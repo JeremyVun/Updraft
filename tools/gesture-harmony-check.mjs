@@ -25,7 +25,7 @@ try {
       const module=await productionModule(`/src/audio/${file}-score.ts`);
       for(const [phase,pattern] of Object.entries(module[table])) {
         const chords=file==='sea'?pattern.chords.map(([at,index])=>({at,tones:module.SEA_CHORDS[index]})):pattern.chords;
-        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase,sleepingWind:file==='sleeping'&&phase==='climb'},key,seconds:pattern.seconds,
+        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase},key,seconds:pattern.seconds,
           changes:chords.map(c=>c.at),harmony:(at,score)=>{
             if(!chords.length)return [50,57,64,69];
             const local=phrasePosition(pattern,score.current.epoch,at);
@@ -33,7 +33,7 @@ try {
           }});
       }
     }
-    let notes=0,boundaryNotes=0;
+    let notes=0;
     for(const c of cases) {
       const {ctx,sound}=offlineSound(1),events=[];
       sound.chime=(midi,velocity,pan,at,decay,soft)=>events.push({midi,at,decay,velocity,soft,now:ctx.currentTime});
@@ -49,29 +49,24 @@ try {
           sound.update(.1,{...baseState,...c.state,...input,rise:now%2>1?-1:1,flockChatter:false});
         }
       }
-      if (!c.state.forestWind && !c.state.sleepingWind) {
-        check(events.length === 0, `${c.name}: no cursor chimes outside the forest and Sleeping climb`);
+      if (!c.state.forestWind) {
+        check(events.length === 0, `${c.name}: no cursor chimes outside the forest`);
         delete ctx.currentTime;
         continue;
       }
       check(events.length>=12,`${c.name}: playable wind responses schedule`);
       check(events.every(e=>pitchIn(e.midi,c.harmony(e.at,score))),`${c.name}: every gesture note belongs to the harmony at its scheduled onset`);
       check(events.some(e=>e.decay===1.6)&&events.some(e=>e.decay===2.2)
-        &&(c.state.sleepingWind||events.some(e=>e.decay===1.8)),`${c.name}: all available gesture voices are covered`);
-      boundaryNotes+=events.filter(e=>JSON.stringify(c.harmony(e.at,score))!==JSON.stringify(c.harmony(e.now,score))).length;
+        &&events.some(e=>e.decay===1.8),`${c.name}: all available gesture voices are covered`);
       notes+=events.length;
       delete ctx.currentTime;
     }
-    check(boundaryNotes>0,'Queued notes crossing a chord boundary use the next harmony');
     const {ctx,sound}=offlineSound(1),events=[];
     sound.chime=(...args)=>events.push(args);
     const tick=(now,state)=>{Object.defineProperty(ctx,'currentTime',{configurable:true,value:now});sound.update(.1,{...baseState,...state});};
     tick(0,{music:'wood',sleepingScore:'climb'});
-    for (let now=.1; now<10; now+=.1) tick(now,{music:'wood',sleepingScore:'climb',sleepingWind:true,gust:26,charge:.8});
-    check(events.length>=7&&events.length<=9,'Feather climb offers sparse notes, at most once every four pulses');
-    check(events.every(e=>e[5]&&Math.abs(e[1]-(.25+.8*.35)*.7)<1e-9&&pitchIn(e[0],sound.sleepingScore.chordAt(e[3]))),'Feather climb uses a soft, quiet voice following its own score');
-    events.length=0;tick(11,{music:'wood',sleepingScore:'climb',sleepingWind:true,gliderLift:1});
-    check(events.length===0,'The stowed glider cannot add chimes during the feather climb');
+    for (let now=.1; now<10; now+=.1) tick(now,{music:'wood',sleepingScore:'climb',gust:26,charge:.8,gliderLift:now>9?1:0});
+    check(events.length===0,'Sleeping climb wind has no chimes');
     tick(12,{music:'wood',sleepingScore:'climb'});
     const climb=sound.sleepingScore.current, epoch=climb.epoch;
     tick(13,{music:'wood',sleepingScore:'summit',gust:20,charge:.8});
@@ -82,8 +77,8 @@ try {
     events.length=0;tick(18,{music:'meadow',pianoActive:true,gust:20,charge:.8,gliderLift:.8});
     check(events.length===0,'The piano still supplies its own gesture response');
     delete ctx.currentTime;
-    return {checks,sections:cases.length,notes,boundaryNotes};
+    return {checks,sections:cases.length,notes};
   });
   fs.writeFileSync('/tmp/updraft-gesture-harmony.json',JSON.stringify(report,null,2));
-  console.log(JSON.stringify({checks:report.checks.length,sections:report.sections,notes:report.notes,boundaryNotes:report.boundaryNotes}));
+  console.log(JSON.stringify({checks:report.checks.length,sections:report.sections,notes:report.notes}));
 }finally{await browser.close();}

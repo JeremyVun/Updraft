@@ -103,7 +103,7 @@ try {
     sound.update=(dt,state)=>{for(const c of state.cues)if(c==='calling')heard.push({kind:'call'});return cue(dt,state);};
     window.climbAudio=()=>{
       const levels=Object.fromEntries(Object.entries(meters).map(([k,a])=>{a.getFloatTimeDomainData(buffer);let p=0;for(const v of buffer)p+=v*v;return[k,p/buffer.length];}));
-      return{...levels,gust:sound.gustGain.gain.value,whistle:sound.whistleGain.gain.value,rustle:sound.rustleGain.gain.value,breezeGain:sound.breezeGain.gain.value,
+      return{...levels,gust:sound.gustGain.gain.value,whistle:sound.whistleGain.gain.value,rustle:sound.rustleGain.gain.value,night:sound.nightGain.gain.value,breezeGain:sound.breezeGain.gain.value,
         rise:NIGHT_WIND.rise,lull:NIGHT_WIND.lull,answer:NIGHT_WIND.answer,heard:heard.splice(0)};
     };
   });

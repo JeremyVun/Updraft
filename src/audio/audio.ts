@@ -45,10 +45,8 @@ export interface SoundState {
   stillDepartureSoon?: boolean;
   /** Approved opening drone; continues on its own clock during the first crossing. */
   openingScore?: OpeningScorePhase;
-  /** The actual forest chapter; Sleeping also uses the wood music mood. */
+  /** The actual forest chapter, the only one whose wind gestures chime. */
   forestWind?: boolean;
-  /** Only the feather-guided climb on Sleeping, ending before the summit. */
-  sleepingWind?: boolean;
   /** Player gust speed, 0..~26. */
   gust: number;
   winterGust?: number;
@@ -309,6 +307,11 @@ export class Soundscape {
   private whistleGain!: GainNode;
   private whistleFilter!: BiquadFilterNode;
   private rustleGain!: GainNode;
+  private nightGain!: GainNode;
+  private nightFilter!: BiquadFilterNode;
+  private nightWhistleGain!: GainNode;
+  private nightWhistleFilter!: BiquadFilterNode;
+  private nightPan!: StereoPannerNode;
   private seaGain!: GainNode;
   private seaFilter!: BiquadFilterNode;
   private liftGain!: GainNode;
@@ -513,6 +516,11 @@ export class Soundscape {
     [this.gustGain, this.gustFilter] = this.noiseLayer('bandpass', 400, 1.1, 0.25, this.gustPan);
     [this.whistleGain, this.whistleFilter] = this.noiseLayer('bandpass', 1200, 14, 0.1, this.gustPan);
     [this.rustleGain] = this.noiseLayer('highpass', 2800, 0.6, 0.05, this.gustPan);
+    // Sleeping's night wind has its own voice, so the player's gust stays distinct over it.
+    this.nightPan = ctx.createStereoPanner();
+    this.nightPan.connect(this.master);
+    [this.nightGain, this.nightFilter] = this.noiseLayer('bandpass', 400, 1.1, 0.25, this.nightPan);
+    [this.nightWhistleGain, this.nightWhistleFilter] = this.noiseLayer('bandpass', 1200, 14, 0.1, this.nightPan);
     [this.liftGain, this.liftFilter] = this.noiseLayer('bandpass', 300, 3, 0.3);
 
     const [seaGain, seaFilter] = this.noiseLayer('lowpass', 380, 0.5, 0);
@@ -1075,16 +1083,15 @@ export class Soundscape {
     if (s.seaMusicTime !== undefined && !s.silence && !this.musicMuted) void this.prepareMusic('sea');
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
-    const weatherGust = winter * .76;
-    const filterGust = Math.max(g * tuning.audio.playerWindFilterRange, weatherGust);
-    const musicalWind = s.forestWind || s.sleepingWind;
-    const playerWindGain = 10 ** (tuning.audio.playerWindDb / 20);
+    const weatherGust = winter * .76 * (1 - tuning.audio.nightWindUnder * Math.min(1, g / tuning.audio.nightWindUnderAt));
+    const filterGust = g * tuning.audio.playerWindFilterRange;
+    const musicalWind = s.forestWind;
+    const playerWindGain = 10 ** ((tuning.audio.playerWindDb + tuning.audio.nightPlayerDb * Math.min(1, winter / .2)) / 20);
     const playerWindEase = 1 - tuning.audio.playerWindEase * g * g;
     const playerWind = playerWindGain * playerWindEase;
     const grassRustle = 10 ** (tuning.audio.grassRustleDb / 20) * playerWindEase;
-    // Preserve the weather floor while easing only the player contribution.
-    const gustLevel = Math.max(Math.pow(g, 1.4) * playerWind, Math.pow(weatherGust, 1.4));
-    const whistleLevel = Math.max(Math.max(0, g - .55) * playerWind, Math.max(0, weatherGust - .55));
+    const gustLevel = Math.pow(g, 1.4) * playerWind;
+    const whistleLevel = Math.max(0, g - .55) * playerWind;
     const rustleLevel = Math.max(Math.pow(g, 1.2) * grassRustle, Math.pow(weatherGust, 1.2));
     const piano = s.piano ?? 0;
     const air = (1 - piano * 0.82) * 10 ** (tuning.audio.windDb / 20);
@@ -1099,9 +1106,14 @@ export class Soundscape {
     this.seaFilter.frequency.setTargetAtTime(380 * (1 - tuning.audio.seaMuffleCutoff * muffle), now, 0.5);
     this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
-    this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);
+    this.gustPan.pan.setTargetAtTime(s.pan * .7, now, tc);
     this.fade(this.whistleGain.gain, whistleLevel * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
+    this.fade(this.nightGain.gain, Math.pow(weatherGust, 1.4) * 0.55 * air, now, tc);
+    this.nightFilter.frequency.setTargetAtTime(260 + weatherGust * 1100, now, tc);
+    this.fade(this.nightWhistleGain.gain, Math.max(0, weatherGust - .55) * 0.12 * air, now, tc);
+    this.nightWhistleFilter.frequency.setTargetAtTime(900 + weatherGust * 900, now, tc);
+    this.nightPan.pan.setTargetAtTime(Math.sin(now * .31) * .55, now, .3);
     this.fade(this.rustleGain.gain, (s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
     this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * playerWindGain * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
@@ -1326,7 +1338,7 @@ export class Soundscape {
       // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
       return bg.music === 'wood' ? MOODS.wood.chords[0] : tones;
     };
-    const forestChimes = !!s.forestWind && !s.caringWind && !s.sleepingWind;
+    const forestChimes = !!s.forestWind && !s.caringWind;
     // The wood's original minor palette includes notes outside the D/A pedal. Let them ring.
     const gestureHarmonyAt = (at: number): readonly number[] => forestChimes ? MOODS.wood.scale : harmonyAt(at);
     // Release gesture tails outside musical wind scenes, and incompatible notes at harmonic changes.
@@ -1385,18 +1397,17 @@ export class Soundscape {
       this.nextLark = now + 6 + Math.random() * 10;
     }
 
-    // Musical wind accompanies the forest search and encourages the feather climb.
+    // Musical wind accompanies the forest search.
     const gestures = musicalWind && !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
-    const care = !!(s.caringWind || s.sleepingWind);
+    const care = !!s.caringWind;
     const scale = care ? [62, 64, 69, 71, 74, 76] : forestChimes ? MOODS.wood.scale : mood.scale;
-    const velocity = (s.sleepingWind ? tuning.audio.sleepingChimeLevel : care ? tuning.audio.careChimeLevel : 1) * (now < this.cueSpaceUntil ? .55 : 1);
+    const velocity = (care ? tuning.audio.careChimeLevel : 1) * (now < this.cueSpaceUntil ? .55 : 1);
     const gusting = s.gust > tuning.pointer.minGust && gestures;
     const lifting = s.charge > tuning.pointer.minLift && gestures;
     const at = this.nextPulse();
-    const interval = PULSE * (s.sleepingWind ? tuning.audio.sleepingChimePulses
-      : s.forestWind ? tuning.audio.forestChimePulses : tuning.audio.gesturePulses);
+    const interval = PULSE * (s.forestWind ? tuning.audio.forestChimePulses : tuning.audio.gesturePulses);
     const ready = at - Math.max(this.lastNote, this.lastArp) >= interval - 1e-3;
-    const glider = !s.sleepingWind && s.gliderLift > .45 && this.prevGliderLift <= .45 && now - this.lastGlider > 2.5 && gestures;
+    const glider = s.gliderLift > .45 && this.prevGliderLift <= .45 && now - this.lastGlider > 2.5 && gestures;
     if (glider && ready) {
       const base = forestChimes ? MOODS.wood.chords[0][0] + 24 : chordNote(harmonyAt(at)[0] + 24, harmonyAt(at), 62, 81);
       this.chime(base, .4 * velocity, 0, at, 1.8, care, true);

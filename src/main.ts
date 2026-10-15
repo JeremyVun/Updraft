@@ -1036,7 +1036,6 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.stillDepartureSoon = story.current.stillDepartureSoon;
   journeyTitle.style.opacity = String(openingTitleOpacity(soundState.stillCrossingTime));
   soundState.forestWind = story.name === 'wood';
-  soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
   soundState.arrivalReady = story.current.arrivalReady;

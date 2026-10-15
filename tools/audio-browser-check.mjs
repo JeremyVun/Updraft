@@ -101,16 +101,6 @@ try {
   assert.equal(await page.evaluate(() => audioStates.at(-1).music), 'sea');
   assert.equal(await page.evaluate(() => __game.sound.seaMusic), null, 'Sleeping morning does not borrow the sea\'s recording');
   assert.equal(await page.evaluate(() => __game.sound.sleepingScore.current.phase), 'morning', 'Restoring morning selects the approved warm answer');
-  assert.equal(await page.evaluate(() => audioStates.at(-1).sleepingWind), false, 'Sleeping morning has no gesture chimes');
-  await page.evaluate(() => {
-    __game.story.current.restoreCheckpoint('feather');
-    audioStates.length = 0;
-  });
-  await page.waitForFunction(() => audioStates.length >= 4);
-  assert.equal(await page.evaluate(() => audioStates.at(-1).sleepingWind), true, 'Restored feather climb enables quiet chimes');
-  await page.evaluate(() => { __game.story.current.beat = 'hilltop'; audioStates.length = 0; });
-  await page.waitForFunction(() => audioStates.length >= 4);
-  assert.equal(await page.evaluate(() => audioStates.at(-1).sleepingWind), false, 'Reaching the summit ends feather chimes');
   // A real pointer sweep through a playable wood fixture must be reflected by the audio state.
   await page.evaluate(() => {
     __game.story.begin('wood');

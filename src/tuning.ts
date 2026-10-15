@@ -127,6 +127,11 @@ export const tuning = {
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
     playerWindEase: .5, playerWindDb: -6, grassRustleDb: -9,
+    /**
+     * On Sleeping's night hill the player's wind is this many dB louder, and the night wind gives way under it: by this
+     * share at most, reached at this share of a full gust.
+     */
+    nightPlayerDb: 4, nightWindUnder: .7, nightWindUnderAt: .35,
     windDb: -3,
     /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
@@ -135,8 +140,6 @@ export const tuning = {
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
     /** Minimum spacing between attacks, including both notes of a glider answer. */
     gesturePulses: 2, forestChimePulses: 4,
-    /** Sparse, soft encouragement while guiding the feather uphill. */
-    sleepingChimeLevel: .7, sleepingChimePulses: 4,
     authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
     /** A cue raised while a call or Siri interrupts audio still plays if the interruption ends within this. */
     heldCueLife: 3,

@@ -64,27 +64,24 @@ meadow, the wood and the Sleeping climb stay quiet by design; the wood's drone k
 
 ## Player feedback
 
-**Cursor chimes play only in the forest and on Sleeping's feather-guided climb.**
+**Cursor chimes play only in the forest** (Jeremy, 2026-10-15: "The only chapter that should ahve tone sounds from the players wind is the woods chapter.").
 The still island keeps its wind sounds and authored story cues, with no chimes from gusts, updrafts or glider lift.
 The first breeze and plane flight have no tune, and restoring its colour has no completion phrase.
 The cygnet's story cues remain.
-`forestWind` follows `story.name === 'wood'` and
-`sleepingWind` is true only in the Sleeping chapter's `climb` score phase (climb, snow, mist, catching the feather).
-These gates are independent of whatever music is still playing from a departed island. Outside them gusts, held
+`forestWind` follows `story.name === 'wood'`.
+This gate is independent of whatever music is still playing from a departed island. Outside it gusts, held
 updrafts and glider-lift answers schedule no chimes, and sounding tails fade over `gestureTailRelease` (300 ms).
 `scripted`, `silence` and an engaged piano (`pianoActive`) also suppress them. Checkpoint restoration derives the same
-gates.
+gate.
 
 - Audio and `PointerInput` share `pointer.minGust` and `pointer.minLift`, so the first gentle stroke after audio
   starts can sound.
-- Attacks sit on a 96-BPM grid with a minimum gap: `forestChimePulses` / `sleepingChimePulses`
-  (four, 1.25 s) in the forest and on the climb. Both notes of a glider
+- Attacks sit on a 96-BPM grid with a minimum gap: `forestChimePulses`
+  (four, 1.25 s) in the forest. Both notes of a glider
   answer obey the gap and reserve it against gusts and updrafts.
 - **Forest chimes use the original low minor palette: the whole wood scale (MIDI 50–72), not filtered to the current
   chord.** Forest updrafts use D3–A3–D4–A4. These ring over the forest drone without tail filtering. Searching at
   the rescue ember uses the softer caring voice (`careChime*`).
-- Sleeping climb notes follow its score, with the soft attack at `sleepingChimeLevel` (about 3 dB under the others).
-  The stowed glider cannot trigger notes; summit, waking and departure have none.
 - Where a gesture follows harmony, lift stays in MIDI 62–81 and strokes and glider answers stop at 86; notes query
   the harmony at their scheduled onset, including across chord and loop boundaries, and incompatible held notes fade
   over 300 ms at chord changes.

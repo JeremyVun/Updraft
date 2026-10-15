@@ -62,7 +62,7 @@ try {
         try { sound.start(); } finally { window.AudioContext = Native; }
         Object.defineProperty(sound, 'running', { get: () => true });
         if (!music) sound.setMusicMuted(true);
-        if (!wind) for (const k of ['breezeGain', 'gustGain', 'whistleGain', 'rustleGain', 'seaGain', 'liftGain']) sound[k].disconnect();
+        if (!wind) for (const k of ['breezeGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'seaGain', 'liftGain']) sound[k].disconnect();
         if (!breeze) for (const k of ['breezeGain', 'seaGain']) sound[k].disconnect();
         const foley = new Foley(), climbing = new SleepingFoley(foley), bird = { wing: { state: 'wrapped' }, hopeBeats: 0 };
         let next = 0, rise = 0, lull = 0;
@@ -80,7 +80,7 @@ try {
           if (cued && Math.abs(t - callAt) < step / 2) cues.push('calling');
           if (cued && Math.abs(t - 86) < step / 2) cues.push('lifted');
           sound.update(step, { ...baseState, music: 'wood', hush: .5, land: 1, sea: .2, meadow: 0, night: 1, life: 0,
-            sleepingScore: summit ? 'summit' : 'climb', sleepingWind: !summit, cold, charge,
+            sleepingScore: summit ? 'summit' : 'climb', cold, charge,
             winterGust: nightWindSound(t, cold, 0),
             breeze: Math.min(1, tuning.wind.breeze * (.3 + hill * T.climbWind + cold * T.winterBreeze + gust * .65) / 6), cues });
           if (!withFoley) return;

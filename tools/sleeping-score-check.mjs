@@ -110,7 +110,6 @@ try {
       const now = tick / 8, phase = now < 9 ? 'shelter' : now < 20 ? 'cold' : now < 27 ? 'climb'
         : now < 37 ? 'summit' : now < 45 ? 'morning' : now < 47 ? undefined : 'morning';
       sound.update(.125, { ...baseState, music: now < 37 ? 'wood' : 'sea', sleepingScore: phase,
-        sleepingWind:phase==='climb',
         night: 1, cold: .8, hush: .8, gust: now >= 16 && now < 16.5 || now >= 22 && now < 22.5 || now >= 34 && now < 34.5 ? 9 : 0,
         charge: now >= 24 && now < 24.5 || now >= 35 && now < 35.5 ? .5 : 0, silence: now >= 48 });
       if (tick === 0) { score = sound.sleepingScore; retired = score.current; }
@@ -120,7 +119,7 @@ try {
       if (tick === 45 * 8 && !musicOnly) check(score.stopped && !sound.sleepingScore, 'Chapter exit stops Sleeping');
       if (tick === 47 * 8) { resumed = sound.sleepingScore; if (!musicOnly) check(resumed !== score && resumed.current.phase === 'morning', 'A morning entry starts directly in the warm arrangement'); }
       if (tick === 48 * 8 && !musicOnly) check(resumed.stopped && !sound.sleepingScore, 'Permanent silence stops Sleeping');
-      if (musicOnly) for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
+      if (musicOnly) for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain']) {
         sound[name].gain.cancelScheduledValues(ctx.currentTime); sound[name].gain.value = 0;
       }
     };

@@ -382,3 +382,27 @@ island and `docs/contracts/world.md`, delete this folder, and merge.
    lift is now their own height off the ground rather than their height on the hill), which takes toes in the 0.45
    slope at the bank's foot from about 0.16 m to 0.10 m; what remains is the tips of its long webbed toes in the grass.
 4. The tall white line during the bank's circles is the updraft's own wind effect (Jeremy's ruling): left as it is.
+
+### Jeremy on the 4c rabbit, verbatim (2026-10-15)
+
+> the rabbit looks like it's spasming like a bug, not shivering
+
+Dial it down, not out: a soft, steady, low tremble of the fur and body, no jerky bouts, no head nods.
+
+> There's also some kind of flashing across the surface of the snow, it looks bad
+
+Find what flashes (sparkle, z-fighting between the drift and the ground or channel skin, aliasing) and remove the flashing; settled snow must sit still in the light.
+
+> And when you blow the snow away, there's a huge performance drop
+
+Measure while stroking at the drift (`tools/perf.mjs`, authorised for this), find the cost and remove it.
+
+> remove the tone sounds from the player's wind. The only chapter that should ahve tone sounds from the players wind is the woods chapter.
+
+> The sound of the players wind during the climb up needs to be louder as well (when the player moves their cursor around, you can't hear the wind they make - it can't be heard over the ambient wind)
+
+Lead, done: cursor chimes are forest-only (`sleepingWind` and its knobs are gone; `docs/contracts/audio.md` says so). The
+night wind has its own noise voice and pan (`nightGain`, `nightWhistleGain`, `nightPan`) instead of sharing the
+player's gust voice through a `max`, gives way under the player's stroke (`nightWindUnder` 0.7, full at
+`nightWindUnderAt` 0.35 of a full gust), and the player's wind is `nightPlayerDb` 4 dB louder on the night hill. At
+the crest a half stroke now sits about 9 dB over the ducked night wind; a gentle one about 2 dB under, panned apart.

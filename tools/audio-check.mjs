@@ -16,11 +16,12 @@ try {
       const parameter = () => ({ value: 0, setTargetAtTime(value) { this.value = value; }, cancelScheduledValues() {}, setValueAtTime(value) { this.value = value; } });
       sound.ctx = { currentTime: 90 };
       Object.defineProperty(sound, 'running', { get: () => true });
-      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck', 'wetDuck']) {
+      for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck', 'wetDuck']) {
         sound[name] = { gain: parameter() };
       }
-      for (const name of ['gustFilter', 'whistleFilter', 'liftFilter', 'padFilter', 'seaFilter']) sound[name] = { frequency: parameter() };
+      for (const name of ['gustFilter', 'whistleFilter', 'nightFilter', 'nightWhistleFilter', 'liftFilter', 'padFilter', 'seaFilter']) sound[name] = { frequency: parameter() };
       sound.gustPan = { pan: parameter() };
+      sound.nightPan = { pan: parameter() };
       if (overrides.music === 'boats') sound.boatsScore = { update() {}, handoffAt: now => now, chordAt: () => 0, stop() {} };
       for (const name of ['chime', 'cricket', 'owl', 'skylark', 'phrase', 'flare', 'peep', 'bugle']) {
         sound[name] = (...args) => calls.push({ name, args });
@@ -60,7 +61,7 @@ try {
     for (const gust of [0, 3]) {
       const before = fixture({ gust, winterGust: 1 });
       const after = fixture({ startingIsland: false, gust, winterGust: 1 });
-      for (const name of ['gustGain', 'whistleGain', 'rustleGain']) {
+      for (const name of ['gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain']) {
         check(before.sound[name].gain.value === after.sound[name].gain.value, `${name}: winter weather floor is preserved at gust ${gust}`);
       }
     }
@@ -70,8 +71,12 @@ try {
       }
     }
     const weather = fixture({ startingIsland: false, winterGust: 1 });
-    check(weather.sound.gustFilter.frequency.value === 260 + .76 * 1100
-      && weather.sound.whistleFilter.frequency.value === 900 + .76 * 900, 'weather filter response is unchanged');
+    check(weather.sound.nightFilter.frequency.value === 260 + .76 * 1100
+      && weather.sound.nightWhistleFilter.frequency.value === 900 + .76 * 900, 'weather filter response is unchanged');
+    check(weather.sound.gustGain.gain.value === 0 && weather.sound.whistleGain.gain.value === 0, 'weather has its own voice, apart from the player\'s wind');
+    const ducked = fixture({ startingIsland: false, winterGust: 1, gust: 26 });
+    check(ducked.sound.nightGain.gain.value < weather.sound.nightGain.gain.value * .3
+      && ducked.sound.gustGain.gain.value > ducked.sound.nightGain.gain.value * 2, 'the night wind gives way under a full stroke');
     const windDb = tuning.audio.windDb;
     try {
       tuning.audio.windDb = 0;
@@ -304,7 +309,7 @@ try {
         silence: now >= 23.5, cues: now >= 2 && !finale ? ['finale'] : [] });
       if (now >= 2) finale = true;
       // Isolate music at the production cut and credit times, retaining its actual reverb path.
-      for (const key of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
+      for (const key of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain']) {
         sound[key].gain.cancelScheduledValues(now); sound[key].gain.value = 0;
       }
     };
