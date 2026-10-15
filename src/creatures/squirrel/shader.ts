@@ -3,11 +3,15 @@ import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { CREATURE_GLSL } from '../shading';
 import type { V3 } from '../shapes';
 import {
-  BODY, BONES, EAR, EYE, EYE_AT, EYE_RADIUS, EYE_TILT, EYE_TURN, FUR as COAT, MOUTH, MUZZLE, NOSE, NOSE_AT, NUT, REST, SKULL, SKULL_SIZE, TAIL_1,
-  TUFT, WHISKER, HAND_R, squirrelCoatGeometry,
+  ACORN_LONG, ACORN_MOUTH, ACORN_PAWS, BODY, BONES, EAR, EYE, EYE_AT, EYE_RADIUS, EYE_TILT, EYE_TURN, FUR as COAT, HAND_R, HEAD, MOUTH, MUZZLE, NOSE, NOSE_AT, NUT,
+  REST, SKULL, SKULL_SIZE, TAIL_1, TUFT, WHISKER, squirrelCoatGeometry,
 } from './body';
 
 const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
+const mat3 = (turn: V3) => {
+  const e = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...turn, 'YXZ'))).elements;
+  return `mat3(${Array.from(e, (v) => v.toFixed(5)).join(', ')})`;
+};
 
 const SHELLS = 7;
 /** How far the coat stands off the skin where it is shortest-but-ordinary, in rest metres; the plume grows far longer. */
@@ -43,6 +47,7 @@ uniform float uNudge;
 uniform float uBlink;
 uniform float uFur;
 uniform float uNut;
+uniform float uCarry;
 uniform vec3 uLay;
 in vec4 aSkin;
 in vec2 aMat;
@@ -65,15 +70,24 @@ void main() {
     float open = 1.0 - clamp(uBlink, 0.0, 1.0) * 0.92;
     p = c + (p - c) * vec3(1.0, open, mix(0.8, 1.0, open));
   }
-  if (m == ${NUT} && uNut < 0.5) p = ${vec3(REST[HAND_R])};
   mat4 a = uBones[int(aSkin.x + 0.5)];
   mat4 b = uBones[int(aSkin.y + 0.5)];
   vec3 world = mix((a * vec4(p, 1.0)).xyz, (b * vec4(p, 1.0)).xyz, aSkin.z);
+  vec3 N = normalize(mix(mat3(a) * n, mat3(b) * n, aSkin.z));
+  if (m == ${NUT}) {
+    /** The acorn passes from its paws to its teeth as the paws come down from its chin. */
+    mat4 paws = uBones[${HAND_R}];
+    mat4 head = uBones[${HEAD}];
+    mat3 inPaws = ${mat3(ACORN_PAWS.turn)};
+    mat3 inMouth = ${mat3(ACORN_MOUTH.turn)};
+    world = mix((paws * vec4(${vec3(ACORN_PAWS.at)} + inPaws * p, 1.0)).xyz, (head * vec4(${vec3(ACORN_MOUTH.at)} + inMouth * p, 1.0)).xyz, uCarry);
+    N = normalize(mix(mat3(paws) * inPaws * n, mat3(head) * inMouth * n, uCarry));
+    if (uNut < 0.5) world = (head * vec4(${vec3(SKULL)}, 1.0)).xyz;
+  }
   if (m == ${WHISKER}) {
     float far = smoothstep(1.5, 4.0, distance(cameraPosition, world));
     world = mix(world, (a * vec4(${vec3(MUZZLE)}, 1.0)).xyz, far);
   }
-  vec3 N = normalize(mix(mat3(a) * n, mat3(b) * n, aSkin.z));
   vFade = 1.0 - smoothstep(${FUR_NEAR.toFixed(1)}, ${FUR_FAR.toFixed(1)}, distance(cameraPosition, world));
 #ifdef SHELL
   /** Each strand stands out along the skin and lies back along the squirrel, more so toward its tip. */
@@ -119,7 +133,8 @@ const vec3 EAR_IN = vec3(0.36, 0.17, 0.09);
 const vec3 NOSE_DARK = vec3(0.07, 0.035, 0.03);
 const vec3 MOUTH_IN = vec3(0.07, 0.025, 0.022);
 const vec3 TEETH = vec3(0.5, 0.33, 0.14);
-const vec3 HAZEL = vec3(0.3, 0.14, 0.05);
+const vec3 ACORN = vec3(0.36, 0.17, 0.05);
+const vec3 CUP = vec3(0.1, 0.07, 0.04);
 const vec3 EYE_DARK = vec3(0.012, 0.007, 0.005);
 const vec3 IRIS = vec3(0.05, 0.022, 0.01);
 const vec3 SKULL = ${vec3(SKULL)};
@@ -197,9 +212,12 @@ void main() {
     fuzz = 0.0;
     thin = 0.6;
   } else if (m == ${NUT}) {
-    float cap = smoothstep(0.0, 0.004, vRest.z - ${(REST[HAND_R][2] + 0.006).toFixed(4)});
-    alb = mix(HAZEL * (0.85 + 0.3 * vnoise(vRest.xy * 900.0)), vec3(0.42, 0.3, 0.17), cap);
-    fuzz = 0.05;
+    /** A glossy warm brown nut, streaked along its length and paler to its point, in a dull dark cup of scales. */
+    float along = vRest.z / ${ACORN_LONG.toFixed(4)};
+    vec3 nut = ACORN * (0.85 + 0.25 * vnoise(vec2(atan(vRest.y, vRest.x) * 9.0, along * 3.0))) * (1.0 + 0.3 * smoothstep(0.3, 1.0, along));
+    float scales = vnoise(vec2(atan(vRest.y, vRest.x) * 7.0, along * 30.0));
+    alb = mix(nut, CUP * (0.75 + 0.5 * scales), k);
+    fuzz = 0.05 + 0.4 * k;
     thin = 0.0;
   } else if (m == ${EYE}) {
     /** Almost all dark: a deep brown iris round a big pupil, wet, under a soft upper lid. */
@@ -237,7 +255,7 @@ void main() {
   col += uSkyAmbient * pow(edge, 3.0) * fuzz * 0.3 * smoothstep(-0.15, 0.1, dot(N, V));
   col += alb * dawnLight(vWorld, N);
   col += (uSunColor * 0.35 + uSkyAmbient * 2.2 + 0.07) * glintAmount * (1.0 - clamp(uBlink, 0.0, 1.0));
-  if (m == ${NOSE} || m == ${NUT}) col += uSunColor * pow(max(dot(N, halfVector(uSunDir, V)), 0.0), 40.0) * 0.18;
+  if (m == ${NOSE} || (m == ${NUT} && k < 0.5)) col += uSunColor * pow(max(dot(N, halfVector(uSunDir, V)), 0.0), 40.0) * 0.18;
   // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
@@ -264,7 +282,9 @@ export const RED: Coat = {
 export interface SquirrelLook {
   blink: number;
   air: number;
+  /** Whether it has its acorn, and where: 0 in its paws, 1 in its teeth. */
   nut: boolean;
+  carry: number;
 }
 
 export function squirrelMaterial(bones: THREE.Matrix4[], coat: Coat = RED): THREE.ShaderMaterial {
@@ -280,6 +300,7 @@ export function squirrelMaterial(bones: THREE.Matrix4[], coat: Coat = RED): THRE
     uNudge: { value: 0 },
     uBlink: { value: 0 },
     uNut: { value: 0 },
+    uCarry: { value: 1 },
     uGlint: { value: new THREE.Vector2(0.3, 0.36) },
     uAir: { value: 0.6 },
     uFur: { value: FUR },
@@ -315,4 +336,5 @@ export function applySquirrelLook(mat: THREE.ShaderMaterial, look: SquirrelLook,
   u.uBlink.value = look.blink;
   u.uAir.value = look.air;
   u.uNut.value = look.nut ? 1 : 0;
+  u.uCarry.value = look.carry;
 }

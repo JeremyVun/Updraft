@@ -132,7 +132,7 @@ export const STANCES: Record<StanceName, Stance> = {
   buried: {
     ...STAND, bodyY: 0.04, bodyZ: 0, pitch: -0.04, flex: 0.42, chestUp: -0.05, neckLow: 0.9, headPitch: -0.2, hock: 1.45,
     front: [0.011, 0.042], hind: [0.022, -0.012], curl: 0.5,
-    tailLift: -0.1, tailCurve: 0.02, tailTip: 0.02, earBack: 0.45, seat: true,
+    tailLift: -0.1, tailCurve: 0.02, tailTip: 0.02, earBack: 0.9, seat: true,
   },
   /** Up on its haunches in the leaves with its head and shoulders out of them, neck stretched, paws half raised, looking about. */
   peek: {
@@ -151,7 +151,7 @@ export const STANCES: Record<StanceName, Stance> = {
    * and flat, the tail laid down the bark behind.
    */
   climb: {
-    ...STAND, bodyY: 0.045, bodyZ: 0, pitch: 0.0, flex: 0.12, chestUp: 0.05, neckLow: 0.0, headPitch: 0.2, hock: 1.45,
+    ...STAND, bodyY: 0.045, bodyZ: 0, pitch: 0.0, flex: 0.12, chestUp: 0.05, neckLow: -0.08, headPitch: 0.32, hock: 1.45,
     front: [0.026, 0.046], hind: [0.03, -0.034], curl: 0.2,
     tailLift: 0.18, tailCurve: -0.06, tailTip: 0.14,
   },
@@ -162,7 +162,7 @@ export const STANCES: Record<StanceName, Stance> = {
   },
   /** Its bound up or down a trunk: flat to the bark, head lifted off it, tail laid along the bark behind. */
   trunk: {
-    ...STAND, bodyY: 0.048, pitch: 0.0, flex: 0.06, chestUp: 0.04, neckLow: 0.0, headPitch: 0.28, hock: 1.3,
+    ...STAND, bodyY: 0.048, pitch: 0.0, flex: 0.06, chestUp: 0.04, neckLow: -0.08, headPitch: 0.4, hock: 1.3,
     tailLift: 0.16, tailCurve: -0.04, tailTip: 0.1, earBack: 0.1,
   },
   /** Along the wool: crouched low over it, eyes on the way ahead, the tail out straight to balance. */

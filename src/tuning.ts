@@ -12,7 +12,16 @@ export const tuning = {
    * its speeds along the ground, up a trunk and along the wool (m/s), how quickly it gets up to speed (per second)
    * and how hard it pulls up at the end of its way (m/s²).
    */
-  squirrel: { scale: 3, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6 },
+  squirrel: {
+    scale: 3.6, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6,
+    /**
+     * Its call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
+     * than `least` of the view's height so they read over a heap from a round's lens, edged dark against the gold.
+     * `hold` is the least time they show for a chuck (a chitter twice that); buried, they rise from `buried` over its
+     * paws, about the height of its raised tail over the leaves.
+     */
+    calls: { height: 0.3, size: 0.6, least: 0.075, halo: 'rgba(62, 30, 12, 0.6)', hold: 0.5, buried: 0.75 },
+  },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,

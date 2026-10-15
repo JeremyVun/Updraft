@@ -211,8 +211,9 @@ export class SquirrelYard {
   /**
    * Each action from its own place: on the log, on the limb, in the heap, up the trunk, out on the open leaves; and
    * the motions, each from where it starts: `run` across the yard, `dive` into the heap, `dive-burst` into it and out
-   * again to scold, `burst` out of it, `climb-up` and `climb-down` the first birch, `run-line` along the wool, and
-   * `follow`, the whole way round: over the ground, up the second birch, along the wool, down the first and home.
+   * again to scold, `burst` out of it, `tell` (and `tell-in`, its tail tucked) twice from the heap, `climb-up` and
+   * `climb-down` the first birch, `run-line` along the wool, and `follow`, the whole way round: over the ground, up
+   * the second birch, along the wool, down the first and home.
    */
   play(name: string, squirrel: Squirrel): boolean {
     this.playing = true;
@@ -265,6 +266,11 @@ export class SquirrelYard {
         squirrel.act('climb', { at, up: out, forward: new THREE.Vector3(0, 1, 0), radius: r, look });
         break;
       }
+      case 'tell':
+      case 'tell-in':
+        squirrel.hide(inHeap, { tailOut: name === 'tell', yaw: toward(inHeap) + 1, floor: this.ground });
+        this.later([[0.6, () => squirrel.tell()], [3.4, () => squirrel.tell()]]);
+        break;
       case 'burst':
         squirrel.hide(inHeap, { tailOut: true, yaw: toward(inHeap), floor: this.ground });
         squirrel.look(look);
@@ -358,7 +364,7 @@ export class SquirrelYard {
     const base = limb.a.clone().setY(this.top);
     const radius = (h: number) => this.radiusAt(limb, this.top + h);
     const out = new THREE.Vector3(Math.cos(from), 0, Math.sin(from));
-    const foot: SquirrelPoint = { at: base.clone().addScaledVector(out, radius(0) + 0.42), on: 'ground' };
+    const foot: SquirrelPoint = { at: base.clone().addScaledVector(out, radius(0) + 0.14 * tuning.squirrel.scale), on: 'ground' };
     const bark = spiral(base, radius, { height: low, angle: from }, { height: high, angle: to ?? from + turns * Math.PI * 2 });
     return { foot, way: [foot, ...bark] };
   }
