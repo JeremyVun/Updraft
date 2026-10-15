@@ -843,14 +843,17 @@ verification's own list. Built on `birches-uplift-heaps`.
 **Uncovering is generous again.** Raked heaps are loose (`LitterField` `uLoose`, `tuning.birches.looseReach`,
 `looseLift`): their leaves feel the strongest gust within 1.6 m as well as the air over them, and go 1.6 times as
 readily. A deliberate swipe across the right heap still uncovers it in one stroke in every round (found 1.75–2.07 s
-after it begins), and the heap visibly thins first; circles uncover it in two loops; a stroke across a wrong heap
+after it begins), and the heap visibly thins first; circles uncover it in two or three loops; a stroke across a wrong heap
 aimed away from the right one never does. Random swipes over the frame (each from where the last ended to anywhere in
-the frame below the canopy, three seeds) found it in 2–3, 2–3 and 4–11 strokes in rounds 1, 2 and 3, mean 3.8, most
-11 (19–30 before). The previous random model, short swipes that wander and pin to the frame's edges once they reach
+the frame below the canopy, three seeds) found it in 2–3, 3–5 and 4–5 strokes in rounds 1, 2 and 3, mean 3.6, most
+5 (19–30 before). The previous random model, short swipes that wander and pin to the frame's edges once they reach
 one, is kept as `WANDER=1`; with it one seed in three never reaches the heaps in rounds 1 and 2 in 40 strokes.
 
-**Spacing.** Round 3's heaps are 3 m apart at the rim (1.2 m before) and erode on their own: a stroke over one takes
-nothing of the next. Round 2's two heaps were already 7 m apart.
+**Spacing.** Round 3's heaps are 3 m apart at the rim (1.2 m before) and erode on their own: a stroke across the
+near heap takes it from 0.90 to 0.31 m and leaves the middle and far ones standing (1.03, 0.90). An updraft's column
+is wider than any spacing the frame allows (5–9 m), so while circles are wound over one heap of the round being played,
+and for `circleLinger` (3 s) after, the round's other heaps hold against it: three loops over the middle heap take it
+to nothing and leave the far one at 0.90 (before, they took all three). Round 2's two heaps were already 7 m apart.
 
 **Frames** (the storyboard table above): round 2 is looked at from the south, high enough that the near heap and
 its burst sit well inside the frame (portrait from the east along the two heaps, the near one whole at the frame's
@@ -860,8 +863,8 @@ before). The meeting keeps her stop, her look, its freeze, chatter and call mark
 cygnet now comes up beside her to look too. At each tangle where it waits on a perch, it chatters at her once as she
 comes up to the knot.
 
-**Tangles 1 and 3.** Tangle 1's frame already holds the squirrel on its branch at about 35–40 px in landscape and
-23 px in portrait; closer lenses were tried and pushed the knot under the near crowns, so it is unchanged. Tangle 3's
+**Tangles 1 and 3.** Tangle 1's frame already holds the squirrel on its branch at about 35 px in landscape and
+20 px in portrait; closer lenses were tried and pushed the knot under the near crowns, so it is unchanged. Tangle 3's
 landscape perch moved to the birch east of the slipped loop (35 px, 23 before).
 
 **The arrival.** The boat leaves the beach they landed on only once that beach has been out of the picture for a

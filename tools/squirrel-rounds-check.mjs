@@ -1,11 +1,11 @@
 // The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap once the wind has
-// uncovered it, by a stroke and by an updraft, wrong heaps first and the right heap answering them, a child's random
-// swipes (counted per round), a stalled player through the hint and the drawn updraft, heaps held against strokes until
-// it is in (and the drift and trunk fallbacks), round 3's shuffle (its plan, its frame, the heaps held through it, her
-// and the cygnet watching), the leap into a deep drift and through a bare hollow, resumed saves at every new checkpoint
-// and from names saved before the game, and stills of each round's frame with the squirrel's height on screen and how
-// much of it shows buried tail in.
-// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer random shuffle plans stall flat leap bare resume frames]
+// uncovered it, by a stroke and by an updraft, wrong heaps first and the right heap answering them, heaps eroding each
+// on its own under a stroke and under circles, a child's random swipes (counted per round), a stalled player through
+// the hint and the drawn updraft, heaps held against strokes until it is in (and the drift and trunk fallbacks), round
+// 3's shuffle (its plan, its frame, the heaps held through it, her and the cygnet watching), the leap into a deep drift
+// and through a bare hollow, resumed saves at every new checkpoint and from names saved before the game, and stills of
+// each round's frame with the squirrel's height on screen and how much of it shows buried tail in.
+// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer apart random shuffle plans stall flat leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
 // the squirrel's size at runtime.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
@@ -15,7 +15,7 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600), H = Number(process.env.H ?? 900);
 const out = process.env.OUT ?? '/tmp/updraft-squirrel-rounds';
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'answer', 'random', 'shuffle', 'plans', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'answer', 'apart', 'random', 'shuffle', 'plans', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
 const { browser, close } = await openBrowser();
 const errors = [];
 const results = {};
@@ -286,6 +286,28 @@ const cased = {
     const all = rows.flatMap((r) => [r.round1, r.round2, r.round3]);
     if (!process.env.WANDER) assert.ok(all.every((n) => n <= 15), `random swipes took up to ${Math.max(...all)} strokes: ${JSON.stringify(rows)}`);
     return { rows, mean: +(all.reduce((a, b) => a + b, 0) / all.length).toFixed(1), most: Math.max(...all) };
+  },
+
+  /**
+   * Round 3's heaps erode each on its own: a stroke across one, and circles wound over another, leave the rest standing
+   * (the squirrel lying in the far one, out of the way).
+   */
+  async apart() {
+    await load();
+    await jump(2);
+    await hideIn(2);
+    await page.waitForTimeout(1500);
+    const read = () => page.evaluate(() => __game.birches.depthAt(__sq.ROUNDS[2].heaps.map((i) => __sq.BIRCH_PILES[i])).then((d) => d.map((v) => +v.toFixed(2))));
+    const before = await read();
+    await stroke(await acrossHeap(0));
+    await page.waitForTimeout(2000);
+    const stroked = await read();
+    await circleOver(1, 2, 3);
+    await page.waitForTimeout(4500);
+    const circled = await read();
+    assert.ok(stroked[0] < before[0] * 0.6 && stroked[1] >= before[1] * 0.9 && stroked[2] >= before[2] * 0.9, `a stroke across the near heap took its neighbours: ${JSON.stringify({ before, stroked })}`);
+    assert.ok(circled[1] < before[1] * 0.6 && circled[2] >= before[2] * 0.9, `circles over the middle heap took the far one: ${JSON.stringify({ before, circled })}`);
+    return { before, stroked, circled };
   },
 
   /** Wind on a wrong heap: the right one answers with a tell at once, with no tells of its own due, and she looks at it. */

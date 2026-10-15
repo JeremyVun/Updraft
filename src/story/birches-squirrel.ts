@@ -129,6 +129,9 @@ export class BirchesSquirrel {
   private readonly tracked = new THREE.Vector3();
   private nextAnswer = 0;
   private greeted = false;
+  /** The heap last circled over in the round being played, and until when its neighbours hold against the column. */
+  private circled = -1;
+  private circledUntil = 0;
   /** She is looking at the heap that answered until then, whatever else the wind throws up. */
   private answeredUntil = 0;
   private generation = 0;
@@ -301,11 +304,35 @@ export class BirchesSquirrel {
     this.after(tuning.birches.squirrel.scoldFor, () => { if (this.station === station && this.mode === 'idle') this.settle(perch, false); });
   }
 
-  /** Each round's heaps stand against the wind until it has gone into hiding in one of them, and has done shuffling. */
+  /**
+   * Each round's heaps stand against the wind until it has gone into hiding in one of them, and has done shuffling.
+   * While the player winds an updraft over one heap of the round being played, and until its rising air has died
+   * away, the others stand against it: the column is wider than the loops drawn, and circles over one heap should take
+   * that heap.
+   */
   private holdHeaps(): void {
     this.holding.length = 0;
-    ROUNDS.forEach((r, round) => { if (this.rounds <= round && this.wentIn < round) this.holding.push(...r.heaps); });
+    const now = this.circledHeap();
+    if (now >= 0) {
+      this.circled = now;
+      this.circledUntil = this.now + tuning.birches.squirrel.circleLinger;
+    } else if (this.now > this.circledUntil || this.cue.round < 0) this.circled = -1;
+    const circled = this.circled;
+    ROUNDS.forEach((r, round) => {
+      if (this.rounds <= round && this.wentIn < round) this.holding.push(...r.heaps);
+      else if (circled >= 0 && round === this.cue.round) this.holding.push(...r.heaps.filter((heap) => heap !== circled));
+    });
     this.cast.birches.hold(this.holding);
+  }
+
+  /** The heap of the round being played that the player's circles are wound over, or −1. */
+  private circledHeap(): number {
+    const round = this.cue.round, { charge, updraftAt: u } = this.cast.input;
+    if (round < 0 || this.rounds > round || charge <= tuning.birches.squirrel.circledBy) return -1;
+    return ROUNDS[round].heaps.find((heap) => {
+      const p = BIRCH_PILES[heap];
+      return Math.hypot(p.x - u.x, p.z - u.z) < p.r + 1;
+    }) ?? -1;
   }
 
   /** The round is over: the cygnet goes back to its own play and she gets up. */
