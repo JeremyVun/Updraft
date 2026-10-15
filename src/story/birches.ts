@@ -85,6 +85,7 @@ export class BirchesChapter implements Chapter {
   readonly squirrel: BirchesSquirrel;
   /** The round the walk is at, while it is at one. */
   private round = -1;
+  private freedAt = -1;
   private lens = 1;
   private lensRate = 0;
   private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
@@ -173,11 +174,22 @@ export class BirchesChapter implements Chapter {
     c.round = this.beat === 'toRound' || this.beat === 'round' ? this.round : -1;
     c.standing = (this.beat === 'toRound' || this.beat === 'round') && !this.cast.child.busy;
     c.seeking = this.beat === 'round';
-    c.tangles = scarf.completed;
+    /** A tangle counts as soon as its loop starts to lift free, so the squirrel is away while it comes off. */
+    const lifting = scarf.active >= 0 && scarf.snags[scarf.active].release > 0 && !scarf.snags[scarf.active].freed;
+    c.tangles = scarf.completed + (lifting ? 1 : 0);
     c.swingOver = ((this.swings > 0 || this.swingOffered) && !swinging) || scarf.active === 1 || scarf.completed >= 2;
     c.gathered = scarf.finished;
     c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
     return c;
+  }
+
+  /**
+   * Freed, she stays and watches it run off to hide in the next round's heaps, as long as it takes: walking on, she
+   * would come over the rise in sight of them while it chose one.
+   */
+  private watchingItHide(time: number): boolean {
+    const next = this.nextStop();
+    return !!next && 'round' in next && !this.squirrel.ready(next.round) && time - this.freedAt < tuning.birches.squirrel.hideWait;
   }
 
   /** The next stop the walk owes, in route order: a round of the squirrel's or a tangle of the scarf's. */
@@ -272,7 +284,9 @@ export class BirchesChapter implements Chapter {
       case 'scarf':
         c.lookAt = scarf.focus;
         if (scarf.active >= 0 && scarf.snags[scarf.active].freed) {
+          if (this.freedAt < 0) this.freedAt = time;
           if (scarf.completed === SCARF_SNAGS.length) this.to('unravelling');
+          else if (this.watchingItHide(time)) c.lookAt = this.cast.squirrel.eye(this.tmp2);
           else this.resumeWalk();
         }
         break;
@@ -495,6 +509,7 @@ export class BirchesChapter implements Chapter {
 
   private resumeWalk(): void {
     this.round = -1;
+    this.freedAt = -1;
     this.cast.birches.scarf.active = -1;
     this.to('walk');
     this.play = this.cast.plane.held ? 'hold' : 'watch';
