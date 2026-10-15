@@ -168,6 +168,10 @@ The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red D
 later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s time constant instead of 0.65 s
 (`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds.
 
+> It's jumping animation also needs a look at, when it's "jumping" it looks like it's slow motion gliding through the
+> air. It doesn't have the expected jump velocity if that makes sense, and so it's animation looks really strange as a
+> result.
+
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 
 What follows from it (Claude's calls, 2026-10-16):
