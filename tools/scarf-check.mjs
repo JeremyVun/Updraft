@@ -1,6 +1,6 @@
 // Real pointer strokes, idle gates, checkpoint restoration, and the one-time swing.
 // Run against Vite: BASE=http://127.0.0.1:5232/ node tools/scarf-check.mjs
-// NATURAL=1 follows the walk; CAPTURE=1 captures the four tangles; W/H and OUT control screenshots.
+// NATURAL=1 follows the walk (blowing the squirrel's heap at each round); CAPTURE=1 captures the four tangles; W/H and OUT control screenshots.
 // PHYSICS=1 also checks the first length's fall, settling, stretch, terrain contact and frame-rate independence.
 // FROM/TO restrict tangle indices; TOUCH=1 exercises the wrapped trunk with real touch events (use W=390 H=844).
 import { chromium } from 'playwright-core';
@@ -21,6 +21,7 @@ const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
 const prefix = process.env.OUT ?? '/tmp/updraft-scarf';
+const innerWidthOf = page => page.viewportSize().width;
 try {
   const page = await browser.newPage({ viewport: { width: Number(process.env.W ?? 1600), height: Number(process.env.H ?? 900) }, hasTouch: !!process.env.TOUCH });
   const touch = process.env.TOUCH ? await page.context().newCDPSession(page) : null;
@@ -56,7 +57,22 @@ try {
   });
   for (let index = Number(process.env.FROM ?? 0); index < Number(process.env.TO ?? 4); index++) {
     if (process.env.NATURAL) {
-      await page.waitForFunction(index => __game.story.current.beat === 'scarf' && __game.birches.scarf.active === index, index, { timeout: 120000 });
+      // The squirrel's rounds stand between the tangles now: blow its heap whenever she kneels at one.
+      const began = Date.now();
+      while (!(await page.evaluate(index => __game.story.current.beat === 'scarf' && __game.birches.scarf.active === index, index))) {
+        assert.ok(Date.now() - began < 180000, `Tangle ${index + 1} never came`);
+        const hide = await page.evaluate(() => {
+          const c = __game.story.current, h = c.beat === 'round' && c.squirrel.hideout;
+          if (!h) return null;
+          const p = h.at.clone(); p.y += 0.3; p.project(__game.rig.camera);
+          return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 };
+        });
+        if (!hide) { await page.waitForTimeout(400); continue; }
+        await page.evaluate(() => { __game.input.present = false; });
+        await page.mouse.move(hide.x - innerWidthOf(page) * 0.15, hide.y);
+        for (let j = 1; j <= 24; j++) { await page.mouse.move(hide.x + innerWidthOf(page) * (j / 24 * 0.3 - 0.15), hide.y); await page.waitForTimeout(16); }
+        await page.waitForTimeout(1500);
+      }
     } else await page.evaluate(index => {
       const g = __game, c = g.story.current, scarf = g.birches.scarf;
       scarf.restore(index);
