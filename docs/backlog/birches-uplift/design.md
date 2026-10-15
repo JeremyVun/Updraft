@@ -190,6 +190,18 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 > for the scarf challenge after the swing, an interesting idea would be to have the squirrel squeak and act alarmed in a
 > cute way after the scarf is blown up the tree trunk, over it, and then uncovering it again as it rises to the side.
 
+> Then for the leaf piles after that scarf challenge wrapped around the dead tree trunk after the swing, where there are
+> three leaf piles, i dont understand why the squirrel only hides in the third one. Why not have it jump from one to the
+> other or something, otherwise two of the leaf piles are wasted (unless you think this wouldn't be fun for the
+> player). Or maybe, I was thinking of seeing if we could do one of those "which cup is the squirrel under" type of
+> shuffle games as well. what do you think?
+
+Claude's proposal (2026-10-16), queued for after the current rounds work: round 3 becomes the shuffle. No counting
+before it. The squirrel dives into a heap in plain view, then leaps heap to heap three or four times, quickening and
+sometimes doubling back. The last one or two moves are under the leaves, a rustling bulge crossing the floor. Then it
+settles and stays put. The heaps hold until the shuffle ends. Blowing an empty heap makes the real one answer with a
+tail tell and a chitter. Rounds 2 and 3 vary which heap it ends in.
+
 Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
 its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
 sample.
