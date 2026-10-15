@@ -128,7 +128,7 @@ export const ROUND_VIEWS_TALL = [
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
-  { at: birchesGap(2, 14.8, -12.3), from: { x: 0.819, z: 0.574 } },
+  { at: birchesGap(2, 13.8, -11.8), from: { x: 0.819, z: 0.574 } },
 ] as const;
 const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some(v => {
   const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(24, ax * v.from.x + az * v.from.z));

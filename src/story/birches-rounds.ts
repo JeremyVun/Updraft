@@ -188,7 +188,7 @@ export const ROUNDS: readonly Round[] = [
     lastSeen: lifted(SHUFFLE_FROM),
     shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
     cygnet: [lifted(birchesGap(2, 9, -9.6)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: { ...view(2, 21, 7), zoom: 1.2 }, portrait: tall(2, 25, 12, 0, 1.3) },
+    frames: { landscape: { ...view(2, 21, 7), zoom: 1.15 }, portrait: tall(2, 25, 12, 0, 1.3) },
   },
 ];
 

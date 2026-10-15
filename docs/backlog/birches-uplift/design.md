@@ -633,7 +633,7 @@ the ground (portrait 0–1.3 m), and portrait stands further back on screens nar
 | | portrait | band (11.5, −1075), world (−124.5, −1091) | 75° (0.966, 0.259) | 18, 5 | 1.25 |
 | 2 | landscape | gap B 12.5 m in, x 5; world (−131.5, −1146.5) | 15° (0.259, 0.966) | 18, 6.5 | 1 |
 | | portrait | gap B 13 m in, x 3; world (−133, −1146.5) | 65° (0.906, 0.423) | 20, 7.5 | 1.3 |
-| 3 | landscape | gap C 14.8 m in, x −12.3; world (−148.3, −1216.8) | 55° (0.819, 0.574) | 21, 7 | 1.2 |
+| 3 | landscape | gap C 13.8 m in, x −11.8; world (−147.8, −1215.8) | 55° (0.819, 0.574) | 21, 7 | 1.15 |
 | | portrait | gap C 18 m in, x −14; world (−150, −1220) | 8° (0.139, 0.990) | 25, 12 | 1.3 |
 
 Every portrait lens is eased by a spring in the chapter (`lensEase`), so it comes in and out like a dolly rather than
@@ -881,7 +881,7 @@ its gesture), landscape: 4:20 (259.9 s), from stepping ashore to the push-off.
 
 **Not right yet.**
 - Portrait round 3 is small: from the south the three heaps stack up the frame, the squirrel sitting up 33, 22 and 16
-  px by heap (landscape 51, 40, 33). Its call marks carry it on each bound, but the far heap's hump is faint.
+  px by heap (landscape 46, 35, 31). Its call marks carry it on each bound, but the far heap's hump is faint.
 - Portrait tangle 3's squirrel is still about 11 px on the birch behind the loop.
 - The shuffle's middle heap is its most common end (half the time).
 
