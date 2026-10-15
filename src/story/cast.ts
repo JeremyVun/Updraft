@@ -11,6 +11,7 @@ import type { SeaScorePhase } from '../audio/sea-score';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
+import type { MeadowMusicPart } from '../audio/meadow-music';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import type { StairsAir } from '../audio/stairs-air';
 import type { LinesScorePhase } from '../audio/lines-score';
@@ -162,6 +163,8 @@ export interface Chapter {
   readonly sleepingScore?: SleepingScorePhase;
   /** The background after Meadow's piano follows the flock, paddle and return to the child. */
   readonly meadowScore?: MeadowScorePhase;
+  /** Where the meadow's recordings are, from the walk to the stool to the feather. */
+  readonly meadowMusic?: MeadowMusicPart;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */
   readonly birchesScore?: BirchesScorePhase;
   /** The air round the travellers in the stairs in the clouds: in the white, out on top, the fog on the way down. */

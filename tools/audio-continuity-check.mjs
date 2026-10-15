@@ -79,7 +79,6 @@ try {
     // A held gain needs an explicit release anchor too: Sleeping formerly lost 83% at once.
     for (const [music, key, first, next] of [
       ['wood','sleepingScore','shelter','climb'],
-      ['meadow','meadowScore','walk','flock'],
       ['boats','boatsScore',null,null],
     ]) {
       const { ctx, sound } = offlineSound(11);

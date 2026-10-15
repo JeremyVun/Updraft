@@ -229,7 +229,7 @@ export class MeadowEchoes {
 
   release(time: number): void {
     this.seeds.release();
-    this.soundQueue.push({ midi: this.seeds.completed === 0 ? 62 : 69, at: time + .5, point: this.source });
+    this.soundQueue.push({ midi: this.seeds.completed === 0 ? 65 : 72, at: time + .5, point: this.source });
   }
 
   update(dt: number, time: number, camera: THREE.PerspectiveCamera, input: PointerInput,
@@ -247,7 +247,7 @@ export class MeadowEchoes {
     if (this.seeds.active && this.enabled) this.brush(dt, camera, input);
     if (this.seeds.update(dt)) {
       this.lastReceived = time;
-      const notes = this.seeds.completed === 1 ? [64, 66, 69] : [71, 69, 66, 62];
+      const notes = this.seeds.completed === 1 ? [68, 70, 72] : [75, 72, 68, 65];
       notes.forEach((midi, i) => this.soundQueue.push({ midi, at: time + .35 + i * .55, point: this.patches[this.seeds.completed - 1] }));
     }
     this.material.uniforms.uBloom.value.fromArray(this.seeds.blooms);
@@ -298,7 +298,7 @@ export class MeadowEchoes {
         this.seeds.sweep(i, movement * Math.sqrt(hit) * t.strokeGain);
         this.ringing[i] = Math.min(1, this.ringing[i] + movement * hit * 12);
         if (this.now > this.nextNote[i]) {
-          this.soundQueue.push({ midi: [62, 66, 69][i], at: this.now, point: this.sectors[i] });
+          this.soundQueue.push({ midi: [65, 68, 72][i], at: this.now, point: this.sectors[i] });
           this.nextNote[i] = this.now + 1.1; this.heard.copy(this.sectors[i]); this.heardAt = this.now;
         }
       }

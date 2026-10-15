@@ -32,10 +32,14 @@ try {
   await page.waitForFunction(()=>window.__ready&&window.__game?.piano,null,{timeout:90000});
   if(process.env.REVIEW==='1')stopReview=reviewCapture(page,prefix);
   await page.mouse.click(10,10);
+  await page.evaluate(()=>__game.sound.start());
   const state=()=>page.evaluate(()=>{
     const g=__game,p=g.piano,s=g.story.current.piano;
-    const path=[0,1].map(t=>{const v=p.guideAlong(t,p.keys.clone()).project(g.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2]});
-    return {time:s.now,beat:s.at,phrase:s.phrase,part:s.part,matched:p.matched,expect:p.expect,progress:p.gesture.progress,
+    // The outline in the order it is traced: it rises and falls with the answer's melody.
+    const forward=(p.expect?.direction??1)>0;
+    const path=Array.from({length:25},(_,i)=>{const v=p.guideAlong(forward?i/24:1-i/24,p.keys.clone()).project(g.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2]});
+    return {time:s.now,beat:s.at,phrase:s.phrase,part:s.part,matched:p.matched,expect:p.expect&&{index:p.expect.index,direction:p.expect.direction},progress:p.gesture.progress,
+      music:g.meadowMusic?.state,duet:g.meadowMusic?.log.slice(-12),
       path,wave:g.life.regions.wave.toArray(),waiting:g.life.regions.waiting.toArray(),roseFrom:s.roseFrom,
       checkpoint:g.story.current.checkpoint,lineVisible:p.line.batch.mesh.visible,
       bough:g.windBough?.log.slice(),
@@ -59,10 +63,7 @@ try {
   assert.equal((await state()).expect,null,'piano input waits for the wind call');
   const early=(await state()).path;
   await page.mouse.move(...early[0]);
-  for(let i=1;i<=20;i++){
-    await page.mouse.move(early[0][0]+(early[1][0]-early[0][0])*i/20,early[0][1]+(early[1][1]-early[0][1])*i/20);
-    await page.waitForTimeout(15);
-  }
+  for(const point of early.slice(1)){await page.mouse.move(...point);await page.waitForTimeout(12);}
   assert.equal((await state()).matched,0,'swiping during the call cannot answer it');
   await page.waitForFunction(()=>window.__game?.piano.expect!==null&&window.__game?.story.current.piano.at==='seated',null,{timeout:120000});
   await waitSeconds(2);
@@ -77,14 +78,15 @@ try {
   for(let n=0;n<4;n++){
     await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:45000});
     const before=await state();
-    const forward=before.expect.at(-1)>before.expect[0];
-    const a=before.path[forward?0:1],b=before.path[forward?1:0];
-    for(const [x,y] of [a,b])assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
+    const a=before.path[0],trace=before.path;
+    for(const [x,y] of trace)assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
     if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:a[0],y:a[1]}]});
     else await page.mouse.move(...a);
     await page.waitForTimeout(160);
-    for(let i=1;i<=40;i++){
-      const x=a[0]+(b[0]-a[0])*i/40,y=a[1]+(b[1]-a[1])*i/40;
+    // Along the drawn outline, at a moderate pace (about 2.4 s), so the recorded notes come one by one.
+    for(let i=1;i<=80;i++){
+      const f=i/80*(trace.length-1),k=Math.min(trace.length-2,Math.floor(f)),u=f-k;
+      const x=trace[k][0]+(trace[k+1][0]-trace[k][0])*u,y=trace[k][1]+(trace[k+1][1]-trace[k][1])*u;
       if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
       else await page.mouse.move(x,y);
       await page.waitForTimeout(30);
@@ -109,6 +111,13 @@ try {
     }
   }
   await page.waitForFunction(()=>__game.story.current.piano.roseFrom>0,null,{timeout:90000});
+  {
+    const s=await state(),finale=s.bough.at(-1);
+    const due=finale.at+(await page.evaluate(()=>__game.tuning.windBough.inhale))+(await page.evaluate(async()=>(await import('/src/audio/meadow-duet.ts')).MEADOW_FINALE.greenAt));
+    assert(finale.finale&&Math.abs(s.roseFrom-due)<0.05,`the greening starts on the finale's arrival (${s.roseFrom} vs ${due})`);
+    if(s.music)assert(s.duet.some(d=>d.what==='finale'),'the flute finale sounded');
+    report.greening={roseFrom:s.roseFrom,due,finaleAt:finale.at};
+  }
   assert((await state()).waiting[2]>0,'far ground stays grey at the start of the final wave');
   await shot('wave-start');await waitSeconds(8);await shot('wave-wide');
   for(const p of (await state()).subjects)assert(Math.abs(p[0])<0.94&&Math.abs(p[1])<0.94&&p[2]<1,'child and piano remain in the finale frame');

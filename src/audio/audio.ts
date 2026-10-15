@@ -18,6 +18,7 @@ import type { BirchesScorePhase } from './birches-score';
 import type { StairsAir } from './stairs-air';
 import { flightKnock, OUTSIDE_STAIRS, StairsSound, type StairsMix } from './stairs-sound';
 import type { LinesScorePhase } from './lines-score';
+import { meadowMusic, type MeadowFile, type MeadowMusicPart } from './meadow-music';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
 import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
@@ -113,6 +114,8 @@ export interface SoundState {
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
+  /** Where the meadow's recordings are, from the walk to the stool to the feather (`meadow-music.ts`). */
+  meadowMusic?: MeadowMusicPart;
   birchesScore?: BirchesScorePhase;
   /** On the Birches island or the approach to it its recording loops; once they have sailed, its pass plays out. */
   birchesLoop?: boolean;
@@ -153,8 +156,11 @@ const MOODS: Record<Mood, MoodMusic> = {
   lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
   /** Its approved plucked score replaces the shared pad; gestures retain the same bright voice. */
   boats: { chords: BOATS_CHORDS, seconds: 4.5, cutoff: 1500, level: 0, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
-  /** The last warm afternoon of the year: the fullest the music gets before the dark. */
-  meadow: { chords: [[50, 57, 64, 66], [47, 54, 57, 62], [43, 50, 59, 66], [45, 52, 59, 64]], seconds: 8.5, cutoff: 1600, level: 1, scale: [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86, 88] },
+  /**
+   * The last warm afternoon of the year, in the F minor of its recordings, which replace the shared pad. Its
+   * pentatonic scale (F, A♭, B♭, C, E♭) is what the wind finds on the piano.
+   */
+  meadow: { chords: [[53, 60, 65, 68], [49, 56, 63, 68], [44, 51, 60, 63], [46, 53, 60, 65]], seconds: 8.5, cutoff: 1600, level: 0, scale: [63, 65, 68, 70, 72, 75, 77, 80, 82, 84, 87, 89] },
   /** Slower than the meadow and a step lower each time round: warm, falling, and it never comes back up. */
   birches: { chords: [[50, 57, 62, 66], [48, 55, 62, 67], [47, 54, 59, 66], [45, 52, 59, 64]], seconds: 11, cutoff: 1250, level: 0.95, scale: [62, 64, 66, 69, 71, 72, 74, 76, 78, 81, 83] },
   /** Suspended, hollow, never landing on a third: homes the water took. */
@@ -389,6 +395,12 @@ export class Soundscape {
     return this.preparedScore.ready;
   }
 
+  /** The meadow's first recordings for a start or restore there; the duet's voices need sound only, not music. */
+  prepareMeadow(files: MeadowFile[]): Promise<void> {
+    if (!this.ctx) return Promise.resolve();
+    return meadowMusic.prepareFor(this.musicMuted ? files.filter(file => file === 'duet') : files);
+  }
+
   cancelStartingMusic(): void {
     this.preparedScore?.stop(0); this.preparedScore = null;
     this.stillPhrases?.stop(0); this.stillPhrases = null;
@@ -545,6 +557,7 @@ export class Soundscape {
       this.padVoices.push({ osc, gain });
     }
     this.graph = { ctx, bus: this.master, reverb: this.reverb };
+    meadowMusic.attach(ctx, this.master, this.backgroundDry);
     this.syncPlayback();
   }
 
@@ -1167,13 +1180,10 @@ export class Soundscape {
     } else if (this.sleepingScore) {
       this.sleepingScore.stop(s.silence ? 0.12 : 1.8); this.sleepingScore = null;
     }
-    if (bg.music === 'meadow' && bg.meadowScore && !s.silence && !backgroundPaused) {
-      this.meadowScore ??= new MeadowScore(ctx, this.backgroundBus);
-      // The audition already includes the quieter flock/pond dynamics; don't apply that hush twice.
-      this.meadowScore.update(bg.meadowScore, tuning.audio.meadowScoreLevel * (1 - piano), arrival.handoffAt);
-    } else if (this.meadowScore) {
-      this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
-    }
+    // The meadow plays its recordings in place of its pad and synthesised score; a handoff away fades them.
+    meadowMusic.update(bg.music === 'meadow' && !s.silence && !backgroundPaused && arrival.stage !== 'fade'
+      ? s.meadowMusic ?? (bg.meadowScore === 'return' ? 'onward' : 'walk') : undefined,
+      1 - piano, this.musicMuted, (this.backgroundGate?.gain.value ?? 1) > .98, s.silence ? .12 : arrival.fadeOut ?? 1.8);
     // Birches loops on its island and the approach to it. Once they have sailed, the pass under way plays out to the end
     // of the file; up in the white it stops for good over `birchesCloudFade`, and silence holds until `clouds.ogg`.
     if (bg.music === 'birches' && bg.birchesScore && !this.birchesGone && !s.silence && !backgroundPaused

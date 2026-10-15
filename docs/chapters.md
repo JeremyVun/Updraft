@@ -293,16 +293,18 @@ seen through a shallow saddle. The rest stays grey under the waiting region (`li
 `uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
 **The piano is the key; music brings colour.** The plane leads the child to the stool; she plays one note.
-The hollow wooden bough beside it answers on the breeze; the child turns to listen. Its call finishes before an
-outline appears above the piano for the player's reply: rising, falling, then rising and falling together. The outline, with a
-ring at its starting end, is both the invitation and the input target on screen; tracing it plays the notes, her
-hands follow the progress, partial progress is kept, and there is no rhythm or pitch to match. An idle player
+The hollow wooden bough beside it answers on the breeze, a recorded flute phrase; the child turns to listen. Its call
+finishes before an outline appears above the piano for the player's reply, rising and falling with the melody of her
+recorded piano answer. The outline, with a ring at its starting end, is both the invitation and the input target on
+screen; tracing it plays the answer note by note as it crosses each onset, her hands and the dipping keys follow the
+melody, partial progress is kept, and there is no rhythm or pitch to match. An idle player
 hears the call again if no reply has begun; partial replies remain uninterrupted and nothing times out. Each answered sweep sends music out from the
 piano: note traces curl into the field planting colour, and a broad front with loose eddies wakes the ground to
 `tuning.piano.responseReach` (45, 85, 125). The fourth answer leads to a musical pause and the bough's longer
-finale, whose cue sends colour across the whole island. `audio/meadow-duet.ts` holds the provisional phrase
-notes, durations, reply patterns and final greening cue; Jeremy's supplied recordings will replace them in a
-later pass. The front's shape is fixed and it
+finale, whose arpeggio's arrival sends colour across the whole island; it is the reward, with no completion phrase.
+The cuts are one table, `audio/meadow-cuts.ts`; `node tools/meadow-music-cuts.mjs` makes the files and measures
+onsets, melody, outlines and the greening cue into `audio/meadow-cuts-measured.ts`, which `audio/meadow-duet.ts`
+turns into calls, answers and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera steps back and up over the field
 and stays there (`restBack`, `restUp`). On the lullaby the cygnet climbs out onto the keys and walks them, the
 camera rises and widens with the wave, and the grey hold is released only once the front covers it. Competing wind

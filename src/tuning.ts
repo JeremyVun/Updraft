@@ -1005,13 +1005,27 @@ export const tuning = {
   },
   windBough: {
     offset: [3.5, -1.2], inhale: 1.2, answerAfter: .65, finalRest: 1.4,
-    voice: 1.65, ribbonAlpha: .3, ribbonWidth: .045,
+    ribbonAlpha: .3, ribbonWidth: .045,
+  },
+  /** The meadow's recordings (`audio/meadow-music.ts`); cuts and measured gains live in `audio/meadow-cuts.ts`. */
+  meadowMusic: {
+    /** Trims (dB) on the gains that level each part to the room reference. */
+    walkDb: 0, callDb: 0, answerDb: 0, finaleDb: 0, afterDb: 0, endingDb: 0,
+    /**
+     * A traced note eases every note still ringing before it down by `answerEaseDb` over about `answerEase` seconds;
+     * a stroke fast enough to cross several onsets at once plays them `answerGap` apart.
+     */
+    answerEaseDb: -6, answerEase: 0.4, answerGap: 0.07,
+    /** The warm bed fades over this long for the listening rest before the family's call. */
+    listenFade: 1.8,
   },
   piano: {
     place: [-18, -678],
     initialRadius: 15, initialSoft: 4,
     /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
     guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
+    /** Half the height of the outline the answer's melody draws over the keys, in world units. */
+    guideRise: 0.45,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */

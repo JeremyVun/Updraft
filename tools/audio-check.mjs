@@ -178,13 +178,16 @@ try {
     stop.onComplete = () => completed++;
     stop.onWake = stage => { if (stage === 4) woke++; };
     stop.finish({ carry: { unstow() {} } }, true);
-    const lastPianoNote = Math.max(...piano.queue.filter(n => n.active).map(n => n.at));
-    stop.wakeIsland(10 + tuning.piano.finaleWaveAfter);
+    // The bough's finale wakes the island on its arpeggio's arrival and completes after the flute has finished.
+    stop.wakeIsland(stop.wakeAt - .01);
+    check(woke === 0, 'the island waits for the finale cue');
+    stop.wakeIsland(stop.wakeAt);
     check(woke === 1 && completed === 0, 'meadow begins waking without a competing completion phrase');
-    stop.wakeIsland(lastPianoNote);
-    check(completed === 0, 'completion waits for every lullaby note');
-    stop.wakeIsland(stop.completeAt); stop.wakeIsland(lastPianoNote + 8);
-    check(completed === 1, 'completion follows the lullaby once');
+    const completeAt = stop.completeAt;
+    stop.wakeIsland(completeAt - .01);
+    check(completed === 0, 'completion waits for the whole finale');
+    stop.wakeIsland(completeAt); stop.wakeIsland(completeAt + 8);
+    check(completed === 1, 'completion follows the finale once');
     stop.completeAt = 30; stop.restoreDone(); stop.wakeIsland(40);
     check(completed === 1, 'piano checkpoint restore cancels a pending completion');
     const phraseNotes = [];

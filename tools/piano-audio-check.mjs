@@ -10,21 +10,25 @@ try {
     const { PianoStop } = await import('/src/story/piano.ts');
     const { MeadowChapter } = await import('/src/story/meadow.ts');
     const { piano } = await productionModule('/src/world/piano.ts');
+    const { windBough } = await productionModule('/src/world/wind-bough.ts');
     const { tuning } = await productionModule('/src/tuning.ts');
     const results = [];
     for (const fps of [10, 30, 60, 144]) for (const walkFor of [2, 12]) {
       const stop = new PianoStop(), notes = [], trace = [];
-      const child = { position: piano.stand.clone(), yaw: 0, moving: true, lookAt: null,
-        faceToward() {}, ride(at, yaw) { this.position.copy(at); this.yaw = yaw; } };
+      const child = { position: piano.stand.clone(), yaw: 0, moving: true, lookAt: null, lean: 0,
+        faceToward() {}, reachFor() {}, ride(at, yaw) { this.position.copy(at); this.yaw = yaw; } };
       const cast = { child };
       // Hand/companion geometry does not decide the audio handover.
       stop.playHands = stop.onTheKeys = () => {};
       stop.to('walking');
       piano.expect = null; piano.matched = 0;
       piano.press = () => notes.push({ kind: 'first key', time: stop.now, mix: stop.hush });
-      piano.phrase = (steps, spacing) => {
+      // The bough's first call is the demonstration now: the piano waits for her answer.
+      windBough.reset();
+      const call = windBough.play.bind(windBough);
+      windBough.play = (phrase, time, finale) => {
         notes.push({ kind: 'demonstration', time: stop.now, mix: stop.hush });
-        return stop.now + steps.length * spacing;
+        return call(phrase, time, finale);
       };
       for (let i = 1; i <= (walkFor + 8) * fps; i++) {
         const time = i / fps;

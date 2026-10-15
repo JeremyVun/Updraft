@@ -6,6 +6,7 @@ import { StillGestures } from './audio/still-gestures';
 import { openingTitleOpacity } from './opening-title';
 import { STILL_CENTRE, STILL_SHIFT } from './world/geography';
 import { musicForStart, nextMusicForChapter, prefetchMusic } from './audio/music-loading';
+import { meadowFilesAhead, meadowFilesAt, meadowMusic } from './audio/meadow-music';
 import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
 import { BirchesFoley } from './audio/birches-foley';
@@ -548,6 +549,7 @@ let playing = false;
 let nextMusic: ReturnType<typeof nextMusicForChapter> = null;
 function syncMusicLoading(): void {
   if (!startScreen.started) { prefetchStartingMusic(); return; }
+  meadowMusic.prefetch(playing && controls.soundOn ? meadowFilesAhead(story.name, story.current.meadowMusic, controls.musicOn) : []);
   if (!controls.soundOn || !controls.musicOn) {
     prefetchMusic(null);
     nextMusic = null;
@@ -1047,6 +1049,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;
+  soundState.meadowMusic = story.current.meadowMusic;
   soundState.birchesScore = story.current.birchesScore;
   soundState.birchesLoop = story.name === 'toBirches' || story.name === 'birches';
   soundState.stairsAir = story.current.stairsAir;
@@ -1390,7 +1393,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, meadowMusic, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);
@@ -1511,7 +1514,8 @@ async function boot(): Promise<void> {
 async function play(resumed: boolean): Promise<void> {
   const track = tuning.audio.stillPhraseExperiment && story.current.stillDepartureSoon ? 'stillDeparture'
     : musicForStart({ chapter: story.name, point: story.current.checkpoint ?? undefined });
-  const music = controls.soundOn && controls.musicOn && track ? sound.prepareMusic(track) : Promise.resolve();
+  const meadowStart = story.name === 'meadow' && controls.soundOn ? sound.prepareMeadow(meadowFilesAt(story.current.meadowMusic)) : null;
+  const music = Promise.all([controls.soundOn && controls.musicOn && track ? sound.prepareMusic(track) : undefined, meadowStart]);
   const musicStatus = window.setTimeout(() => startScreen.musicLoading(true), 150);
   const musicReady = music.finally(() => { clearTimeout(musicStatus); startScreen.musicLoading(false); });
   try {

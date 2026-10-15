@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { AudioOut } from '../creatures/voices';
-import { meadowBreath } from '../audio/meadow-breath';
 import type { WindPhrase } from '../audio/meadow-duet';
+import { meadowMusic } from '../audio/meadow-music';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import type { WindField } from '../wind/field';
 import { tuning } from '../tuning';
@@ -84,10 +84,10 @@ export class WindBough {
   private readonly curls: Ribbon[] = Array.from({ length: 3 }, () => ({
     points: Array.from({ length: 40 }, () => new THREE.Vector3()), alpha: 0, width: .04,
   }));
-  private readonly projected = new THREE.Vector3();
   private phrase: WindPhrase | null = null;
   private started = 0;
-  private nextNote = 0;
+  /** Its recording has been started, or passed by. */
+  private sounded = false;
   private finale = false;
   private breath = 0;
 
@@ -116,7 +116,7 @@ export class WindBough {
   }
 
   play(phrase: WindPhrase, time: number, finale = false): number {
-    this.phrase = phrase; this.started = time; this.nextNote = 0; this.finale = finale;
+    this.phrase = phrase; this.started = time; this.sounded = false; this.finale = finale;
     this.log.push({at:time,finale,duration:phrase.duration});
     if (this.log.length > 24) this.log.shift();
     return time + tuning.windBough.inhale + phrase.duration;
@@ -138,12 +138,12 @@ export class WindBough {
     this.breath += (envelope - this.breath) * (1 - Math.exp(-dt * 4));
     this.reed.rotation.x = Math.sin(time * 32) * this.breath * .12;
     this.reed.rotation.z = Math.sin(time * 21) * this.breath * .025;
-    if (phrase) while (this.nextNote < phrase.notes.length && elapsed >= t.inhale + phrase.notes[this.nextNote][0]) {
-      const [at, midi, strength] = phrase.notes[this.nextNote++];
-      if (out && elapsed - t.inhale - at < .2) {
-        this.projected.copy(this.mouth).project(camera);
-        meadowBreath(out, midi, this.projected.x * .6, strength * t.voice);
-      }
+    // The flute's recording begins on the breath's own clock; a stalled frame joins it where it would have been.
+    if (phrase && !this.sounded && elapsed >= t.inhale + phrase.startAt) {
+      this.sounded = true;
+      const late = elapsed - t.inhale - phrase.startAt;
+      if (out) meadowMusic.phrase(phrase.clip, late, this.finale ? 'finale' : 'call',
+        this.finale ? tuning.meadowMusic.finaleDb : tuning.meadowMusic.callDb);
     }
     if (this.breath > .01) {
       wind.addSplat({source:'wind-bough',ax:this.mouth.x-5,az:this.mouth.z+4,bx:this.mouth.x,bz:this.mouth.z,

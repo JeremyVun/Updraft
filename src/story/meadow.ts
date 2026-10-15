@@ -10,7 +10,7 @@ import { windBough } from '../world/wind-bough';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 import { PianoStop } from './piano';
 import { harebells } from '../world/harebells';
 import { tuning } from '../tuning';
@@ -18,6 +18,7 @@ import { MeadowSong } from './meadow-song';
 import { meadowEchoes } from '../world/meadow-echoes';
 import { musicFront } from '../world/music-growth';
 import type { MeadowScorePhase } from '../audio/meadow-score';
+import type { MeadowMusicPart } from '../audio/meadow-music';
 
 type Beat = 'ashore' | 'beach' | 'climb' | 'brow' | 'walk' | 'crest' | 'down' | 'pond' | 'gather' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
@@ -162,6 +163,9 @@ export class MeadowChapter implements Chapter {
   private readonly songTurf = new THREE.Vector3();
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
+  /** The duet has been heard to its end; a checkpoint past the feather plays the ending afresh. */
+  private duetDone = false;
+  private endingDue = false;
   readonly song = new MeadowSong();
   private nextCall = 0;
   private nextBugle = 0;
@@ -201,7 +205,8 @@ export class MeadowChapter implements Chapter {
     life.regions.wave.set(PLACE.x, PLACE.z, PATCH.radius, PATCH.soft);
     this.waveTo = PATCH.radius;
     this.piano.onWake = (stage, answered) => this.wake(stage, answered);
-    this.piano.onComplete = completeObjective;
+    // The flute's finale is the reward: no shared completion phrase over it, in another key.
+    this.piano.onComplete = () => { this.duetDone = true; };
     /**
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
@@ -260,7 +265,7 @@ export class MeadowChapter implements Chapter {
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
     this.piano.restoreDone();
     this.song.restore(point === 'pond' ? 2 : point.startsWith('echoes-') ? Number(point.slice(7)) : 0, point === 'pond');
-    this.crestDone = point === 'pond';
+    this.crestDone = this.endingDue = point === 'pond';
     this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
     if (this.crestDone) this.cast.flock.clear();
   }
@@ -281,6 +286,19 @@ export class MeadowChapter implements Chapter {
     if (this.beat === 'walk') return 'walk';
     // Carry the last phrase through boarding and the crossing, until Birches' arrival handoff.
     return 'return';
+  }
+  /**
+   * The meadow's recordings: the walk until she sits, the duet, the warm bed from its end through the flowers and
+   * seeds, fading for the listening rest, silence for the family's departure, then the ending from the feather.
+   */
+  get meadowMusic(): MeadowMusicPart {
+    const at = this.piano.at;
+    if (at === 'ahead' || at === 'walking' || at === 'looking') return 'walk';
+    if (at !== 'done' && !this.duetDone) return 'duet';
+    if (this.featherFrom >= 0 || this.endingDue) return 'ending';
+    if (this.crestDone || this.beat === 'crest' || this.beat === 'down' || this.beat === 'pond' || this.song.beat === 'done') return 'quiet';
+    if (this.song.beat === 'listen' || this.song.beat === 'gather') return 'listen';
+    return 'after';
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged || this.song.active; }

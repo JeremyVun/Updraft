@@ -3,7 +3,7 @@ import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { piano } from '../world/piano';
 import { windBough } from '../world/wind-bough';
-import { MEADOW_CALLS, MEADOW_FINALE } from '../audio/meadow-duet';
+import { MEADOW_CALLS, MEADOW_FINALE, type MeadowAnswer } from '../audio/meadow-duet';
 import type { Cast } from './cast';
 
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
@@ -40,7 +40,7 @@ export class PianoStop {
   /** Which phrase of the lullaby they are on, which part of it the player has got to, and when the piano speaks next. */
   private phrase = 0;
   private callEnds = 0;
-  private pendingReply: number[] | null = null;
+  private pendingReply: MeadowAnswer | null = null;
   private sayAt = 0;
   private heardTo = 0;
   private finishedAt = 0;
@@ -227,7 +227,6 @@ export class PianoStop {
   /** Demonstrate the next sweep without spending its colour or resetting a partial answer. */
   private duet(time: number, cast: Cast): void {
     if (this.finishedAt > 0 || this.noteAt > 0 || this.pressAt > 0) return;
-    const base = Math.floor(piano.steps * 0.3);
     if (this.sayAt === 0) this.sayAt = time + 1.4;
     if (piano.matched > this.heardTo) {
       this.heardTo = piano.matched;
@@ -251,7 +250,7 @@ export class PianoStop {
     } else if (time > this.sayAt && piano.gesture.progress === 0) {
       const phrase = MEADOW_CALLS[this.phrase];
       piano.expect = null;
-      this.pendingReply = phrase.reply.map(s => base + s);
+      this.pendingReply = phrase.reply;
       this.callEnds = windBough.play(phrase.call, time);
     }
   }

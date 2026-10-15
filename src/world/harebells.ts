@@ -9,10 +9,10 @@ import { WAY } from './fields';
 import { heightAt } from './island';
 
 /**
- * The bells, low to high along the walk: the meadow's own scale, so a sweep either way is a run of the lullaby's
- * notes. When one sweep rings all of them in order the row answers by itself, back the other way.
+ * The bells, low to high along the walk: the meadow's own F minor pentatonic, so a sweep either way is a run in the
+ * key of its recordings. When one sweep rings all of them in order the row answers by itself, back the other way.
  */
-const NOTES = [74, 76, 78, 81, 83];
+const NOTES = [77, 80, 82, 84, 87];
 /** Where along the walk down from the pond the row stands (metres along the way), and how far to its left. */
 const ALONG = [8, 12, 16, 20, 24];
 const ASIDE = [3.1, 2.7, 3.4, 2.8, 3.2];

@@ -47,3 +47,34 @@ for(const fps of [30,60,120]){
   stop.restoreDone();assert(!windBough.sounding(time));assert.equal(piano.expect,null);
   console.log(`PASS ${fps}fps: call/listen/reply, retained partial input, four answers, final bough cue and restored completion.`);
 }
+
+{
+  const {MEADOW_ANSWERS}=await import('../src/audio/meadow-duet.ts');
+  const {meadowFilesAhead}=await import('../src/audio/meadow-music.ts');
+  const {MeadowChapter}=await import('../src/story/meadow.ts');
+  for(const answer of MEADOW_ANSWERS){
+    assert(answer.notes.length>=4,'every answer has its notes');
+    assert(answer.notes.every((n,i)=>i===0||n.share>answer.notes[i-1].share),'notes sound in order along the trace');
+    assert(answer.notes[0].share>0&&answer.notes.at(-1).share<1,'the first note waits for the stroke, the last comes before completion');
+    assert(answer.outline.every(([,h])=>h>=-1&&h<=1)&&new Set(answer.outline.map(([,h])=>h)).size>1,'the outline rises and falls');
+  }
+  assert.deepEqual(MEADOW_ANSWERS.map(a=>a.direction),[1,-1,1,-1],'the mirrored sweeps still alternate');
+  for(const {call} of MEADOW_CALLS)assert(call.startAt<=0&&call.startAt>=-tuning.windBough.inhale&&call.duration>2,'each call starts within the inhale');
+  assert(MEADOW_FINALE.greenAt>0&&MEADOW_FINALE.greenAt<MEADOW_FINALE.duration,'the greening falls inside the finale');
+  const part=Object.getOwnPropertyDescriptor(MeadowChapter.prototype,'meadowMusic').get;
+  const room=(at,extra={})=>({piano:{at},song:{beat:'ahead'},beat:'walk',duetDone:false,featherFrom:-1,endingDue:false,crestDone:false,...extra});
+  for(const at of ['ahead','walking','looking'])assert.equal(part.call(room(at)),'walk');
+  for(const at of ['sitting','seated'])assert.equal(part.call(room(at)),'duet');
+  assert.equal(part.call(room('leaving',{duetDone:true})),'after','the warm bed begins with the duet complete');
+  assert.equal(part.call(room('done',{song:{beat:'play'}})),'after');
+  assert.equal(part.call(room('done',{song:{beat:'listen'}})),'listen');
+  assert.equal(part.call(room('done',{song:{beat:'done'}})),'quiet');
+  assert.equal(part.call(room('done',{song:{beat:'done'},beat:'pond',crestDone:true})),'quiet','the family leaves in silence');
+  assert.equal(part.call(room('done',{song:{beat:'done'},beat:'pond',crestDone:true,featherFrom:3})),'ending');
+  assert.equal(part.call(room('done',{song:{beat:'done'},crestDone:true,endingDue:true})),'ending','a pond restore plays the ending');
+  assert.deepEqual(meadowFilesAhead('boats',undefined,true),['walk','duet']);
+  assert.deepEqual(meadowFilesAhead('meadow','duet',true),['duet','after','ending']);
+  assert.deepEqual(meadowFilesAhead('meadow','duet',false),['duet'],'music off still fetches the duet: it is the instruments');
+  assert.deepEqual(meadowFilesAhead('birches',undefined,true),[]);
+  console.log('PASS: recorded answers, calls, finale cue, the meadow music parts and what is fetched ahead.');
+}
