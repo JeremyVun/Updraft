@@ -393,6 +393,10 @@ island and `docs/contracts/world.md`, delete this folder, and merge.
 
 Dial it down, not out: a soft, steady, low tremble of the fur and body, no jerky bouts, no head nods.
 
+Done: the bouts, head nods, ear flicks and nose twitches are gone. What is left is a soft tremble of the fur of its back
+(about 1% of its girth) that swells and eases over about ten seconds and never starts or stops at once, its laid-back
+ears trembling only a little with it, fluffed slightly against the cold, and slow breathing (about 2.2 s, flanks 8%).
+
 > There's also some kind of flashing across the surface of the snow, it looks bad
 
 Find what flashes (sparkle, z-fighting between the drift and the ground or channel skin, aliasing) and remove the flashing; settled snow must sit still in the light.

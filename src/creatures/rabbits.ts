@@ -63,25 +63,24 @@ void main() {
   int part = int(aPart + 0.5);
   vec3 p = position;
   vec3 n = normal;
-  // Asleep in its form: settled down into it, fluffed against the cold, the flanks rising and falling, shivering.
+  // Asleep in its form: settled down into it, fluffed against the cold, the flanks rising and falling, and the fur
+  // of its back trembling with the cold.
   if (part == ${BODY}) {
     float flank = smoothstep(0.12, 0.42, position.y);
-    p.xz *= 1.0 + (iRest.y * 0.1 + iRest.w * 0.05) * flank;
-    p.y += iRest.y * 0.03 * flank;
-    p.x += iRest.z * 0.06 * flank;
-    p.y += iRest.z * 0.03 * flank;
+    p.xz *= 1.0 + (iRest.y * 0.08 + iRest.x * 0.04 + iRest.z * 0.012) * flank;
+    p.y += (iRest.y * 0.025 + iRest.z * 0.006) * flank;
   }
   float side = (part == ${EAR_L} || part == ${HIND_L} || part == ${FRONT_L}) ? 1.0 : -1.0;
 
   if (part == ${EYE}) p.y = 0.76 + (p.y - 0.76) * (1.0 - 0.9 * iHead.w);
   if (part == ${NOSE} || (part == ${HEAD} && p.z > 0.45)) p.y += iHead.z * 0.018 * smoothstep(0.45, 0.62, p.z);
   if (part == ${EAR_L} || part == ${EAR_R}) {
-    float back = (part == ${EAR_L} ? iEars.x : iEars.y) + iRest.z * 0.5;
+    float back = (part == ${EAR_L} ? iEars.x : iEars.y) + iRest.z * 0.05;
     float spread = part == ${EAR_L} ? iEars.z : iEars.w;
     turn(p, n, vec3(0.085 * side, 0.9, 0.33), vec3(-back, 0.0, -side * spread));
   }
   bool onHead = part == ${HEAD} || part == ${EAR_L} || part == ${EAR_R} || part == ${EYE} || part == ${NOSE};
-  if (onHead) turn(p, n, NECK, vec3(iHead.y + iBody.z * 0.9 + iRest.z * 0.1, iHead.x, 0.0));
+  if (onHead) turn(p, n, NECK, vec3(iHead.y + iBody.z * 0.9, iHead.x, 0.0));
   if (part == ${HIND_L} || part == ${HIND_R}) turn(p, n, vec3(0.19 * side, 0.24, -0.26), vec3(iLimb.x * 1.3, 0.0, 0.0));
   if (part == ${FRONT_L} || part == ${FRONT_R}) turn(p, n, vec3(0.1 * side, 0.36, 0.22), vec3(iBody.z * 0.75 - iLimb.y * 1.7, 0.0, side * iLimb.y * 0.25));
   if (part == ${TAIL}) turn(p, n, vec3(0.0, 0.42, -0.5), vec3(-iLimb.z * 0.25, iLimb.z * 0.3, 0.0));
@@ -268,15 +267,10 @@ interface Rabbit {
   wakeDelay: number;
   /** Snow settled on its back while it lay curled, shaken off when it gets up. */
   snow: number;
-  /** How far it is settled down asleep in its form, its breath, and a twitch of the nose in a dream. */
+  /** How far it is settled down asleep in its form, its breath, and the tremble of the cold through it. */
   rest: number;
   breath: number;
-  twitch: number;
-  /** Shivering in its sleep: how hard, the tremble itself, and the bout it is in or waiting for. */
-  shiver: number;
   tremble: number;
-  shiverFor: number;
-  nextShiver: number;
   /** What it does next on waking in its form, before its ordinary day begins. */
   plan: ('groom' | 'lope')[];
 }
@@ -364,11 +358,7 @@ export class Rabbits {
       snow: 0,
       rest: 0,
       breath: 0,
-      twitch: 0,
-      shiver: 0,
       tremble: 0,
-      shiverFor: 0,
-      nextShiver: 0,
       plan: [],
     };
     r.squash.value = 1;
@@ -711,16 +701,10 @@ export class Rabbits {
     r.hind = ease(r.hind, hind, 22, dt);
     const curled = act === 'curl';
     r.rest = ease(r.rest, curled ? 1 : 0, 3, dt);
-    r.breath = r.rest * Math.sin(time * 3.6 + r.seed * 11);
-    /** A fine shiver all the while it sleeps in the frost, and every few breaths a hard bout that shakes it through. */
-    r.nextShiver -= dt;
-    if (curled && r.nextShiver <= 0) {
-      r.shiverFor = range(rand, 1.4, 2.6);
-      r.nextShiver = r.shiverFor + range(rand, 1.2, 3);
-    }
-    r.shiverFor = Math.max(0, r.shiverFor - dt);
-    r.shiver = ease(r.shiver, curled ? (r.shiverFor > 0 ? 1 : 0.3) : 0, 6, dt);
-    r.tremble = r.shiver * (Math.sin(time * 47 + r.seed * 5) * 0.6 + Math.sin(time * 59 + r.seed * 9) * 0.4);
+    r.breath = r.rest * Math.sin(time * 2.9 + r.seed * 11);
+    /** A soft, steady tremble that swells and eases over a few seconds and never starts or stops at once. */
+    const swell = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * 0.6 + r.seed * 7)) ** 2;
+    r.tremble = r.rest * swell * (Math.sin(time * 71 + r.seed * 5) * 0.6 + Math.sin(time * 89 + r.seed * 9) * 0.4);
     if (!hop || hop.prep <= 0) r.squash.step(airborne ? 1.1 : 1, 260, 14, dt);
     r.pitch.step(pitch, 160, 16, dt);
     if (!curled) r.snow = ease(r.snow, 0, 2.5, dt);
@@ -732,13 +716,7 @@ export class Rabbits {
       if (roll < 0.4) (rand() < 0.5 ? r.earL : r.earR).velocity += (rand() < 0.5 ? -1 : 1) * range(rand, 5, 9);
       else if (roll < 0.8) r.headYawGoal = (rand() - 0.5) * (act === 'graze' ? 0.5 : 1.1);
       else r.tail.velocity += 10;
-    } else if (r.nextFidget <= 0 && curled) {
-      /** Asleep, now and then an ear flicks or the nose works at something in a dream. */
-      r.nextFidget = range(rand, 2.5, 6);
-      if (rand() < 0.55) (rand() < 0.5 ? r.earL : r.earR).velocity -= range(rand, 4, 7);
-      else r.twitch = 1;
     }
-    r.twitch = Math.max(0, r.twitch - dt * 2.5);
     let headYaw = r.headYawGoal;
     if (act === 'look') headYaw = THREE.MathUtils.clamp(wrapAngle(Math.atan2(r.lookX - r.x, r.lookZ - r.z) - r.yaw), -1.1, 1.1);
     if (hop || act === 'crouch' || curled) headYaw = 0;
@@ -752,7 +730,7 @@ export class Rabbits {
     }
     r.blink = curled ? 1 : Math.max(0, r.blink - dt * 8);
     const nibbling = act === 'graze' && Math.sin(time * 0.9 + r.seed * 20) > -0.3;
-    r.chew = nibbling ? Math.sin(time * 19 + r.seed * 7) * 0.5 + 0.5 : curled ? r.twitch * (0.5 + 0.5 * Math.sin(time * 31)) : ease(r.chew, 0, 10, dt);
+    r.chew = nibbling ? Math.sin(time * 19 + r.seed * 7) * 0.5 + 0.5 : ease(r.chew, 0, 10, dt);
 
     const breeze = Math.min(windSpeed, 12) * 0.035;
     const flutter = Math.sin(time * 9 + r.seed * 30) * Math.min(windSpeed, 14) * 0.012;
@@ -773,7 +751,7 @@ export class Rabbits {
     inst.set(3, i, r.earL.value, r.earR.value, r.spreadL, r.spreadR);
     inst.set(4, i, r.hind, r.front, r.tail.value, r.snow);
     inst.set(5, i, r.fur.r, r.fur.g, r.fur.b, r.seed);
-    inst.set(6, i, r.rest, r.breath, r.tremble, r.shiver);
+    inst.set(6, i, r.rest, r.breath, r.tremble, 0);
   }
 
   /** Live positions for spatial queries; the inspection snapshot below remains detached. */
