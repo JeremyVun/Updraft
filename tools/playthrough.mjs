@@ -50,6 +50,7 @@ const snapshot=()=>page.evaluate(()=>{
     bird:project(g.cygnet.position),coax:project(c.coax?.at),wind:project(c.windInvitation),
     fleet:project(g.littleBoats.invitation),pinwheel:project(g.shorePinwheel),updraft:project(c.updraftTarget),push:c.invitationHeading??null,feather:project(g.sleeping.feather.position),
     snag,scarf:snag>=0?project(g.birches.scarf.snags[snag].center):null,
+    squirrel:g.story.name==='birches'&&c.beat==='round'&&c.squirrel.hideout?project(c.squirrel.hideout.at.clone().setY(c.squirrel.hideout.at.y+.1)):null,
     bubble:project(bubble?.position),carried:!!g.skyMirror.carried,wand:project(g.skyMirror.wand),direction,
     flight:piece?{at:project(g.cloudStairs.pointOn(piece,home.clone(),home.clone())),to:project(home),settling:piece.settling}:null,
     piano:g.piano.expect && c.piano?.at==='seated' ? {expect:g.piano.expect,path:[0,1].map(t=>project(g.piano.guideAlong(t,g.piano.keys.clone())))} : null,
@@ -208,6 +209,7 @@ try {
       strokes++;acted=true;await page.waitForTimeout(900);
     }
     else if(s.chapter==='meadow'&&visible(s.wind)&&s.push!==null)acted=await sweep(s.wind,Math.cos(s.push),-Math.sin(s.push),height*.23,1000);
+    else if(s.chapter==='birches'&&s.beat==='round'&&visible(s.squirrel))acted=await sweep(s.squirrel,1,0,width*.3,400);
     else if(s.chapter==='birches'&&s.beat==='scarf'&&s.snag>=0)acted=s.snag===1?await circle(s.scarf,height*.078):await sweep(s.scarf,s.snag===0?0:s.snag===3&&strokes%2?-1:1,s.snag===0?-1:0,150,400,s.snag===3);
     else if(s.chapter==='stairs'&&s.beat==='waiting'&&s.flight&&!s.flight.settling){
       const {at,to}=s.flight,dx=to.x-at.x,dy=to.y-at.y,length=Math.hypot(dx,dy);

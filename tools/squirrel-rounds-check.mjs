@@ -137,6 +137,8 @@ const cased = {
           await page.waitForTimeout(1500);
           wrongs.push({ heap, found: await found(round, 50) });
         }
+        /** A hard stroke over round 2's far heap also blows the near one, whose air is 3.4 m wide and more; anywhere else a wrong heap only bursts. */
+        assert.ok(wrongs.every((w) => !w.found || (round === 1 && right === 0)), `round ${round + 1}: a wrong heap found it: ${JSON.stringify(wrongs)}`);
         if (!wrongs.some((w) => w.found)) {
           await stroke(await acrossHeap(right));
           assert.ok(await found(round), `round ${round + 1}: the right heap after the wrong ones did not find it`);
@@ -309,17 +311,23 @@ const cased = {
     };
     const rows = [];
     for (const [point, [data, station, mode]] of Object.entries(expect)) {
-      const s = await page.evaluate(async ({ point, data }) => {
+      const s = await page.evaluate(async ({ point, data, mode }) => {
         const g = __game, c = g.story.current;
         c.restoreCheckpoint(point, data);
-        await new Promise((r) => setTimeout(r, 200));
-        return { rounds: c.squirrel.rounds, station: c.squirrel.station, mode: c.squirrel.mode, visible: g.squirrel.visible, at: g.squirrel.position.toArray().map((v) => +v.toFixed(1)) };
-      }, { point, data });
+        for (let t = 0; t < 30 && c.squirrel.mode !== mode; t++) await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 150));
+        const spec = { tangle1: __sq.TANGLE_PERCHES[0], swing: __sq.swingPerch(g.birches), tangle2: __sq.TANGLE_PERCHES[1], tangle3: __sq.TANGLE_PERCHES[2],
+          tangle4: __sq.TANGLE_PERCHES[3], goodbye: __sq.GOODBYE }[c.squirrel.station];
+        const want = spec && (spec.action === 'climb' ? __sq.onTrunk(g.birches, spec.trunk).at : spec.at);
+        const off = want ? +g.squirrel.position.distanceTo(want).toFixed(2) : null;
+        return { rounds: c.squirrel.rounds, station: c.squirrel.station, mode: c.squirrel.mode, visible: g.squirrel.visible, off };
+      }, { point, data, mode });
       if (station === 'goodbye') await until(() => ['goodbye'].includes(__game.story.current.squirrel.station), null, 3000).catch(() => {});
       rows.push({ point, ...s });
       assert.equal(s.station, station, `${point} resumes the squirrel at ${s.station}, not ${station}`);
       if (station !== 'goodbye') assert.equal(s.mode, mode, `${point}: ${s.mode}`);
       assert.ok(s.visible, `${point}: squirrel hidden from view`);
+      assert.ok(s.off === null || s.off < 0.5, `${point}: ${s.off} m from its place at ${s.station}`);
     }
     /** Two real reloads through the save: one made by this build, one made before it. */
     for (const [point, data, rounds] of [['squirrel2-scarf1-swing', [3, 1, 0.6, 1, 2], 2], ['scarf4-2', [3, 0, 0.6, 2], 2]]) {
