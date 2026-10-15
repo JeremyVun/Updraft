@@ -118,6 +118,7 @@ export const tuning = {
     stillPhraseExperiment: true,
     stillFallTones: false,
     linesArrivalEarlier: 10,
+    birchesArrivalLater: 2,
     stillPhraseDb: -6,
     stillPhraseFade: .12,
     stillPhraseSpacing: 4.5,
@@ -866,7 +867,7 @@ export const tuning = {
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     boatsMist: { clear: 75, hidden: 150, edge: 1.32 },
-    birchesMist: { clear: 60, hidden: 110, edge: 1.32 },
+    birchesMist: { clear: 90, hidden: 150, edge: 1.32 },
     seaStateEase: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: .88,

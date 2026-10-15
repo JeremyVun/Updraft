@@ -450,7 +450,8 @@ export class CrossingChapter implements Chapter {
 
   /** How far out the destination's music may come in. */
   private entrance(speed: number): number {
-    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
+    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier
+      : this.destinationMusic === 'birches' ? -tuning.audio.birchesArrivalLater : 0;
     return Math.min(tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalEntranceLead + earlier) * speed,
       this.routeLength * tuning.audio.arrivalEntranceRouteShare);
   }

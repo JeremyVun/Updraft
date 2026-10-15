@@ -158,6 +158,12 @@ On the meadow sail after it was lengthened along the meadow's coast (2026-10-16)
 
 > holy hell just move the birches out a bit. Don't touch the stairs chapter. i dont want to mess with that
 
+> the haze / fog around the birches island is a bit too strong and obvious i think, and the music starts playing maybe
+> 2 seconds too early
+
+The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110), and Red Door's arrival entrance comes
+2 s later (`tuning.audio.birchesArrivalLater`).
+
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 
 What follows from it (Claude's calls, 2026-10-16):
@@ -335,7 +341,7 @@ Boat speed and the crossings' pace are untouched; only distance changed.
 - **Crossings.** `toBirches` leaves the far shore already bearing west (`FAR_SHORE` + (−18, −22)) and sails straight
   across open sea, west-north-west, to a point 30 m off the landing (band (14, −1022)), then runs up the beach straight
   on. The meadow's shore falls away south behind it, and for the middle of the crossing there is only sea. On this
-  crossing the island lies in its own mist (`tuning.world.birchesMist`, clear 60 m to hidden 110 m from the eye, as
+  crossing the island lies in its own mist (`tuning.world.birchesMist`, clear 90 m to hidden 150 m from the eye, as
   the wood and the boats do): it stays hidden to about 34 s, its beach comes out of the haze then, the trees on the
   run-in, and the mist lifts once they are ashore. `toStairs` leaves the berth east (its first waypoint, band
   (16, −1204), moves with the band), passes south of the village's edge at (26, −1239) and comes in to the stairs as
