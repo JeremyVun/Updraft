@@ -71,6 +71,8 @@ export class PianoStop {
   private readonly approachChild = new THREE.Vector3();
   /** The paper plane gliding to the music desk as she comes to the piano, and back into her hand as she leaves. */
   private planeGlide: { to: 'desk' | 'hand'; start: number; length: number } | null = null;
+  /** Whose paper it is while it waits on the desk, so a restore past the stop hands it straight back. */
+  private planeOwner: Cast | null = null;
   private readonly planeFrom = new THREE.Vector3();
   private readonly planeFromTurn = new THREE.Quaternion();
   private readonly planeAt = new THREE.Vector3();
@@ -86,7 +88,9 @@ export class PianoStop {
   }
 
   /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
-  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; this.hushed = this.hushProgress = 0; this.pendingReply = null; windBough.reset(); piano.expect = null; piano.engaged = false; piano.finale = false; }
+  restoreDone(): void {
+    if (this.planeOwner) this.returnPlane(this.planeOwner);
+    this.beat = 'done'; this.completeAt = 0; this.hushed = this.hushProgress = 0; this.pendingReply = null; windBough.reset(); piano.expect = null; piano.engaged = false; piano.finale = false; }
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -354,7 +358,9 @@ export class PianoStop {
   }
 
   /** The paper never vanishes: it flies from wherever it is, in a low arc, to the desk or to her hand. */
-  private glidePlane(to: 'desk' | 'hand', { plane }: Cast): void {
+  private glidePlane(to: 'desk' | 'hand', cast: Cast): void {
+    const { plane } = cast;
+    this.planeOwner = cast;
     this.planeFrom.copy(plane.position);
     this.planeFromTurn.copy(plane.group.quaternion);
     piano.planeRest(this.planeAt, this.planeRest);
@@ -379,11 +385,19 @@ export class PianoStop {
     plane.keptSmall = true;
     if (k < 1) return;
     this.planeGlide = null;
-    if (glide.to === 'hand') { plane.keptSmall = false; plane.hold(child); }
+    if (glide.to === 'hand') this.returnPlane({ plane, child });
+  }
+
+  private returnPlane({ plane, child }: Pick<Cast, 'plane' | 'child'>): void {
+    this.planeGlide = null;
+    this.planeOwner = null;
+    plane.keptSmall = false;
+    plane.visible = true;
+    plane.hold(child);
   }
 
   private give({ child, plane }: Cast): void {
-    if (this.planeGlide?.to === 'hand' || !plane.held) { this.planeGlide = null; plane.keptSmall = false; plane.hold(child); }
+    if (this.planeGlide?.to === 'hand' || !plane.held) this.returnPlane({ plane, child });
     piano.expect = null;
     piano.engaged = false;
     piano.finale = false;
