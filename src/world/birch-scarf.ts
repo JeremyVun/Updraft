@@ -111,6 +111,9 @@ interface Snag {
 interface Section { tied: THREE.CatmullRomCurve3; loose: THREE.CatmullRomCurve3; snag: number; count: number; stretch: number }
 const ground = (x: number, z: number, above: number): THREE.Vector3 => new THREE.Vector3(x, Math.max(0, heightAt(x, z)) + above, z);
 
+/** How far through freeing the second tangle its coils close in over the broken top, and have lifted clear of it again. */
+export const SCARF_OVER = { from: 0.42, to: 0.8 };
+
 /** The branch the first loop hangs on, out from its birch's fork to just past the loop: thick at `a`, thin at `b`. */
 export const FORK_BRANCH = (() => {
   const s = SCARF_SNAGS[0], hook = ground(s.x, s.z, 3.5);
@@ -606,13 +609,16 @@ export class BirchScarf {
         const u = (i - this.ownerStart[1]) / 130;
         const attachment = smooth(Math.min(u / .065, (1 - u) / .065));
         // The top coils climb first and loosen as they rise, then slide off one after another: an unwinding, not a lid.
+        // On the way up they close in over whatever sits on the broken top, a moment, before they lift clear of it.
         const lift = smooth((s.work - u * .2) / .58), slip = smooth((s.work - .78 - u * .08) / .14);
-        const loosen = 1 + .28 * lift * attachment;
+        const over = Math.sin(Math.PI * THREE.MathUtils.clamp((s.work - SCARF_OVER.from) / (SCARF_OVER.to - SCARF_OVER.from), 0, 1)) * attachment;
+        const loosen = THREE.MathUtils.lerp(1 + .28 * lift * attachment, .55, over);
         p.x = this.stump.x + (p.x - this.stump.x) * loosen; p.z = this.stump.z + (p.z - this.stump.z) * loosen;
         p.y = THREE.MathUtils.lerp(p.y, top + .85 + (p.y - this.snags[1].center.y) * .34, lift * attachment);
+        p.y = THREE.MathUtils.lerp(p.y, Math.max(p.y, top + .5), over);
         p.x += slip * 3.4 * attachment;
         const dx = p.x - this.stump.x, dz = p.z - this.stump.z, radius = Math.hypot(dx, dz);
-        if (p.y < top + .65 && radius < 1.15) {
+        if (p.y < top + .65 && radius < 1.15 && over < .05) {
           const angle = radius > .001 ? Math.atan2(dz, dx) : u * Math.PI * 5.2;
           p.x = this.stump.x + Math.cos(angle) * 1.15;
           p.z = this.stump.z + Math.sin(angle) * 1.15;

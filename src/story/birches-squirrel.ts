@@ -4,6 +4,7 @@ import type { CameraAttention } from '../camera-direction';
 import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
+import { SCARF_OVER } from '../world/birch-scarf';
 import { BIRCH_PILES, ROUND_VIEWS } from '../world/birches';
 import { heightAt } from '../world/island';
 import { FAR_TRUNK, GOODBYE, LEAP, MEETING, ON_THE_STUMP, PATHS, ROUNDS, frameShot, SWING_PERCH, TANGLE_PERCHES, onTrunk, route, type PerchSpec, type Step } from './birches-rounds';
@@ -89,6 +90,9 @@ export class BirchesSquirrel {
   /** A readback of the leaves over its back is on its way, and when the next is due. */
   private feeling = false;
   private nextFeel = 0;
+  /** At the second tangle: none, startled under the coils closing over it, or indignant at the wool gone past. */
+  private coiled: 'none' | 'startled' | 'indignant' = 'none';
+  private readonly woolGone = new THREE.Vector3();
   private readonly overBack: THREE.Vector3[] = Array.from({ length: 5 }, () => new THREE.Vector3());
   private lastHeap = -1;
   private generation = 0;
@@ -168,6 +172,7 @@ export class BirchesSquirrel {
     this.later.length = 0;
     this.rounds = rounds;
     this.wentIn = rounds - 1;
+    this.coiled = 'none';
     this.leapt = rounds >= 3;
     this.leap = 'none';
     this.cue = cue;
@@ -205,15 +210,35 @@ export class BirchesSquirrel {
       else if (time >= l.at) { this.later.splice(i, 1); l.run(); }
     }
     const want = this.stationFor(cue);
-    if (want !== this.station && this.mode !== 'flushed' && this.mode !== 'glancing') this.goTo(want);
+    const scolding = this.coiled === 'indignant' && this.station === 'tangle2' && this.cast.squirrel.busy;
+    if (want !== this.station && this.mode !== 'flushed' && this.mode !== 'glancing' && !scolding) this.goTo(want);
     if (this.mode === 'meeting') this.meeting();
     else if (this.mode === 'hiding') this.hiding();
     else if (this.mode === 'hidden') this.lying(dt);
     else if (this.mode === 'flushed') this.flushed();
     this.seek(time);
     this.leapStep(dt);
+    this.underCoils();
     this.glance(dt);
     this.holdHeaps();
+  }
+
+  /**
+   * On the broken birch's top while she frees the second tangle: the coils close in over it as they rise, and it
+   * jolts down with a squeak; once they have lifted clear and slid off, it shakes itself and scolds the wool.
+   */
+  private underCoils(): void {
+    if (this.station !== 'tangle2' || this.mode !== 'idle') return;
+    const { birches, squirrel: s } = this.cast;
+    const work = birches.scarf.snags[1].work;
+    if (this.coiled === 'none' && work >= THREE.MathUtils.lerp(SCARF_OVER.from, SCARF_OVER.to, 0.25)) {
+      this.coiled = 'startled';
+      s.act('startle', { look: this.face });
+    } else if (this.coiled === 'startled' && (work >= SCARF_OVER.to + 0.06 || birches.scarf.snags[1].freed)) {
+      this.coiled = 'indignant';
+      this.woolGone.copy(s.position).add(this.v.set(2.6, 0.6, 0));
+      s.act('indignant', { look: this.woolGone });
+    }
   }
 
   /** Each round's heaps stand against the wind until it has gone into hiding in one of them. */
@@ -868,6 +893,7 @@ export class BirchesSquirrel {
     if (this.station === 'meeting' && this.seen && (this.mode === 'meeting' || this.mode === 'choosing')) want = 1;
     else if (this.station === 'meeting' && cue.round < 0) want = nearing;
     else if (this.mode === 'flushed') want = 1;
+    else if (this.station === 'tangle2' && this.coiled !== 'none' && (this.cast.squirrel.busy || this.coiled === 'startled')) want = 1;
     else if (ahead) want = nearing;
     else if (this.station === 'goodbye' && cue.leaving) want = 1;
     this.attention.strength += (want - this.attention.strength) * (1 - Math.exp(-dt * k.glanceIn));
