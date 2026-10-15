@@ -187,6 +187,9 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 > the squirrel also jumps out the very instant that the leaf pile is "blown" even though the leaf pile might not have
 > disappeared at all
 
+> for the scarf challenge after the swing, an interesting idea would be to have the squirrel squeak and act alarmed in a
+> cute way after the scarf is blown up the tree trunk, over it, and then uncovering it again as it rises to the side.
+
 Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
 its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
 sample.
