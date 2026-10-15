@@ -389,8 +389,9 @@ authored in the first-built island's band-local terms and placed with `birchesAt
 swing tree and the log keep their tuned shapes, each band keeps its ground, grass and trees, and only the open walk
 between them grows: every round gets its own stretch of wood and its own frame, never one shared with a tangle. The
 coast is drawn in and the outer wood thinned, so the island keeps its tree count. `BIRCHES_SHIFT` stands it west of
-where it was first built, so the sail from the meadow's far shore and the sail on to the stairs are each about 30 s
-of open sea (`docs/contracts/world.md`).
+where it was first built, out over open sea about 120 m from the meadow, so the sail from the meadow's far shore and
+the sail on to the stairs each take about 45 s (`docs/contracts/world.md`). On the meadow sail the island lies in its
+own mist until the run-in.
 
 After landing, the child looks up the ride, steps aside and sets the cygnet down (`carry.setDown`). Between stops it
 plays on its own (`birches-play.ts`): hops to a heap, chases gusts, dives in and rummages (`delve`), shakes, and
@@ -468,8 +469,10 @@ the wrapped trunk needs circling; the draw-in into the boat is unhurried. One co
 look of how the birches island is set up already as sort of this one corridor instead of zig zag paths everywhere like
 in the other chapters." The island's look is kept or lifted: "try to preserve or even uplift the aesthetics of the
 island with the swirling leaves and the golden light etc." The sails from the meadow and to the stairs are
-lengthened by distance alone: "the boat speed must be kept the same". After his first playtest the meadow sail grew
-by about 5 s: "The sail is like 5 seconds short... The crossing needs to be longer".
+lengthened by distance alone: "the boat speed must be kept the same". After his first playtest the island moved out over
+open sea: "The sail is like 5 seconds short... The crossing needs to be longer", then "holy hell just move the birches
+out a bit. Don't touch the stairs chapter", and "It's ok if the distance between birches and stairs increases as well
+e.g. if both become 40 seconds or whatever".
 
 Rules: the squirrel hides, not the cygnet, so the dark wood's hiding-and-finding stays unspent. Nothing is lost or
 failed, and no timer finds it. The child looks at the heaps and the squirrel, never at the camera. The child, the
@@ -485,7 +488,7 @@ stage, `play('squirrel:<action>')` (`story/squirrel-yard.ts`). Design record and
 
 ## The stairs in the clouds
 
-Between the birches and the drowned village: `toStairs` is about 30 s east over open sea, ending under a low cloud
+Between the birches and the drowned village: `toStairs` is about 45 s east over open sea, ending under a low cloud
 deck at a small grassy island (`STAIRS_ISLE`). Everything about the room, including Jeremy's brief and the open work,
 is in `docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: Jeremy wants the sail over the cloud fixed
 first, and it needs a still and a name.

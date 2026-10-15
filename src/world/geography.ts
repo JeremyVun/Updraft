@@ -23,6 +23,6 @@ export const HOME_SHIFT = { x: -105 + SEA_SHORTENING.x + PAST_THE_WHALE.x + ONWA
 export const LINES_SHIFT = { x: 0, z: 100 } as const;
 export const STILL_SHIFT = { x: 0, z: 200 } as const;
 export const STILL_CENTRE = { x: -6 + STILL_SHIFT.x, z: -14 + STILL_SHIFT.z } as const;
-/** Revision 12 moves the grown birches west, lengthening the sea before and after them. */
-export const BIRCHES_SHIFT = { x: -48, z: 8 } as const;
+/** Revision 12 moves the grown birches west, out over open sea from the meadow. */
+export const BIRCHES_SHIFT = { x: -136, z: -16 } as const;
 export const GEOGRAPHY_VERSION = 12;

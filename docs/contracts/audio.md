@@ -273,9 +273,9 @@ boat's speed now). Once that is `stairsSongRest` + `birchesSailFade` (15 s) or l
 `stairsSongRest` (10 s) before it fades over `birchesSailFade` (5 s) to end then; a pass ending sooner simply ends.
 The gap is sea, wind and the boat. The boat gathers way after the estimate is made, and gusts can drive it on, so
 the stairs song also waits until `stairsSongRest` after the birches were last heard. With no input, timed from the
-push-off: aboard 2.8 s, the fade 8.2–13.1 s, the handoff asked for at 13.7 and ready at 20.8, the stairs song from
-23.2 s (held 2.4 s for the rest), the landing 29.7 s. A pass ending by itself before the rest leaves the song on
-the handoff (20.8 s).
+push-off: aboard 2.8 s, the fade 22.2–27.2 s, the handoff asked for at 29.1 and ready at 36.9, the stairs song from
+37.2 s (held 0.3 s for the rest), the landing 45.8 s. A pass ending by itself before the rest leaves the song on
+the handoff (36.9 s).
 
 **Drowned Village.** Jeremy (2026-10-14/15), verbatim:
 
