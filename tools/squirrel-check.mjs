@@ -25,12 +25,16 @@
 //            `short`, the furthest a leg fell short of its planted paw (the squirrel's own QA probe). Limits as the
 //            cat's: slip none, sink and float a few millimetres, short a few millimetres. EVERY=2 keeps every
 //            second frame; NEAR=0.4 brings the lens in to 0.4 of its distance, following the squirrel;
-//            WINDOW=5.8-8.2 keeps frames only between those seconds. `stand`, `sit`, `perch` and `freeze` are its
+//            WINDOW=5.8-8.2 keeps frames only between those seconds; FOV=50 widens the lens (30° by default). `stand`, `sit`, `perch` and `freeze` are its
 //            idles held six seconds (fidgets, hops on the spot, tail flicks); `tell` and `tell-in` are two tells.
 //     clips  The same motions (CLIPS=run,dive-burst,climb-up,run-line,follow by default; dash is follow's way at the dash) stepped two frames at a
 //            time, shot through the motion's lens trailing the squirrel smoothly, and made into a 30 fps webm with
-//            ffmpeg (clip-<name>.webm), so the clip plays at true speed however slow the GPU. Only record what
-//            will be watched for motion.
+//            ffmpeg (clip-<name>.webm), so the clip plays at true speed however slow the GPU; NEAR as for motion.
+//            Only record what will be watched for motion.
+//     jumps  Each motion (JUMPS=run,dash,dive-burst,follow,hop by default) stepped frame by frame, and every time it
+//            is off what it stands on (every paw up, or in the air of a dive, burst or hop) printed: how long, the
+//            body's apex over the line from take-off to landing, how far it went, and the gravity a parabola through
+//            its height implies, which should be the world's (jumps.json).
 //   env: POSES=sit,perch picks poses; ROOM_POSES=sit,scold; LIGHT=<query> replaces the room light (e.g. dusk=0.7);
 //        SCALE=2.3 draws the squirrel at another size than `tuning.squirrel.scale` (its life-size multiple).
 // Traps:
@@ -93,6 +97,10 @@ const MOTIONS = {
   'tell-in': { for: 5.4, eye: [-1.6, 1.6, 0.9], every: 6 },
   follow: { for: 15, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 12 },
   dash: { for: 7, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 6 },
+  startle: { for: 4, eye: [4.7, 1.2, 1.6], every: 6 },
+  indignant: { for: 6, eye: [4.7, 1.2, 1.6], every: 6 },
+  'startle-perch': { for: 4, eye: [-0.2, 4.6, 2.6], every: 6 },
+  'indignant-perch': { for: 6, eye: [-0.2, 4.6, 2.6], every: 6 },
 };
 const motions = list(process.env.MOTIONS, Object.keys(MOTIONS));
 const clips = list(process.env.CLIPS, ['run', 'dive-burst', 'climb-up', 'run-line', 'follow']);
@@ -210,7 +218,7 @@ const STEP_CONTACT = `(async (t) => {
 })`;
 
 /** Page-side: the lens set for a motion, aimed at the squirrel (trailing it smoothly when filmed) or held on the yard. */
-const MOTION_LENS = `(async ([eye, hold, near]) => {
+const MOTION_LENS = `(async ([eye, hold, near, fov = 30]) => {
   const { story } = window.__game;
   const yard = story.current.squirrels;
   const m = window.__sqMotion;
@@ -223,8 +231,60 @@ const MOTION_LENS = `(async ([eye, hold, near]) => {
   }
   let at = place(eye);
   if (near !== 1) at = at.map((v, i) => aim[i] + (v - aim[i]) * near);
-  await window.__sq.lens(at, aim, 30);
+  await window.__sq.lens(at, aim, fov);
 })`;
+
+/**
+ * Page-side, every frame: where its body is in the world and whether it is off whatever it stands on (every paw
+ * up as it goes, or in the air of a dive, burst or hop), and what kind of jump that is.
+ */
+const STEP_AIR = `(async (t) => {
+  const s = window.__game.squirrel;
+  const body = window.__sqBody ??= await import('/src/creatures/squirrel/body.ts');
+  const p = s.rig.joint(body.BODY, s.position.clone());
+  const g = s.gait;
+  let kind = s.kind, air = false;
+  if (s.mode === 'air') { air = s.airT >= s.gatherFor; kind = s.air; }
+  else if (s.hopT >= 0) { air = true; kind = 'hop'; }
+  else if (s.mode === 'travel') {
+    air = g.paws.every((q) => !q.planted);
+    const from = s.route.kind(s.seg, 'from'), to = s.route.kind(s.seg, 'to');
+    if (from !== to) kind = from + '>' + to;
+    else kind = from === 'ground' ? (s.pace > 1 ? 'dash' : 'bound') : from;
+  }
+  return { t, air, kind, p: [p.x, p.y, p.z] };
+})`;
+
+/**
+ * Each run of frames off the ground: how long, the body's highest point over the straight line from where it left
+ * to where it came down, how far it went, and the gravity a parabola through its height implies.
+ */
+function airborne(frames) {
+  const out = [];
+  for (let i = 0; i < frames.length; i++) {
+    if (!frames[i].air) continue;
+    let j = i;
+    while (j + 1 < frames.length && frames[j + 1].air) j++;
+    const run = frames.slice(Math.max(0, i - 1), Math.min(frames.length, j + 2));
+    const t0 = run[0].t, t1 = run[run.length - 1].t, y0 = run[0].p[1], y1 = run[run.length - 1].p[1];
+    let apex = 0;
+    for (const f of run) apex = Math.max(apex, f.p[1] - (y0 + ((y1 - y0) * (f.t - t0)) / Math.max(t1 - t0, 1e-6)));
+    let n = 0, st = 0, st2 = 0, st3 = 0, st4 = 0, sy = 0, sty = 0, st2y = 0;
+    for (const f of j - i >= 3 ? frames.slice(i, j + 1) : run) {
+      const t = f.t - t0, y = f.p[1];
+      n++; st += t; st2 += t * t; st3 += t ** 3; st4 += t ** 4; sy += y; sty += t * y; st2y += t * t * y;
+    }
+    const det = (a) => a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) - a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) + a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0]);
+    const M = [[st4, st3, st2], [st3, st2, st], [st2, st, n]];
+    const D = det(M);
+    const a = D ? det([[st2y, st3, st2], [sty, st2, st], [sy, st, n]]) / D : 0;
+    const [x0, , z0] = run[0].p, [x1, , z1] = run[run.length - 1].p;
+    const kind = frames.slice(i, j + 1).find((f) => f.kind.includes('>'))?.kind ?? frames[i].kind;
+    out.push({ kind, at: frames[i].t, air: (j - i + 1) / 60, apex, run: Math.hypot(x1 - x0, z1 - z0), g: -2 * a });
+    i = j;
+  }
+  return out;
+}
 
 /** Frames the whole squirrel from `bearing` off the way it faces (off the bark's outward normal when it climbs). */
 async function frameWhole(page, { bearing, elev, distance = 0 }, fov = 28, margin = 1.15) {
@@ -353,7 +413,7 @@ try {
         await advance(1 / 60);
         await page.evaluate(([src, arg]) => eval(src)(arg), [STEP_CONTACT, f / 60]);
         if ((f - 1) % m.every || f / 60 < window[0] || f / 60 > window[1]) continue;
-        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, m.hold ?? null, m.near ?? 1]]);
+        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, m.hold ?? null, m.near ?? 1, Number(process.env.FOV ?? 30)]]);
         const file = path.join(out, 'frames', `${name}-${String(f).padStart(4, '0')}.png`);
         fs.mkdirSync(path.dirname(file), { recursive: true });
         await page.screenshot({ path: file });
@@ -365,6 +425,30 @@ try {
       sheets[`motion-${name}`] = cells.map((c) => ({ ...c, file: path.join(out, c.file), strip: true }));
     }
     fs.writeFileSync(path.join(out, 'motion.json'), JSON.stringify(results, null, 2));
+    await context.close();
+  }
+
+  if (modes.includes('jumps')) {
+    const { context, page, advance } = await open('chapter=stage&grass=0', 480, 480);
+    await advance(1);
+    const all = [];
+    for (const name of list(process.env.JUMPS, ['run', 'dash', 'dive-burst', 'follow', 'hop'])) {
+      const m = MOTIONS[name] ?? { for: 4 };
+      await page.evaluate((n) => {
+        window.__game.story.current.play(`squirrel:${n === 'hop' ? 'stand' : n}`);
+        window.__sq.calm();
+      }, name);
+      const frames = [];
+      for (let f = 1; f <= Math.round(m.for * 60); f++) {
+        if (name === 'hop' && f % 90 === 0) await page.evaluate(() => { window.__game.squirrel.idle.hop = 0.6; });
+        await advance(1 / 60);
+        frames.push(await page.evaluate(([src, arg]) => eval(src)(arg), [STEP_AIR, f / 60]));
+      }
+      const jumps = airborne(frames);
+      for (const j of jumps) all.push({ motion: name, ...j });
+      for (const j of jumps) console.log(`${name.padEnd(10)} ${j.kind.padEnd(14)} at ${j.at.toFixed(2)} s  air ${(j.air * 1000).toFixed(0).padStart(4)} ms  apex ${(j.apex * 100).toFixed(1).padStart(5)} cm  run ${j.run.toFixed(2)} m  g ${j.g.toFixed(1).padStart(6)} m/s²`);
+    }
+    fs.writeFileSync(path.join(out, 'jumps.json'), JSON.stringify(all, null, 2));
     await context.close();
   }
 
@@ -382,7 +466,8 @@ try {
       const frames = Math.round((m.for + 0.4) * 30);
       for (let f = 0; f < frames; f++) {
         await advance(2 / 60);
-        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, m.hold ?? null, 1]]);
+        const near = process.env.NEAR ? Number(process.env.NEAR) : 1;
+        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, near !== 1 ? null : m.hold ?? null, near, Number(process.env.FOV ?? 30)]]);
         await page.screenshot({ path: path.join(dir, `${String(f).padStart(4, '0')}.png`) });
       }
       const file = path.join(out, `clip-${name}.webm`);

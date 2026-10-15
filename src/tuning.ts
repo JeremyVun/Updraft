@@ -15,6 +15,13 @@ export const tuning = {
   squirrel: {
     scale: 3.6, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6,
     /**
+     * It falls as everything in the world does (m/s²), however big it is drawn. A leap from one surface to another
+     * goes at `speed` (m/s) and is in the air between `least` and `most` seconds; it takes off `reach` (metres
+     * before scale) from a trunk or the wool's end, bounding the rest of the way. It pounces into a heap from no
+     * further than `pounce` (before scale), and an idle hop round on the spot is `hop` seconds in the air.
+     */
+    gravity: 9.8, leap: { speed: 3, least: 0.16, most: 0.34, reach: 0.13 }, pounce: 0.25, hop: 0.16,
+    /**
      * Its call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
      * than `least` of the view's height so they read over a heap from a round's lens, edged dark against the gold.
      * `hold` is the least time they show for a chuck (a chitter twice that); buried, they rise from `buried` over its

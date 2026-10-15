@@ -54,3 +54,18 @@ export function boundShape(p: number, size: number, air: number, out: BoundShape
   out.tail = loop(p, TAIL) * size;
   return out;
 }
+
+/**
+ * How high its body is carried through a bound that leaves the ground, in metres: thrown up off its hind feet at
+ * `lift`, it falls under gravity `g` until its forepaws land at 0, and while its paws are down its legs take that
+ * fall and give it back in one smooth give (no deeper than a quick bound's, however slowly it goes, and only
+ * `give` of that as it sets off). `period` is the stride's length in seconds.
+ */
+export function boundFlight(p: number, lift: number, period: number, g: number, give: number): number {
+  const x = p - Math.floor(p);
+  const flight = (1 - lift) * period;
+  const up = (g * flight) / 2;
+  if (x < lift) return ((-up * give * Math.min(lift * period, 0.2)) / Math.PI) * Math.sin((Math.PI * x) / lift);
+  const t = (x - lift) * period;
+  return up * t - (g * t * t) / 2;
+}
