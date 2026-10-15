@@ -1416,14 +1416,17 @@ export const tuning = {
       sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
       /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */
       kneel: 0.6, chaseReach: 2.5,
+      /** How much faster than its usual it runs on ahead to hide. */
+      dash: 2.4,
       /**
-       * How much faster than its usual it runs on ahead to hide, and the longest she waits at a freed tangle watching
-       * it go before she walks on to its heaps (it is under the leaves before they come into her sight).
+       * Hide-and-seek at a freed tangle while it runs on to hide: she watches it go for `countAfter` seconds, covers
+       * her eyes and counts for `countFor`, nodding `countNod` numbers a second, then looks round for `lookRound`, or
+       * until it has gone to ground but no longer than `lookRoundMost`, her gaze sweeping `lookSweep` radians a second.
        */
-      dash: 2.4, hideWait: 14,
+      countAfter: 0.6, countFor: 6, countNod: 1.3, lookRound: 1.2, lookRoundMost: 3, lookSweep: 2.2,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
-      /** Share of the camera's gaze given to the squirrel at the meeting, on its dash along the wool, and at the goodbye. */
+      /** Share of the camera's gaze given to the squirrel at the meeting and at the goodbye. */
       glance: 0.28, glanceIn: 1.2,
       /** How quickly a round's longer portrait lens eases in and out: a spring's rate per second, settled in about 3 s. */
       lensEase: 1.6,

@@ -112,8 +112,9 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
    scolds, flicks its tail, and dashes for the tangle-1 tree with the cygnet scrambling after it and the child
    laughing (`cheer`). One heap and an obvious tell, so the player learns it without being told.
 2. **Tangle 1.** The squirrel sits up on the floor at the loop's foot beside the wool, watching the work (background,
-   never in the way). When the loop lifts free it runs to the first perch tree, up to the coil there and down the
-   wool into the next round. The wool is its road, and the room's red line leads the eye on.
+   never in the way). As the loop lifts free it runs to the first perch tree, up to the coil there and down the
+   wool into the next round. The wool is its road, and the room's red line leads the eye on. She sees it go, and
+   they play hide-and-seek: she turns her back on where it went, covers her eyes and counts while it hides.
 3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride on the slope below
    the rise, out of the swing's frame.
    Now there is a choice. Only the right heap twitches; the tail shows less often. A wrong heap bursts into gold
@@ -362,8 +363,8 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
 - **Camera.** Each round has its own frame, like the tangles' frames: the child, the heaps and the squirrel's last
   sighting in view. It is lower and closer than the walking shot so the squirrel reads (about the swing's 14–17 m,
   storyboarded per round). Portrait stands further back on a longer lens, so its far heaps read nearly as large as its
-  near ones. Dashes between hides are followed by a low-weight glance (`shot.attention`), never a pan away from the
-  child, and the squirrel never goes out of frame mid-beat.
+  near ones. The lens never follows a dash to hide: it stays on her while she counts, and the squirrel goes off up
+  the ride, small and far, and hides out of sight. Within a round the squirrel never goes out of frame mid-beat.
 
 ### Between rounds
 
@@ -371,6 +372,17 @@ The squirrel's routes between rounds are authored paths (ground, trunks, and len
 routes. It waits in sight at the next tangle's tree while that tangle is worked, and never stands where the
 tangle's gesture or camera needs to be. It is never needed off-screen and never seen to teleport. A resumed save
 places it where that point of the story would have it.
+
+**Counting.** Before rounds 2 and 3 it sets off to hide as the tangle's loop starts to lift, and when the loop is
+free and it is not yet hidden, she counts (the `counting` beat, still the tangle's frame, the wind still the
+player's). She watches it go for a moment (`countAfter`, 0.6 s), then turns her back on where it went,
+three-quarters to the lens, and covers her eyes: both mittens over them, elbows out, head bowed a little, a dip at the
+knees and a nod on every number (`countNod`, 1.3 a second) and her head rocking side to side (`Traveller.counting`).
+The cygnet looks from where it went to her and back. After `countFor` (6 s) she drops her hands, turns round and
+looks for it, her gaze sweeping across the way it went, for `lookRound` (1.2 s) or until it has gone to ground, but
+never more than `lookRoundMost` (3 s), and sets off. The whole count is 7.6–9.6 s from the loop coming free, about
+what the squirrel takes to hide: in round 3 it is under the leaves before she sets off; in round 2 she sets off a
+second or two before it dives, 40 m up the ride, a few pixels in the haze.
 
 ### The leap
 
@@ -506,8 +518,7 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   there directly. Found, it sits up and scolds her (`sitFor`, `scoldFor`), bounds off, and glances back once a few
   metres on. It is shown only in the birches and its crossing, so it sees them off from the beach.
 - **Hiding.** On ahead to hide it dashes (`dash`, 2.4 times its pace), setting off as the tangle's loop starts to
-  lift free; she stays at the freed tangle watching it go until it is under the leaves (at most `hideWait`, 14 s;
-  about 10 s), because walking on she would come over the rise in sight of the heaps while it chose one. At the
+  lift free, while she counts at the freed tangle ("Counting" above). At the
   round's ground it reads the floor once (`depthAt`, its hides and a 5 × 5 grid): a heap still `buryDepth` deep
   (0.35 m), never the one just turned out of while there is another; else the deepest drift; else the bark of a
   heap's bank tree, round from the lens. Drift and trunk hides are only chosen where the round's lens shows them. It
@@ -528,8 +539,8 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   runs and leaps (`Traveller.leap` with `seat`: she lands on her seat with no stumble), the leaves burst at 1.4, she
   sits 1.8 s and gets up. Below `leapDepth` (0.35 m) she runs on through the hollow toward the sun, kicking leaves
   up. Measured 5–7.5 s.
-- **Frames.** Landscape keeps phase 4's frames; portrait's are in the table above. The meeting, the dash down the
-  wool and the goodbye get `shot.attention` at `glance` (0.28).
+- **Frames.** Landscape keeps phase 4's frames; portrait's are in the table above. The meeting and the goodbye get
+  `shot.attention` at `glance` (0.28).
 - **Sound.** `BirchesFoley.leaves`: a rustle for each tell, a burst when it is turned out and when the wind throws a
   wrong heap up, and the leap's burst with a thump under it. Heard just before the leaves go up, each stands for the
   scuff that `burst` would otherwise make.
@@ -552,6 +563,8 @@ Judged in real-gesture clips of the whole room, from the `toBirches` arrival to 
   47 / 81, 36 / 75, 42, 31 px in landscape and 27 / 61, 30 / 43, 29, 23 px in portrait (by heap, near to far).
 - **Time on the island**, engaged (the swing ridden, a wrong heap in round 2 and two in round 3): 3:52 in landscape
   and 3:53 in portrait. Random swipes took 5:36, a minute and a half of it circling tangle 2 into the right gesture.
+  With the counting, an engaged landscape drive (the swing ridden about 19 s, wrong heaps first) took 3:38 (217.5 s);
+  the count is within a second or two of the old wait at each tangle, so most of the difference is the drive.
 
 ### Saves
 
@@ -583,7 +596,7 @@ follow the echo rules: scenery only, above the tide line and off the walk, and t
 - **The cygnet never flies here** (`mayFly = false`), and its play stays its own.
 - **The room's existing rulings stand** (chapters.md): the leaves don't behave like grass; the scarf reads as wool
   and its draw-in is unhurried; the swing is optional and rideable once.
-- **The camera never jerks**; scenery and dashes get glances, never a stop-the-world pan.
+- **The camera never jerks**; scenery gets glances, never a stop-the-world pan, and a dash to hide gets none.
 - **Legibility:** the child, the cygnet and the squirrel are whole and readable in every round's frame, in portrait
   and landscape.
 

@@ -133,6 +133,8 @@ export class Traveller {
   /** Story-authored drowsiness and silent yawns; both zero outside the bedtime passage. */
   sleepiness = 0;
   yawn = 0;
+  /** Hide-and-seek, 0 to 1: both mittens over her eyes, head bowed, nodding and bobbing as she counts. */
+  counting = 0;
   private readonly rig: Rig;
   private readonly motion: ChildMotion;
   private readonly look = newPose();
@@ -176,6 +178,7 @@ export class Traveller {
   private readonly sideGlide = new Glide();
   private readonly shutGlide = new Glide();
   private readonly yawnGlide = new Glide();
+  private readonly countGlide = new Glide();
   private readonly hipFrom = new THREE.Vector3();
   private readonly hipTo = new THREE.Vector3();
   private readonly hipPivot = new THREE.Vector3(0, 0.62 * 1.12, 0);
@@ -1286,6 +1289,17 @@ export class Traveller {
       lean += 0.22 * brace;
       headDown += 0.15 * brace;
     }
+    const count = this.countGlide.step(this.counting, 0.4, dt);
+    if (count > 0.001) {
+      /** A dip at the knees and a nod on every number, and the head rocking side to side across each pair. */
+      const counted = t * tuning.birches.squirrel.countNod;
+      const beat = Math.sin(counted * Math.PI) ** 2;
+      crouch += 0.035 * beat * count;
+      headDown += 0.1 * beat * count;
+      tiltHead += 0.09 * Math.sin(counted * Math.PI * 0.5) * count;
+      lean += 0.05 * count;
+      if (this.gaze.w === 0) this.gazeAt(0, 0.18, count);
+    }
 
     const sit = this.sit;
     const kneel = this.kneel.step(this.kneeling, 0.55, dt) * (1 - sit);
@@ -1371,7 +1385,7 @@ export class Traveller {
     }
     /** Standing a while, whatever hand is free holds a strap of the bag at their chest. */
     const handsFree = !a && !this.sitting && this.presenting < 0.01 && this.swing < 0.01 && !this.armsFull
-      && this.reachWant[0] === 0 && this.reachWant[1] === 0 && this.brace < 0.1 && this.kneeling < 0.1 && this.abed < 0.01;
+      && this.reachWant[0] === 0 && this.reachWant[1] === 0 && this.brace < 0.1 && this.kneeling < 0.1 && this.abed < 0.01 && count < 0.1;
     this.stillFor = moving < 0.05 && handsFree ? this.stillFor + h : 0;
     const holding = this.stillFor > 1.2;
     const straps = this.straps.step(holding ? 1 : 0, holding ? 0.55 : 0.18, dt);
@@ -1519,6 +1533,13 @@ export class Traveller {
       const target = this.reachInBody[hand] ? r.body.localToWorld(this.tmp.copy(this.reachAt[hand])) : this.tmp.copy(this.reachAt[hand]);
       this.motion.reach(hand === 0, target, this.reachNow[hand]);
     }
+    if (count > 0.001) {
+      r.root.updateMatrixWorld(true);
+      for (const hand of [0, 1] as const) {
+        r.face.localToWorld(this.tmp.set(hand === 0 ? COVER_EYE.x : -COVER_EYE.x, COVER_EYE.y, COVER_EYE.z));
+        this.motion.reach(hand === 0, this.tmp, count, COVER_ELBOW);
+      }
+    }
     r.root.updateMatrixWorld(true);
     const u = r.material.uniforms;
     u.uBlink.value = Math.max(this.blink > 0 ? 1 : 0, shut);
@@ -1659,6 +1680,10 @@ function arm(m: ArmPose, raise: number, out: number, twist: number, elbow: numbe
   m.elbow = elbow;
   m.wrist = wrist;
 }
+
+/** A mitten over each eye, in the face's frame (the left one; the right mirrors it), and the elbows out wide. */
+const COVER_EYE = new THREE.Vector3(0.075, 0.05, 0.25);
+const COVER_ELBOW = new THREE.Vector3(1, 0.2, -0.1);
 
 /** Where in the walk's phase the feet pass each other, both under the hips: the stance foot halfway through. */
 const PASSING = 0.54 * Math.PI;

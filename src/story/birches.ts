@@ -22,7 +22,7 @@ const BOARDING = 20;
 const LAST_LEG_PATIENCE = 45;
 /** Once the boat is drawn up past here, the scarf's free end is tied to its mast. */
 const MAST_FROM = birchesZ(-1175);
-type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'toRound' | 'round' | 'leap'
+type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'counting' | 'toRound' | 'round' | 'leap'
   | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
 /** The walk's stops in the order it meets them: the squirrel's rounds between the scarf's tangles. */
 const STOPS = [{ round: 0 }, { tangle: 0 }, { round: 1 }, { tangle: 1 }, { round: 2 }, { tangle: 2 }, { tangle: 3 }] as const;
@@ -30,7 +30,8 @@ type Stop = (typeof STOPS)[number];
 /** Further past a round's heaps than walking can take her without stopping there: she was put past it. */
 const PUT_PAST = 10;
 /** Beats where the player is playing, and the wind is theirs. */
-const PLAYING: readonly Beat[] = ['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'toRound', 'round', 'unravelling'];
+const PLAYING: readonly Beat[] = ['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'counting', 'toRound', 'round', 'unravelling'];
+const AT_TANGLE: readonly Beat[] = ['toScarf', 'scarf', 'counting', 'unravelling'];
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /**
@@ -85,7 +86,13 @@ export class BirchesChapter implements Chapter {
   readonly squirrel: BirchesSquirrel;
   /** The round the walk is at, while it is at one. */
   private round = -1;
-  private freedAt = -1;
+  private readonly hideWent = new THREE.Vector3();
+  private readonly seenGo = new THREE.Vector3();
+  private readonly lookingFor = new THREE.Vector3();
+  private countRound = -1;
+  /** Where the count is: 0 seeing it go, 1 turned away counting, 2 turned back round to look for it. */
+  private countPhase = 0;
+  private readonly herFace = new THREE.Vector3();
   private lens = 1;
   private lensRate = 0;
   private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
@@ -111,8 +118,7 @@ export class BirchesChapter implements Chapter {
    * tangle, round the wool, so circling it never blows the next round's heaps away beyond it.
    */
   get pointerReach(): number {
-    const tangle = this.beat === 'toScarf' || this.beat === 'scarf' || this.beat === 'unravelling';
-    return this.shot.distance + (tangle ? tuning.birches.scarf.strokeReach : tuning.birches.strokeReach);
+    return this.shot.distance + (AT_TANGLE.includes(this.beat) ? tuning.birches.scarf.strokeReach : tuning.birches.strokeReach);
   }
 
   /** A stalled player's drawn sweep across the heap the squirrel is in. */
@@ -154,6 +160,8 @@ export class BirchesChapter implements Chapter {
     this.cast.boat.scarfSail = count === SCARF_SNAGS.length ? 1 : 0;
     const { child, cygnet } = this.cast;
     child.stop();
+    child.counting = 0;
+    child.stowPlane(false);
     if (cygnet.carried) {
       cygnet.release(this.tmp.set(child.position.x - Math.cos(child.yaw) * 1.2, 0, child.position.z + Math.sin(child.yaw) * 1.2));
       cygnet.seating.snap();
@@ -181,15 +189,6 @@ export class BirchesChapter implements Chapter {
     c.gathered = scarf.finished;
     c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
     return c;
-  }
-
-  /**
-   * Freed, she stays and watches it run off to hide in the next round's heaps, as long as it takes: walking on, she
-   * would come over the rise in sight of them while it chose one.
-   */
-  private watchingItHide(time: number): boolean {
-    const next = this.nextStop();
-    return !!next && 'round' in next && !this.squirrel.ready(next.round) && time - this.freedAt < tuning.birches.squirrel.hideWait;
   }
 
   /** The next stop the walk owes, in route order: a round of the squirrel's or a tangle of the scarf's. */
@@ -284,11 +283,14 @@ export class BirchesChapter implements Chapter {
       case 'scarf':
         c.lookAt = scarf.focus;
         if (scarf.active >= 0 && scarf.snags[scarf.active].freed) {
-          if (this.freedAt < 0) this.freedAt = time;
+          const next = this.nextStop();
           if (scarf.completed === SCARF_SNAGS.length) this.to('unravelling');
-          else if (this.watchingItHide(time)) c.lookAt = this.cast.squirrel.eye(this.tmp2);
+          else if (next && 'round' in next && !this.squirrel.ready(next.round)) this.countTo(next.round);
           else this.resumeWalk();
         }
+        break;
+      case 'counting':
+        this.counting();
         break;
       case 'unravelling':
         c.lookAt = boat.sailPoint(this.scarfMast);
@@ -304,7 +306,7 @@ export class BirchesChapter implements Chapter {
         break;
     }
 
-    if (PLAYING.includes(this.beat) && this.round < 0) this.leafPlay.update(dt, time);
+    if (PLAYING.includes(this.beat) && this.round < 0 && this.beat !== 'counting') this.leafPlay.update(dt, time);
     birches.swing.invited = (this.beat === 'swinging' && !this.swingPushed && !this.leavingSwing)
       || (this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16)));
     birches.swing.update(dt, this.cast.wind);
@@ -478,6 +480,53 @@ export class BirchesChapter implements Chapter {
     child.walkTo(snag.before.x, snag.before.z, false, undefined, 0.6);
   }
 
+  /**
+   * Freed while the squirrel is still running on to hide: hide-and-seek. She sees it go, covers her eyes and counts,
+   * then looks round toward its heaps and sets off, and the walk takes her there.
+   */
+  private countTo(round: number): void {
+    this.countRound = round;
+    this.hideWent.copy(ROUNDS[round].lastSeen);
+    this.cast.cygnet.errand = null;
+    /** The paper goes on the bag, or it would be pressed to her face with the mitten. */
+    this.cast.child.stowPlane(true);
+    this.countPhase = 0;
+    this.to('counting');
+  }
+
+  private counting(): void {
+    const { child: c, cygnet: bird } = this.cast;
+    const k = tuning.birches.squirrel;
+    const counted = this.t - k.countAfter, looked = counted - k.countFor;
+    c.counting = counted > 0 && looked < 0 ? 1 : 0;
+    if (counted > 0 && this.countPhase === 0) {
+      /** She turns her back on where it went, three-quarters to the lens, so the hands over her eyes are seen. */
+      this.countPhase = 1;
+      const lens = Math.atan2(this.scarfFrom.x, this.scarfFrom.z);
+      const went = Math.atan2(this.hideWent.x - c.position.x, this.hideWent.z - c.position.z);
+      const off = (a: number) => Math.abs(Math.atan2(Math.sin(a - went), Math.cos(a - went)));
+      const yaw = off(lens + 0.6) > off(lens - 0.6) ? lens + 0.6 : lens - 0.6;
+      c.faceToward(c.position.x + Math.sin(yaw), c.position.z + Math.cos(yaw), 1);
+    } else if (looked > 0 && this.countPhase === 1) {
+      this.countPhase = 2;
+      c.faceToward(this.hideWent.x, this.hideWent.z, 1);
+    }
+    if (counted <= 0) c.lookAt = this.cast.squirrel.eye(this.seenGo);
+    else if (c.counting) c.lookAt = null;
+    else {
+      /** Looking round for it: her gaze sweeps across the way it went, and stays on it until it has gone to ground. */
+      const dx = this.hideWent.x - c.position.x, dz = this.hideWent.z - c.position.z, d = Math.hypot(dx, dz) || 1;
+      const across = Math.sin(looked * k.lookSweep) * d * 0.25;
+      c.lookAt = this.lookingFor.set(this.hideWent.x - (dz / d) * across, this.hideWent.y, this.hideWent.z + (dx / d) * across);
+    }
+    /** The cygnet looks from where it went to her and back, to see what she is doing. */
+    bird.watch(Math.floor(this.t / 1.6) % 2 ? c.face(this.herFace) : this.hideWent, true);
+    if (looked > k.lookRound && (this.squirrel.ready(this.countRound) || looked > k.lookRoundMost)) {
+      bird.watch(null);
+      this.resumeWalk();
+    }
+  }
+
   /** To the edge of the round's heaps, to kneel there and look; round a heap in the way rather than through it. */
   private toRound(round: number): void {
     const { child } = this.cast;
@@ -509,7 +558,8 @@ export class BirchesChapter implements Chapter {
 
   private resumeWalk(): void {
     this.round = -1;
-    this.freedAt = -1;
+    this.cast.child.counting = 0;
+    this.cast.child.stowPlane(false);
     this.cast.birches.scarf.active = -1;
     this.to('walk');
     this.play = this.cast.plane.held ? 'hold' : 'watch';
@@ -595,7 +645,7 @@ export class BirchesChapter implements Chapter {
       this.focus.set(r.area.x, r.stand.y, r.area.z);
       return;
     }
-    if (this.beat === 'toScarf' || this.beat === 'scarf' || this.beat === 'unravelling') {
+    if (AT_TANGLE.includes(this.beat)) {
       const scarf = this.cast.birches.scarf;
       const at = scarf.focus ?? this.cast.boat.sailPoint(this.scarfMast);
       s.from = this.scarfFrom;

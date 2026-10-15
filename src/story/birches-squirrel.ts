@@ -744,7 +744,10 @@ export class BirchesSquirrel {
     this.cast.cygnet.watch(null);
   }
 
-  /** A low-weight look at it when it is worth one: on the log as they come, on its dash down the wool, and at the goodbye. */
+  /**
+   * A low-weight look at it when it is worth one: on the log as they come, and at the goodbye. Never on its dash to
+   * hide: she is counting, and where it goes is the game.
+   */
   private glance(dt: number): void {
     const k = tuning.birches.squirrel;
     const { child } = this.cast;
@@ -752,8 +755,7 @@ export class BirchesSquirrel {
     if (this.station === 'meeting' && this.cue.round < 0) {
       const d = Math.hypot(child.position.x - MEETING.at.x, child.position.z - MEETING.at.z);
       want = THREE.MathUtils.smoothstep(k.meetGlance - d, 0, 10);
-    } else if (this.station === 'round2' && this.mode === 'going' && this.cue.round < 0) want = 1;
-    else if (this.station === 'goodbye' && this.cue.leaving) want = 1;
+    } else if (this.station === 'goodbye' && this.cue.leaving) want = 1;
     this.attention.strength += (want - this.attention.strength) * (1 - Math.exp(-dt * k.glanceIn));
     this.attention.point.copy(this.eye);
   }
