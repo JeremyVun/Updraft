@@ -1277,9 +1277,18 @@ function drawView(): void {
   const bird = cygnet.visible ? focusDistance(cygnet.position, 0.2) : her;
   // Measured to the front of the cat rather than its middle: it is small enough to be seen from close to.
   const puss = cat.visible ? focusDistance(cat.position, 0.15) - 0.3 : her;
-  const near = puss > 0.5 ? Math.min(her, bird, puss) : Math.min(her, bird);
+  let near = puss > 0.5 ? Math.min(her, bird, puss) : Math.min(her, bird);
   // The swans overhead and the house she comes home to are subjects in their own right, however far.
   let far = Math.max(her, bird, puss);
+  // And whatever the story says matters now, as far as it says: the focus settles on it rather than jumping.
+  const also = story.current.alsoSharp;
+  if (also && also.weight > 0.005) {
+    const d = focusDistance(also.at, 0);
+    if (d > 0.5) {
+      near = Math.min(near, near + (d - near) * also.weight);
+      far = Math.max(far, far + (d - far) * also.weight);
+    }
+  }
   if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
   if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
   if (story.name === 'drowned' && village.dark.rise > 0) {

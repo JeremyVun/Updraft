@@ -62,7 +62,7 @@ try {
     }
     check(calls.length === 1, 'Tiny idle swing oscillations never creak');
 
-    for (const kind of ['leaf-scuff', 'swing-creak']) {
+    for (const kind of ['leaf-scuff', 'leaf-dive', 'swing-creak']) {
       const { ctx, sound } = offlineSound(3);
       sound.master.gain.cancelScheduledValues(0); sound.master.gain.value = .9;
       const foley = new Foley(); foley.setOutput(sound.output);
@@ -72,7 +72,7 @@ try {
         made++; const source = create(), disconnect = source.disconnect.bind(source);
         source.disconnect = (...args) => { ended++; return disconnect(...args); }; return source;
       };
-      foley.material(kind, kind === 'leaf-scuff' ? tuning.audio.leafScuffLevel : tuning.audio.swingCreakLevel, .6);
+      foley.material(kind, { 'leaf-scuff': tuning.audio.leafScuffLevel, 'leaf-dive': tuning.audio.leafDiveLevel }[kind] ?? tuning.audio.swingCreakLevel, .6);
       const count = made; foley.setOutput(null); foley.material(kind, 1, 0);
       check(count === made, `${kind}: no voice queues while output is disabled`);
       const buffer = await ctx.startRendering();
@@ -80,11 +80,12 @@ try {
       const { pcm: _, ...metrics } = encodeAudio(buffer); renders.push({ kind, ...metrics });
     }
 
-    // Isolated audition at game gain: walking/pile scuffs, then a loaded swing, with real spacing.
+    // Isolated audition at game gain: walking/pile scuffs, the squirrel diving in and a heap bursting, then a loaded swing, with real spacing.
     const { ctx, sound } = offlineSound(19);
     const foley = new Foley(); foley.setOutput(sound.output);
     const leafLevel = tuning.audio.leafScuffLevel;
     const events = [[1,'leaf-scuff',leafLevel*.6],[2.8,'leaf-scuff',leafLevel*.525],[4.7,'leaf-scuff',leafLevel],
+      [6.2,'leaf-dive',tuning.audio.leafDiveLevel],[7.6,'leaf-burst',tuning.audio.leafBurstLevel],
       [9,'swing-creak',.3],[13,'swing-creak',.5],[17,'swing-creak',.38]];
     for (const [time, kind, level] of events) {
       Object.defineProperty(ctx, 'currentTime', { configurable: true, value: time });

@@ -200,8 +200,8 @@ export const tuning = {
     paperLevel: 0.35,
     /** Sparse close physical detail: child and bird share one leaf budget, with no wind/particle triggers. */
     leafScuffLevel: 0.4 * 10 ** (3 / 20), leafScuffEvery: 1.4, leafCoverMin: 0.55,
-    /** The squirrel's heap stirring under it, and a heap going up (a leap is that, a third louder and with a thump). */
-    leafRustleLevel: 0.9, leafBurstLevel: 0.85,
+    /** The squirrel's heap stirring under it, it diving in, and a heap going up (a leap is that, a third louder and with a thump). */
+    leafRustleLevel: 0.9, leafDiveLevel: 0.95, leafBurstLevel: 0.85,
     swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
     birchesFoleyNear: 20, birchesFoleyFar: 65,
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
@@ -1397,6 +1397,9 @@ export const tuning = {
     /** Something going into or out of the leaves: how far round it they go up, at a strength of 0 and per unit of it. */
     burstReach: 0.6,
     burstReachPer: 1.6,
+    /** A squirrel diving into a heap: how far round it the loose leaves go up, and how hard they are thrown (over 1 throws them higher and wider). */
+    splashReach: 3.4,
+    splashThrow: 2.6,
     /** The buried squirrel's paws this far under the leaves' surface (its back 0.2 m under, its tail's tip 0.21 m out), and at most this far into the soil. */
     buryBelow: 0.38,
     burySoil: 0.12,
@@ -1407,10 +1410,10 @@ export const tuning = {
     swingDamping: 0.13,
     /** The squirrel's hide-and-seek (`story/birches-squirrel.ts`). */
     squirrel: {
-      /** Seconds between the hidden heap's shivers, and how hard each stirs it. */
-      tellFrom: 2.5, tellTo: 4, tellStrength: 0.18,
-      /** Share of the time the tail tip is out of the leaves, by round; the chance a tell is a peek, and how long it looks. */
-      tailOut: [0.5, 0.33, 0.2], peekChance: 0.22, peekFor: 1.3,
+      /** Seconds between the hidden heap's tells, and how hard each shivers it; under a waving tail, less. */
+      tellFrom: 2.5, tellTo: 4, tellStrength: 0.18, tailTellStrength: 0.1,
+      /** Share of the time the tail tip is out of the leaves, by round, and how long a peek at a gust that shaved it looks. */
+      tailOut: [0.5, 0.33, 0.2], peekFor: 1.3,
       /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
       buryDepth: 0.35, leapDepth: 0.35,
       /**
@@ -1420,8 +1423,15 @@ export const tuning = {
        * makes 0.3 to 0.6, one along its rim about 0.15.
        */
       driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
-      /** Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn sweep. */
-      hintAfter: 10, inviteAfter: 18,
+      /**
+       * Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn updraft
+       * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
+       */
+      hintAfter: 10, inviteAfter: 18, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
+      /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
+      liftWork: 0.3,
+      /** Updraft charge at which circles wound over another heap stop their gusts counting on the hide's. */
+      circledBy: 0.02,
       /**
        * The meeting: how near she comes before the lens glances at it on its log, how long she stands at the heap
        * looking at it (the round's frame easing in) before it sees her, and how long it freezes before it drops in.
@@ -1441,10 +1451,15 @@ export const tuning = {
       countAfter: 0.6, countFor: 6, countNod: 1.3, lookRound: 1.2, lookRoundMost: 3, lookSweep: 2.2,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
-      /** Share of the camera's gaze given to the squirrel at the meeting and at the goodbye. */
-      glance: 0.28, glanceIn: 1.2,
+      /**
+       * Share of the camera's gaze given to the squirrel when it is worth a look (`glanceIn` a second to come and go),
+       * and how quickly the depth blur's focus settles on it.
+       */
+      glance: 0.28, glanceIn: 1.2, sharpIn: 1.5,
       /** How quickly a round's longer portrait lens eases in and out: a spring's rate per second, settled in about 3 s. */
       lensEase: 1.6,
+      /** How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest. */
+      splash: 1, meetSplash: 1.3,
       /** The leap: her run-up speed and spring, how hard the leaves go up, and how long she sits in them. */
       leapRun: 3.2, leapUp: 2.6, leapBurst: 1.4, leapSitFor: 1.8,
       /** Through a bare hollow she runs, kicking up what is left this often and this hard. */

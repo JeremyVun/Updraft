@@ -47,14 +47,15 @@ export class BirchesFoley {
   }
 
   /**
-   * The squirrel's game: a hidden one stirring its heap, a heap thrown up, and the child landing in the leaves. Heard
-   * just before the leaves go up, it stands for the scuff their going up would make, so that is not heard as well.
+   * The squirrel's game: a hidden one stirring its heap, it diving in, a heap thrown up, and the child landing in the
+   * leaves. Heard just before the leaves go up, it stands for the scuff their going up would make, so that is not
+   * heard as well.
    */
-  leaves(kind: 'rustle' | 'burst' | 'leap', at: THREE.Vector3, strength: number, active: boolean): void {
+  leaves(kind: 'rustle' | 'dive' | 'burst' | 'leap', at: THREE.Vector3, strength: number, active: boolean): void {
     if (!active) return;
     this.claimed = this.time + 0.05;
     const k = tuning.audio;
-    const level = Math.min(1, strength) * this.distance(at) * (kind === 'rustle' ? k.leafRustleLevel : k.leafBurstLevel);
+    const level = Math.min(1, strength) * this.distance(at) * (kind === 'rustle' ? k.leafRustleLevel : kind === 'dive' ? k.leafDiveLevel : k.leafBurstLevel);
     if (level < 0.015) return;
     this.foley.material(`leaf-${kind}`, kind === 'leap' ? level * 1.3 : level, screenPan(this.camera, at));
   }

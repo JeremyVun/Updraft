@@ -53,8 +53,8 @@ try {
     ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(c.cast);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
     ...[1,2].map(count=>['meadow','echoes',`echoes-${count}`,`const f=g.meadowEchoes.stands[${count}-1];g.child.place(f.x,f.z,Math.PI);c.restoreCheckpoint('echoes-${count}',[2,300,0,0,0]);`]),
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
-    ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
-      `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
+    ...[['squirrel1-scarf1',[1,0,.65,1,1]],['squirrel2-scarf2-swing',[3,1,.65,2,2]],['squirrel3-scarf3-swing',[4,1,.65,3,3]],['squirrel3-scarf4-swing',[5,1,.7,4,3]]]
+      .map(([point, data]) => ['birches','birches',point,`c.restoreCheckpoint('${point}',[${data}]);c.holdUntil=1e6;`]),
     ['drowned', 'drowned', 'sail', `const {CAT_HOLD:h}=await import('/src/world/drowned-way.ts');g.boat.beach(h.x,h.y,Math.atan2(19,-41));g.boat.launch();c.cat.aboard();c.aboardFrom=c.now;c.beat='drift';c.leg=2;g.boat.steerFor=(await import('/src/world/drowned.ts')).DROWNED_CHANNEL[2];`],
     // The run, the church, the belfry and the storm save as the real play reaches them from their QA starts.
     ['drowned', 'roofs', 'roofs', ''],

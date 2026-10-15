@@ -186,14 +186,18 @@ export const ROUNDS: readonly Round[] = [
  */
 export const LEAP = { heap: 7, from: lifted(STAND[2]), takeOff: rimOf(7, STAND[2]), land: inPile(7, STAND[2], 0.15) };
 
-const T1_FOOT = birchesGap(0, 14.55, 7.2);
-const T1_STOP = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ };
+/** The birch the first loop hangs on, from a branch at its fork. */
+const FORK_TREE = { x: SCARF_SNAGS[0].treeX, z: SCARF_SNAGS[0].treeZ };
 const STUMP = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ };
+const STUMP_TOP = lifted(STUMP, 4.12);
 const T2_STOP = { x: SCARF_SNAGS[1].stopX, z: SCARF_SNAGS[1].stopZ };
+/** The broken birch's top, where it sits through the second tangle, and the ground round it. */
+export const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.5 ? STUMP_TOP.y : ground(x, z));
 /** The birch standing behind the slipped loop, beyond the fallen one, in that tangle's view. */
 const BEHIND_SLIP = birchesAt(0.8, -1171.6);
 const BOW_TREE = { x: SCARF_SNAGS[3].treeX, z: SCARF_SNAGS[3].treeZ };
-/** Down the ride from the last two tangles, so that a trunk's face toward it faces their lenses. */
+/** Down the ride from the tangles, so that a trunk's face toward it faces their lenses. */
+const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
 const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
 /** The hollow's far trunk: the bank of its farthest heap (`world/birches.ts` BANKS). */
@@ -206,14 +210,14 @@ const SWING_LENS = birchesAt(12, -1106.3);
 const BERTH_SIDE = birchesAt(-7.4, -1194.8);
 
 /**
- * At each tangle, in sight of the work and out of the gesture's way and the lens's: sitting up on the floor at the
- * first loop's foot beside the wool (the fork itself is inside the thickest gold, hidden from that lens); on the
- * broken birch's top, where the coils rise round it and slide off past it; on the trunk standing behind the slipped
- * loop; and up the bow's own birch, above its low limb.
+ * At each tangle it waits ahead of her where the knot is, in sight of the work and out of the gesture's way and the
+ * lens's: on the first loop's birch just above the fork its branch leaves from, red on the white bark (out on the
+ * branch it is lost in the gold); on the broken birch's top, where the coils rise round it and slide off past it;
+ * on the trunk standing behind the slipped loop; and up the bow's own birch, above its low limb.
  */
 export const TANGLE_PERCHES: readonly PerchSpec[] = [
-  { action: 'sit', at: lifted(T1_FOOT), yaw: Math.atan2(T1_STOP.x - T1_FOOT.x, T1_STOP.z - T1_FOOT.z) },
-  { action: 'sit', at: lifted(STUMP, 4.12), yaw: Math.atan2(T2_STOP.x - STUMP.x, T2_STOP.z - STUMP.z) },
+  { action: 'climb', trunk: { tree: FORK_TREE, height: 4.5, toward: T1_LENS } },
+  { action: 'sit', at: STUMP_TOP, yaw: Math.atan2(T2_STOP.x - STUMP.x, T2_STOP.z - STUMP.z), floor: ON_THE_STUMP },
   { action: 'climb', trunk: { tree: BEHIND_SLIP, height: 4.5, toward: T3_LENS } },
   { action: 'climb', trunk: { tree: BOW_TREE, height: 5, toward: T4_LENS } },
 ];
@@ -248,11 +252,14 @@ const wool = (p: Spot, lift: number): Step => ({ line: lifted(p, lift) });
  * foot it runs to the first perch tree and takes the length that stays up there until the scarf is gathered.
  */
 export const PATHS = {
-  /** Out of the first heap, over the fallen birch and up the ride's edge to the foot of the first loop. */
-  toTangle1: [{ line: onLimb(fallen(0.45, 0.5), 0.5) }, g(11.6, -1078.5), gap(0, 6, 9.5), { ground: T1_FOOT }],
-  /** Round the fork tree, up the first perch tree to its coil, and down the wool to the floor of the second round. */
+  /** Out of the first heap, over the fallen birch and up the ride's edge ahead of her, and up the first loop's birch. */
+  toTangle1: [
+    { line: onLimb(fallen(0.45, 0.5), 0.5) }, g(11.6, -1078.5), gap(0, 6, 9.5), gap(0, 14.5, 10.5), g(13, -1086.4),
+    bark(FORK_TREE, 0.5, T1_LENS), bark(FORK_TREE, 4.5, T1_LENS),
+  ],
+  /** Down the fork tree and round it, up the first perch tree to its coil, and down the wool to the floor of the second round. */
   toRound2: [
-    { ground: T1_FOOT }, g(15, -1084.5), g(16.5, -1094), g(19.2, -1098.3),
+    bark(FORK_TREE, 4.5, T1_LENS), bark(FORK_TREE, 0.5, T1_LENS), g(15.8, -1089.6), g(16.5, -1094), g(19.2, -1098.3),
     bark(P0, 0.5, birchesGap(1, 2, 13.6)), bark(P0, 5, birchesGap(1, 2, 13.6)), bark(P0, 9, birchesGap(1, 2, 13.6)),
     wool(birchesAt(20.51, -1099.74), 9.22), wool(birchesAt(19.26, -1100.43), 7.58), wool(birchesGap(1, 0.38, 16.66), 5.08),
     wool(birchesGap(1, 2.09, 13.58), 2.7), wool(birchesGap(1, 3.57, 10.93), 1.16), wool(birchesGap(1, 4.84, 8.64), 0.52),

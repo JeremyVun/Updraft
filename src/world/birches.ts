@@ -1347,6 +1347,17 @@ export class AutumnBirches {
     this.onLeafScuff?.(x, z, Math.min(strength, 1));
   }
 
+  /**
+   * Something landing in a heap at (x, z), 1 a squirrel's dive: the loose leaves round it go up high and wide, and
+   * none of the heap is taken, so it is still a whole mound to hide in.
+   */
+  splash(x: number, z: number, strength: number): void {
+    const { splashReach, splashThrow } = tuning.birches;
+    this.kicking.set(x, z, splashReach * Math.sqrt(strength), -splashThrow * strength);
+    this.kickFor = 0.7;
+    this.onLeafScuff?.(x, z, 1);
+  }
+
   /** How high the leaves stand over the ground at each point, in metres, read back from the live floor. */
   depthAt(points: readonly { x: number; z: number }[]): Promise<number[]> {
     return this.litter.depthAt(points);
