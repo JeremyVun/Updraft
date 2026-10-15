@@ -1,10 +1,11 @@
-// The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap, wrong heaps
-// first, a child's random swipes, a stalled player through the hint and the drawn sweep, heaps blown flat before
-// the round (the drift and trunk fallbacks), the leap into a deep drift and through a bare hollow, resumed saves at
-// every new checkpoint and from names saved before the game, and stills of each round's frame with the squirrel's
-// height on screen.
-// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right wrong random stall flat leap bare resume frames]
-// W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills.
+// The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap, by a stroke and
+// by an updraft, wrong heaps first, a child's random swipes, a stalled player through the hint and the drawn updraft,
+// heaps blown flat before the round (the drift and trunk fallbacks), the leap into a deep drift and through a bare
+// hollow, resumed saves at every new checkpoint and from names saved before the game, and stills of each round's
+// frame with the squirrel's height on screen and how much of it shows buried tail in.
+// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong random stall flat leap bare resume frames]
+// W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
+// the squirrel's size at runtime.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600), H = Number(process.env.H ?? 900);
 const out = process.env.OUT ?? '/tmp/updraft-squirrel-rounds';
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'wrong', 'random', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'random', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
 const { browser, close } = await openBrowser();
 const errors = [];
 const results = {};
@@ -31,6 +32,7 @@ async function load(query = '') {
     window.__sq = { ...rounds, ...world, ...points, SCARF_SNAGS: scarf.SCARF_SNAGS, heightAt: island.heightAt };
     window.__screen = (p) => { const v = p.clone().project(__game.rig.camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; };
   });
+  if (process.env.SCALE) await page.evaluate((scale) => { __game.squirrel.scale = scale; }, Number(process.env.SCALE));
   await page.waitForTimeout(3000);
 }
 
@@ -62,9 +64,10 @@ async function jump(round, patch = null) {
 }
 
 /** Forces the hide into heap `heap` of the round being played, so a case can choose which heaps are wrong. */
-const hideIn = (heap) => page.evaluate((heap) => {
-  const c = __game.story.current, r = __sq.ROUNDS[c.round];
-  c.squirrel.hide({ round: c.round, heap, at: r.hides[heap].clone(), reach: __sq.BIRCH_PILES[r.heaps[heap]].r, trunk: null }, true);
+const hideIn = (heap) => page.evaluate(async (heap) => {
+  const g = __game, c = g.story.current, r = __sq.ROUNDS[c.round], at = r.hides[heap].clone();
+  const [depth] = await g.birches.depthAt([at]);
+  c.squirrel.hide({ round: c.round, heap, at, sink: depth - g.birches.buryDepth(at.x, at.z, depth), reach: __sq.BIRCH_PILES[r.heaps[heap]].r, trunk: null }, true);
 }, heap);
 
 /** A stroke on screen across heap `heap` of the round, `span` times its width on screen, through `off` of it to the side. */
@@ -85,6 +88,29 @@ async function stroke([a, b], ms = 380, lift = true) {
     await page.mouse.move((a[0] + (b[0] - a[0]) * i / steps) * W, (a[1] + (b[1] - a[1]) * i / steps) * H);
     await page.waitForTimeout(ms / steps);
   }
+}
+
+/** Where heap `heap` of the round is on screen. */
+const heapOnScreen = (heap) => page.evaluate((heap) => {
+  const c = __game.story.current, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[heap]];
+  return window.__screen(r.hides[heap].clone().set(p.x, r.hides[heap].y + 0.3, p.z));
+}, heap);
+
+/** Real circles round heap `heap` on screen, `radius` screen heights across, until it is found or `loops` are drawn. */
+async function circleOver(heap, round, loops = 6, radius = 0.07) {
+  const [cx, cy] = await heapOnScreen(heap);
+  await page.evaluate(() => { __game.input.present = false; });
+  let a = 0, drawn = 0;
+  await page.mouse.move(cx * W + radius * H, cy * H);
+  for (; drawn < loops; drawn++) {
+    for (let i = 0; i < 24; i++) {
+      a += (Math.PI * 2) / 24;
+      await page.mouse.move(cx * W + Math.cos(a) * radius * H, cy * H + Math.sin(a) * radius * H);
+      await page.waitForTimeout(28);
+    }
+    if (await found(round, 20)) return drawn + 1;
+  }
+  return (await found(round, 1500)) ? drawn : null;
 }
 
 /** Flushed out of its hide in this round (it is counted found once it has scolded her and set off). */
@@ -118,6 +144,32 @@ const cased = {
       await page.screenshot({ path: `${out}-right-${round + 1}.png` });
       await afterFind(round);
       rows.push({ round: round + 1, heap: hide.heap, strokes: 1, foundAfter: +(at - began).toFixed(2), next: (await state()).beat });
+    }
+    return rows;
+  },
+
+  /** Circles over the right heap find it in about two loops; in round 3 circles over each wrong heap first never do. */
+  async updraft() {
+    await load();
+    const rows = [];
+    for (const round of [0, 1, 2]) {
+      if (round === 0) await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 90000);
+      else await jump(round);
+      if (round > 0) await hideIn(round === 2 ? 1 : 0);
+      const { hide } = await state();
+      const wrongs = [];
+      if (round === 2) for (const heap of [0, 2]) {
+        const loops = await circleOver(heap, round, 4);
+        wrongs.push({ heap, found: loops !== null });
+        await page.waitForTimeout(1500);
+      }
+      assert.ok(wrongs.every((w) => !w.found), `round ${round + 1}: an updraft over a wrong heap found it: ${JSON.stringify(wrongs)}`);
+      const lift = await page.evaluate(() => { const h = __game.story.current.squirrel.hideout; return h ? +__game.wind.sample(h.at.x, h.at.z, { x: 0, z: 0, energy: 0, lift: 0 }).lift.toFixed(2) : null; });
+      const loops = await circleOver(hide.heap, round);
+      assert.ok(loops !== null && loops <= 4, `round ${round + 1}: circling the right heap took ${loops} loops`);
+      await page.screenshot({ path: `${out}-updraft-${round + 1}.png` });
+      rows.push({ round: round + 1, heap: hide.heap, loops, wrongs, liftBefore: lift });
+      await afterFind(round);
     }
     return rows;
   },
@@ -189,7 +241,7 @@ const cased = {
       const s = await page.evaluate(() => {
         const g = __game, c = g.story.current, q = c.squirrel, h = q.hideout, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[h.heap]];
         return { t: c.now, bird: Math.hypot(g.cygnet.position.x - p.x, g.cygnet.position.z - p.z), r: p.r, stay: g.cygnet.stay,
-          invitation: g.emberInvitation.strokes.some((s) => s.alpha > 0.3), rounds: q.rounds };
+          invitation: !!c.coax && g.swirl.glow > 0.2, rounds: q.rounds };
       });
       const t = s.t - began;
       if (timeline.hint === null && s.stay && s.bird < s.r + 1.2) { timeline.hint = +t.toFixed(1); await page.screenshot({ path: `${out}-stall-hint.png` }); }
@@ -199,10 +251,10 @@ const cased = {
       await page.waitForTimeout(500);
     }
     assert.ok(timeline.hint !== null && timeline.hint >= 9.5 && timeline.hint < 16, `the cygnet's hint: ${timeline.hint}`);
-    assert.ok(timeline.invitation !== null && timeline.invitation >= 17.5 && timeline.invitation < 21, `the drawn sweep: ${timeline.invitation}`);
-    await stroke(await acrossHeap(0));
-    assert.ok(await found(1), 'found after the invitation');
-    return timeline;
+    assert.ok(timeline.invitation !== null && timeline.invitation >= 17.5 && timeline.invitation < 21, `the drawn updraft: ${timeline.invitation}`);
+    const loops = await circleOver(0, 1);
+    assert.ok(loops !== null, 'an updraft after the invitation did not find it');
+    return { ...timeline, loops };
   },
 
   /**
@@ -383,26 +435,41 @@ const cased = {
           return y1 > y0 ? Math.round(y1 - y0) : 0;
         };
         const settle = () => { for (let i = 0; i < 40; i++) s.update(1 / 30, 100 + i / 30); };
+        /** Pixels that differ with it drawn and without, the world held still between the two. */
+        const showing = () => {
+          const R = g.renderer, size = R.getDrawingBufferSize(cam.position.clone()), w = size.x, h = size.y;
+          const target = new g.post.sceneTarget.constructor(w, h), a = new Uint8Array(w * h * 4), b = new Uint8Array(w * h * 4);
+          const draw = (into) => { R.setRenderTarget(target); R.render(g.scene, cam); R.readRenderTargetPixels(target, 0, 0, w, h, into); };
+          s.mesh.visible = true; draw(a);
+          s.mesh.visible = false; draw(b);
+          s.mesh.visible = true; R.setRenderTarget(null); target.dispose();
+          let n = 0;
+          for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 12) n++;
+          return n;
+        };
         const depths = await g.birches.depthAt(r.hides);
-        const sit = [], peek = [];
+        const sit = [], peek = [], tailIn = [], tailOut = [];
         r.hides.forEach((h, i) => {
           s.act('sit', { at: h, yaw: Math.atan2(cam.position.x - h.x, cam.position.z - h.z), floor: () => h.y, look: null, nut: true });
           settle(); sit.push(tall());
           c.squirrel.hide({ round: c.round, heap: i, at: h.clone(), sink: depths[i] - g.birches.buryDepth(h.x, h.z, depths[i]), reach: 1, trunk: null }, true);
-          c.squirrel.mode = 'hidden'; settle();
+          c.squirrel.mode = 'hidden';
+          s.act('buried', { tailOut: false }); settle(); tailIn.push(showing());
+          s.act('buried', { tailOut: true }); settle(); tailOut.push(showing());
           s.act('peek', { for: 30, tailOut: true }); settle(); peek.push(tall(h.y + depths[i]));
         });
         const face = g.child.face(g.child.position.clone()), head = window.__screen(face.clone().setY(face.y + 0.55)), feet = window.__screen(g.child.position.clone());
         const inFrame = ([u, w]) => u > 0.04 && u < 0.96 && w > 0.03 && w < 0.97;
         s.act('sit', { at: r.hides[0], yaw: Math.atan2(cam.position.x - r.hides[0].x, cam.position.z - r.hides[0].z), floor: () => r.hides[0].y, look: null, nut: true });
         settle();
-        return { sit, peekAboveLeaves: peek, leafTop: depths.map((d) => +d.toFixed(2)), childWhole: inFrame(head) && inFrame(feet),
+        return { sit, peekAboveLeaves: peek, tailInPx: tailIn, tailOutPx: tailOut, leafTop: depths.map((d) => +d.toFixed(2)), childWhole: inFrame(head) && inFrame(feet),
           heapsIn: r.heaps.map((i) => inFrame(window.__screen(r.hides[0].clone().set(__sq.BIRCH_PILES[i].x, r.hides[0].y, __sq.BIRCH_PILES[i].z)))),
           lens: +cam.position.distanceTo(r.stand).toFixed(1) };
       });
       await page.waitForTimeout(300);
       await page.screenshot({ path: `${out}-frame-${round + 1}-${W}x${H}.png` });
       rows.push({ round: round + 1, ...row });
+      assert.ok(row.tailInPx.every((n) => n <= 6), `round ${round + 1}: buried tail in, it shows ${row.tailInPx} px`);
       await page.evaluate(() => { const q = __game.story.current.squirrel; delete q.lying; delete q.seek; });
     }
     return rows;

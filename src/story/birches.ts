@@ -1,6 +1,7 @@
 import { birchesPoint, type CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
+import type { Coax } from '../fx/swirl';
 import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK, BIRCH_PILES } from '../world/birches';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
@@ -95,7 +96,7 @@ export class BirchesChapter implements Chapter {
   private readonly herFace = new THREE.Vector3();
   private lens = 1;
   private lensRate = 0;
-  private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
+  private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false, atTangle: false, atSwing: false };
 
   constructor(private readonly cast: Cast) {
     this.leafPlay = new BirchLeafPlay(cast);
@@ -121,9 +122,14 @@ export class BirchesChapter implements Chapter {
     return this.shot.distance + (AT_TANGLE.includes(this.beat) ? tuning.birches.scarf.strokeReach : tuning.birches.strokeReach);
   }
 
-  /** A stalled player's drawn sweep across the heap the squirrel is in. */
-  get windInvitation(): THREE.Vector3 | null {
+  /** A stalled player's drawn updraft, turning over the heap the squirrel is in. */
+  get coax(): Coax | null {
     return this.beat === 'round' ? this.squirrel.invitation : null;
+  }
+
+  /** The squirrel, kept sharp with her by the depth blur while it matters. */
+  get alsoSharp(): { at: THREE.Vector3; weight: number } {
+    return this.squirrel.sharpness;
   }
 
   get birchesScore(): BirchesScorePhase | undefined {
@@ -188,6 +194,8 @@ export class BirchesChapter implements Chapter {
     c.swingOver = ((this.swings > 0 || this.swingOffered) && !swinging) || scarf.active === 1 || scarf.completed >= 2;
     c.gathered = scarf.finished;
     c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
+    c.atTangle = AT_TANGLE.includes(this.beat);
+    c.atSwing = swinging;
     return c;
   }
 

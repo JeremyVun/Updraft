@@ -87,8 +87,8 @@ export interface Cast {
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
   /** A physical sound at a place in the world, heard as near as it is: for things a chapter builds and moves itself. */
   knock?(kind: MaterialSound, at: THREE.Vector3, strength: number): void;
-  /** The birches' leaves heard where they go up: something hidden stirring them, a heap bursting, a child landing in one. */
-  leafSound?(kind: 'rustle' | 'burst' | 'leap', at: THREE.Vector3, strength: number): void;
+  /** The birches' leaves heard where they go up: something hidden stirring them, the squirrel diving in, a heap bursting, a child landing in one. */
+  leafSound?(kind: 'rustle' | 'dive' | 'burst' | 'leap', at: THREE.Vector3, strength: number): void;
 }
 
 /** What a chapter tells the rest of the game each frame. */
@@ -218,6 +218,8 @@ export interface Chapter {
   readonly invitationHeading?: number | null;
   /** How many of the night's fireflies are out, 0..1; all of them when unset. */
   readonly fireflies?: number;
+  /** Something besides her and the cygnet that the depth blur keeps sharp, and how much (0..1). */
+  readonly alsoSharp?: { at: THREE.Vector3; weight: number } | null;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
   /** Where the one ember light the shaders get comes from, when a beat needs it somewhere other than the brightest coal. */
