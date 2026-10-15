@@ -169,6 +169,11 @@ The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red D
 later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s time constant instead of 0.65 s
 (`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds.
 
+> when the music loops on the birches island, it needs to have a better fade in.
+
+Going round on the island, each pass plays to its natural end, rests 3.5 s (`tuning.audio.recordedMusicLoop.birches`)
+and begins again from its top with the same entrance (audio contract, Birches).
+
 > It's jumping animation also needs a look at, when it's "jumping" it looks like it's slow motion gliding through the
 > air. It doesn't have the expected jump velocity if that makes sense, and so it's animation looks really strange as a
 > result.

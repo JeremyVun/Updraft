@@ -1,5 +1,6 @@
 // Birches' play-out, the stairs song, the village's approach and the quiet after it, rendered offline through the production
-// soundscape: Birches (`red_door.ogg`) loops on its island, plays its pass out once they have sailed and never begins after,
+// soundscape: Birches (`red_door.ogg`) goes round on its island, resting between passes and coming in again as on arrival,
+// plays its pass out once they have sailed and never begins after,
 // ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud, fading over
 // `stairsSongCloudFade` in the white and never starting again; `village_approach.ogg` starts from its top at the
 // village's handoff at full level, ends faded at its seam just before the bass, never restarts; then no music through
@@ -93,32 +94,64 @@ try {
       check(db(power(raw, 0, .2)) < -55 && db(power(raw, .25, .45)) > median + 6, 'the file opens on 0.2 s of silence, then its loudest note');
     }
 
-    // Birches: loops on its island, plays its pass out once they have sailed, the same source.
+    // Birches: goes round on its island, plays its pass out once they have sailed, the same source.
     {
-      let source = null, looped = null, same = true;
+      let source = null, held = null, entrance = [], same = true, released = null;
+      const level = 10 ** (tuning.audio.recordedMusicDb.birches / 20), tau = tuning.audio.recordedMusicFadeIn.birches;
       await render(4, t => birches(t < 2), { watch: (t, sound) => {
         const s = sound.birchesScore?.source;
         if (!s) return;
         source ??= s; same &&= s === source;
-        if (t === 1) looped = s.loop;
+        if (t === 1) held = !s.loop && !!sound.birchesScore.buffer;
+        if (t === 1 || t === 2) entrance.push(sound.birchesScore.bus.gain.value / level);
+        released = sound.birchesScore.buffer === null;
       } });
-      check(looped === true, 'on the Birches island and its approach the recording loops');
-      check(same && source.loop === false, 'once they have sailed, the pass under way plays out: the same source, no longer looping');
+      check(held === true, 'on the Birches island and its approach the recording is held to go round again, not looped sample to sample');
+      check(entrance.every((g, i) => Math.abs(g - (1 - Math.exp(-(i + 1) / tau))) < .04),
+        `it comes in over its own ${tau} s time constant (${entrance.map(g => g.toFixed(2)).join(', ')} at 1 and 2 s)`);
+      check(same && source.loop === false && released, 'once they have sailed, the pass under way plays out: the same source, its recording released');
       let fetched = false;
       const late = await render(1, () => birches(false), { watch: (t, sound) => { fetched ||= !!sound.birchesScore || sound.preparedScore?.track === 'birches'; } });
       check(late.starts.length === 0 && !fetched, 'it never begins once they have sailed (a toStairs start is quiet until the stairs song)');
     }
     {
-      // The end of the file: a played-out pass stops there; a looping one goes round.
-      const out = new OfflineAudioContext(2, 10 * RATE, RATE), round = new OfflineAudioContext(2, 10 * RATE, RATE);
-      const a = new RecordedScore(out, out.destination, 'birches'), b = new RecordedScore(round, round.destination, 'birches');
-      await Promise.all([a.ready, b.ready]);
+      // The end of the file: a played-out pass stops there.
+      const out = new OfflineAudioContext(2, 10 * RATE, RATE);
+      const a = new RecordedScore(out, out.destination, 'birches');
+      await a.ready;
       const length = a.buffer.duration;
-      a.update('return', 1, length - 5); b.update('return', 1, length - 5);
+      a.update('return', 1, length - 5);
       a.playOut();
-      const [ended, looping] = await Promise.all([out.startRendering(), round.startRendering()]);
-      check(power(ended, 1, 4) > 1e-7 && power(ended, 5.05, 10) === 0 && power(looping, 6, 9) > 1e-7,
-        `played out, it stops at the end of the file (${length.toFixed(1)} s) instead of going round`);
+      const ended = await out.startRendering();
+      check(power(ended, 1, 4) > 1e-7 && power(ended, 5.05, 10) === 0, `played out, it stops at the end of the file (${length.toFixed(1)} s)`);
+    }
+    {
+      // On the island the pass ends, rests, and the next comes in from its top as on arrival; sailing in a rest, none does.
+      const tail = 4, { rest } = tuning.audio.recordedMusicLoop.birches, tau = tuning.audio.recordedMusicFadeIn.birches;
+      const level = 10 ** (tuning.audio.recordedMusicDb.birches / 20);
+      const setup = sound => {
+        sound.birchesScore = new RecordedScore(sound.ctx, sound.ctx.destination, 'birches');
+        sound.birchesScore.update('return', level, 238.893 - tail);
+      };
+      let heldInRest = null, raw = null;
+      const round = await render(tail + rest + 3, () => birches(true), { setup, watch: (t, sound) => {
+        if (t === tail + 1) { heldInRest = !sound.birchesScore.source && !!sound.birchesScore.buffer; raw = sound.birchesScore.buffer; }
+      } });
+      const next = round.starts.filter(s => s.track === 'birches').at(-1);
+      check(heldInRest && round.starts.length === 2 && next.offset === 0 && next.when >= tail + rest - .05 && next.when <= tail + rest + STEP + .05
+        && power(round.buffer, tail + .05, tail + rest - .05) === 0 && power(round.buffer, tail + rest + 1, tail + rest + 3) > 1e-8,
+        `on the island the pass ends, rests ${rest} s with its recording held, and goes round from its top (at ${next?.when} s)`);
+      const gain = (a, b) => Math.sqrt(power(round.buffer, next.when + a, next.when + b) / power(raw, a, b)) / level;
+      const expected = (a, b) => { let sum = 0; for (let i = 0; i < 100; i++) sum += (1 - Math.exp(-(a + (b - a) * (i + .5) / 100) / tau)) ** 2; return Math.sqrt(sum / 100); };
+      const windows = [[0, .25], [.75, 1.25], [1.75, 2.25], [2.5, 2.75]];
+      check(windows.every(([a, b]) => Math.abs(gain(a, b) - expected(a, b)) < .05),
+        `the next pass comes in from silence over ${tau} s, as on arrival (${windows.map(([a, b]) => gain(a, b).toFixed(2)).join(', ')} of full)`);
+      let released = null;
+      const sailed = await render(tail + rest + 3, t => birches(t < tail + 1), { setup, watch: (t, sound) => {
+        if (t === tail + 2) released = sound.birchesScore?.buffer === null;
+      } });
+      check(sailed.starts.length === 1 && released && power(sailed.buffer, tail + .05, tail + rest + 3) === 0,
+        'sailing during the rest, nothing more plays and the recording is released');
     }
     {
       // Sailing to the stairs (from 2 s), the stairs song due at 20 s: a pass that would still sound then fades over
