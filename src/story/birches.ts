@@ -59,6 +59,8 @@ export class BirchesChapter implements Chapter {
   private play: Play = 'carry';
   private leg = 0;
   private boatMoved = false;
+  /** When the boat was last in the picture on the beach they landed on. */
+  private boatSeenAt = 0;
   private beatStart = 0;
   private holdUntil = 0;
   private now = 0;
@@ -230,12 +232,9 @@ export class BirchesChapter implements Chapter {
     const mast = boat.position.z < MAST_FROM ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
     boat.scarfSail = scarf.woven;
+    /** The first shot looks at her over the stern, and she steps off the bow behind the sail. */
+    boat.sailGivesWay = this.beat === 'ashore' || this.beat === 'wonder' ? tuning.birches.landingGivesWay : tuning.sail.givesWay;
     this.squirrel.update(dt, time, this.cue());
-    // The arrival beach is behind the trees before the boat moves to the far shore.
-    if (!this.boatMoved && this.leg >= CLEARING_LEG) {
-      boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z, 0.15);
-      this.boatMoved = true;
-    }
     /** The afternoon goes on while they walk, and hands over to the village's dusk at the far beach. */
     const over = THREE.MathUtils.clamp((BIRCHES_LANDING.y - c.position.z) / (BIRCHES_LANDING.y - BIRCHES_BERTH.z), 0, 1);
     this.dusk += (0.58 + over * 0.12 - this.dusk) * (1 - Math.exp(-dt * 0.3));
@@ -330,6 +329,25 @@ export class BirchesChapter implements Chapter {
     if (p.held) p.hold(c);
     this.frame();
     this.easeLens(dt);
+  }
+
+  /**
+   * The boat goes round to the far shore only once the beach they landed on has been out of the picture a moment and
+   * she is well up the ride, so it is never seen to go; past the crest that beach is behind them for good.
+   */
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    if (this.boatMoved) return;
+    const { boat, child } = this.cast;
+    const seen = [0, 5].some((up) => {
+      const p = this.tmp.copy(boat.position).setY(boat.position.y + up).project(camera);
+      return p.z < 1 && Math.abs(p.x) < 1.15 && Math.abs(p.y) < 1.15;
+    });
+    if (seen) this.boatSeenAt = this.now;
+    const up = Math.hypot(child.position.x - BIRCHES_LANDING.x, child.position.z - BIRCHES_LANDING.y);
+    if ((up > 15 && this.now - this.boatSeenAt > 1) || child.position.z < BIRCHES_CLEARING.y) {
+      boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z, 0.15);
+      this.boatMoved = true;
+    }
   }
 
   /** A round's longer portrait lens comes in and goes out as smoothly as a dolly, never with the rig's quick start. */

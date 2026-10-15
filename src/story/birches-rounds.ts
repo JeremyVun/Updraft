@@ -212,6 +212,11 @@ const T2_STOP = { x: SCARF_SNAGS[1].stopX, z: SCARF_SNAGS[1].stopZ };
 export const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.5 ? STUMP_TOP.y : ground(x, z));
 /** The birch standing behind the slipped loop, beyond the fallen one, in that tangle's view. */
 const BEHIND_SLIP = birchesAt(0.8, -1171.6);
+/**
+ * East of the slipped loop, the way it is drawn: its red on white bark against the sea, nearer the lens than any tree
+ * behind the loop. Only landscape's wider view holds it.
+ */
+const EAST_OF_SLIP = birchesAt(9.3, -1160.2);
 const BOW_TREE = { x: SCARF_SNAGS[3].treeX, z: SCARF_SNAGS[3].treeZ };
 /** Down the ride from the tangles, so that a trunk's face toward it faces their lenses. */
 const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
@@ -237,6 +242,9 @@ export const TANGLE_PERCHES: readonly PerchSpec[] = [
   { action: 'climb', trunk: { tree: BEHIND_SLIP, height: 4.5, toward: T3_LENS } },
   { action: 'climb', trunk: { tree: BOW_TREE, height: 5, toward: T4_LENS } },
 ];
+
+/** The third tangle's perch in landscape, which shows it larger than portrait can. */
+export const TANGLE_3_WIDE: PerchSpec = { action: 'climb', trunk: { tree: EAST_OF_SLIP, height: 3.2, toward: T3_LENS } };
 
 /**
  * While she swings: on the swing tree's trunk just under the limb, on the side toward the lens, where its red reads
@@ -299,6 +307,16 @@ export const PATHS = {
   toTangle3: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
     g(-11.4, -1154.2), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),
+  ],
+  /** In landscape: down the far trunk, across the ride short of where she will stand, and up the birch east of the loop. */
+  toTangle3Wide: [
+    bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
+    g(-11.4, -1154.2), g(-4.5, -1155), g(3, -1157.5), g(7.5, -1159.5), bark(EAST_OF_SLIP, 0.5, T3_LENS), bark(EAST_OF_SLIP, 3.2, T3_LENS),
+  ],
+  /** And from there round the fallen birch's end and along the top of the beach's wood to the bow's birch. */
+  toTangle4Wide: [
+    bark(EAST_OF_SLIP, 3.2, T3_LENS), bark(EAST_OF_SLIP, 0.5, T3_LENS),
+    g(10, -1162), g(12.2, -1168.5), g(8, -1172.5), g(-4, -1174), g(-9, -1178.5), g(-12.6, -1179.6), bark(BOW_TREE, 0.5, T4_LENS), bark(BOW_TREE, 5, T4_LENS),
   ],
   /** Down, along the top of the beach's wood to the bow's birch, and up above its low limb. */
   toTangle4: [

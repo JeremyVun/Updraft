@@ -1418,6 +1418,8 @@ export const tuning = {
     /** A heap held against the wind until the squirrel is in it: how far past its rim it is held, and in how many seconds it is held or let go. */
     holdReach: 0.6,
     holdEase: 0.5,
+    /** Stepping off the bow under the sail in the first shot, she is seen through all but this much of it. */
+    landingGivesWay: 0.06,
     /** Something burrowing under the leaves heaves them into a hump this far across (m, from its middle) and this high. */
     burrowReach: 1.3,
     burrowRise: 0.6,
@@ -2355,6 +2357,8 @@ export const tuning = {
    * the wind field's unit, so `drive` is boat speed per unit of breeze.
    */
   sail: {
+    /** What is left of the cloth where it hangs between the camera and the child. */
+    givesWay: 0.3,
     /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
     hullClearance: 0.06,
     /** Most a beached hull leans with the sand beneath it, in radians. */

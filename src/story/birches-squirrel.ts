@@ -7,7 +7,7 @@ import { tuning } from '../tuning';
 import { SCARF_OVER } from '../world/birch-scarf';
 import { BIRCH_PILES, ROUND_VIEWS } from '../world/birches';
 import { heightAt } from '../world/island';
-import { FAR_TRUNK, GOODBYE, LEAP, MEETING, ON_THE_STUMP, PATHS, ROUNDS, frameShot, SWING_PERCH, TANGLE_PERCHES, onTrunk, route, type PerchSpec, type Step } from './birches-rounds';
+import { FAR_TRUNK, GOODBYE, LEAP, MEETING, ON_THE_STUMP, PATHS, ROUNDS, frameShot, SWING_PERCH, TANGLE_3_WIDE, TANGLE_PERCHES, onTrunk, route, type PerchSpec, type Step } from './birches-rounds';
 import type { Cast } from './cast';
 
 const ground: Floor = (x, z) => Math.max(0, heightAt(x, z));
@@ -25,6 +25,10 @@ const WAYS: Record<Exclude<Station, 'meeting'>, readonly Step[]> = {
   farTrunk: PATHS.toFarTrunk, tangle3: PATHS.toTangle3, tangle4: PATHS.toTangle4, goodbye: PATHS.toGoodbye,
 };
 const ROUND_OF: Partial<Record<Station, number>> = { meeting: 0, round2: 1, round3: 2 };
+const wide = (): boolean => window.innerWidth >= window.innerHeight;
+/** Its way to a station; landscape's third tangle has a perch of its own, nearer the lens. */
+const wayTo = (station: Exclude<Station, 'meeting'>): readonly Step[] =>
+  station === 'tangle3' && wide() ? PATHS.toTangle3Wide : station === 'tangle4' && wide() ? PATHS.toTangle4Wide : WAYS[station];
 /** The meeting's log and the ground either side of it, for the dive off it into the heap. */
 const OFF_THE_LOG: Floor = (x, z) => Math.max(ground(x, z), MEETING.floor(x, z));
 const floorTo = (station: Station): Floor => (station === 'tangle2' ? ON_THE_STUMP : ground);
@@ -122,6 +126,7 @@ export class BirchesSquirrel {
   /** What she and the cygnet follow with their eyes while it shuffles: it, or the hump of leaves it heaves along. */
   private readonly tracked = new THREE.Vector3();
   private nextAnswer = 0;
+  private greeted = false;
   private generation = 0;
   private now = 0;
   private setOffAt = -1e9;
@@ -256,6 +261,7 @@ export class BirchesSquirrel {
     this.seek(time);
     this.leapStep(dt);
     this.underCoils();
+    this.greet(cue);
     this.glance(dt);
     this.holdHeaps();
   }
@@ -276,6 +282,19 @@ export class BirchesSquirrel {
       this.woolGone.copy(s.position).add(this.v.set(2.6, 0.6, 0));
       s.act('indignant', { look: this.woolGone });
     }
+  }
+
+  /** She has come to the knot it waits by: it chatters at her once, so that it is found there by the eye and the ear. */
+  private greet(cue: SquirrelCue): void {
+    const was = this.greeted;
+    this.greeted = cue.atTangle;
+    const s = this.cast.squirrel;
+    if (was || !cue.atTangle || this.mode !== 'idle' || s.busy || this.station === 'tangle2' || ROUND_OF[this.station] !== undefined) return;
+    const perch = this.perchOf(this.station);
+    if (perch.action === 'climb') { s.tell(); return; }
+    s.act('scold', { look: this.face });
+    const station = this.station;
+    this.after(tuning.birches.squirrel.scoldFor, () => { if (this.station === station && this.mode === 'idle') this.settle(perch, false); });
   }
 
   /** Each round's heaps stand against the wind until it has gone into hiding in one of them, and has done shuffling. */
@@ -312,7 +331,7 @@ export class BirchesSquirrel {
       case 'swing': return SWING_PERCH;
       case 'tangle2': return TANGLE_PERCHES[1];
       case 'farTrunk': return FAR_TRUNK;
-      case 'tangle3': return TANGLE_PERCHES[2];
+      case 'tangle3': return wide() ? TANGLE_3_WIDE : TANGLE_PERCHES[2];
       case 'tangle4': return TANGLE_PERCHES[3];
       case 'goodbye': return GOODBYE;
       default: return MEETING;
@@ -352,7 +371,7 @@ export class BirchesSquirrel {
     this.endShuffle();
     const s = this.cast.squirrel;
     if (station === 'meeting') { this.meet(); return; }
-    let points = route(this.cast.birches, WAYS[station]);
+    let points = route(this.cast.birches, wayTo(station));
     /** Sent on before it got where it was going, it cuts in at the nearest point of its new way. */
     if (points[0].at.distanceTo(s.position) > 1.5) {
       let near = 0;

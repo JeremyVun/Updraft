@@ -526,7 +526,7 @@ const cased = {
         c.restoreCheckpoint(point, data);
         for (let t = 0; t < 30 && c.squirrel.mode !== mode; t++) await new Promise((r) => setTimeout(r, 100));
         await new Promise((r) => setTimeout(r, 150));
-        const spec = { tangle1: __sq.TANGLE_PERCHES[0], swing: __sq.SWING_PERCH, tangle2: __sq.TANGLE_PERCHES[1], tangle3: __sq.TANGLE_PERCHES[2],
+        const spec = { tangle1: __sq.TANGLE_PERCHES[0], swing: __sq.SWING_PERCH, tangle2: __sq.TANGLE_PERCHES[1], tangle3: innerWidth >= innerHeight ? __sq.TANGLE_3_WIDE : __sq.TANGLE_PERCHES[2],
           tangle4: __sq.TANGLE_PERCHES[3], goodbye: __sq.GOODBYE }[c.squirrel.station];
         const want = spec && (spec.action === 'climb' ? __sq.onTrunk(g.birches, spec.trunk).at : spec.at);
         const off = want ? +g.squirrel.position.distanceTo(want).toFixed(2) : null;
