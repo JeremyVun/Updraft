@@ -385,7 +385,10 @@ island and `docs/contracts/world.md`, delete this folder, and merge.
 5. **`cygnet-gates` stow turn** (lead's report, 0.1014 once): not a regression. Stow measures 0.0619 in every run on
    this branch, on the build before 4b (`7fd52e5d`) and on `main`. The 0.10 is an intermittent one-frame turn spike that
    lands in a random gate each run, on the pre-4b build as often as on this one (idle, walk or down in 2 of 3 runs on
-   each); a full clean pass came on the next run.
+   each); a full clean pass came on the next run. A real but small one did come from 4c: `down` jerk at the set-down's
+   step-off rose from 0.0197 to 0.0202–0.0203 because a planted foot's lift stopped counting the body's height over the
+   ground under it; it now counts that and only leaves out the slope, and `down` is back at 0.0196–0.0197 with two
+   clean full passes.
 
 ### Jeremy on the 4c rabbit, verbatim (2026-10-15)
 

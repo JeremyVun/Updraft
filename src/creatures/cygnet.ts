@@ -1910,7 +1910,7 @@ export class Cygnet {
         out.x = rx * cy - rz * sy;
         out.z = rx * sy + rz * cy;
         out.y = (f.at.y - this.position.y) / SIZE;
-        out.lift = f.lift / SIZE;
+        out.lift = (f.lift + Math.max(this.groundAt(this.position.x, this.position.z), 0) - this.position.y) / SIZE;
       }
       d.gait.sway = g.sway;
       d.gait.roll = g.roll;
