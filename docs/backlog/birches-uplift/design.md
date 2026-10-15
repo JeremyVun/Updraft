@@ -178,6 +178,10 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 > And didn't i ask for the leaf heaps to become updrafts, not normal wind gestures? what else did i ask before that
 > hasn't been done? Also, when the music loops on the birches island, it needs to have a better fade in.
 
+> i need you to also take a look at the camera when they are doing the crossing to the birches island, it's not very
+> good right now. It just stays behind the child and never does a cinematic reveal of the birches island until she
+> gets off the boat.
+
 Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
 its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
 sample.
