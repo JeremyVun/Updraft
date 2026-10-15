@@ -104,25 +104,32 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 | −1176 / −1180 | −1216 / −1220 | tangle 4, the bow; the scarf gathers into the boat as its sail | as now |
 | −1197 | −1237 | berth; the squirrel sits at the water's edge and watches them go | new glance |
 
-1. **Meeting (round 1, one heap).** Walking up the ride, the frame takes in the fallen log. The squirrel sits up on it
-   with a nut in its paws, ear tufts up. It sees them, freezes, then dives into the heap against the log with a
-   crunching whumph, and the leaves go up high and wide round it, lit against the sun (then stillness). The cygnet goes straight for the heap. The child stops at the heap's edge, crouching and
-   peering (the walk gates here, as at a tangle). A red tail tip sticks out of the leaves and twitches; the heap
-   shivers with a rustle. Any gust over the heap bursts it. The squirrel explodes out in a spray of gold, sits up,
-   scolds, flicks its tail, and dashes for the tangle-1 tree with the cygnet scrambling after it and the child
-   laughing (`cheer`). One heap and an obvious tell, so the player learns it without being told.
-2. **Tangle 1.** Found, the squirrel runs on ahead of her up the ride, as the drowned village's cat leads, and up the
-   loop's own birch. It waits there on the trunk just above the fork the loop's branch leaves from, red on the white
-   bark, watching her come and work (in the frame, never in the way). As the loop lifts free it runs down and on to
-   the first perch tree, up to the coil there and down the wool into the next round. The wool is its road, and the room's red line leads the eye on. She sees it go, and
-   they play hide-and-seek: she turns her back on where it went, covers her eyes and counts while it hides.
+1. **Meeting (round 1, one heap).** Walking up the ride, the frame takes in the fallen log. The squirrel sits up on the
+   log's end, out past the heap, with a nut in its paws: red on the white bark and the bare ground there. She comes up
+   to the heap and stops, looking at it; it sees her and freezes, then sits up and chatters at her (a chitter and its
+   call marks, then bouts of chucks) while she and the cygnet look straight at it and the lens glances at it. After
+   about two seconds it dives into the heap with a crunching whumph, and the leaves go up high and wide round it, lit
+   against the sun (then stillness). The heap stands against the wind until it is in. The cygnet goes straight for
+   the heap. The child crouches at its edge, peering (the walk gates here, as at a tangle). The tail pops up out of
+   the leaves and waves with a chitter. Wind that takes enough of the heap off its back uncovers it: it starts with a
+   squeak, sitting up in what is left, then explodes out in a spray of gold, sits up, scolds, flicks its tail, and
+   dashes for the tangle-1 tree with the cygnet scrambling after it and the child laughing (`cheer`). One heap and an
+   obvious tell, so the player learns it without being told.
+2. **Tangle 1.** Found, the squirrel runs on ahead of her up the ride, as the drowned village's cat leads, climbs the
+   loop's own birch and goes out along the branch the loop hangs from. It sits up on the branch beside the loop,
+   against the haze beyond, watching her come and work (the subject of the frame with the knot, never in the
+   gesture's way). As the loop lifts free it runs back along the branch, down, and on to the first perch tree, up to
+   the coil there and down the wool into the next round. The wool is its road, and the room's red line leads the eye
+   on. She sees it go, and they play hide-and-seek: she turns her back on where it went, covers her eyes and counts
+   while it hides.
 3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride on the slope below
    the rise, out of the swing's frame.
    Now there is a choice. Only the right heap twitches; the tail shows less often. A wrong heap bursts into gold
    harmlessly (it's fun on its own), and the cygnet may rummage one and come up with nothing but a leaf on its head.
 4. **The swing** (optional). The squirrel sits on the swing limb while she rides.
-5. **Tangle 2.** The squirrel is up on the broken birch's top while the coils are circled off: they rise round it
-   and slide off past it.
+5. **Tangle 2.** The squirrel is up on the broken birch's top while the coils are circled off. On their way up they
+   close in over it for a moment: it startles, jolting down with a squeak, and is uncovered again as they lift clear
+   and slide off to the side, when it shakes itself and scolds the wool (Jeremy's idea, 2026-10-16).
 6. **Round 3, the hollow (three heaps).** The biggest round, where the leaves are deepest, and the tells are subtlest
    but always present. When it is found, the squirrel bounds up the far trunk of the hollow and stays in the canopy
    from here on. Then **the leap**: the cygnet dives into the deepest drift left in the hollow, and the child takes a
@@ -236,7 +243,20 @@ What follows from it (Claude's calls, 2026-10-16):
 - **It dives in with a splash.** A dive throws leaves everywhere, with a crunching "whumph", without hollowing the
   heap (phase 6's ring fix stands).
 - **It leads.** At every tangle it waits ahead of her, on or by the knot's tree where the knot is, as the cat leads
-  in the drowned village. Waiting at a challenge stays as it is.
+  in the drowned village. Waiting at a challenge stays as it is. At the first knot it climbs the knot's birch and sits
+  up on the branch beside the loop, and that tangle's frame is moved so the knot and the squirrel on its branch are
+  its subject in both orientations.
+- **The meeting is unmistakable,** the room's introduction of its main character, in story and without a pan. It sits
+  up on the log's end, red on white bark and bare ground rather than in the gold by the heap. When she stops at the
+  heap it sees her, freezes, then sits up and chatters at her with call marks while she and the cygnet look straight
+  at it and the lens glances at it; it holds that look about two seconds before it dives.
+- **Heaps hold until it is in.** Each round's heaps stand against the wind until the squirrel has gone into hiding in
+  that round: the wind flutters their tops and lifts a few loose leaves, and takes none of the heap.
+- **It is found when it is uncovered,** not the instant the wind arrives. The live floor over its back is read a few
+  times a second; when the wind has taken enough leaves off that it shows, it starts with a squeak, sitting up in
+  what is left, then bursts out. One deliberate swipe or about two loops of updraft over the right heap is enough.
+- **Under the coils at the second tangle** it startles as they close over it on the way up, and scolds the wool once
+  they have lifted clear and slid off.
 - **It carries an acorn**: in its mouth while it runs, in its paws while it sits and nibbles.
 - **The heaps' invitation is an updraft** (the circling gesture), and an updraft over the right heap finds it,
   lifting the leaves off in a whirl. A swipe still counts.
@@ -471,10 +491,19 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
   in the area instead.
 - If nothing in the area is deep enough to bury it, it hides **behind a trunk**, peeking round, as real squirrels
   do. A gust at it flushes it out just the same. The round never breaks and never waits for leaves that are gone.
+- **The heaps hold until it is in.** Each round's heaps (`ROUNDS[i].heaps`) stand against the wind from the start
+  until the squirrel has gone into hiding in that round (`AutumnBirches.hold`, eased on and off over `holdEase`,
+  0.5 s). The litter field takes them as up to six held circles (`LitterField.holds`: centre, the heap's radius plus
+  `holdReach`, and how firmly) and the wind's mobility there is held at nothing, so the wind stirs their tops and lifts
+  a few loose leaves but takes none of the heap. Heaps after their round and the free-play heaps are never held. So
+  the drift and trunk fallbacks only come into play for heaps blown away after it is in.
 - Round 1's heap is the one the squirrel is seen diving into, so its hide is never a choice.
 - Diving in is a splash (`AutumnBirches.splash`): the loose leaves round it go up high and wide, lit against the low
   sun the round's lens looks into, with a crunching whumph (`BirchesFoley.leaves('dive')`), and none of the heap is
-  taken, so it stays a whole mound to hide in. The meeting's dive, its first, is the biggest.
+  taken, so it stays a whole mound to hide in. The meeting's dive, its first, is the biggest. A dash to hide ends
+  `pounceFrom` (0.8 m) short of the hide, so it goes in with one pounce.
+- Buried, its paws are `buryBelow` (0.45 m) under the leaves' top, so at 3.6 times life its back is about 0.2 m under
+  and, tail in, it is hidden from every round's lens in both orientations.
 
 ### A round
 
@@ -484,16 +513,20 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
   so it stays by the heaps.
 - **Tells**, always present and never on a wrong heap. Every 2.5–4 s the right heap rustles, the tail pops up out of
   the leaves and waves with a chitter and its call marks (`Squirrel.tell`), and the heap shivers a little under it.
-  Between tells the tail tip is out about half the time in round 1, a third in round 2 and a fifth in round 3. Now
-  and then the tell is a `peek` instead.
-- **Finding.** The air over the hide's heap is measured as the trees' stripping measures it (energy plus speed above
-  `gripSpeed`), and each rise of it counts, so it bursts out as the gust arrives, two glancing gusts add up and a
-  gust dying away adds nothing. A stroke's air is 3.4 m wide or more, so one passing a metre or two outside the heap
-  still reaches in. One deliberate swipe across the heap, or two careless ones near it, is enough; in the first round
-  any gust over the heap is. An updraft counts as well: circles over the right heap find it in about two loops. A
-  column is wider than the gaps between heaps, so what counts is how much more lift stands over the hide than over
-  any other heap of the round (`liftWork`), and circles over a wrong heap never find it in the next. A gust that only
-  shaves the right heap makes it `peek`, as a "nearly". Wrong heaps simply burst, or whirl up under an updraft.
+  Between tells the tail tip is out about half the time in round 1, a third in round 2 and a fifth in round 3. A peek
+  at room distance is mostly lost in the leaves, so every tell is the tail; a peek is kept for the "nearly".
+- **Finding is uncovering.** In the leaves it is found when the wind has actually taken enough of them off it: every
+  `feelEvery` (0.25 s) one batched readback of the live depth over its back and `feelAcross` (0.35 m) round it, and
+  once that is less than `uncovered` (0.3 m) over its paws, the red shows through. It starts (`freeze` with a squeak,
+  sitting up in what is left of the leaves) for `startledFor` (0.4 s), then bursts out. Measured with real strokes:
+  one deliberate swipe across the right heap uncovers it in every round, found 1.3–1.9 s after the swipe begins; a
+  stroke across a wrong heap aimed away from the right one never does. An updraft thins a heap from the top too: the
+  litter under a column is thrown outward down the slope of its lift (`litterLiftThrow`), so circles over the right
+  heap uncover it in two or three loops. A column is wider than the gap between neighbouring heaps, so circles over
+  the heap next to it can uncover it as well, visibly, by taking that heap down too; circles over a far heap do not.
+  Behind a trunk there are no leaves to read, so there the wind on it is counted as before (each rise of energy plus
+  speed above `gripSpeed`, `findWork`; circles wound over another heap count only there). A gust that only shaves the
+  right heap makes it `peek`, as a "nearly". Wrong heaps simply burst, or whirl up under an updraft.
 - **Found.** `burst`, a beat of `sit` and `scold` facing the child, then `bound` to the next waypoint, glancing back
   once (an invitation to chase). The cygnet chases a few steps (its own errand, not a script) and the child
   `cheer`s, then follows.
@@ -511,10 +544,10 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
 - **The camera highlights it, subtly.** The depth blur's focus settles on it along with her (`alsoSharp`, eased over
   about a second): at the meeting, through a round (its tells and its find), and at its perch while she works a
   tangle or swings. The lens gives it a low-weight glance (`glance`, 0.28 of the gaze, eased in and out over a second
-  or two) as she comes up to it on its log, when it is found and scolds her, as it runs on ahead to wait at the next
-  tangle or the swing and while she walks up to it there, and at the goodbye. Never a pan, never inside a tangle's,
-  a round's composition beyond the find, or the swing's own frame, and never on a tell: a look every few seconds
-  would bob the lens.
+  or two) as she comes up to it on its log and while it chatters at her there, when it is found and scolds her, as it runs on ahead to wait at the next
+  tangle or the swing and while she walks up to it there, through its startle under the second tangle's coils, and at
+  the goodbye. Never a pan, never otherwise inside a tangle's, a round's composition beyond the find, or the swing's
+  own frame, and never on a tell: a look every few seconds would bob the lens.
 
 ### Between rounds
 
@@ -608,11 +641,19 @@ exactly where gap-grown trees stood. The island still has 146 trees.
 
 **The squirrel's places** (`MEETING`, `TANGLE_PERCHES`, `SWING_PERCH`, `FAR_TRUNK`, `GOODBYE`):
 
-- Tangle 1: ahead of her on the loop's own birch, 4.5 m up the trunk on the side toward the lens, just above the fork
-  its branch leaves from: red on the white bark. Out along the branch it was lost against the red wool and the gold
-  behind it, and lower on the trunk the near trees' hanging leaves hide it.
-- Tangle 2: on the broken birch's top. The coils rise round it to 0.85 m above the top, at least 1.15 m out, and slide
-  off east, so they ring it without touching it; it is hidden in them for a moment.
+- The meeting: sitting up on the fallen birch's end, out past the heap, red on the white bark and the bare ground
+  there. By the heap's flank it was lost in the gold. Round 1's landscape frame looks a fifth of the way toward it, so
+  she and it stand near the thirds; at the freeze it is about 56 px tall in landscape, and in portrait on the log's end
+  at the frame's right.
+- Tangle 1: sitting up on the branch the loop hangs from (`FORK_BRANCH`, shared with the world and the cloth), 0.4 of
+  the way out from the trunk: just beside the loop, against the haze beyond it rather than the red wool. Tangle 1 is
+  looked at from further west than the other tangles and closer (18 m, 3 m up), so the near crowns no longer hang in
+  front of the loop; portrait comes further round (bearing −0.45), leans toward the knot and takes a slightly longer
+  lens (1.25).
+- Tangle 2: on the broken birch's top. The coils rise round it toward 0.85 m above the top, at least 1.15 m out, and
+  slide off east. Between 0.42 and 0.8 of the way to free (`SCARF_OVER`) they close in over the top, covering it a
+  moment; it `startle`s as they reach it and turns `indignant` at the wool once they have slid off, finishing its
+  scold before it goes to hide.
 - Tangle 3: 4.5 m up the birch standing behind the slipped loop, above and beyond the work.
 - Tangle 4: 5 m up the bow's own birch, above its low limb.
 - The swing: 3.4 m up the swing tree's trunk, just under the limb, on the side toward the swing's lens, where its red
@@ -702,8 +743,9 @@ Judged in real-gesture clips of the whole room, from the `toBirches` arrival to 
 1600×900 and portrait 390×844, with an engaged player and a careless one.
 
 - **The meeting** is played in round 1's frame. She comes up to the heap and stands looking at it while the frame
-  eases in (`meetPause`, 1.4 s); then it sees her, freezes and drops in. The walking shot glances at it on its log
-  from `meetGlance` (30 m) away. Sitting on the log it is 48 px tall in landscape and 36 px in portrait.
+  eases in (`meetPause`, 1.4 s); then it sees her and freezes (`meetFreeze`, 0.5 s), sits up chattering at her for
+  `meetHold` (1.8 s) while the cygnet watches it, and dives. The walking shot glances at it on its log from
+  `meetGlance` (30 m) away.
 - **The wind lands among what the lens shows** (`pointerReach`, the wind contract): strokes at the canopy on the
   walk and circles round the wool at a tangle used to land on the next round's heaps 25–57 m from the lens and flatten
   them before she got there.

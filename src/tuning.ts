@@ -1439,10 +1439,11 @@ export const tuning = {
       driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
       /**
        * In the leaves it is found once they are thinner than `uncovered` m over where its paws are set (its back is
-       * 0.18 m above them, and red shows through the last few centimetres of leaves), read every `feelEvery` s over it and `feelAcross` m round it; it starts for
-       * `startledFor` s, sitting up in what is left of them, before it bursts out.
+       * about 0.22 m above them at 3.6 times life, and red shows through the last few centimetres), read every
+       * `feelEvery` s over it and `feelAcross` m round it; it starts for `startledFor` s, sitting up in what is left
+       * of them, before it bursts out.
        */
-      uncovered: 0.26, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
+      uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
        * Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn updraft
        * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
