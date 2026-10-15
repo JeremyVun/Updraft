@@ -431,7 +431,16 @@ export class BirchesSquirrel {
     const s = this.cast.squirrel, k = tuning.birches.squirrel;
     if (this.seen) return;
     if (!this.cue.standing) { this.stoodSince = -1; return; }
-    if (this.stoodSince < 0) this.stoodSince = this.now;
+    if (this.stoodSince < 0) {
+      this.stoodSince = this.now;
+      /** It comes up beside her, so the two of them stand looking at it together. */
+      const bird = this.cast.cygnet;
+      if (!bird.carried) {
+        bird.stay = false;
+        bird.errand = ROUNDS[0].cygnet[0].clone();
+        bird.watch(this.eye, true);
+      }
+    }
     if (this.now - this.stoodSince < k.meetPause) return;
     this.seen = true;
     const yaw = Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z);
@@ -514,6 +523,8 @@ export class BirchesSquirrel {
     const h = this.hideAt(sh, i), k = tuning.birches.squirrel;
     this.tailOut = false;
     const into = () => s.act('dive', { at: h.at.clone().setY(this.inLeaves(h)(h.at.x, h.at.z)), tailOut: false, floor: this.inLeaves(h), yaw: Math.random() * Math.PI * 2 });
+    /** Off across to the next heap it chatters as it goes, so its call marks ride over it and a child can keep it in sight. */
+    if (i > 0) s.call('chitter', 0.8);
     if (Math.hypot(h.at.x - s.position.x, h.at.z - s.position.z) < k.pounceFrom + 0.6) { into(); return; }
     const rim = onGround(h.at.clone().addScaledVector(flat(h.at, s.position), k.pounceFrom + BIRCH_PILES[ROUNDS[sh.round].heaps[h.heap]].r * 0.35));
     s.follow([{ at: rim, on: 'ground' }], () => { if (this.shuffle === sh && sh.step === 'dive') into(); }, { floor: ground, pace: k.shufflePace[Math.min(i, k.shufflePace.length - 1)] });
@@ -529,7 +540,7 @@ export class BirchesSquirrel {
     if (!sh) return;
     const last = sh.order.length - 1;
     if (sh.step === 'dive' && s.action === 'buried' && !s.busy) {
-      const h = this.hideAt(sh, sh.move), strength = sh.move === 0 ? k.splash : k.shuffleSplash;
+      const h = this.hideAt(sh, sh.move), strength = k.shuffleSplash[sh.move === 0 ? 0 : 1];
       this.cast.leafSound?.('dive', h.at, strength);
       this.cast.birches.splash(h.at.x, h.at.z, strength);
       sh.step = 'rest';
@@ -548,6 +559,8 @@ export class BirchesSquirrel {
         sh.step = 'burst';
         this.cast.leafSound?.('burst', from.at, k.shuffleBurst);
         s.act('burst', { at: out, look: to.at, floor: this.inLeaves(from) });
+        /** Its burst throws the leaves up as high as being found does; this one only pops them, replacing that throw. */
+        this.cast.birches.shiver(from.at.x, from.at.z, k.shufflePop);
       }
     } else if (sh.step === 'burst' && !s.busy) {
       sh.step = 'bound';

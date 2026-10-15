@@ -251,10 +251,11 @@ export class BirchesChapter implements Chapter {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 20;
       } else if (this.round >= 0) {
-        /** By the heaps, as it stays by a tangle; over her where a shuffle is watched, never over the heaps it must not hide. */
+        /** By the heaps, as it stays by a tangle; where a shuffle is watched, behind her, never over the heaps it is in. */
         const { area, stand, shuffle } = ROUNDS[this.round];
-        p.home.set(shuffle ? stand.x : area.x, 0, shuffle ? stand.z : area.z);
-        p.homeRadius = shuffle ? 3 : 5;
+        const back = shuffle ? 5 / (Math.hypot(stand.x - area.x, stand.z - area.z) || 1) : 0;
+        p.home.set(shuffle ? stand.x + (stand.x - area.x) * back : area.x, 0, shuffle ? stand.z + (stand.z - area.z) * back : area.z);
+        p.homeRadius = shuffle ? 2 : 5;
       } else {
         const t = this.target();
         const dx = t.x - c.position.x;
