@@ -4,7 +4,10 @@ import { RibbonBatch, type Ribbon } from './ribbons';
 import { windPen } from './wind-gesture';
 
 const POINTS = 49;
-/** A path that stays while listening, with air repeatedly demonstrating its direction. */
+/**
+ * A path that stays while listening, with air repeatedly demonstrating its direction. It is drawn bold, in the dark
+ * halo of the invitations that must read against a bright field, and over the grass in front of it.
+ */
 export class KeyLine {
   readonly batch = new RibbonBatch(POINTS * 4, '#fff4dd', 1, false, tuning.invitation.lightFloor);
   private readonly ribbon: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
@@ -19,6 +22,11 @@ export class KeyLine {
   private since = 0;
   private direction = 0;
 
+  constructor() {
+    this.batch.halo = 1;
+    (this.batch.mesh.material as THREE.ShaderMaterial).depthTest = false;
+  }
+
   update(dt: number, time: number, along: (t: number, out: THREE.Vector3) => THREE.Vector3,
     camera: THREE.Camera, direction: number, progress: number): void {
     if (direction !== this.direction) { this.since = time; this.direction = direction; }
@@ -28,9 +36,9 @@ export class KeyLine {
     const t = tuning.piano;
     const phase = ((time - this.since) % t.guideCycle) / t.guideSweep;
     const head = Math.min(1, phase);
-    const pen = windPen(camera, along(0.5, this.centre), t.linePen);
-    this.ribbon.alpha = this.shown * 0.65;
-    this.ribbon.width = pen * 0.45;
+    const pen = windPen(camera, along(0.5, this.centre), t.linePen, true);
+    this.ribbon.alpha = this.shown * 0.9;
+    this.ribbon.width = pen * 0.8;
     this.sweep.alpha = this.shown * (1 - THREE.MathUtils.smoothstep(phase, 1, 1.3));
     this.sweep.width = pen;
     this.answer.alpha = this.shown * (progress > 0 ? 0.95 : 0);

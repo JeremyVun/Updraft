@@ -78,7 +78,7 @@ export class WindBough {
   readonly group = new THREE.Group();
   readonly mouth = new THREE.Vector3();
   readonly crown = new THREE.Vector3();
-  readonly log: { at: number; finale: boolean; duration: number }[] = [];
+  readonly log: { at: number; finale: boolean; duration: number; trimDb: number }[] = [];
   private readonly reed = new THREE.Mesh();
   private readonly ribbons = new RibbonBatch(3 * 40, '#f3ead0', 1, false, .35);
   private readonly curls: Ribbon[] = Array.from({ length: 3 }, () => ({
@@ -89,6 +89,8 @@ export class WindBough {
   /** Its recording has been started, or passed by. */
   private sounded = false;
   private finale = false;
+  /** dB on the recording's level: a call said again is softer. */
+  private trim = 0;
   private breath = 0;
 
   constructor() {
@@ -115,9 +117,9 @@ export class WindBough {
     this.ribbons.mesh.visible = false;
   }
 
-  play(phrase: WindPhrase, time: number, finale = false): number {
-    this.phrase = phrase; this.started = time; this.sounded = false; this.finale = finale;
-    this.log.push({at:time,finale,duration:phrase.duration});
+  play(phrase: WindPhrase, time: number, finale = false, trimDb = 0): number {
+    this.phrase = phrase; this.started = time; this.sounded = false; this.finale = finale; this.trim = trimDb;
+    this.log.push({at:time,finale,duration:phrase.duration,trimDb});
     if (this.log.length > 24) this.log.shift();
     return time + tuning.windBough.inhale + phrase.duration;
   }
@@ -142,8 +144,8 @@ export class WindBough {
     if (phrase && !this.sounded && elapsed >= t.inhale + phrase.startAt) {
       this.sounded = true;
       const late = elapsed - t.inhale - phrase.startAt;
-      if (out) meadowMusic.phrase(phrase.clip, late, this.finale ? 'finale' : 'call',
-        this.finale ? tuning.meadowMusic.finaleDb : tuning.meadowMusic.callDb);
+      if (out) meadowMusic.duet(phrase.clip, late, this.finale ? 'finale' : 'call',
+        (this.finale ? tuning.meadowMusic.finaleDb : tuning.meadowMusic.callDb) + this.trim);
     }
     if (this.breath > .01) {
       wind.addSplat({source:'wind-bough',ax:this.mouth.x-5,az:this.mouth.z+4,bx:this.mouth.x,bz:this.mouth.z,

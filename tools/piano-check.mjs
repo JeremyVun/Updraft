@@ -35,100 +35,164 @@ try {
   await page.evaluate(()=>__game.sound.start());
   const state=()=>page.evaluate(()=>{
     const g=__game,p=g.piano,s=g.story.current.piano;
-    // The outline in the order it is traced: it rises and falls with the answer's melody.
-    const forward=(p.expect?.direction??1)>0;
-    const path=Array.from({length:25},(_,i)=>{const v=p.guideAlong(forward?i/24:1-i/24,p.keys.clone()).project(g.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2]});
-    return {time:s.now,beat:s.at,phrase:s.phrase,part:s.part,matched:p.matched,expect:p.expect&&{index:p.expect.index,direction:p.expect.direction},progress:p.gesture.progress,
-      music:g.meadowMusic?.state,duet:g.meadowMusic?.log.slice(-12),
+    // The guide in the order it is followed: always from its low-keys end.
+    const path=Array.from({length:25},(_,i)=>{const v=p.guideAlong(i/24,p.keys.clone()).project(g.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2]});
+    const plane=g.glider.position.clone().project(g.rig.camera);
+    return {time:s.now,beat:s.at,phrase:s.phrase,matched:p.matched,expect:p.expect&&{index:p.expect.index,tilt:p.expect.tilt},progress:p.gesture.progress,
+      music:g.meadowMusic?.state,duet:g.meadowMusic?.log.slice(),
       path,wave:g.life.regions.wave.toArray(),waiting:g.life.regions.waiting.toArray(),roseFrom:s.roseFrom,
       checkpoint:g.story.current.checkpoint,lineVisible:p.line.batch.mesh.visible,
+      plane:{visible:g.glider.visible,held:g.glider.held,screen:[+plane.x.toFixed(3),+plane.y.toFixed(3),+plane.z.toFixed(3)]},
       bough:g.windBough?.log.slice(),
       subjects:[g.child.position.clone().add({x:0,y:1.5,z:0}),p.keys.clone(),...(g.windBough?[g.windBough.crown.clone()]:[])].map(v=>{v.project(g.rig.camera);return [v.x,v.y,v.z]}),
       plants:g.meadowEchoes?.group.children.map(mesh=>({
         waiting:mesh.material.uniforms.uWaiting.value.toArray(),wave:mesh.material.uniforms.uLifeWave.value.toArray(),
-      })),notes:p.log.slice(-8)};
+      })),notes:p.log.slice()};
   });
-  const waitSeconds=async seconds=>{const start=(await state()).time;await page.waitForFunction(t=>__game.story.current.piano.now>=t,start+seconds,{timeout:120000});};
+  const waitSeconds=async seconds=>{const start=(await state()).time;await page.waitForFunction(t=>__game.story.current.piano.now>=t,start+seconds,{timeout:180000});};
   const shot=async name=>{
     const s=await state();
     for(const plant of s.plants??[]) {
       assert.deepEqual(plant.waiting,s.waiting,'Meadow plants must remain grey with the surrounding ground');
       assert.deepEqual(plant.wave,s.wave,'Meadow plants must follow every piano colour wave');
     }
-    report.states.push({name,...s});await page.screenshot({path:`${prefix}-${name}.png`});console.log(JSON.stringify({name,...s}));
+    const {notes,duet,plants,...brief}=s;
+    report.states.push({name,...s});await page.screenshot({path:`${prefix}-${name}.png`});console.log(JSON.stringify({name,...brief}));
   };
+  const touch=portrait?await page.context().newCDPSession(page):null;
+  const pointer=async(points,ms)=>{
+    if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0][0],y:points[0][1]}]});
+    else await page.mouse.move(...points[0]);
+    for(const [x,y] of points.slice(1)){
+      if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
+      else await page.mouse.move(x,y);
+      await page.waitForTimeout(ms);
+    }
+    if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  };
+  // Gusts across the keys and circles over them: the piano is never the wind's to play.
+  const windOverKeys=async()=>{
+    const k=await page.evaluate(()=>{const v=__game.piano.keys.clone().project(__game.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2];});
+    const r=Math.min(viewport.width,viewport.height)*.12;
+    await pointer(Array.from({length:30},(_,i)=>[k[0]-2*r+4*r*i/29,k[1]+r*.3*Math.sin(i)]),8);
+    await pointer(Array.from({length:30},(_,i)=>[k[0]+2*r-4*r*i/29,k[1]-r*.2]),8);
+    await pointer(Array.from({length:90},(_,i)=>[k[0]+r*Math.cos(i/6),k[1]+r*.6*Math.sin(i/6)]),12);
+  };
+  const pianoSounds=s=>s.notes.length+s.duet.filter(d=>!['call','finale'].includes(d.what)).length;
+  await page.waitForFunction(()=>__game.story.current.piano.at==='seated',null,{timeout:120000});
+  await windOverKeys();
+  assert.equal(pianoSounds(await state()),0,'nothing sounds from the piano before the bough calls, whatever the wind does');
   await page.waitForFunction(()=>__game.windBough.log.length>0,null,{timeout:120000});
+  assert.equal(pianoSounds(await state()),0,'no note when she sits: the bough opens the duet');
   await waitSeconds(1.4);
   await shot('wind-call');
+  assert((await state()).plane.visible&&!(await state()).plane.held,'the paper waits on the music desk, in view');
   assert.equal((await state()).expect,null,'piano input waits for the wind call');
-  const early=(await state()).path;
-  await page.mouse.move(...early[0]);
-  for(const point of early.slice(1)){await page.mouse.move(...point);await page.waitForTimeout(12);}
-  assert.equal((await state()).matched,0,'swiping during the call cannot answer it');
+  await pointer((await state()).path,12);
+  await windOverKeys();
+  assert.equal((await state()).matched,0,'following the guide during the call cannot answer it');
+  assert.equal(pianoSounds(await state()),0,'wind during the call plays nothing');
   await page.waitForFunction(()=>window.__game?.piano.expect!==null&&window.__game?.story.current.piano.at==='seated',null,{timeout:120000});
   await waitSeconds(2);
   await shot('invitation');
-  await waitSeconds(17);
-  const idle=await state();assert.equal(idle.matched,0);assert.equal(idle.beat,'seated');
-  await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:15000});
-  await waitSeconds(.5);
-  assert((await state()).lineVisible,'guide returns after the call');
+  {
+    const s=await state();
+    assert(Math.abs(s.plane.screen[0])<1&&Math.abs(s.plane.screen[1])<1&&s.plane.screen[2]<1,'the paper plane is in frame at the invitation');
+    assert(s.path[0][0]<s.path.at(-1)[0],'the guide runs left to right');
+  }
+  // Left alone, the bough says the call once more, softer, and then waits; idle wind never answers.
+  const said=(await state()).bough.length;
+  await page.waitForFunction(n=>__game.windBough.log.length>n,said,{timeout:120000});
+  const again=(await state()).bough.at(-1);
+  assert(!again.finale&&Math.abs(again.trimDb-(await page.evaluate(()=>__game.tuning.meadowMusic.callAgainDb)))<1e-6,'the repeat is the same call, softer');
+  const gap=again.at-(await state()).bough.at(-2).at;
+  report.repeat={gap,trimDb:again.trimDb};
+  await waitSeconds(40);
+  const idle=await state();
+  assert.equal(idle.bough.length,said+1,'after its repeat the bough stays silent');
+  assert.equal(idle.matched,0);assert.equal(idle.beat,'seated');assert(idle.lineVisible,'the guide alone invites');
   await shot('waiting');
-  const touch=portrait?await page.context().newCDPSession(page):null;
+  // Moderate, fast, slow and moderate strokes: the answer plays at its own tempo every time.
+  const strokeMs=[30,3,75,30];
+  report.answers=[];
   for(let n=0;n<4;n++){
-    await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:45000});
+    await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:90000});
     const before=await state();
-    const a=before.path[0],trace=before.path;
-    for(const [x,y] of trace)assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
-    if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:a[0],y:a[1]}]});
-    else await page.mouse.move(...a);
-    await page.waitForTimeout(160);
-    // Along the drawn outline, at a moderate pace (about 2.4 s), so the recorded notes come one by one.
-    for(let i=1;i<=80;i++){
-      const f=i/80*(trace.length-1),k=Math.min(trace.length-2,Math.floor(f)),u=f-k;
-      const x=trace[k][0]+(trace[k+1][0]-trace[k][0])*u,y=trace[k][1]+(trace[k+1][1]-trace[k][1])*u;
-      if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
-      else await page.mouse.move(x,y);
-      await page.waitForTimeout(30);
-    }
-    if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    const trace=before.path;
+    for(const [x,y] of [trace[0],trace.at(-1)])assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
+    const points=Array.from({length:81},(_,i)=>{const f=i/80*(trace.length-1),k=Math.min(trace.length-2,Math.floor(f)),u=f-k;
+      return [trace[k][0]+(trace[k+1][0]-trace[k][0])*u,trace[k][1]+(trace[k+1][1]-trace[k][1])*u+(n===0?18:0)];});
+    const startedAt=Date.now();
+    await pointer(points,strokeMs[n]);
+    const strokeSeconds=(Date.now()-startedAt)/1000;
     await page.waitForFunction(m=>__game.piano.matched===m,before.matched+1,{timeout:10000});
     await waitSeconds(0.8);
     await shot(`answer-${n+1}-start`);
     await waitSeconds(1.8);
     await shot(`answer-${n+1}-front`);
-    await waitSeconds(2.6);
+    await waitSeconds(4.5);
     await shot(`answer-${n+1}`);
+    const s=await state();
+    const reply=await page.evaluate(async i=>{const {MEADOW_ANSWERS}=await import('/src/audio/meadow-duet.ts');const a=MEADOW_ANSWERS[i];return {clip:a.clip.duration,end:a.end,onsets:a.notes.map(x=>x.at)};},n);
+    const sounded=s.duet.filter(d=>d.what===`answer ${n+1}`);
+    assert.equal(sounded.length,1,`answer ${n+1} sounds once, as one recording`);
+    const hands=s.notes.filter(x=>x.src==='answer').slice(-reply.onsets.length);
+    const offsets=hands.map(x=>x.t-hands[0].t),expected=reply.onsets.map(t=>t-reply.onsets[0]);
+    const drift=Math.max(...offsets.map((t,i)=>Math.abs(t-expected[i])));
+    assert(drift<0.05,`her hands follow answer ${n+1}'s own onsets whatever the stroke (${drift.toFixed(3)} s)`);
+    report.answers.push({answer:n+1,strokeSeconds:+strokeSeconds.toFixed(2),audioStart:sounded[0].at,audioEnd:+(sounded[0].at+reply.clip).toFixed(2),
+      clipSeconds:reply.clip,rungDownAt:reply.end,handOnsets:offsets.map(t=>+t.toFixed(2)),recordedOnsets:expected.map(t=>+t.toFixed(2))});
+    assert(s.plane.visible,'the paper stays in view through the duet');
     if(n<3){
       const reward=await page.evaluate(()=>{
         const g=__game,m=g.story.current,w=g.life.regions.wave;
         return {reach:m.waveTo,radius:w.z,colour:[-0.85,0,0.85].map(a=>g.life.at(w.x+Math.sin(a)*(m.waveTo-24),w.y-Math.cos(a)*(m.waveTo-24)))};
       });
-      assert.equal(reward.reach,[45,85,125][n],'every mirrored action has a distinct colour reward');
+      assert.equal(reward.reach,[45,85,125][n],'every answer has a distinct colour reward');
       assert.equal(reward.radius,reward.reach,'the musical front reaches its colour target');
       assert(reward.colour.every(v=>v>.98),'colour reaches the left, middle and right of the meadow');
-      for(const p of (await state()).subjects)assert(Math.abs(p[0])<.94&&Math.abs(p[1])<.94,'child and piano remain in each reward frame');
+      for(const p of s.subjects)assert(Math.abs(p[0])<.94&&Math.abs(p[1])<.94,'child and piano remain in each reward frame');
+      const next=s.bough.length;
+      await windOverKeys();
+      assert.equal((await state()).notes.length,s.notes.length,'wind between answers plays nothing');
+      await page.waitForFunction(k=>__game.windBough.log.length>k,next,{timeout:60000});
+      const call=(await state()).bough.at(-1);
+      assert(call.at>=s.notes.filter(x=>x.src==='answer').at(-1).t,'the next call waits for her answer');
     }
   }
+  console.log('ANSWERS',JSON.stringify(report.answers));
   await page.waitForFunction(()=>__game.story.current.piano.roseFrom>0,null,{timeout:90000});
   {
     const s=await state(),finale=s.bough.at(-1);
     const due=finale.at+(await page.evaluate(()=>__game.tuning.windBough.inhale))+(await page.evaluate(async()=>(await import('/src/audio/meadow-duet.ts')).MEADOW_FINALE.greenAt));
     assert(finale.finale&&Math.abs(s.roseFrom-due)<0.05,`the greening starts on the finale's arrival (${s.roseFrom} vs ${due})`);
-    if(s.music)assert(s.duet.some(d=>d.what==='finale'),'the flute finale sounded');
+    assert(s.duet.some(d=>d.what==='finale'),'the flute finale sounded');
+    const last=s.notes.filter(x=>x.src==='answer').at(-1);
+    assert(finale.at>last.t,'the finale waits for her last answer');
     report.greening={roseFrom:s.roseFrom,due,finaleAt:finale.at};
   }
   assert((await state()).waiting[2]>0,'far ground stays grey at the start of the final wave');
-  await shot('wave-start');await waitSeconds(8);await shot('wave-wide');
+  await shot('wave-start');await waitSeconds(5);await shot('cygnet-keys');await waitSeconds(3);await shot('wave-wide');
   for(const p of (await state()).subjects)assert(Math.abs(p[0])<0.94&&Math.abs(p[1])<0.94&&p[2]<1,'child and piano remain in the finale frame');
   await page.waitForFunction(()=>__game.story.current.piano.at==='done',null,{timeout:90000});
   await shot('done');
+  {
+    const s=await state(),steps=s.notes.filter(x=>x.src==='bird');
+    assert.equal(steps.length,6,'six footfalls on the keys');
+    assert(steps.every(x=>[60,68,75].includes(x.midi)),'the cygnet sounds only the finale chord: C, A♭, E♭');
+    report.steps=steps;
+    assert(s.plane.visible&&s.plane.held,'the paper is back in her hand');
+  }
   assert.equal((await state()).matched,4);
   assert.equal((await state()).waiting[2],0,'the completed wave releases the grey hold');
-  await waitSeconds(4);
+  const after=(await state()).notes.length;
+  await windOverKeys();
+  await waitSeconds(1);
+  assert.equal((await state()).notes.length,after,'after the duet the wind plays nothing on the piano');
+  await waitSeconds(3);
   assert(await page.evaluate(()=>__game.child.moving||!__game.glider.held),'the walk resumes after the piano');
   assert.equal(report.errors.length,0,report.errors.join('\n'));
-  console.log('Piano passed: four real sweeps, no idle completion, visible guide, travelling restoration, departure.');
+  console.log('Piano passed: bough opens, one softer repeat, four answers at their own tempo, idle and wind silent, finale cue, chord-tone steps, paper in view.');
 } finally {
   fs.writeFileSync(`${prefix}-report.json`,JSON.stringify(report,null,2));
   try{await stopReview?.();}finally{

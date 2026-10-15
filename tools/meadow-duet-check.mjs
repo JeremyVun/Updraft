@@ -53,12 +53,13 @@ for(const fps of [30,60,120]){
   const {meadowFilesAhead}=await import('../src/audio/meadow-music.ts');
   const {MeadowChapter}=await import('../src/story/meadow.ts');
   for(const answer of MEADOW_ANSWERS){
-    assert(answer.notes.length>=4,'every answer has its notes');
-    assert(answer.notes.every((n,i)=>i===0||n.share>answer.notes[i-1].share),'notes sound in order along the trace');
-    assert(answer.notes[0].share>0&&answer.notes.at(-1).share<1,'the first note waits for the stroke, the last comes before completion');
-    assert(answer.outline.every(([,h])=>h>=-1&&h<=1)&&new Set(answer.outline.map(([,h])=>h)).size>1,'the outline rises and falls');
+    assert(answer.notes.length>=4,'every answer has its onsets for her hands');
+    assert(answer.notes.every((n,i)=>i===0||n.at>answer.notes[i-1].at),'onsets in order');
+    assert(answer.end>answer.notes.at(-1).at&&answer.end<=answer.clip.duration,'it rings down after its last note, within its cut');
+    assert(Math.abs(answer.tilt)<=1,'the guide tilts gently');
   }
-  assert.deepEqual(MEADOW_ANSWERS.map(a=>a.direction),[1,-1,1,-1],'the mirrored sweeps still alternate');
+  const {MEADOW_STEPS}=await import('../src/audio/meadow-duet.ts');
+  assert.deepEqual(MEADOW_STEPS.map(s=>s.midi%12),[0,8,3],'the cygnet steps on C, A♭ and E♭');
   for(const {call} of MEADOW_CALLS)assert(call.startAt<=0&&call.startAt>=-tuning.windBough.inhale&&call.duration>2,'each call starts within the inhale');
   assert(MEADOW_FINALE.greenAt>0&&MEADOW_FINALE.greenAt<MEADOW_FINALE.duration,'the greening falls inside the finale');
   const part=Object.getOwnPropertyDescriptor(MeadowChapter.prototype,'meadowMusic').get;
@@ -76,5 +77,12 @@ for(const fps of [30,60,120]){
   assert.deepEqual(meadowFilesAhead('meadow','duet',true),['duet','after','ending']);
   assert.deepEqual(meadowFilesAhead('meadow','duet',false),['duet'],'music off still fetches the duet: it is the instruments');
   assert.deepEqual(meadowFilesAhead('birches',undefined,true),[]);
-  console.log('PASS: recorded answers, calls, finale cue, the meadow music parts and what is fetched ahead.');
+  // Left alone, the bough calls once and once more, softer, then waits.
+  windBough.reset();piano.matched=0;piano.expect=null;
+  const stop=new PianoStop(),cast={child:{reachFor(){},lean:0},carry:{busy:false,unstow(){}}};
+  let time=0;
+  for(let i=0;i<60*120;i++){time+=1/60;stop.now=time;stop.duet(time,cast);}
+  assert.deepEqual(windBough.log.map(l=>l.trimDb),[0,tuning.meadowMusic.callAgainDb],'one call, one softer repeat, then silence');
+  assert(Math.abs(windBough.log[1].at-windBough.log[0].at-(MEADOW_CALLS[0].call.duration+tuning.windBough.inhale+tuning.windBough.answerAfter+tuning.meadowMusic.callAgainAfter))<.05,'the repeat comes callAgainAfter after the reply opens');
+  console.log('PASS: recorded answers, steps, calls and their one repeat, finale cue, the meadow music parts and what is fetched ahead.');
 }

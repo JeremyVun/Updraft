@@ -22,7 +22,6 @@ try {
       stop.playHands = stop.onTheKeys = () => {};
       stop.to('walking');
       piano.expect = null; piano.matched = 0;
-      piano.press = () => notes.push({ kind: 'first key', time: stop.now, mix: stop.hush });
       // The bough's first call is the demonstration now: the piano waits for her answer.
       windBough.reset();
       const call = windBough.play.bind(windBough);
@@ -36,11 +35,12 @@ try {
         const before = stop.at;
         stop.hold(1 / fps, time, cast);
         trace.push({ time, beat: before, mix: stop.hush });
-        if (notes.length >= 2) break;
+        if (notes.length >= 1) break;
       }
       if (trace.some(s => ['walking', 'looking'].includes(s.beat) && s.mix !== 0)) throw Error('Approach lost background music');
-      const first = notes.find(n => n.kind === 'first key'), demo = notes.find(n => n.kind === 'demonstration');
-      if (!first || !demo || first.mix <= 0.6 || first.mix >= 0.96 || demo.mix !== 1) throw Error('Fade missed the first key or demonstration');
+      const demo = notes.find(n => n.kind === 'demonstration');
+      if (!demo || demo.mix !== 1) throw Error('The background has not faded by the bough\'s first call');
+      if (piano.log.length) throw Error('The piano sounded before the bough\'s first call');
       const fades = trace.filter(s => s.mix > 0);
       for (let i = 1; i < fades.length; i++) {
         if (fades[i].mix < fades[i - 1].mix || fades[i].mix - fades[i - 1].mix > 0.075) throw Error('Abrupt or reversing entry fade');
@@ -53,12 +53,12 @@ try {
       if (stop.hush !== 0 || piano.engaged) throw Error('Background failed to return on departure');
       stop.hushed = stop.hushProgress = 1; stop.restoreDone();
       if (stop.hush !== 0) throw Error('Completed checkpoint retained piano ducking');
-      results.push({ fps, walkFor, fadeStarts: fades[0].time, first, demo });
+      results.push({ fps, walkFor, fadeStarts: fades[0].time, demo });
     }
     return results;
   });
   assert.equal(report.length, 8);
   fs.writeFileSync('/tmp/updraft-piano-audio-check.json', JSON.stringify(report, null, 2));
-  console.log('Piano approach, first-key overlap, demonstration, one fade, departure and restoration passed at 10–144 Hz.');
+  console.log('Piano approach, one fade before the bough\'s first call, a silent piano, departure and restoration passed at 10–144 Hz.');
   console.log(JSON.stringify(report.filter(r => r.fps === 60)));
 } finally { await browser.close(); }

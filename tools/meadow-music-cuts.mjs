@@ -1,7 +1,8 @@
 // Cuts the meadow's recorded music from its source takes, per `src/audio/meadow-cuts.ts`, into `assets/music/` and
 // writes the measurements the game plays them by to `src/audio/meadow-cuts-measured.ts`: loudness and gain to the room
-// reference, where each call's flute begins and ends, each answer's note onsets with the melody note of each and the
-// outline they trace, the ringing tail each answer slice carries, and where the finale's colour front starts.
+// reference, where each call's flute begins and ends, each answer's note onsets with the melody note of each (her
+// hands play along to them) and its overall rise or fall, the cygnet's single notes, and where the finale's colour
+// front starts.
 // SOURCES=<dir> finds the takes (default: this checkout's assets/music). Needs ffmpeg with libopus.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -14,13 +15,10 @@ const RATE = 48000;
 const EDGE = 0.02;
 /** Silence between packed items, so a decoder's few samples of offset never reach a neighbour. */
 const GAP = 0.25;
-/** A slice starts this long before its measured onset, so the hammer's attack is whole. */
-const PREROLL = 0.025;
-/** The tail's decay while it waits for the next note, and how it crossfades out of the slice. */
-const RING_DECAY_DB = 6;
-const RING_CROSS = 0.04;
 /** The top voice holds through inner notes struck within this long of it. */
 const TOP_HOLD = 0.3;
+/** Semitones of overall rise or fall that tilt the guide fully. */
+const FULL_TILT = 12;
 
 const run = (args, input) => {
   const out = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', ...args], { input, maxBuffer: 1 << 30 });
@@ -198,91 +196,15 @@ function highArrival(signal) {
 }
 
 /**
- * Phase-vocoder freeze of the sound just before `end`: every partial carries on at its own measured frequency, so
- * a slice cut before the next note's attack keeps ringing like a pedalled piano. Returns the tail from `end - cross`.
+ * The melody's overall rise or fall, −1..1: the top voice (held through inner notes, a lone note's spike or dip
+ * smoothed by a three-note median) from its first note to the average of its last two.
  */
-function ring(channel, end, earliest, seconds) {
-  let N = 4096;
-  while (N > 1024 && end - N - 256 < earliest) N >>= 1;
-  const Ha = 256, Hs = N / 4, window = hann(N);
-  const s1 = end - N, f0 = spectrum(channel, s1 - Ha, N, window), f1 = spectrum(channel, s1, N, window);
-  const bins = N / 2 + 1, mag = new Float64Array(bins), phase = new Float64Array(bins), omega = new Float64Array(bins);
-  for (let k = 0; k < bins; k++) {
-    mag[k] = Math.hypot(f1.re[k], f1.im[k]);
-    phase[k] = Math.atan2(f1.im[k], f1.re[k]);
-    const expected = 2 * Math.PI * k * Ha / N;
-    let d = phase[k] - Math.atan2(f0.im[k], f0.re[k]) - expected;
-    d -= 2 * Math.PI * Math.round(d / (2 * Math.PI));
-    omega[k] = (expected + d) / Ha;
-  }
-  const cross = Math.round(RING_CROSS * RATE), total = Math.round(seconds * RATE) + cross;
-  const origin = end - cross, before = Math.ceil((origin - s1 + N) / Hs), frames = Math.ceil((total + N) / Hs) + 1;
-  const out = new Float64Array(total), norm = new Float64Array(total);
-  const re = new Float64Array(N), im = new Float64Array(N);
-  for (let j = -before; j < frames; j++) {
-    const start = s1 + j * Hs;
-    if (start + N <= origin || start >= origin + total) continue;
-    for (let k = 0; k < bins; k++) {
-      const p = phase[k] + omega[k] * j * Hs;
-      re[k] = mag[k] * Math.cos(p); im[k] = mag[k] * Math.sin(p);
-      if (k > 0 && k < N / 2) { re[N - k] = re[k]; im[N - k] = -im[k]; }
-    }
-    fft(re, im, true);
-    for (let i = 0; i < N; i++) {
-      const o = start + i - origin;
-      if (o < 0 || o >= total) continue;
-      out[o] += re[i] * window[i]; norm[o] += window[i] * window[i];
-    }
-  }
-  const tail = new Float32Array(total), last = Math.round(0.4 * RATE);
-  for (let i = 0; i < total; i++) {
-    const after = Math.max(0, i - cross) / RATE;
-    const decay = 10 ** (-RING_DECAY_DB * after / 20) * (i >= total - last ? 0.5 - 0.5 * Math.cos(Math.PI * (total - 1 - i) / last) : 1);
-    tail[i] = (norm[i] > 1e-6 ? out[i] / norm[i] : 0) * decay;
-  }
-  return tail;
-}
-
-/** The answer's notes as slices: its own sound from just before each onset to just before the next, then a ring. */
-function answerSlices(audio, found, seconds) {
-  const n = length(audio), first = found[0].at, last = found[found.length - 1].at;
-  return found.map((o, k) => {
-    const from = Math.max(0, Math.round((o.at - PREROLL) * RATE));
-    if (k === found.length - 1) return { onset: o.at, audio: audio.map(ch => ch.slice(from, n)), natural: (n - from) / RATE };
-    const end = Math.round((found[k + 1].at - PREROLL) * RATE), cross = Math.round(RING_CROSS * RATE);
-    const earliest = Math.round((o.at + 0.04) * RATE);
-    const parts = audio.map(ch => {
-      const tail = ring(ch, end, earliest, seconds), own = ch.slice(from, end - cross);
-      const out = new Float32Array(own.length + tail.length);
-      out.set(own);
-      for (let i = 0; i < tail.length; i++) {
-        const x = i < cross ? i / cross : 1;
-        out[own.length + i] = (i < cross ? ch[end - cross + i] * (1 - x) : 0) + tail[i] * x;
-      }
-      return out;
-    });
-    return { onset: o.at, audio: parts, natural: (end - from) / RATE };
-  }).map((s, k) => ({ ...s, share: 0.05 + 0.9 * (found[k].at - first) / Math.max(1e-6, last - first) }));
-}
-
-/**
- * The melody's shape over the trace: the top voice, held through inner notes, with a lone note's spike or dip
- * smoothed out (a three-note median), scaled to −1..1.
- */
-function outline(found, shares, fallback) {
+function rise(found) {
   const held = found.map((o, k) => Math.max(...found.filter((p, j) => j <= k && o.at - p.at <= TOP_HOLD).map(p => p.midi)));
   const top = held.map((m, k) => k === 0 || k === held.length - 1 ? m : [held[k - 1], m, held[k + 1]].sort((a, b) => a - b)[1]);
-  const lo = Math.min(...top), hi = Math.max(...top);
-  let turns = 0;
-  for (let k = 2; k < top.length; k++) if (Math.sign(top[k] - top[k - 1]) * Math.sign(top[k - 1] - top[k - 2]) < 0) turns++;
-  if (hi - lo < 3 || turns > 4) {
-    const a = Math.min(...fallback), b = Math.max(...fallback);
-    return { from: 'steps', top, points: fallback.map((s, i) => [i / (fallback.length - 1), (s - a) / Math.max(1, b - a) * 2 - 1]) };
-  }
-  return { from: 'melody', top, points: top.map((m, k) => [shares[k], (m - lo) / (hi - lo) * 2 - 1]) };
+  const semitones = (top.at(-1) + top.at(-2)) / 2 - top[0];
+  return { top, tilt: Math.max(-1, Math.min(1, semitones / FULL_TILT)) };
 }
-/** The outlines the answers traced before they were recorded, for a phrase whose pitches do not settle. */
-const STEPS = [[0, 1, 2, 4], [5, 4, 2, 1], [0, 2, 4, 5], [4, 2, 1, 0]];
 
 const round = (v, places = 3) => Math.round(v * 10 ** places) / 10 ** places;
 const files = new Map();
@@ -298,9 +220,26 @@ const level = audio => { const l = lufs(audio); return { lufs: round(l, 1), gain
 const measured = {}, report = [];
 
 for (const beat of ['walk', 'after', 'ending']) {
-  const audio = cutAudio(MEADOW_CUTS[beat].cuts[0]);
-  measured[beat] = { ...level(audio), rest: MEADOW_CUTS[beat].rest ?? 0, ...pack(MEADOW_CUTS[beat].file, audio) };
-  report.push(`${beat}: ${measured[beat].duration}s ${measured[beat].lufs} LUFS → ${measured[beat].gainDb} dB`);
+  const { cuts: [cut], rest = 0, loop } = MEADOW_CUTS[beat], audio = cutAudio(cut);
+  const looped = loop ? bakeLoop(audio, cut, loop) : {};
+  measured[beat] = { ...level(audio), rest, ...looped, ...pack(MEADOW_CUTS[beat].file, audio) };
+  report.push(`${beat}: ${measured[beat].duration}s ${measured[beat].lufs} LUFS → ${measured[beat].gainDb} dB`
+    + (loop ? `, loops ${looped.loopEnd}s → ${looped.loopStart}s in the file` : ''));
+}
+
+/**
+ * A native loop from the cut's end back to `loop.from` in the source: the last `crossfade` seconds become the cut's
+ * own end fading out (equal power) under the source's lead into `loop.from` fading in, so the jump lands mid-phrase
+ * on exactly the music it continues. Returns the loop points in seconds of the cut.
+ */
+function bakeLoop(audio, cut, loop) {
+  const source = decode(cut.source), n = Math.round(loop.crossfade * RATE), end = length(audio);
+  const lead = Math.round((loop.from - loop.crossfade) * RATE);
+  for (let ch = 0; ch < 2; ch++) for (let i = 0; i < n; i++) {
+    const x = (i + 0.5) / n;
+    audio[ch][end - n + i] = audio[ch][end - n + i] * Math.cos(x * Math.PI / 2) + source[ch][lead + i] * Math.sin(x * Math.PI / 2);
+  }
+  return { loopStart: round((Math.round(loop.from * RATE) - Math.round(cut.from * RATE)) / RATE, 6), loopEnd: round(end / RATE, 6) };
 }
 measured.calls = MEADOW_CUTS.calls.cuts.map((cut, i) => {
   const audio = cutAudio(cut), { attack, end } = extent(mono(audio));
@@ -309,15 +248,22 @@ measured.calls = MEADOW_CUTS.calls.cuts.map((cut, i) => {
   return call;
 });
 measured.answers = MEADOW_CUTS.answers.cuts.map((cut, i) => {
-  const audio = cutAudio(cut), found = onsets(mono(audio)), slices = answerSlices(audio, found, MEADOW_CUTS.answers.ring);
-  const shape = outline(found, slices.map(s => s.share), STEPS[i]);
-  const answer = { ...level(audio), outline: shape.from, points: shape.points.map(([s, v]) => [round(s), round(v)]),
-    slices: slices.map((s, k) => ({ onset: round(s.onset), share: round(s.share), midi: found[k].midi, top: shape.top[k],
-      natural: round(s.natural, 4), ...pack(MEADOW_CUTS.answers.file, s.audio) })) };
-  report.push(`answer ${i + 1}: B ${cut.from}–${cut.to}, ${answer.lufs} LUFS → ${answer.gainDb} dB, outline from ${shape.from}`);
-  for (const s of answer.slices) report.push(`  ${s.onset.toFixed(3)}s share ${s.share.toFixed(2)} ${noteName(s.midi).padEnd(4)} top ${noteName(s.top)}`);
+  const audio = cutAudio(cut), signal = mono(audio), found = onsets(signal), { end } = extent(signal), shape = rise(found);
+  const answer = { ...level(audio), end: round(end), tilt: round(shape.tilt), notes: found.map(o => ({ at: round(o.at), midi: o.midi })),
+    ...pack(MEADOW_CUTS.answers.file, audio) };
+  report.push(`answer ${i + 1}: B ${cut.from}–${cut.to}, ${answer.lufs} LUFS → ${answer.gainDb} dB, sounds to ${answer.end}s, tilt ${answer.tilt}; `
+    + found.map(o => `${noteName(o.midi)}@${o.at.toFixed(2)}`).join(' '));
   return answer;
 });
+{
+  // Single notes, as quiet as the answers they come from: too short to measure alone.
+  const gainDb = round(measured.answers.reduce((sum, a) => sum + a.gainDb, 0) / measured.answers.length, 1);
+  measured.steps = MEADOW_CUTS.steps.cuts.map(cut => {
+    const step = { gainDb, midi: cut.midi, ...pack(MEADOW_CUTS.steps.file, cutAudio(cut)) };
+    report.push(`step ${noteName(cut.midi)}: B ${cut.from}–${cut.to}, ${gainDb} dB`);
+    return step;
+  });
+}
 {
   const cut = MEADOW_CUTS.finale.cuts[0], audio = cutAudio(cut), signal = mono(audio), { attack, end } = extent(signal);
   const arrival = highArrival(signal);
@@ -361,6 +307,31 @@ for (const [file, parts] of files) {
     '-application', 'audio', '-map_metadata', '-1', target], interleave(audio));
   const back = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', target]).stdout.toString().trim();
   report.push(`${file}: ${round(length(audio) / RATE, 2)}s written, ${back}s read back, ${(fs.statSync(target).size / 1e6).toFixed(2)} MB`);
+}
+// The loop seam, decoded from the written file: its level and spectral steps against those of the second either side.
+{
+  const after = measured.after, written = split(run(['-i', path.join(root, 'assets/music', MEADOW_CUTS.after.file), '-f', 'f32le', '-ac', '2', '-ar', String(RATE), '-']).stdout);
+  const at = s => Math.round((after.at + s) * RATE), m = mono(written);
+  const span = m.slice(at(after.loopEnd) - 2.5 * RATE, at(after.loopEnd));
+  const across = new Float32Array(5 * RATE);
+  across.set(span); across.set(m.slice(at(after.loopStart), at(after.loopStart) + 2.5 * RATE), span.length);
+  report.push(`warm bed loop seam: ${seamSteps(across)}`);
+  const source = mono(decode(MEADOW_CUTS.after.cuts[0].source)), from = Math.round(MEADOW_CUTS.after.loop.from * RATE);
+  report.push(`  the source's own continuation at the loop start, for comparison: ${seamSteps(source.slice(from - 2.5 * RATE, from + 2.5 * RATE))}`);
+}
+/** The 50 ms level step and spectral flux at the middle of five seconds, against the largest of the second either side. */
+function seamSteps(signal) {
+  const hop = Math.round(0.05 * RATE), N = 2048, window = hann(N), levels = [], spectra = [];
+  for (let i = 0; i + hop <= signal.length; i += hop) {
+    levels.push(db(rms(signal, i, i + hop)));
+    spectra.push(magnitude(spectrum(signal, i + hop / 2 - N / 2, N, window)).map(v => Math.log1p(v * 100)));
+  }
+  const seam = levels.length / 2, flux = k => spectra[k].reduce((s, v, b) => s + Math.max(0, v - spectra[k - 1][b]), 0);
+  const near = [];
+  for (let k = seam - 20; k <= seam + 20; k++) if (k !== seam && k > 0 && k < levels.length) near.push({ step: Math.abs(levels[k] - levels[k - 1]), flux: flux(k) });
+  const top = (key) => Math.max(...near.map(x => x[key]));
+  return `level step ${Math.abs(levels[seam] - levels[seam - 1]).toFixed(1)} dB (largest nearby ${top('step').toFixed(1)}), `
+    + `spectral flux ${flux(seam).toFixed(0)} (largest nearby ${top('flux').toFixed(0)})`;
 }
 const fileNames = Object.fromEntries(Object.entries(MEADOW_CUTS).map(([beat, b]) => [beat, b.file]));
 fs.writeFileSync(path.join(root, 'src/audio/meadow-cuts-measured.ts'),

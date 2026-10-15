@@ -156,10 +156,7 @@ const MOODS: Record<Mood, MoodMusic> = {
   lines: { chords: [[50, 57, 64, 71], [43, 50, 59, 66], [45, 52, 61, 66], [47, 54, 57, 62]], seconds: 9, cutoff: 1500, level: 1, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
   /** Its approved plucked score replaces the shared pad; gestures retain the same bright voice. */
   boats: { chords: BOATS_CHORDS, seconds: 4.5, cutoff: 1500, level: 0, scale: [62, 64, 66, 69, 71, 73, 74, 76, 78, 81, 83, 86] },
-  /**
-   * The last warm afternoon of the year, in the F minor of its recordings, which replace the shared pad. Its
-   * pentatonic scale (F, A♭, B♭, C, E♭) is what the wind finds on the piano.
-   */
+  /** The last warm afternoon of the year, in the F minor of its recordings, which replace the shared pad. */
   meadow: { chords: [[53, 60, 65, 68], [49, 56, 63, 68], [44, 51, 60, 63], [46, 53, 60, 65]], seconds: 8.5, cutoff: 1600, level: 0, scale: [63, 65, 68, 70, 72, 75, 77, 80, 82, 84, 87, 89] },
   /** Slower than the meadow and a step lower each time round: warm, falling, and it never comes back up. */
   birches: { chords: [[50, 57, 62, 66], [48, 55, 62, 67], [47, 54, 59, 66], [45, 52, 59, 64]], seconds: 11, cutoff: 1250, level: 0.95, scale: [62, 64, 66, 69, 71, 72, 74, 76, 78, 81, 83] },
@@ -1462,11 +1459,6 @@ export class Soundscape {
   }
 }
 
-/** The room's established melodic palette; live gestures also follow the active background chord. */
-export function moodScale(mood: Mood): readonly number[] {
-  return (MOODS[mood] ?? MOODS.meadow).scale;
-}
-
 /** At most this many notes may be sounding at once, so a storm of gestures cannot pile up oscillators. */
 const PIANO_VOICES = 10;
 
@@ -1477,7 +1469,7 @@ function outOfTune(midi: number): number {
 }
 
 /**
- * The upright piano standing in the meadow, which the wind plays. Felted hammers gone soft, a case that has been
+ * The upright piano standing in the meadow. Felted hammers gone soft, a case that has been
  * out in the weather, and strings that have drifted apart from each other: a dull, warm tone with a little beating
  * in it and the knock of the action underneath. Synthesised like everything else here; nothing is sampled.
  */

@@ -245,30 +245,35 @@ given), levels each to the room reference by measured loudness, and writes what 
 - Landing to the stool: the walk (O 0–27.2) loops with 3 s rests. It arrives through the ordinary handoff from Little
   Boats and begins once the background gate is open, so its first note is not under the gate's rise; sitting fades it
   over `tuning.piano.fadeOut` (`pianoMix`), and it is released.
-- The duet: the bough's four flute calls and her four piano answers and the flute finale are the instruments' own
-  voices, on the instrument route like the piano strings they replace (sound-off silences them, music-off does not).
-  Each call starts with the bough's inhale so its first breath lands as the inhale ends; reply input opens after the
-  flute's measured end. Each answer is sliced at its measured note onsets; a slice runs from just before its onset to
-  just before the next, then rings on as a phase-vocoder freeze of that moment, decaying 6 dB a second. Crossing a
-  note's share of the trace (shares follow the recording's rhythm) plays it; every note still ringing eases down
-  `tuning.meadowMusic.answerEaseDb` over `answerEase`, and a stroke fast enough to cross several plays them
-  `answerGap` apart. The outline rises and falls with the top voice of the answer's onsets. Until the duet file is
-  decoded the piano strings play the melody notes instead. The finale's colour front starts on the measured top of
-  its opening arpeggio (`MEADOW_FINALE.greenAt`). Its end raises no `restored`: the flute's finale is the reward.
-- From the duet's end the warm bed (E 22.6–119.6) loops with 5 s rests through the flowers and seeds, then fades over
-  `listenFade` for the listening rest. The family's departure is silent. The ending (E 119.6 to its end, its last 3 s
-  faded) plays once from the feather (`dropFeather`) or a `pond` restore; then silence until Birches' handoff.
+- The duet: the bough's four flute calls, her four piano answers, the flute finale and the cygnet's steps are the
+  instruments' own voices, on the instrument route (sound-off silences them, music-off does not). Nothing sounds from
+  the piano before the bough's first call. Each call starts with the bough's inhale so its first breath lands as the
+  inhale ends; reply input opens after the flute's measured end. With no answer begun `callAgainAfter` (25 s) later
+  the bough says the call once more, `callAgainDb` (−4 dB) softer, and then stays silent. Following the guide far
+  enough plays the answer whole at its own tempo; her hands and the keys follow its measured onsets and melody notes,
+  and stroke speed changes nothing. The next call waits for the answer to ring down, and the finale for the last.
+  The guide tilts with the answer's overall rise or fall (`tilt`). Until the duet file is decoded the piano strings
+  play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
+  (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
+  answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
+  end raises no `restored`: the flute's finale is the reward.
+- From the duet's end the warm bed plays through the flowers and seeds from `meadow_extended.ogg` (take E as Jeremy
+  extended it): 0:22.60 to 2:53.05, then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`).
+  The cut's last 0.6 s carries the source's lead into 1:36.60 under its own end (an equal-power crossfade baked in by
+  the tool), so the seam continues the phrase; the tool's seam check measures it against the source's own
+  continuation there. It fades over `listenFade` for the listening rest. The family's departure is silent. The ending
+  (3:16.30 to the file's end, whose tail still sounds, so its last 0.5 s fade) plays once from the feather
+  (`dropFeather`) or a `pond` restore; then silence until Birches' handoff.
 - `MeadowChapter.meadowMusic` names the part; `audio/meadow-music.ts` plays it. The shared pad is silent in the meadow
   (`MOODS.meadow.level` 0) and the synthesised `MeadowScore` no longer plays; `meadowScore` remains story state.
   `hush` does not apply. Files are fetched ahead in Little Boats and on the crossing (walk, duet), during the duet
   (warm bed, ending) and after it (ending), decoded as their part nears and released once played; a start or restore
   in the meadow waits behind the veil for its first part. Music mute and hidden pages behave as for the other
-  recordings. Decoded sizes: walk 10 MiB, duet 60 MiB (most of it the answer notes' rings), warm bed 36 MiB,
-  ending 13 MiB.
+  recordings. Decoded sizes: walk 10 MiB, duet 31 MiB, warm bed 55 MiB, ending 17 MiB.
 
-The flowers' breath voice (`audio/meadow-breath.ts`), the harebells and the piano's own wind-played notes use the F
-minor pentatonic (F, A♭, B♭, C, E♭) of the recordings. The flower prototype's breath voice is synthesised in Web Audio
-from harmonics and filtered air; the grey approach flower stays silent. `MeadowSong` smoothly shares the existing
+The flowers' breath voice (`audio/meadow-breath.ts`) and the harebells use the F minor pentatonic (F, A♭, B♭, C, E♭)
+of the recordings. The flower prototype's breath voice is synthesised in Web Audio from harmonics and filtered air at
+`tuning.meadowEchoes.voice`, under the warm bed; the grey approach flower stays silent. `MeadowSong` smoothly shares the existing
 `pianoMix` gate while the child and wind exchange seeds, then releases it; the warm bed ignores that duck. The final
 listening rest gives the distant family call space before the crest.
 
@@ -642,7 +647,7 @@ pan and bounded scheduling; finished nodes disconnect.
 ## Start-up and lifecycle
 
 The Music button mutes background scores and the shared pad through separate dry and reverb-send gains.
-Existing reverb tails ring out. Wind, wildlife, physical sounds, gesture chimes, story cues and the playable piano
+Existing reverb tails ring out. Wind, wildlife, physical sounds, gesture chimes, story cues and the meadow's duet
 remain audible. The score keeps following the story while music is muted; arrivals and endings cannot override
 the preference. The Sound button and M shortcut still mute everything. `tools/music-mute-check.mjs` renders both
 music routes and the effects routes through this control.

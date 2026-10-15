@@ -13,20 +13,16 @@ export interface WindPhrase {
   readonly clip: DuetClip;
 }
 
-/** One note of a traced answer: the recording from just before its onset, ringing on, and the key it is. */
-export interface AnswerNote extends DuetClip {
-  /** The share of the trace that sounds it. */
-  readonly share: number;
-  readonly midi: number;
-}
-
+/** Her recorded answer, played whole at its own tempo once the guide is followed. */
 export interface MeadowAnswer {
   readonly index: number;
-  readonly notes: readonly AnswerNote[];
-  /** The outline she traces, as (share of the trace, height −1..1) points along the answer's melody. */
-  readonly outline: readonly (readonly [number, number])[];
-  /** Up the keyboard or down it: the mirrored sweeps alternate. */
-  readonly direction: 1 | -1;
+  readonly clip: DuetClip;
+  /** Seconds into the recording that it has rung down. */
+  readonly end: number;
+  /** Its notes' onsets and melody keys, which her hands and the keys follow. */
+  readonly notes: readonly { readonly at: number; readonly midi: number }[];
+  /** The melody's overall rise (positive) or fall, −1..1, which tilts the guide. */
+  readonly tilt: number;
 }
 
 /** The recording starts this long before its first sound, so the flute is heard as the inhale ends. */
@@ -37,10 +33,7 @@ const phrase = (m: { at: number; duration: number; gainDb: number; attack: numbe
 };
 
 export const MEADOW_ANSWERS: readonly MeadowAnswer[] = MEADOW_MEASURED.answers.map((a, index) => ({
-  index,
-  notes: a.slices.map(s => ({ at: s.at, duration: s.duration, gainDb: a.gainDb, share: s.share, midi: s.midi })),
-  outline: a.points.map(([share, height]) => [share, height] as const),
-  direction: index % 2 === 0 ? 1 : -1,
+  index, clip: { at: a.at, duration: a.duration, gainDb: a.gainDb }, end: a.end, notes: a.notes, tilt: a.tilt,
 }));
 
 export const MEADOW_CALLS: readonly { call: WindPhrase; reply: MeadowAnswer }[] =
@@ -51,3 +44,6 @@ export const MEADOW_FINALE: WindPhrase & { readonly greenAt: number } = (() => {
   const finale = phrase(MEADOW_MEASURED.finale);
   return { ...finale, greenAt: finale.startAt + MEADOW_MEASURED.finale.greenAt };
 })();
+
+/** The cygnet's footfalls on the keys: single recorded notes of the finale's chord, low to high. */
+export const MEADOW_STEPS: readonly (DuetClip & { readonly midi: number })[] = MEADOW_MEASURED.steps;

@@ -316,7 +316,7 @@ export const tuning = {
     departureWalk: 16,
     cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
     cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65, cameraPortraitSecondSide: .15,
-    seedHeight: 5, voice: 0.14, musicDuck: 0.65,
+    seedHeight: 5, voice: 0.079, musicDuck: 0.65,
     flowers: 290, seedHeads: 140, stemBend: .06, stemSaturation: .24,
     turf: .42, turfExtra: 8, tread: 5, listeningTurf: [2, -821, 11, 10],
   },
@@ -1014,21 +1014,31 @@ export const tuning = {
     /** Trims (dB) on the gains that level each part to the room reference. */
     walkDb: 0, callDb: 0, answerDb: 0, finaleDb: 0, afterDb: 0, endingDb: 0,
     /**
-     * A traced note eases every note still ringing before it down by `answerEaseDb` over about `answerEase` seconds;
-     * a stroke fast enough to cross several onsets at once plays them `answerGap` apart.
+     * The cygnet's steps under the finale sit `stepDb` under the answers, so the flute leads; `stepVelocity` is their
+     * strike on the piano's own strings until the recording is decoded.
      */
-    answerEaseDb: -6, answerEase: 0.4, answerGap: 0.07,
+    stepDb: -10, stepVelocity: 0.12,
+    /** With no answer begun this long after a call, the bough says it once more, `callAgainDb` softer, and then waits. */
+    callAgainAfter: 25, callAgainDb: -4,
     /** The warm bed fades over this long for the listening rest before the family's call. */
     listenFade: 1.8,
   },
   piano: {
     place: [-18, -678],
     initialRadius: 15, initialSoft: 4,
-    /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
-    guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
-    /** Half the height of the outline the answer's melody draws over the keys, in world units. */
-    guideRise: 0.45,
+    /**
+     * The guide is the hit target: a straight line `guideSpan` keyboard-widths long (`guidePortraitSpan` times that on a
+     * tall screen), `guideAhead` piano units in front of the stool and `guideOver` metres over the piano's foot, so it
+     * lies against the land; its ends rise or fall `guideTilt` metres with the answer's melody. A stroke within
+     * `guideTolerance` screen heights of it counts.
+     */
+    guideSpan: 2.1, guidePortraitSpan: 1.8, guideAhead: 1.2, guideOver: 0.55, guideTilt: 0.22, guideTolerance: 0.08,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
+    /**
+     * The paper plane waits on the music desk's ledge while she plays (piano units: across, up, out), leaning back
+     * `planeLean` radians; it glides there over at least `planeGlide` seconds and back into her hand as she gets up.
+     */
+    planeRest: [0.4, 1.06, 0.47], planeTurn: 0, planeLean: 1.15, planeRoll: 0, planeGlide: 1.2,
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
@@ -1038,30 +1048,9 @@ export const tuning = {
     growthRoughness: 14, growthSoftness: 6,
     traceCurl: 0.9, traceOrbit: 0.9, traceDrift: 0.55,
     waveCurl: 0.075, waveCurlRadius: 11, waveSwirl: 0.55,
-    /** Gust energy over the keys that starts a run of notes, and the energy that makes the longest, loudest one. */
-    gustFrom: 0.2,
-    gustFull: 0.75,
-    /** Notes in a run, from a breath to a full gust, and the seconds between them at each. */
-    runLeast: 3,
-    runMost: 9,
-    spaceSlow: 0.2,
-    spaceFast: 0.075,
-    /** Rising air held over the keys that rolls a chord, and how often it rolls another while it is held. */
-    liftFrom: 0.45,
-    chordEvery: 3.4,
-    /** Seconds between the single notes the prevailing breeze alone finds, and the wind speed it needs. */
-    breezeLeast: 7,
-    breezeMost: 15,
-    breezeSpeed: 1.3,
     /** How far a key dips as it sounds, and how long it takes to come back up. */
     dip: 0.045,
     dipRelease: 0.3,
-    /** How near the camera has to be for the piano to sound at all, and where it is loudest. */
-    heardWithin: 62,
-    heardFully: 16,
-    /** The lullaby: seconds between its notes, how long it waits for an answer before saying a phrase again. */
-    phraseSpacing: 0.42,
-    sayAgain: 8,
     /** The cygnet on the keys: how long it takes to walk them, and how far along them it starts and finishes. */
     walkKeys: 6.5,
     walkFrom: 0.46,

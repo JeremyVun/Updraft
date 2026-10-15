@@ -21,6 +21,10 @@ const PASSING = 60;
 const PATIENCE = 22;
 /** How long they take to lower themselves onto the stool. */
 const SIT_FOR = 0.7;
+/** Seconds seated before the bough's first call. */
+const FIRST_CALL = 2;
+/** The cygnet climbs out of the satchel this long before it starts along the keys. */
+const UNSTOW = 1.8;
 
 /** The child and wind play the meadow awake. The invitation waits; only a traced answer advances it. */
 export class PianoStop {
@@ -35,12 +39,12 @@ export class PianoStop {
   private beat: Beat = 'ahead';
   private since = 0;
   private now = 0;
-  private pressAt = 0;
-  private noteAt = 0;
   /** Which phrase of the lullaby they are on, which part of it the player has got to, and when the piano speaks next. */
   private phrase = 0;
   private callEnds = 0;
   private pendingReply: MeadowAnswer | null = null;
+  /** How many times the bough has called this phrase: once, and once more, softer, if no answer has begun. */
+  private asked = 0;
   private sayAt = 0;
   private heardTo = 0;
   private finishedAt = 0;
@@ -52,6 +56,8 @@ export class PianoStop {
   private walkStep = 0;
   /** When the island is told to wake all the way, at the latest, and when the camera began its one long rise. */
   private wakeAt = 0;
+  /** When the cygnet starts along the keys: on the finale's arrival, after her last answer has rung down. */
+  private walkAt = 0;
   private roseFrom = 0;
   private responseAt = -1;
   private readonly foot = new THREE.Vector3();
@@ -63,6 +69,14 @@ export class PianoStop {
   private readonly side = new THREE.Vector3();
   private readonly hands = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly approachChild = new THREE.Vector3();
+  /** The paper plane gliding to the music desk as she comes to the piano, and back into her hand as she leaves. */
+  private planeGlide: { to: 'desk' | 'hand'; start: number; length: number } | null = null;
+  private readonly planeFrom = new THREE.Vector3();
+  private readonly planeFromTurn = new THREE.Quaternion();
+  private readonly planeAt = new THREE.Vector3();
+  private readonly planeTurn = new THREE.Quaternion();
+  private readonly planeTurnTo = new THREE.Quaternion();
+  private readonly planeRest = new THREE.Euler();
   private readonly approachFrame = { primary: this.approachChild, secondary: piano.keys,
     margin: tuning.piano.approachMargin, extra: tuning.piano.approachExtra };
 
@@ -89,6 +103,7 @@ export class PianoStop {
   hold(dt: number, time: number, cast: Cast): boolean {
     this.now = time;
     const c = cast.child;
+    this.tendPlane(cast);
     this.approachChild.copy(c.position).y += 1.2;
     piano.engaged = this.beat !== 'ahead' && this.beat !== 'done';
     // Ownership starts on approach, but music stays with the walk and the first look at the keys.
@@ -103,9 +118,9 @@ export class PianoStop {
         const gap = Math.hypot(c.position.x - piano.stand.x, c.position.z - piano.stand.z);
         if (gap < NOTICE || (gap < PASSING && c.position.z < piano.keys.z + 8)) {
           c.stop();
+          // Her hands are for the keys: the paper glides ahead of her onto the music desk and waits there, in view.
           c.stowPlane(true);
-          cast.plane.hold(c);
-          cast.plane.visible = false;
+          this.glidePlane('desk', cast);
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
           this.to('walking');
         }
@@ -131,24 +146,11 @@ export class PianoStop {
         const want = Math.atan2(piano.keys.x - piano.seat.x, piano.keys.z - piano.seat.z);
         c.ride(this.onto.lerpVectors(this.from, piano.seat, k), this.fromYaw + shortest(want - this.fromYaw) * k);
         c.lookAt = piano.keys;
-        if (this.t >= SIT_FOR) {
-          this.to('seated');
-          this.pressAt = time + 0.55;
-        }
+        if (this.t >= SIT_FOR) this.to('seated');
         break;
       }
       case 'seated': {
         c.lookAt = piano.keys;
-        /** One key, pressed with a finger: the only note in this room nobody had to be the wind for. */
-        if (this.pressAt > 0 && time > this.pressAt) {
-          this.pressAt = 0;
-          this.noteAt = time + 0.4;
-          this.playHands(time, cast);
-        }
-        if (this.noteAt > 0 && time > this.noteAt) {
-          this.noteAt = 0;
-          piano.press();
-        }
         this.duet(time, cast);
         if (windBough.sounding(time)) {
           c.lookAt = windBough.mouth;
@@ -163,6 +165,7 @@ export class PianoStop {
           c.dismount();
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(cast), 1);
           this.to('leaving');
+          this.glidePlane('hand', cast);
         }
         break;
       }
@@ -224,39 +227,45 @@ export class PianoStop {
     return this.roseFrom > 0 ? t.risePace : this.responseAt >= 0 && this.now - this.responseAt < t.phraseRest ? 1.3 : t.framePace;
   }
 
-  /** Demonstrate the next sweep without spending its colour or resetting a partial answer. */
+  /**
+   * The bough opens the duet: nothing sounds from the piano before its first call. It calls, and once more, softer,
+   * if no answer has begun `callAgainAfter` later; after that only the guide invites. A partial answer is never
+   * interrupted, and her answer plays out before the next call.
+   */
   private duet(time: number, cast: Cast): void {
-    if (this.finishedAt > 0 || this.noteAt > 0 || this.pressAt > 0) return;
-    if (this.sayAt === 0) this.sayAt = time + 1.4;
+    if (this.finishedAt > 0) return;
+    if (this.sayAt === 0) this.sayAt = time + FIRST_CALL;
     if (piano.matched > this.heardTo) {
       this.heardTo = piano.matched;
       this.answered = true;
       this.responseAt = time;
       this.phrase++;
+      this.asked = 0;
       if (this.phrase >= MEADOW_CALLS.length) {
         this.finish(cast, true);
         return;
       }
       this.onWake?.(this.heardTo as Waking, true);
       // Leave room to hear the answer and watch its colour travel before the next invitation.
-      this.sayAt = time + tuning.piano.phraseRest;
+      this.sayAt = Math.max(time + tuning.piano.phraseRest, piano.answerEnds + tuning.windBough.answerAfter);
       return;
     }
     if (this.pendingReply) {
       if (time < this.callEnds + tuning.windBough.answerAfter) return;
       piano.expect = this.pendingReply;
       this.pendingReply = null;
-      this.sayAt = time + tuning.piano.sayAgain;
-    } else if (time > this.sayAt && piano.gesture.progress === 0) {
+      this.sayAt = time + tuning.meadowMusic.callAgainAfter;
+    } else if (time > this.sayAt && piano.gesture.progress === 0 && this.asked < 2) {
       const phrase = MEADOW_CALLS[this.phrase];
       piano.expect = null;
       this.pendingReply = phrase.reply;
-      this.callEnds = windBough.play(phrase.call, time);
+      this.callEnds = windBough.play(phrase.call, time, false, this.asked === 0 ? 0 : tuning.meadowMusic.callAgainDb);
+      this.asked++;
     }
   }
 
   private playHands(time: number, cast: Cast): void {
-    if (this.walkFrom !== 0 || cast.carry.busy) return;
+    if (this.walkFrom > 0 || cast.carry.busy) return;
     const recent = Math.exp(-Math.max(0, time - piano.performedAt) * 7);
     const note = THREE.MathUtils.clamp(piano.performedKey, 0.2, 0.8);
     for (const hand of [0, 1] as const) {
@@ -282,18 +291,14 @@ export class PianoStop {
     this.answered = answered;
     piano.finale = true;
     this.releaseHands(cast);
-    const starts = this.now + tuning.windBough.finalRest;
+    // The finale waits for her last answer to ring down.
+    const starts = Math.max(this.now, piano.answerEnds) + tuning.windBough.finalRest;
     const ends = windBough.play(MEADOW_FINALE, starts, true);
     this.completeAt = ends + tuning.piano.completionRest;
     this.wakeAt = starts + tuning.windBough.inhale + MEADOW_FINALE.greenAt;
+    this.walkAt = this.wakeAt;
     this.finishedAt = Math.max(this.completeAt, this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor);
-    /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
     this.walkFrom = -1;
-    cast.carry.unstow(() => {
-      this.walkFrom = this.now;
-      this.walkStep = 0;
-      piano.walkKeys(piano.noteAlong(tuning.piano.walkFrom), piano.noteAlong(tuning.piano.walkTo), tuning.piano.walkKeys);
-    });
   }
 
   /**
@@ -301,7 +306,16 @@ export class PianoStop {
    * the only thing in the game that makes music with its feet, and neither of them says a word about it.
    */
   private onTheKeys(time: number, cast: Cast): void {
-    if (this.walkFrom <= 0) return;
+    /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
+    if (this.walkFrom === -1 && time >= this.walkAt - UNSTOW) {
+      this.walkFrom = -2;
+      cast.carry.unstow(() => {
+        this.walkFrom = Math.max(this.now, this.walkAt);
+        this.walkStep = 0;
+        piano.walkKeys(tuning.piano.walkFrom, tuning.piano.walkTo, tuning.piano.walkKeys, this.walkFrom);
+      });
+    }
+    if (this.walkFrom <= 0 || time < this.walkFrom) return;
     const { walkKeys, walkFrom, walkTo } = tuning.piano;
     const k = (time - this.walkFrom) / walkKeys;
     const { cygnet, child } = cast;
@@ -339,7 +353,37 @@ export class PianoStop {
     this.finishedAt = Math.max(this.finishedAt, time + tuning.piano.riseFor + tuning.piano.restFor);
   }
 
+  /** The paper never vanishes: it flies from wherever it is, in a low arc, to the desk or to her hand. */
+  private glidePlane(to: 'desk' | 'hand', { plane }: Cast): void {
+    this.planeFrom.copy(plane.position);
+    this.planeFromTurn.copy(plane.group.quaternion);
+    piano.planeRest(this.planeAt, this.planeRest);
+    const length = Math.max(tuning.piano.planeGlide, this.planeFrom.distanceTo(this.planeAt) / 8);
+    this.planeGlide = { to, start: this.now, length };
+  }
+
+  private tendPlane({ plane, child }: Cast): void {
+    const glide = this.planeGlide;
+    if (!glide) return;
+    const k = THREE.MathUtils.smootherstep(this.now - glide.start, 0, glide.length);
+    if (glide.to === 'desk') piano.planeRest(this.planeAt, this.planeRest);
+    else {
+      child.handPosition(this.planeAt);
+      this.planeRest.set(0, child.yaw, 0);
+    }
+    this.planeTurnTo.setFromEuler(this.planeRest);
+    this.planeAt.lerpVectors(this.planeFrom, this.planeAt, k).y += Math.sin(k * Math.PI) * 0.6;
+    this.planeRest.setFromQuaternion(this.planeTurn.slerpQuaternions(this.planeFromTurn, this.planeTurnTo, k));
+    plane.pin(this.planeAt, this.planeRest);
+    plane.visible = true;
+    plane.keptSmall = true;
+    if (k < 1) return;
+    this.planeGlide = null;
+    if (glide.to === 'hand') { plane.keptSmall = false; plane.hold(child); }
+  }
+
   private give({ child, plane }: Cast): void {
+    if (this.planeGlide?.to === 'hand' || !plane.held) { this.planeGlide = null; plane.keptSmall = false; plane.hold(child); }
     piano.expect = null;
     piano.engaged = false;
     piano.finale = false;

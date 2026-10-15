@@ -136,6 +136,8 @@ export class Glider {
   private readonly shadow: THREE.Mesh;
   private readonly shadowMat: THREE.ShaderMaterial;
   private carrier: Traveller | null = null;
+  /** Set down by hand rather than landed from flight, it keeps the size it is carried at. */
+  keptSmall = false;
   /** A story object resting in the world until picked up (the wet paper in the wood). */
   private restingAt: THREE.Vector3 | null = null;
   private pinned = false;
@@ -297,7 +299,7 @@ export class Glider {
 
   update(dt: number, time: number): void {
     this.clock = time;
-    const size = this.held ? tuning.paperCarry.scale : SCALE;
+    const size = this.held || this.keptSmall ? tuning.paperCarry.scale : SCALE;
     this.body.scale.setScalar(THREE.MathUtils.lerp(this.body.scale.x, size, 1 - Math.exp(-dt * tuning.paperCarry.sizeRate)));
     if (this.restingAt) {
       this.position.copy(this.restingAt);

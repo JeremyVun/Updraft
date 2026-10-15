@@ -3,7 +3,7 @@ import duetUrl from '../../assets/music/meadow-duet.ogg?url';
 import afterUrl from '../../assets/music/meadow-after.ogg?url';
 import endingUrl from '../../assets/music/meadow-ending.ogg?url';
 import { MEADOW_MEASURED } from './meadow-cuts-measured';
-import type { DuetClip, MeadowAnswer } from './meadow-duet';
+import type { DuetClip } from './meadow-duet';
 import { tuning } from '../tuning';
 
 /**
@@ -57,9 +57,7 @@ class MeadowMusic {
   private part: MeadowMusicPart | undefined;
   private bed: { name: Bed; bus: GainNode; voices: Set<Voice>; next: number; once: boolean } | null = null;
   private endingPlayed = false;
-  private answer = -1;
-  private readonly answerVoices: Voice[] = [];
-  private lastNote = -Infinity;
+  private readonly duetVoices = new Set<Voice>();
   /** QA: what was last sounded from the duet, on the audio clock. */
   readonly log: { at: number; what: string }[] = [];
 
@@ -194,8 +192,10 @@ class MeadowMusic {
     const buffer = this.buffers.get(bed.name);
     if (buffer && now + 0.25 >= bed.next) {
       const clip = BEDS[bed.name], at = Math.max(now, bed.next);
-      this.voice(buffer, clip.at, clip.duration, at, bed.bus, 1, bed.voices);
-      bed.next = bed.once ? Infinity : at + clip.duration + clip.rest;
+      // The warm bed loops natively, round its seam, with no rest; the walk rests between its passes.
+      const loop = 'loopEnd' in clip ? [clip.at + clip.loopStart, clip.at + clip.loopEnd] as const : undefined;
+      this.voice(buffer, clip.at, clip.duration, at, bed.bus, 1, bed.voices, loop);
+      bed.next = bed.once || loop ? Infinity : at + clip.duration + clip.rest;
     }
   }
 
@@ -212,53 +212,39 @@ class MeadowMusic {
     else for (const voice of bed.voices) voice.source.addEventListener('ended', () => { if (!bed.voices.size) bed.bus.disconnect(); });
   }
 
-  private voice(buffer: AudioBuffer, offset: number, duration: number, at: number, out: AudioNode, level: number, into?: Set<Voice> | Voice[]): Voice {
+  private voice(buffer: AudioBuffer, offset: number, duration: number, at: number, out: AudioNode, level: number,
+    into?: Set<Voice> | Voice[], loop?: readonly [number, number]): Voice {
     const ctx = this.ctx!;
     const source = ctx.createBufferSource(), g = ctx.createGain();
     source.buffer = buffer;
     g.gain.value = 0;
     g.gain.setValueAtTime(level, at);
     source.connect(g).connect(out);
-    const voice = { source, gain: g, ends: at + duration };
+    const voice = { source, gain: g, ends: loop ? Infinity : at + duration };
     source.onended = () => {
       source.disconnect(); g.disconnect(); source.buffer = null;
       if (into instanceof Set) into.delete(voice);
       else if (into) { const i = into.indexOf(voice); if (i >= 0) into.splice(i, 1); }
     };
-    source.start(at, offset, duration);
+    if (loop) {
+      source.loop = true;
+      [source.loopStart, source.loopEnd] = loop;
+      source.start(at, offset);
+    } else source.start(at, offset, duration);
     if (into instanceof Set) into.add(voice); else into?.push(voice);
     return voice;
   }
 
-  /** A bough call or the finale, `late` seconds into its recording. False if the duet is not decoded yet. */
-  phrase(clip: DuetClip, late: number, what: string, trimDb: number): boolean {
+  /**
+   * A phrase of the duet (a bough call, her answer, the finale or a cygnet's step), `late` seconds into its recording,
+   * at its measured gain plus `trimDb`. False if the duet is not decoded yet.
+   */
+  duet(clip: DuetClip, late: number, what: string, trimDb: number): boolean {
     const buffer = this.buffers.get('duet'), ctx = this.ctx;
     if (!buffer || !ctx || !this.instrument || late >= clip.duration) return false;
     const now = ctx.currentTime, skip = Math.max(0, late);
-    this.voice(buffer, clip.at + skip, clip.duration - skip, now, this.instrument, gain(clip.gainDb + trimDb));
+    this.voice(buffer, clip.at + skip, clip.duration - skip, now, this.instrument, gain(clip.gainDb + trimDb), this.duetVoices);
     this.note(now, what);
-    return true;
-  }
-
-  /**
-   * One traced note of an answer. It starts on its onset and rings; the note before it eases down by
-   * `answerEaseDb` over `answerEase`, and a fast stroke's notes are spaced `answerGap` apart rather than struck together.
-   */
-  answerNote(reply: MeadowAnswer, k: number): boolean {
-    const buffer = this.buffers.get('duet'), ctx = this.ctx, note = reply.notes[k];
-    if (!buffer || !ctx || !this.instrument || !note) return false;
-    const t = tuning.meadowMusic;
-    if (reply.index !== this.answer) { this.answer = reply.index; this.lastNote = -Infinity; }
-    const at = Math.max(ctx.currentTime, this.lastNote + t.answerGap);
-    this.lastNote = at;
-    for (const older of this.answerVoices) {
-      if (older.ends <= at) continue;
-      const g = older.gain.gain;
-      g.cancelAndHoldAtTime(at);
-      g.setTargetAtTime(gain(t.answerEaseDb) * g.value, at, t.answerEase / 3);
-    }
-    this.voice(buffer, note.at, note.duration, at, this.instrument, gain(note.gainDb + t.answerDb), this.answerVoices);
-    this.note(at, `answer ${reply.index + 1} note ${k + 1}`);
     return true;
   }
 
@@ -272,7 +258,7 @@ class MeadowMusic {
     const ctx = this.ctx;
     if (!ctx) return;
     const now = ctx.currentTime;
-    for (const voice of this.answerVoices) {
+    for (const voice of this.duetVoices) {
       voice.gain.gain.cancelAndHoldAtTime(now);
       voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
       voice.gain.gain.linearRampToValueAtTime(0, now + Math.max(0.02, fade));
