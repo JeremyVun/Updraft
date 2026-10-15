@@ -122,6 +122,11 @@ export class WhaleRig {
       uHaze: { value: 0 },
       uLost: { value: 0 },
       uPresence: { value: 1 },
+      // The skin's loop bounds: compiler bounds, not quality settings (gl/loops.ts).
+      uRosetteCells: Object.freeze({ value: 4 }),
+      uLichenScales: Object.freeze({ value: 2 }),
+      uShellScatters: Object.freeze({ value: 3 }),
+      uFormTaps: Object.freeze({ value: 4 }),
     };
     const look = tuning.whaleLook;
     const skin = {

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
-import { ATMO_GLSL, atmo } from '../atmosphere';
+import { atmo } from '../atmosphere';
+import { propLook, propMaterial } from '../prop-shader';
 import { REFLECTION_LAYER } from '../water/reflection';
 import type { PointerInput } from '../../input/pointer';
 import type { WindField } from '../../wind/field';
@@ -36,26 +37,18 @@ const RING_EVERY = (NX - 1) / (SHEET.rings - 1);
 const LINE_SAMPLES = 48;
 const LINE_SIDES = 5;
 
-const CLOTH_VERT = /* glsl */ `
-in vec2 aUv;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec2 vUv;
-void main() {
+const CLOTH_LOOK = propLook({
+  varyings: 'vec2 vUv;',
+  vertexInputs: 'in vec2 aUv;',
+  fragmentInputs: 'uniform float uThrough;',
+  vertex: /* glsl */ `
   vec4 w = modelMatrix * vec4(position, 1.0);
   vWorld = w.xyz;
   vNormal = mat3(modelMatrix) * normal;
   vUv = aUv;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const CLOTH_FRAG = /* glsl */ `
-${ATMO_GLSL}
-uniform float uThrough;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec2 vUv;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   vec3 alb = vec3(0.6, 0.565, 0.49) * (0.95 + 0.08 * vnoise(vUv * vec2(3.0, 2.4)));
@@ -73,33 +66,22 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.0);
   col += uSunColor * rim * sun * 0.18;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
-const HARD_VERT = /* glsl */ `
-in vec3 color;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vColor;
-void main() {
+/** The line, the rings and their pegs, and the fixtures: plain, coloured by vertex. */
+const HARD_LOOK = propLook({
+  varyings: 'vec3 vColor;',
+  vertexInputs: 'in vec3 color;',
+  vertex: /* glsl */ `
   vec4 w = modelMatrix * vec4(position, 1.0);
-  #ifdef USE_INSTANCING
-  w = modelMatrix * instanceMatrix * vec4(position, 1.0);
-  vNormal = mat3(modelMatrix) * mat3(instanceMatrix) * normal;
-  #else
   vNormal = mat3(modelMatrix) * normal;
-  #endif
   vWorld = w.xyz;
   vColor = color;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const HARD_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vColor;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -108,8 +90,9 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
   col += uSunColor * rim * sun * 0.2;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
 const ROPE = lin(0.13, 0.11, 0.085);
@@ -181,15 +164,16 @@ export class WashSheet {
   private readonly rings: number[] = [];
   private readonly clothGeo: THREE.BufferGeometry;
   private readonly lineGeo: THREE.BufferGeometry;
-  private readonly ringMesh: THREE.InstancedMesh;
+  private readonly ringMesh: THREE.Mesh;
+  /** One ring and its peg facing along the line, and where along it each ring was last placed. */
+  private readonly ringShape: Float32Array;
+  private readonly ringsAt = new Float64Array(SHEET.rings * 3).fill(NaN);
   private readonly clothMaterial: THREE.ShaderMaterial;
   private readonly sample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly out = new THREE.Vector3();
   private readonly air = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
-  private readonly matrix = new THREE.Matrix4();
-  private readonly quat = new THREE.Quaternion();
   private readonly projected = new THREE.Vector3();
   private readonly sa = new THREE.Vector2();
   private readonly sb = new THREE.Vector2();
@@ -247,13 +231,10 @@ export class WashSheet {
     }
     this.clothGeo.setAttribute('aUv', new THREE.BufferAttribute(uv, 2));
     this.clothGeo.setIndex(idx);
-    this.clothMaterial = new THREE.ShaderMaterial({
-      vertexShader: CLOTH_VERT, fragmentShader: CLOTH_FRAG,
-      uniforms: { ...atmo.uniforms, uThrough: { value: tuning.crossings.sheet.through } }, side: THREE.DoubleSide,
-    });
+    this.clothMaterial = propMaterial(CLOTH_LOOK, { uThrough: { value: tuning.crossings.sheet.through } });
     const cloth = new THREE.Mesh(this.clothGeo, this.clothMaterial);
 
-    const hard = new THREE.ShaderMaterial({ vertexShader: HARD_VERT, fragmentShader: HARD_FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide });
+    const hard = propMaterial(HARD_LOOK);
     this.lineGeo = new THREE.BufferGeometry();
     this.lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(LINE_SAMPLES * LINE_SIDES * 3), 3));
     this.lineGeo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(LINE_SAMPLES * LINE_SIDES * 3), 3));
@@ -273,8 +254,14 @@ export class WashSheet {
     const ring = new THREE.TorusGeometry(0.045, 0.011, 5, 10).rotateY(Math.PI / 2);
     const peg = new THREE.BoxGeometry(0.03, 0.13, 0.045).translate(0, -0.075, 0);
     const ringParts = [coloured(ring, IRON), coloured(peg, PEG)];
-    const ringGeo = mergeParts(ringParts);
-    this.ringMesh = new THREE.InstancedMesh(ringGeo, hard, SHEET.rings);
+    /**
+     * Every ring with its peg in one geometry, turned to face along the line and placed along it on the CPU: instanced,
+     * they would need a program of their own.
+     */
+    const ringGeo = mergeParts(Array.from({ length: SHEET.rings }, () => ringParts).flat());
+    ringGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(this.along.x, this.along.z)));
+    this.ringShape = ringGeo.attributes.position.array.slice(0, ringGeo.attributes.position.count / SHEET.rings * 3) as Float32Array;
+    this.ringMesh = new THREE.Mesh(ringGeo, hard);
 
     const fixed = this.fixtures(spot);
     const fixtures = new THREE.Mesh(fixed, hard);
@@ -470,10 +457,14 @@ export class WashSheet {
       let pin = this.pins.get(this.rings[r]);
       if (!pin) this.pins.set(this.rings[r], pin = new THREE.Vector3());
       pin.copy(at);
-      this.matrix.compose(at, this.quat.setFromAxisAngle(this.tmp.set(0, 1, 0), Math.atan2(this.along.x, this.along.z)), this.tmp2.set(1, 1, 1));
-      this.ringMesh.setMatrixAt(r, this.matrix);
+      const placed = this.ringsAt;
+      if (placed[r * 3] === at.x && placed[r * 3 + 1] === at.y && placed[r * 3 + 2] === at.z) continue;
+      placed.set([at.x, at.y, at.z], r * 3);
+      const pos = this.ringMesh.geometry.attributes.position as THREE.BufferAttribute;
+      const shape = this.ringShape, each = shape.length / 3;
+      for (let i = 0; i < each; i++) pos.setXYZ(r * each + i, shape[i * 3] + at.x, shape[i * 3 + 1] + at.y, shape[i * 3 + 2] + at.z);
+      pos.needsUpdate = true;
     }
-    this.ringMesh.instanceMatrix.needsUpdate = true;
     for (const [i, col] of HOLD_COLS.entries()) {
       const at = (NY - 1) * NX + col;
       if (!this.held) {

@@ -1,51 +1,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WindGesture } from '../fx/wind-gesture';
-import { glsl, tuning } from '../tuning';
-import { ATMO_GLSL, atmo } from './atmosphere';
-import { CLOTH_FRAG, PAINT_FRAG, WOOD_FRAG, WOOD_VERT, passagePegGeometry } from './lines';
+import { tuning } from '../tuning';
+import { atmo } from './atmosphere';
+import { CLOTH_FRAG, CURTAIN_VERT, PAINT_FRAG, WOOD_FRAG, WOOD_VERT, passagePegGeometry } from './lines';
 import { rotaryWashing, ROTARY_SHEET_INTERVALS, type RotaryFrame } from './lines-rotary';
 
 const K = tuning.rotaryWashing;
 const UP = new THREE.Vector3(0, 1, 0);
-const CLOTH_VERTEX = /* glsl */ `
-${ATMO_GLSL}
-uniform vec3 uColor;
-uniform vec3 uCentre;
-uniform vec3 uSnagAt;
-uniform float uSnag;
-uniform float uSnagPull;
-uniform float uSpin;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vColor;
-out vec2 vUv;
-out float vSwing;
-out float vRole;
-out float vCurtain;
-void main() {
-  float hang = 1.0 - uv.y;
-  vec3 p = position;
-  vec4 world = modelMatrix * vec4(p, 1.0);
-  vec4 sway = swayAt(world.xz);
-  vec2 breeze = clamp(sway.xy, vec2(-3.0), vec2(3.0));
-  vec2 radial = world.xz - uCentre.xz;
-  vec2 drag = vec2(-radial.y, radial.x) * uSpin * 0.38;
-  float ripple = sin(uv.x * 13.0 + uTime * 1.8 - hang * 3.0) * 0.07;
-  world.xz += (breeze * 0.18 + drag) * hang * hang;
-  world.xz += normalize(radial) * ripple * hang;
-  world.y += (length(breeze) * 0.04 + abs(uSpin) * 0.2) * hang * hang;
-  float tug = uSnag * uSnagPull * hang * hang * smoothstep(0.25, 0.85, uv.x)
-    * ${glsl(K.snagTug)} * (1.0 + 0.2 * sin(uTime * ${glsl(K.snagShiverRate)} - hang * 4.0));
-  world.xz += normalize(uCentre.xz - uSnagAt.xz) * tug;
-  world.y += sin(hang * 3.141593) * tug * 0.4;
-  float hooked = smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x) * uSnag;
-  world.xyz = mix(world.xyz, uSnagAt, hooked);
-  vWorld = world.xyz;
-  vNormal = normalize(mat3(modelMatrix) * normal);
-  vColor = uColor; vUv = uv; vSwing = 0.0; vRole = -1.0; vCurtain = 2.0;
-  gl_Position = projectionMatrix * viewMatrix * world;
-}`;
 
 function rod(a: THREE.Vector3, b: THREE.Vector3, radius: number): THREE.BufferGeometry {
   const g = new THREE.CylinderGeometry(radius, radius, a.distanceTo(b), 7);
@@ -118,8 +80,9 @@ class FrameRig {
                 uColor: { value: new THREE.Color(frame.index ? (piece ? '#a7baca' : '#89a5b8') : (piece ? '#adc1ab' : '#94ae9d')) },
                 uSpin: this.spin,
                 uCentre: { value: frame.foot }, uSnagAt: this.snagAt, uSnagPull: this.snagPull,
-                uSnag: frame.index === 1 && i === 3 && size === 1 && piece === 1 ? this.snag : { value: 0 } },
-              vertexShader: CLOTH_VERTEX, fragmentShader: CLOTH_FRAG,
+                uSnag: frame.index === 1 && i === 3 && size === 1 && piece === 1 ? this.snag : { value: 0 }, uRotary: { value: 1 } },
+              // The passage curtains' program, switched to the rotary's sheets.
+              vertexShader: CURTAIN_VERT, fragmentShader: CLOTH_FRAG,
               side: THREE.DoubleSide, alphaToCoverage: true,
             });
             const cloth = new THREE.Mesh(geometry, material);

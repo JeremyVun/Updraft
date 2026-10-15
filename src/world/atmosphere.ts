@@ -885,6 +885,7 @@ float mistSample(vec4 value, vec4 slope, vec3 weight, float t) {
   return mistDensityAt(value + slope * t) * clamp((weight.x * t + weight.y) * t + weight.z, 0.0, 1.0);
 }
 
+uniform int uMistPasses;
 // Between ramp boundaries the density is a polynomial; four Gauss points integrate it exactly.
 float mistIntegral(vec4 value, vec4 slope, float start, float end, vec3 weight) {
   if (end <= start) return 0.0;
@@ -908,23 +909,26 @@ float mistIntegral(vec4 value, vec4 slope, float start, float end, vec3 weight) 
   return optical;
 }
 
-float mistCleared(vec4 value, vec4 slope, vec2 offset, vec2 direction, float reach) {
+/** Where a sightline crosses the clearing, and in how many spans: none, one (bounds.xy), or the rim, the core and the
+ * rim again (bounds.xy, .yz, .zw). The core weighs 1, each rim the weight in rim. */
+int mistClearedSpans(vec2 offset, vec2 direction, float reach, out vec4 bounds, out vec3 rim) {
   float inner = uSeaFogClear.z;
   float outer = inner * ${glsl(tuning.drowned.church.fog.clearRim)} + ${glsl(tuning.drowned.church.fog.clearSoft)};
   float a = dot(direction, direction), b = dot(offset, direction), c = dot(offset, offset);
   float width = outer * outer - inner * inner;
   vec3 weight = vec3(-a, -2.0 * b, outer * outer - c) / width;
-  if (a < 1e-8) return mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, clamp(weight.z, 0.0, 1.0)));
+  bounds = vec4(0.0);
+  rim = weight;
+  if (a < 1e-8) { bounds.xy = vec2(0.0, reach); rim = vec3(0.0, 0.0, clamp(weight.z, 0.0, 1.0)); return 1; }
   float disc = b * b - a * (c - outer * outer);
-  if (disc <= 0.0) return 0.0;
+  if (disc <= 0.0) return 0;
   float start = max(0.0, (-b - sqrt(disc)) / a), end = min(reach, (-b + sqrt(disc)) / a);
   float core = b * b - a * (c - inner * inner);
-  if (core <= 0.0) return mistIntegral(value, slope, start, end, weight);
+  if (core <= 0.0) { bounds.xy = vec2(start, end); return 1; }
   float coreStart = clamp((-b - sqrt(core)) / a, start, max(start, end));
   float coreEnd = clamp((-b + sqrt(core)) / a, start, max(start, end));
-  return mistIntegral(value, slope, start, coreStart, weight) +
-    mistIntegral(value, slope, coreStart, coreEnd, vec3(0.0, 0.0, 1.0)) +
-    mistIntegral(value, slope, coreEnd, end, weight);
+  bounds = vec4(start, coreStart, coreEnd, end);
+  return 3;
 }
 
 float mistWispPrimitive(float t) {
@@ -959,14 +963,29 @@ float mistOptical(vec3 ro, vec3 rd, float far) {
   vec4 slope = vec4(-rd.y / softness, -dot(rd.xz, n) / frontSoftness,
     acrossSlope / widths.x, -acrossSlope / widths.y);
   float reach = min(far, 4000.0);
-  float optical = mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, 1.0));
-  if (uSeaFogClear.z > 0.0 && uSeaFogClear.w < top) {
-    vec2 clearing = ro.xz - uSeaFogClear.xy;
-    optical -= mistCleared(value, slope, clearing, rd.xz, reach);
-    float lowSoftness = max(0.1, softness * clamp(uSeaFogClear.w / top, 0.0, 1.0));
-    value.x = (uSeaFogClear.w + lowSoftness * 0.5 - ro.y) / lowSoftness;
-    slope.x = -rd.y / lowSoftness;
-    optical += mistCleared(value, slope, clearing, rd.xz, reach);
+  // The whole bank, less the clearing at the bank's height, plus the clearing at its low height. One loop of
+  // uMistPasses (3) keeps mistIntegral to one expansion where the compiler inlines every call.
+  float optical = 0.0;
+  bool clears = uSeaFogClear.z > 0.0 && uSeaFogClear.w < top;
+  vec2 clearing = ro.xz - uSeaFogClear.xy;
+  for (int pass = 0; pass < uMistPasses; pass++) {
+    if (pass > 0 && !clears) break;
+    if (pass == 2) {
+      float lowSoftness = max(0.1, softness * clamp(uSeaFogClear.w / top, 0.0, 1.0));
+      value.x = (uSeaFogClear.w + lowSoftness * 0.5 - ro.y) / lowSoftness;
+      slope.x = -rd.y / lowSoftness;
+    }
+    // Spans are picked by selects: a local array indexed by k is slow indexable memory on D3D.
+    vec4 bounds = vec4(0.0, reach, 0.0, 0.0);
+    vec3 rim = vec3(0.0, 0.0, 1.0);
+    int count = 1;
+    if (pass > 0) count = mistClearedSpans(clearing, rd.xz, reach, bounds, rim);
+    float part = 0.0;
+    for (int k = 0; k < count; k++) {
+      vec2 span = k == 0 ? bounds.xy : k == 1 ? bounds.yz : bounds.zw;
+      part += mistIntegral(value, slope, span.x, span.y, k == 1 ? vec3(0.0, 0.0, 1.0) : rim);
+    }
+    optical += pass == 1 ? -part : part;
   }
   if (uSeaFogShape.z < 1.0) {
     vec3 localEye = vec3(across, ro.y, dot(offset, n));

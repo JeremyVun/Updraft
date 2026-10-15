@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
-import { ATMO_GLSL, atmo } from '../atmosphere';
+import { propLook, propMaterial } from '../prop-shader';
 import { REFLECTION_LAYER } from '../water/reflection';
 import type { PointerInput } from '../../input/pointer';
 import { merged, tagged } from './shapes';
@@ -52,18 +52,11 @@ export const HOIST = {
 const DRUM = new THREE.Vector3(-1.85, 0, -TOWER_BACK);
 const SHEAVE_R = 0.12;
 
-const MILL_VERT = /* glsl */ `
-uniform float uTime;
-uniform float uFlap;
-uniform float uBelt;
-in float aKind;
-in float aShake;
-in float aPhase;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-out float vKind;
-void main() {
+const MILL_LOOK = propLook({
+  program: 'timber',
+  varyings: 'vec3 vLocal; float vKind;',
+  vertexInputs: 'uniform float uFlap; uniform float uBelt; in float aKind; in float aShake; in float aPhase;',
+  vertex: /* glsl */ `
   vec3 p = position;
   if (aKind > ${LINEN - 0.5} && aKind < ${LINEN + 0.5}) {
     float t = uTime * (2.3 + uFlap * 3.0) + aPhase * 6.28;
@@ -77,15 +70,8 @@ void main() {
   if (aKind > ${BELT - 0.5}) vLocal.y += uBelt;
   vKind = aKind;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const MILL_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-in float vKind;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   int kind = int(vKind + 0.5);
@@ -127,8 +113,9 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
   col += uSunColor * rim * sun * 0.2;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 /**
  * Where a drowned mill stands: the middle of its sails (the hub's x and z) and the way they face (a yaw, the way you
@@ -217,10 +204,7 @@ export class Windmill {
     this.group.rotation.y = spot.facing;
     this.rotor.position.set(0, hubY, 0);
     this.group.add(this.rotor);
-    this.material = new THREE.ShaderMaterial({
-      vertexShader: MILL_VERT, fragmentShader: MILL_FRAG,
-      uniforms: { ...atmo.uniforms, uFlap: { value: 0 }, uBelt: { value: 0 } }, side: THREE.DoubleSide,
-    });
+    this.material = propMaterial(MILL_LOOK, { uFlap: { value: 0 }, uBelt: { value: 0 } });
     const mesh = (g: THREE.BufferGeometry) => {
       const m = new THREE.Mesh(g, this.material);
       m.frustumCulled = false;

@@ -296,6 +296,8 @@ export class SleepingWhale extends WhaleRig {
 
   constructor(private readonly spray: Spray, private readonly foam: Marks, slicks: Marks) {
     super();
+    // Opaque all the same, but without three's OPAQUE define it shares the crossing whale's program.
+    (this.mesh.material as THREE.ShaderMaterial).blending = THREE.NoBlending;
     this.wake = new WhaleWake(this, spray, foam, slicks);
     this.wake.onSound = (kind, x, y, z) => this.onSound?.(kind, x, y, z);
     this.birds = new Seabirds(this.uniforms);

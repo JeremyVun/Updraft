@@ -498,6 +498,9 @@ export class Net {
     lineGeo.setAttribute('width', this.line.width);
     lineGeo.setAttribute('afloat', this.line.afloat);
     lineGeo.setAttribute('weed', this.line.weed);
+    // A rope has no normals and its shader reads none, but three builds geometry without them its own program: it
+    // lends its direction as one, so the ropes draw with the sheet's and corks' program.
+    lineGeo.setAttribute('normal', this.line.along);
     lineGeo.setIndex(lineIndex);
     this.ropes = new THREE.Mesh(lineGeo, ropeMaterial());
     this.ropes.renderOrder = 5;

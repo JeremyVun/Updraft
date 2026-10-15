@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ATMO_GLSL, atmo } from './atmosphere';
+import { propLook, propMaterial } from './prop-shader';
 import { REFLECTION_LAYER } from './water/reflection';
 import { mulberry32 } from './noise';
 
@@ -52,19 +52,10 @@ const LEAF = (() => {
   return new THREE.ShapeGeometry(s, 3);
 })();
 
-const IVY_VERT = /* glsl */ `
-${ATMO_GLSL}
-uniform vec3 uOut;
-in vec3 color;
-in float aKind;
-in vec3 aPivot;
-in float aSeed;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vColor;
-out vec3 vLocal;
-out float vKind;
-void main() {
+const IVY_LOOK = propLook({
+  varyings: 'vec3 vColor; vec3 vLocal; float vKind;',
+  vertexInputs: 'uniform vec3 uOut; in vec3 color; in float aKind; in vec3 aPivot; in float aSeed;',
+  vertex: /* glsl */ `
   vec3 p = position;
   if (aKind > 0.5) {
     /** A leaf nods on its stalk in the evening air, a little more in a gust. */
@@ -79,16 +70,8 @@ void main() {
   vLocal = position;
   vKind = aKind;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const IVY_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vColor;
-in vec3 vLocal;
-in float vKind;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   vec3 alb = vColor;
@@ -110,8 +93,9 @@ void main() {
   } else {
     col += uSunColor * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.0) * 0.12 * sun;
   }
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 /** A stem through `points` (in the face's frame), narrowing from r0 to r1 along its length, a little lumpy, as an old stem is. */
 function stem(points: THREE.Vector3[], r0: number, r1: number, radial: number): THREE.BufferGeometry {
@@ -286,9 +270,7 @@ export class IvyFace {
       const pos = p.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < pos.count; i++) piv.setXYZ(i, pos.getX(i), pos.getY(i), pos.getZ(i));
     }
-    this.mesh = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({
-      vertexShader: IVY_VERT, fragmentShader: IVY_FRAG, uniforms: { ...atmo.uniforms, uOut: { value: this.out.clone() } }, side: THREE.DoubleSide,
-    }));
+    this.mesh = new THREE.Mesh(mergeGeometries(parts), propMaterial(IVY_LOOK, { uOut: { value: this.out.clone() } }));
     this.mesh.frustumCulled = false;
     this.mesh.layers.enable(REFLECTION_LAYER);
   }

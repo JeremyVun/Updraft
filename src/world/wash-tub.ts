@@ -7,6 +7,7 @@ import { tuning } from '../tuning';
 import type { WindField } from '../wind/field';
 import { INSIDE_HULL } from '../traveller/boat/waterline';
 import { ATMO_GLSL, atmo } from './atmosphere';
+import { propLook, propMaterial } from './prop-shader';
 import { REFLECTION_LAYER } from './water/reflection';
 import { swellAt, swellUniforms, type Swell } from './water/swell';
 
@@ -112,6 +113,7 @@ function lid(): THREE.Mesh {
   return mesh;
 }
 
+/** The glow showing where the tub is to go draws over the tub's own geometry, placed as the tub's look places it. */
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
 in float aKind;
@@ -128,14 +130,20 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const FRAG = /* glsl */ `
-${ATMO_GLSL}
-uniform float uWater;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-in float vKind;
-void main() {
+const TUB_LOOK = propLook({
+  program: 'timber',
+  varyings: 'vec3 vLocal; float vKind;',
+  vertexInputs: 'in float aKind;',
+  fragmentInputs: 'uniform float uWater;',
+  vertex: /* glsl */ `
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  vNormal = normalize(mat3(modelMatrix) * normal);
+  vLocal = position;
+  vKind = aKind;
+  gl_Position = projectionMatrix * viewMatrix * w;
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   int kind = int(vKind + 0.5);
@@ -174,8 +182,9 @@ void main() {
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * 0.25 * (0.35 + alb);
   if (kind == ${IRON}) col += uSunColor * pow(max(dot(reflect(-V, n), uSunDir), 0.0), 24.0) * sun * 0.12;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 /** An oriented box at the waterline the tub cannot pass into: a middle, a heading, and half its length and depth. */
 export interface TubWall {
@@ -245,10 +254,7 @@ export class WashTub {
   private rippleIn = 1;
 
   constructor(private readonly wind: WindField) {
-    this.mesh = new THREE.Mesh(tubGeometry(), new THREE.ShaderMaterial({
-      vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide,
-      uniforms: { ...atmo.uniforms, ...swellUniforms, uWater: this.waterline },
-    }));
+    this.mesh = new THREE.Mesh(tubGeometry(), propMaterial(TUB_LOOK, { ...swellUniforms, uWater: this.waterline }));
     this.mesh.layers.enable(REFLECTION_LAYER);
     this.group.add(this.mesh, lid());
     this.destination = new THREE.Mesh(this.mesh.geometry, new THREE.ShaderMaterial({
