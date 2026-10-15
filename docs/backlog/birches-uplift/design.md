@@ -131,6 +131,45 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
    pushes off, the squirrel has come down the beach after them and sits up at the water's edge beside the berth,
    watching them go (a glance, not a shot).
 
+## Jeremy's first playtest (2026-10-16, verbatim)
+
+> 1. The sail is like 5 seconds short... The crossing needs to be longer
+> 2. It's hard to see the squirrel sometimes, especially at the beginning. We need the camera to subtly highlight it,
+> and noise marks when it makes squirrel noises. a bit of a more energetic idle animation might also help? what do
+> you think? Or like it's tail sticking out of each leaf pile and waving around with the noise marks? It's sometimes
+> hard to even see the tail sticking out. Maybe the squirrel could be slightly bigger?
+> 3. At the first scarf knot, it waits for the child instead of scurrying along to the next leaf pile by itself
+> 4. What if the squirrel was holding an acorn or something?
+> 5. The indicative wind gestures on the leaf piles should probably be updrafts
+
+> Actually, when i said that the squirrel waits for the player at a challenge, that actually plays alright. It's just
+> the very first challenge is a bit weird because the squirrel is standing tehre behind the player waiting for her
+> instead of ahead of her on the branch of where the knot is. i.e. it looks better when the squirrel is in the "lead"
+> somewhat of the same way the cat does in the drowning village.
+>
+> There's a leaf pile before the swing that the player can sweep away before they get on the swing. Is that
+> intentional?
+
+> And when the squirrel jumps into a leaf pile, it should be obvious with leaves flying everywhere and a sound effect.
+
+What follows from it (Claude's calls, 2026-10-16):
+- **The meadow sail** (`toBirches`) gets about 5 s more sea by distance alone. Revision 12 has not shipped, so its
+  shift is amended rather than a revision 13 added. The stairs sail stays about 30 s.
+- **The squirrel reads at a glance.** Its scale goes from 3 to about 3.6. Its calls show `CallMarks`, the small
+  visual echo of a voice the cygnet and the cat already use. Its idle is livelier: stop-start twitches, tail flicks,
+  quick head turns and small hops. While hidden, the tell is the tail. More of it comes out, more often, and it
+  waves with each chitter and its call marks. The camera highlights it subtly: the depth of field's focus settles on
+  it, and a low-weight glance goes to it when it appears, calls or is found, never a pan.
+- **It dives in with a splash.** A dive throws leaves everywhere, with a crunching "whumph", without hollowing the
+  heap (phase 6's ring fix stands).
+- **It leads.** At every tangle it waits ahead of her, on or by the knot's tree where the knot is, as the cat leads
+  in the drowned village. Waiting at a challenge stays as it is.
+- **It carries an acorn**: in its mouth while it runs, in its paws while it sits and nibbles.
+- **The heaps' invitation is an updraft** (the circling gesture), and an updraft over the right heap finds it,
+  lifting the leaves off in a whirl. A swipe still counts.
+- **The heap before the swing** is heap 1, one of the island's original free-play heaps. It isn't a round heap
+  and isn't raked, so it doesn't promise a squirrel. Blowing it away before the swing is fine.
+
 ## Mechanisms
 
 ### Music
