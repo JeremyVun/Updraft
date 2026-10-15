@@ -878,7 +878,8 @@ export const tuning = {
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     boatsMist: { clear: 75, hidden: 150, edge: 1.32 },
-    birchesMist: { clear: 90, hidden: 150, edge: 1.32 },
+    birchesMist: { clear: 90, hidden: 150, edge: 2 },
+    stairsMist: { clear: 70, hidden: 130, edge: 2 },
     seaStateEase: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: .88,
@@ -1739,13 +1740,25 @@ export const tuning = {
     /**
      * Arrivals watched from somewhere else than behind and above (`ArrivalView`), easing in between `from` and `full`
      * units of sailing from the end of the route and ending where the room's own first view stands: low beside the
-     * hull as the meadow's bank rises over it, high and wide over the little boats' pools, low on the quarter under
-     * the cloud onto the stairs' knoll.
+     * hull as the meadow's bank rises over it, high and wide over the little boats' pools.
      */
     arrivals: {
       meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
       boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
-      stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+      /**
+       * The stairs come out of their mist dead ahead and are watched from low off the port quarter, the lens lifted
+       * to the stair climbing from the knoll into the cloud (in portrait from astern, the stair rising behind the
+       * boat), then low beside the hull onto the knoll, where the room's first view takes it from the south-west.
+       */
+      stairs: { from: 80, full: 10, world: true, bearing: -0.6, distance: 14.5, height: 1.5, lead: 1.5,
+        reveal: { from: 120, full: 70, bearing: -1.3, weight: 0.22, portrait: { bearing: -1.55, weight: 0.08 }, distance: 16, height: 3 } },
+      /**
+       * The birches come out of their mist ahead and to starboard and are watched from the port side, low over the
+       * water: the whole island beside the boat with the low sun over it, or in portrait standing behind it. As the
+       * bow runs in, the lens rises into the room's first view from the south.
+       */
+      birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
+        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 24, height: 4 } },
     },
   },
 

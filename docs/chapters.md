@@ -14,10 +14,18 @@ wood → toSleeping → sleeping → toMirror → mirror → toHarbour → home.
 optionally a look back, a whale, dolphins and the cygnet's swim. Most arrivals are watched from behind and above the
 boat; a few have their own view (`ArrivalView`, `tuning.crossingCamera.arrivals`), easing in over the last stretch
 of the route and ending where the room's own first view stands: low beside the hull along the waterline as the
-meadow's bank rises over it, high and wide over the little boats' pools and spit, low on the quarter under the cloud
-onto the stairs' knoll. The drowned village is its own crossing: it
-carries the boat from the stairs through the storm to the wood's beach. `toWood` and `toHome` exist only to
-resume old saves.
+meadow's bank rises over it, high and wide over the little boats' pools and spit. Two sails reveal their island first
+(`IslandReveal`), anchored in the world rather than on the hull. As the birches come out of their mist, about
+halfway over, the lens swings round from astern in one slow move to the port side, low over the water, and holds the
+whole island with the low sun over it and the boat at a third (in portrait
+further round, the island standing behind the boat), the child looking at it; Red Door comes in on that hold. As the
+bow runs in, the lens rises into the birches' first view from the south, so landing needs no swing. Jeremy: "It just
+stays behind the child and never does a cinematic reveal of the birches island until she gets off the boat." On the
+birches' sail the stairs lie in their own mist until about 80 m out; from halfway over the lens turns in one slow arc
+and lifts to the stair as it emerges, climbing from the knoll into the cloud beside the boat (in portrait behind it),
+then comes round low onto the beach into the stairs' first view. The boat sails out from the birches' beach before
+turning, never along its shore. The drowned village is its own crossing: it carries the boat from the stairs through
+the storm to the wood's beach. `toWood` and `toHome` exist only to resume old saves.
 
 `?chapter=<name>` starts a room directly (the list and aliases are in the project instructions, plus `piano`,
 `stairs`/`clouds`); every start past the first island puts the cygnet with the child. The chapter select
