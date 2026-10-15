@@ -182,6 +182,8 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 > good right now. It just stays behind the child and never does a cinematic reveal of the birches island until she
 > gets off the boat.
 
+> the player also shouldn't be able to blow away the leaf pile until the squirrel has jumped into it
+
 Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
 its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
 sample.
