@@ -59,7 +59,7 @@ interface Hide {
   trunk: { at: THREE.Vector3; up: THREE.Vector3; radius: number } | null;
 }
 
-type Mode = 'idle' | 'meeting' | 'going' | 'glancing' | 'choosing' | 'hiding' | 'hidden' | 'flushed';
+type Mode = 'idle' | 'meeting' | 'going' | 'glancing' | 'choosing' | 'hiding' | 'hidden' | 'exposed' | 'flushed';
 type Leap = 'none' | 'reading' | 'waiting' | 'running' | 'flying' | 'sitting' | 'kicking' | 'done';
 
 /**
@@ -83,6 +83,13 @@ export class BirchesSquirrel {
   private seen = false;
   private stoodSince = -1;
   private hidden: Hide | null = null;
+  /** The last round it has gone into hiding in: until it is in, that round's heaps stand against the wind. */
+  private wentIn = -1;
+  private readonly holding: number[] = [];
+  /** A readback of the leaves over its back is on its way, and when the next is due. */
+  private feeling = false;
+  private nextFeel = 0;
+  private readonly overBack: THREE.Vector3[] = Array.from({ length: 5 }, () => new THREE.Vector3());
   private lastHeap = -1;
   private generation = 0;
   private now = 0;
@@ -160,6 +167,7 @@ export class BirchesSquirrel {
     this.generation++;
     this.later.length = 0;
     this.rounds = rounds;
+    this.wentIn = rounds - 1;
     this.leapt = rounds >= 3;
     this.leap = 'none';
     this.cue = cue;
@@ -205,6 +213,14 @@ export class BirchesSquirrel {
     this.seek(time);
     this.leapStep(dt);
     this.glance(dt);
+    this.holdHeaps();
+  }
+
+  /** Each round's heaps stand against the wind until it has gone into hiding in one of them. */
+  private holdHeaps(): void {
+    this.holding.length = 0;
+    ROUNDS.forEach((r, round) => { if (this.rounds <= round && this.wentIn < round) this.holding.push(...r.heaps); });
+    this.cast.birches.hold(this.holding);
   }
 
   /** The round is over: the cygnet goes back to its own play and she gets up. */
@@ -416,6 +432,7 @@ export class BirchesSquirrel {
     s.visible = true;
     if (direct) {
       this.mode = 'hidden';
+      this.wentIn = Math.max(this.wentIn, h.round);
       if (h.trunk) s.act('climb', { at: h.trunk.at, up: h.trunk.up, forward: UP, radius: h.trunk.radius, look: this.face });
       else s.hide(h.at, { tailOut: this.tailOut, yaw: Math.random() * Math.PI * 2, floor: this.inLeaves(h) });
       return;
@@ -437,12 +454,13 @@ export class BirchesSquirrel {
       ], () => {
         if (this.hidden !== h) return;
         this.mode = 'hidden';
+        this.wentIn = Math.max(this.wentIn, h.round);
         s.look(this.face);
       }, { floor: ground, pace: tuning.birches.squirrel.dash });
       return;
     }
     if (this.station === 'meeting' || Math.hypot(h.at.x - from.x, h.at.z - from.z) < 3.5) { this.dive(h); return; }
-    const rim = onGround(h.at.clone().addScaledVector(flat(h.at, from), 1.6));
+    const rim = onGround(h.at.clone().addScaledVector(flat(h.at, from), tuning.birches.squirrel.pounceFrom));
     s.follow([{ at: rim, on: 'ground' }], () => { if (this.hidden === h) this.dive(h); }, { floor: ground, pace: tuning.birches.squirrel.dash });
   }
 
@@ -461,6 +479,7 @@ export class BirchesSquirrel {
     const s = this.cast.squirrel, h = this.hidden;
     if (!h || h.trunk || s.action !== 'buried' || s.busy) return;
     this.mode = 'hidden';
+    this.wentIn = Math.max(this.wentIn, h.round);
     const k = tuning.birches.squirrel, strength = this.station === 'meeting' ? k.meetSplash : k.splash;
     this.cast.leafSound?.('dive', h.at, strength);
     this.cast.birches.splash(h.at.x, h.at.z, strength);
@@ -516,10 +535,10 @@ export class BirchesSquirrel {
   }
 
   /**
-   * Lying hidden: a tell now and then while she is looking for it, and the wind on it counted until it bursts out.
-   * What counts is each rise of the air over it, gust or updraft, so it bursts as the gust arrives or the column
-   * winds up, two glancing gusts add up, and a gust's slow dying away adds nothing. Circles over another heap count
-   * only there.
+   * Lying hidden: a tell now and then while she is looking for it, until it is found. In the leaves, it is found when
+   * the wind has taken enough of them off its back that it shows; behind a trunk, by the wind on it, counted as each
+   * rise of the air there, so two glancing gusts add up and a gust's slow dying away adds nothing. Either way a gust
+   * that only shaves it makes it peek, as a "nearly". Circles over another heap count only there.
    */
   private lying(dt: number): void {
     const h = this.hidden!;
@@ -542,7 +561,8 @@ export class BirchesSquirrel {
         this.gust = 0;
       }
     }
-    if (this.work >= k.findWork[h.round]) { this.flush(); return; }
+    if (h.trunk && this.work >= k.findWork[h.round]) { this.flush(); return; }
+    if (!h.trunk) this.feel(h);
     const playing = this.cue.round === h.round;
     if (playing && this.now >= this.nextTell && !s.busy) {
       this.nextTell = this.now + between(k.tellFrom, k.tellTo);
@@ -564,6 +584,36 @@ export class BirchesSquirrel {
       this.asking.urgency = THREE.MathUtils.smoothstep(this.quiet, k.inviteAfter, k.inviteAfter + k.inviteRamp);
     }
     this.invitation = asking ? this.asking : null;
+  }
+
+  /**
+   * A few times a second, how deep the leaves still lie over its back, read from the live floor over it and round it.
+   * Once they are thin enough that it shows, it is uncovered: it starts, sits up in what is left of them with a
+   * squeak, and bursts out.
+   */
+  private feel(h: Hide): void {
+    const k = tuning.birches.squirrel;
+    if (this.feeling || this.now < this.nextFeel) return;
+    this.feeling = true;
+    this.nextFeel = this.now + k.feelEvery;
+    const across = k.feelAcross;
+    this.overBack.forEach((p, i) => p.copy(h.at).add(this.v.set(i === 1 ? across : i === 2 ? -across : 0, 0, i === 3 ? across : i === 4 ? -across : 0)));
+    void this.cast.birches.depthAt(this.overBack).then((depths) => {
+      this.feeling = false;
+      if (this.hidden !== h || this.mode !== 'hidden') return;
+      const cover = depths.reduce((a, b) => a + b, 0) / depths.length - h.sink;
+      if (cover < k.uncovered) this.uncover();
+    });
+  }
+
+  private uncover(): void {
+    const k = tuning.birches.squirrel;
+    const s = this.cast.squirrel;
+    this.mode = 'exposed';
+    this.invitation = null;
+    s.act('freeze', { look: this.face });
+    s.call('squeak', 1);
+    this.after(k.startledFor, () => this.flush());
   }
 
   /** Out of the leaves in a spray, up on its haunches facing her, then a good scolding. */

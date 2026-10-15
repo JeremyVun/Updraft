@@ -136,8 +136,12 @@ vec4 heapShape(vec2 xz, float top) {
   return vec4(lean, 1.0 - shade * 0.9, 1.0 - clamp(hollow * 1.2, 0.0, 0.45));
 }`;
 
+/** Heaps that can be held against the wind at once. */
+export const LITTER_HOLDS = 6;
+
 const LITTER_SIM_FRAG = /* glsl */ `
 uniform sampler2D uField;
+uniform vec4 uHold[${LITTER_HOLDS}];
 uniform sampler2D uWindTex;
 uniform vec4 uDomain;
 uniform vec4 uWade;
@@ -178,10 +182,19 @@ void main() {
   vec4 w = airAt(p);
   float arrived = smoothstep(0.02, 0.25, w.z + w.w);
   vec2 target = w.xy * ${glsl(tuning.birches.litterCarry)} * arrived;
+  /** An updraft throws what lies under it outward from its middle, down the slope of its lift, so a heap it stands over thins from the top. */
+  vec2 rise = vec2(airAt(p + vec2(1.0, 0.0)).w - airAt(p - vec2(1.0, 0.0)).w, airAt(p + vec2(0.0, 1.0)).w - airAt(p - vec2(0.0, 1.0)).w);
+  target -= rise * ${glsl(tuning.birches.litterLiftThrow)} * arrived;
   target *= min(1.0, ${glsl(tuning.birches.litterMaxSpeed)} / max(length(target), 0.001));
   float response = 1.0 - exp(-uDt / ${glsl(tuning.birches.litterResponse)});
   vec2 velocity = mix(state.gb, target, response);
   float mobile = mix(state.a, lifting(w) * arrived, response);
+  /** A heap held against the wind (centre, radius, how firmly) stirs on top, but none of it goes anywhere. */
+  float held = 0.0;
+  for (int i = 0; i < ${LITTER_HOLDS}; i++) {
+    held = max(held, uHold[i].w * (1.0 - smoothstep(uHold[i].z, uHold[i].z + 1.0, distance(p, uHold[i].xy))));
+  }
+  mobile *= 1.0 - held;
   const vec2 cell = 1.0 / vec2(${glsl(LITTER_RES.x)}, ${glsl(LITTER_RES.z)});
   vec4 left = texture(uField, vUv - vec2(cell.x, 0.0));
   vec4 right = texture(uField, vUv + vec2(cell.x, 0.0));
@@ -503,6 +516,8 @@ export interface Shake {
  */
 export class LitterField {
   readonly uniforms: Record<string, THREE.IUniform>;
+  /** Heaps held against the wind: x, z, the radius held whole, and how firmly (0..1). */
+  readonly holds = Array.from({ length: LITTER_HOLDS }, () => new THREE.Vector4(1e6, 1e6, 0, 0));
   private readonly gpu: GpuRunner;
   private readonly field: PingPong;
   private readonly mat: THREE.ShaderMaterial;
@@ -539,6 +554,7 @@ export class LitterField {
       uDomain: atmo.uniforms.uDomain,
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
+      uHold: { value: this.holds },
     }, this.field);
     this.probeMat = simMaterial(PROBE_FRAG, { ...this.uniforms, uPoints: { value: this.probeTex } }, this.probeTarget);
     this.probeRead = new Readback<number>(renderer, 'litter', PROBE, 1, (data, tag) => {

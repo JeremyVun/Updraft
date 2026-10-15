@@ -1378,6 +1378,8 @@ export const tuning = {
     /** How fast a gust sweeps the floor bare where it blows, and the share of the wind speed the swept litter travels at. */
     litterSweep: 1.35,
     litterCarry: 0.6,
+    /** How hard an updraft throws the litter under it outward, per unit of lift it falls by over 2 m. */
+    litterLiftThrow: 9,
     /** How fast leaves heaped steeper than they will stand run off sideways, and the slope they will stand at. */
     litterSlump: 3.0,
     litterRepose: 0.95,
@@ -1406,11 +1408,14 @@ export const tuning = {
     /** Something going into or out of the leaves: how far round it they go up, at a strength of 0 and per unit of it. */
     burstReach: 0.6,
     burstReachPer: 1.6,
+    /** A heap held against the wind until the squirrel is in it: how far past its rim it is held, and in how many seconds it is held or let go. */
+    holdReach: 0.6,
+    holdEase: 0.5,
     /** A squirrel diving into a heap: how far round it the loose leaves go up, and how hard they are thrown (over 1 throws them higher and wider). */
     splashReach: 3.4,
     splashThrow: 2.6,
-    /** The buried squirrel's paws this far under the leaves' surface (its back 0.2 m under, its tail's tip 0.21 m out), and at most this far into the soil. */
-    buryBelow: 0.38,
+    /** The buried squirrel's paws this far under the leaves' surface (at 3.6 times life its back about 0.2 m under), and at most this far into the soil. */
+    buryBelow: 0.45,
     burySoil: 0.12,
     /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
     swingPush: 0.8,
@@ -1427,11 +1432,17 @@ export const tuning = {
       buryDepth: 0.35, leapDepth: 0.35,
       /**
        * Finding: the air over its heap (`driftReach` round a drift, `trunkReach` round a trunk) as the trees feel it
-       * when they shed, each rise of it counted: `findWork` by round flushes it (in the first, any gust over the heap),
-       * `nearlyWork` in one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap
+       * when they shed, each rise of it counted: `findWork` by round flushes it from behind a trunk, `nearlyWork` in
+       * one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap
        * makes 0.3 to 0.6, one along its rim about 0.15.
        */
       driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
+      /**
+       * In the leaves it is found once they are thinner than `uncovered` m over where its paws are set (its back is
+       * 0.18 m above them, and red shows through the last few centimetres of leaves), read every `feelEvery` s over it and `feelAcross` m round it; it starts for
+       * `startledFor` s, sitting up in what is left of them, before it bursts out.
+       */
+      uncovered: 0.26, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
        * Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn updraft
        * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
@@ -1468,6 +1479,8 @@ export const tuning = {
       glance: 0.28, glanceIn: 1.2, sharpIn: 1.5,
       /** How quickly a round's longer portrait lens eases in and out: a spring's rate per second, settled in about 3 s. */
       lensEase: 1.6,
+      /** How far short of its hide a dash ends, so it goes in with one pounce (the creature bounds closer from further than about 0.9 m). */
+      pounceFrom: 0.8,
       /** How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest. */
       splash: 1, meetSplash: 1.3,
       /** The leap: her run-up speed and spring, how hard the leaves go up, and how long she sits in them. */

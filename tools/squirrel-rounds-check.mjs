@@ -1,8 +1,8 @@
-// The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap, by a stroke and
-// by an updraft, wrong heaps first, a child's random swipes, a stalled player through the hint and the drawn updraft,
-// heaps blown flat before the round (the drift and trunk fallbacks), the leap into a deep drift and through a bare
-// hollow, resumed saves at every new checkpoint and from names saved before the game, and stills of each round's
-// frame with the squirrel's height on screen and how much of it shows buried tail in.
+// The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap once the wind has
+// uncovered it, by a stroke and by an updraft, wrong heaps first, a child's random swipes, a stalled player through the
+// hint and the drawn updraft, heaps held against strokes until it is in (and the drift and trunk fallbacks), the leap
+// into a deep drift and through a bare hollow, resumed saves at every new checkpoint and from names saved before the
+// game, and stills of each round's frame with the squirrel's height on screen and how much of it shows buried tail in.
 // Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong random stall flat leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
 // the squirrel's size at runtime.
@@ -51,7 +51,8 @@ async function jump(round, patch = null) {
   await page.evaluate(({ round, patch }) => {
     const g = __game, c = g.story.current, r = __sq.ROUNDS[round];
     if (patch === 'trunk') g.birches.depthAt = async (points) => points.map(() => 0);
-    if (patch === 'drift') g.birches.depthAt = async (points) => points.map((_, i) => (i < r.hides.length ? 0 : 0.7));
+    /** Drifts but no heaps where it chooses; under it, the drift it chose (the few points felt over its back). */
+    if (patch === 'drift') g.birches.depthAt = async (points) => points.map((_, i) => (i < r.hides.length && points.length > 5 ? 0 : 0.7));
     /** Off the ride beside her stand, clear of every heap, so she walks in without wading through one. */
     g.child.stop(); g.child.place(r.stand.x + [-2, 2, 2][round], r.stand.z + 1, Math.PI); g.glider.hold(g.child);
     if (!g.cygnet.carried) g.cygnet.rideIn('satchel');
@@ -90,6 +91,12 @@ async function stroke([a, b], ms = 380, lift = true) {
     await page.waitForTimeout(ms / steps);
   }
 }
+
+/** Where heap `heap` of the round is on screen. */
+const heapOnScreen = (heap) => page.evaluate((heap) => {
+  const c = __game.story.current, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[heap]];
+  return window.__screen(r.hides[heap].clone().set(p.x, r.hides[heap].y + 0.3, p.z));
+}, heap);
 
 /** The ground circle `size` times the radius of heap `heap` of the round, on screen. */
 const heapLoop = (heap, size) => page.evaluate(({ heap, size }) => {
@@ -143,28 +150,36 @@ const cased = {
       const { hide } = await state();
       const line = hide.heap >= 0 ? await acrossHeap(hide.heap) : [[hide.screen[0] - 0.12, hide.screen[1]], [hide.screen[0] + 0.12, hide.screen[1]]];
       const began = await page.evaluate(() => __game.story.current.now);
-      await stroke(line);
-      assert.ok(await found(round), `round ${round + 1}: one stroke across the right heap did not find it`);
+      let strokes = 0;
+      while (strokes < 3 && !(await found(round, 50))) {
+        await stroke(strokes % 2 ? [line[1], line[0]] : line);
+        strokes++;
+        await found(round, 1500);
+      }
+      assert.ok(await found(round), `round ${round + 1}: three strokes across the right heap did not uncover it`);
       const at = await page.evaluate(() => __game.story.current.now);
       await page.screenshot({ path: `${out}-right-${round + 1}.png` });
       await afterFind(round);
-      rows.push({ round: round + 1, heap: hide.heap, strokes: 1, foundAfter: +(at - began).toFixed(2), next: (await state()).beat });
+      rows.push({ round: round + 1, heap: hide.heap, strokes, foundAfter: +(at - began).toFixed(2), next: (await state()).beat });
     }
     return rows;
   },
 
-  /** Circles over the right heap find it in about two loops; in round 3 circles over each wrong heap first never do. */
+  /**
+   * Circles over the right heap uncover it in about two loops; in round 3, two loops over the far wrong heap first do
+   * not. A column is wider than the gap between neighbouring heaps, so circles over the heap next to it can uncover it.
+   */
   async updraft() {
     await load();
     const rows = [];
     for (const round of [0, 1, 2]) {
       if (round === 0) await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 90000);
       else await jump(round);
-      if (round > 0) await hideIn(round === 2 ? 1 : 0);
+      if (round > 0) await hideIn(0);
       const { hide } = await state();
       const wrongs = [];
-      if (round === 2) for (const heap of [0, 2]) {
-        const loops = await circleOver(heap, round, 4);
+      if (round === 2) for (const heap of [2]) {
+        const loops = await circleOver(heap, round, 2);
         wrongs.push({ heap, found: loops !== null });
         await page.waitForTimeout(1500);
       }
@@ -179,28 +194,35 @@ const cased = {
     return rows;
   },
 
+  /** Each arrangement on a fresh floor: a wrong heap blown in one is a thin one to hide in for the next. */
   async wrong() {
-    await load();
     const rows = [];
     for (const round of [1, 2]) {
       const heaps = round === 1 ? 2 : 3;
       for (let right = 0; right < heaps; right++) {
+        await load();
         await jump(round);
         await hideIn(right);
         const wrongs = [];
         for (let heap = 0; heap < heaps; heap++) {
           if (heap === right) continue;
-          await stroke(await acrossHeap(heap));
+          /** Away from the right heap, as a player aiming at this one does: a stroke's air carries on metres past its end. */
+          const [a, b] = await acrossHeap(heap), [rx] = await heapOnScreen(right);
+          await stroke(rx > a[0] ? [b, a] : [a, b]);
           await page.waitForTimeout(1500);
           wrongs.push({ heap, found: await found(round, 50) });
         }
-        /** A hard stroke over round 2's far heap also blows the near one, whose air is 3.4 m wide and more; anywhere else a wrong heap only bursts. */
-        assert.ok(wrongs.every((w) => !w.found || (round === 1 && right === 0)), `round ${round + 1}: a wrong heap found it: ${JSON.stringify(wrongs)}`);
+        assert.ok(wrongs.every((w) => !w.found), `round ${round + 1}: a wrong heap found it: ${JSON.stringify(wrongs)}`);
+        let strokes = 0;
         if (!wrongs.some((w) => w.found)) {
-          await stroke(await acrossHeap(right));
-          assert.ok(await found(round), `round ${round + 1}: the right heap after the wrong ones did not find it`);
+          while (strokes < 3 && !(await found(round, 50))) {
+            await stroke(await acrossHeap(right));
+            strokes++;
+            await found(round, 2000);
+          }
+          assert.ok(await found(round), `round ${round + 1}: three strokes across the right heap after the wrong ones did not uncover it`);
         }
-        rows.push({ round: round + 1, right, wrongs });
+        rows.push({ round: round + 1, right, wrongs, strokes });
         await afterFind(round);
       }
     }
@@ -263,9 +285,10 @@ const cased = {
   },
 
   /**
-   * Every heap of the round blown flat before the squirrel gets there: real strokes over each heap while she waits
-   * short of them, then the squirrel arrives and reads the floor (drift, or trunk if nothing is deep enough). Each
-   * fallback is also forced, with a floor that reads drifts but no heaps, and one that reads bare everywhere.
+   * Every heap of the round blown at hard before the squirrel gets there: real strokes over each heap while she waits
+   * short of them. The heaps hold until it is in, so it still hides in one. Its fallbacks for heaps blown away after
+   * it is in are forced, with a floor that reads drifts but no heaps (a drift), and one that reads bare everywhere
+   * (a trunk).
    */
   async flat() {
     const rows = [];
@@ -301,9 +324,15 @@ const cased = {
         await jump(round, kind === 'blown' ? null : kind);
         const s = await state();
         await page.screenshot({ path: `${out}-flat-${kind}-${round + 1}.png` });
+        if (kind === 'blown') {
+          assert.ok(after.every((d, i) => d >= before[i] * 0.85), `round ${round + 1}: heaps blown before it was in did not hold: ${JSON.stringify({ before, after })}`);
+          assert.ok(s.hide.heap >= 0, `round ${round + 1}: the held heaps should still hide it`);
+        }
         if (kind === 'trunk') assert.ok(s.hide.trunk, `round ${round + 1}: a bare floor should send it behind a trunk`);
         if (kind === 'drift') assert.ok(s.hide.heap < 0 && !s.hide.trunk, `round ${round + 1}: drifts but no heaps should bury it in a drift`);
         if (kind !== 'blown') assert.ok(s.hide.screen.every((v) => v > 0.05 && v < 0.95), `round ${round + 1}: the ${kind} hide is out of the frame`);
+        /** The forced drift is only on the readback; the real floor there is thin, so the stroke finds it uncovered. */
+        if (kind === 'drift') await page.evaluate(() => { delete __game.birches.depthAt; });
         let strokes = 0;
         while (!(await found(round, 1500)) && strokes < 4) {
           const [x, y] = (await state()).hide?.screen ?? s.hide.screen;

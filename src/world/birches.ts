@@ -831,6 +831,8 @@ export class AutumnBirches {
   private readonly focus = new THREE.Vector3(ISLE.x, 0, ISLE.z);
   /** Something that has just gone into the heap, and the seconds left of it: it outranks anybody merely walking. */
   private readonly kicking = new THREE.Vector4(1e6, 1e6, 3, 0);
+  private holding: readonly number[] = [];
+  private readonly held = new Map<number, number>();
   private kickFor = 0;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly walker = new THREE.Vector3();
@@ -1357,6 +1359,27 @@ export class AutumnBirches {
     this.onLeafScuff?.(x, z, 1);
   }
 
+  /**
+   * Holds `heaps` (`BIRCH_PILES` indices) against the wind until the next call that leaves them out: the wind stirs
+   * their tops but takes none of them. Each is held and let go over about half a second.
+   */
+  hold(heaps: readonly number[]): void {
+    this.holding = heaps;
+  }
+
+  private holdHeaps(dt: number): void {
+    for (const heap of this.holding) if (!this.held.has(heap)) this.held.set(heap, 0);
+    let slot = 0;
+    for (const [heap, firm] of this.held) {
+      const now = THREE.MathUtils.clamp(firm + (this.holding.includes(heap) ? dt : -dt) / tuning.birches.holdEase, 0, 1);
+      if (now === 0 && !this.holding.includes(heap)) { this.held.delete(heap); continue; }
+      this.held.set(heap, now);
+      const p = BIRCH_PILES[heap], h = this.litter.holds[slot++];
+      if (h) h.set(p.x, p.z, p.r + tuning.birches.holdReach, now);
+    }
+    for (; slot < this.litter.holds.length; slot++) this.litter.holds[slot].w = 0;
+  }
+
   /** How high the leaves stand over the ground at each point, in metres, read back from the live floor. */
   depthAt(points: readonly { x: number; z: number }[]): Promise<number[]> {
     return this.litter.depthAt(points);
@@ -1424,6 +1447,7 @@ export class AutumnBirches {
     }
     this.litterMat.uniforms.uLitterCell.value.set(Math.round(camera.position.x / LITTER_CELL), Math.round(camera.position.z / LITTER_CELL));
 
+    this.holdHeaps(dt);
     this.litter.update(dt);
     const shaking = this.shaking > 0.01 ? { x: SWING_TREE.x, z: SWING_TREE.y, radius: 9, strength: this.shaking * 0.5 } : null;
     this.leaves.update(dt, near, this.focus, shaking);
