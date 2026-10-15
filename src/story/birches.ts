@@ -247,10 +247,10 @@ export class BirchesChapter implements Chapter {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 20;
       } else if (this.round >= 0) {
-        /** By the heaps, as it stays by a tangle. */
-        const { area } = ROUNDS[this.round];
-        p.home.set(area.x, 0, area.z);
-        p.homeRadius = 5;
+        /** By the heaps, as it stays by a tangle; over her where a shuffle is watched, never over the heaps it must not hide. */
+        const { area, stand, shuffle } = ROUNDS[this.round];
+        p.home.set(shuffle ? stand.x : area.x, 0, shuffle ? stand.z : area.z);
+        p.homeRadius = shuffle ? 3 : 5;
       } else {
         const t = this.target();
         const dx = t.x - c.position.x;
@@ -551,7 +551,7 @@ export class BirchesChapter implements Chapter {
     this.to('toRound');
     this.play = 'carry';
     child.stop();
-    child.lookAt = round === 0 ? r.lastSeen : r.face;
+    child.lookAt = round === 0 || r.shuffle ? r.lastSeen : r.face;
     const at = child.position, dx = r.stand.x - at.x, dz = r.stand.z - at.z, span = Math.hypot(dx, dz) || 1;
     const across = r.heaps.map((i) => BIRCH_PILES[i]).find((p) => {
       const t = THREE.MathUtils.clamp(((p.x - at.x) * dx + (p.z - at.z) * dz) / (span * span), 0, 1);

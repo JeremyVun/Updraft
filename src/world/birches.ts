@@ -78,9 +78,9 @@ export const BIRCH_PILES = [
   { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8, raked: true },
   { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8, raked: true },
   /** Its third, up the hollow's west side beyond the deep one, in a line toward the low sun. */
-  { ...birchesGap(2, 9.8, -10.1), r: 2.8, deep: 5, raked: true },
-  { ...birchesGap(2, 14.2, -15.6), r: 3, deep: 5.4, raked: true },
-  { ...birchesGap(2, 21.2, -17), r: 2.8, deep: 5, raked: true },
+  { ...birchesGap(2, 11, -14), r: 2.8, deep: 5, raked: true },
+  { ...birchesGap(2, 19.8, -15), r: 3, deep: 5.4, raked: true },
+  { ...birchesAt(-14.6, -1158.6), r: 2.8, deep: 5, raked: true },
 ];
 
 /** The steepest a heap is laid, in depth a metre: a little under what the litter field lets stand (`litterRepose`). */
@@ -100,15 +100,17 @@ function pileDepth(pile: (typeof BIRCH_PILES)[number], from: number): number {
 /** How far out a heap's own leaves and the floor raked into it reach. */
 const pileReach = (pile: (typeof BIRCH_PILES)[number]): number => pile.r + (pile.raked ? tuning.birches.heapRaked : 1.2);
 
-/** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
+/** The trunks the gaps' heaps are banked against (the far one in round 3 against the last perch's birch): placed rather than grown, so a heap never loses its tree. */
 const BANKS = [
   { ...birchesGap(1, 13.8, 10.1), scale: 15, variant: 2 },
   { ...birchesGap(1, 15.5, -4.1), scale: 16, variant: 0 },
-  { ...birchesGap(2, 9, -12.6), scale: 14.5, variant: 1 },
-  { ...birchesGap(2, 16.6, -16.3), scale: 13.3, variant: 0 },
-  { ...birchesGap(2, 23.5, -17.8), scale: 16.4, variant: 2 },
+  { ...birchesGap(2, 11.6, -16.6), scale: 14.5, variant: 1 },
+  { ...birchesGap(2, 20.2, -17.8), scale: 13.3, variant: 0 },
+  /** Between the third round's middle heap and its far one, behind them from the lens: the squirrel watches the leap from it. */
+  { ...birchesAt(-17.4, -1154.4), scale: 16.4, variant: 2 },
 ];
 const nearBank = (x: number, z: number): boolean => BANKS.some(b => Math.hypot(b.x - x, b.z - z) < 1.6);
+const inHeap = (x: number, z: number): boolean => BIRCH_PILES.some(p => p.raked && Math.hypot(p.x - x, p.z - z) < p.r + 1);
 
 /**
  * Where each of the squirrel's rounds is watched from (`story/birches-rounds.ts`): the point its lens looks at and
@@ -117,7 +119,7 @@ const nearBank = (x: number, z: number): boolean => BANKS.some(b => Math.hypot(b
 export const ROUND_VIEWS = [
   { at: birchesAt(8, -1074.6), from: { x: 0.35, z: 0.94 } },
   { at: birchesGap(1, 13.8, 2.5), from: { x: 0.866, z: 0.5 } },
-  { at: birchesGap(2, 14.6, -12.9), from: { x: 0.616, z: 0.788 } },
+  { at: birchesGap(2, 15.8, -12.6), from: { x: 0.819, z: 0.574 } },
 ] as const;
 const inRoundView = (x: number, z: number): boolean => ROUND_VIEWS.some(v => {
   const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(20, ax * v.from.x + az * v.from.z));
@@ -352,10 +354,20 @@ out vec3 vSlope;
 /** How much of the sun reaches it past a heap, how much of the sky it sees, and how far it lies on a heap's surface. */
 out vec3 vLight;`;
 
+/** Something burrowing along under the leaves: a hump `uBurrow.w` high and `uBurrow.z` across, moving with it. */
+const BURROW_GLSL = /* glsl */ `
+uniform vec4 uBurrow;
+float burrow(vec2 p) {
+  vec2 d = p - uBurrow.xy;
+  float k = max(0.0, 1.0 - dot(d, d) / (uBurrow.z * uBurrow.z));
+  return uBurrow.w * k * k;
+}`;
+
 const LITTER_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${LITTER_GLSL}
 ${HEAP_GLSL}
+${BURROW_GLSL}
 uniform vec2 uLitterCell;
 in vec2 aCell;
 ${LITTER_OUT}
@@ -370,7 +382,7 @@ void main() {
   float deep = litterDepth(p);
   /** How much of the floor the leaves cover, and how much of them is heaped on top of that: two different things. */
   float cover = 1.0 - exp(-deep * 1.35);
-  float top = litterTop(deep);
+  float top = litterTop(deep) + burrow(p);
   float heap = top / ${glsl(tuning.birches.pileHeight)};
   /** Far off, fewer and larger: the carpet has to reach the trees at the edge of the frame without the count. */
   float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
@@ -457,12 +469,13 @@ const HEAP_SKIN_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${LITTER_GLSL}
 ${HEAP_GLSL}
+${BURROW_GLSL}
 in vec4 aSpot;
 ${LITTER_OUT}
 void main() {
   vec2 p = aSpot.xy;
   vec2 uv = domainUv(p);
-  float top = litterTopAt(p);
+  float top = litterTopAt(p) + burrow(p);
   float away = distance(p, cameraPosition.xz);
   /** Fewer of them toward the foot, thinning into the floor's own scatter rather than ending in a rim. */
   float from = 0.05 + 0.4 * fract(aSpot.z * 13.7);
@@ -504,13 +517,14 @@ const HEAP_CORE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${LITTER_GLSL}
 ${HEAP_GLSL}
+${BURROW_GLSL}
 out vec3 vWorld;
 out vec3 vSlope;
 out vec3 vLight;
 void main() {
   vec2 p = position.xz;
   vec2 uv = domainUv(p);
-  float top = litterTopAt(p);
+  float top = litterTopAt(p) + burrow(p);
   vec4 hn = insideUv(uv) ? texture(uHeightTex, uv) : vec4(-5.0, 0.0, 1.0, 0.0);
   vec3 n = normalize(hn.gba);
   vec4 shape = heapShape(p, top);
@@ -831,6 +845,7 @@ export class AutumnBirches {
   private readonly focus = new THREE.Vector3(ISLE.x, 0, ISLE.z);
   /** Something that has just gone into the heap, and the seconds left of it: it outranks anybody merely walking. */
   private readonly kicking = new THREE.Vector4(1e6, 1e6, 3, 0);
+  private readonly burrowing = new THREE.Vector4(1e6, 1e6, 1, 0);
   private holding: readonly number[] = [];
   private readonly held = new Map<number, number>();
   private kickFor = 0;
@@ -854,13 +869,14 @@ export class AutumnBirches {
     this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
     this.treeTex.needsUpdate = true;
     this.litterCover = this.litterSeed(rand);
-    this.litter = new LitterField(renderer, this.litterCover, this.wade);
+    this.litter = new LitterField(renderer, this.litterCover, this.wade, BIRCH_PILES.filter((p) => p.raked));
     const shared = {
       ...atmo.uniforms,
       ...this.litter.uniforms,
       uTrees: { value: this.treeTex },
       uSubject: { value: this.subject },
       uWade: { value: this.wade },
+      uBurrow: { value: this.burrowing },
     };
     this.writeTable();
 
@@ -1088,7 +1104,7 @@ export class AutumnBirches {
           if (y < TREE_LINE) continue;
           const way = walkDistance(x, z);
           if (way < RIDE || this.scarf.crosses(x, z) || onSightline(x, z) || draw() > standsAt(x, z) || thinned(way, column, row, 4243 + gap)
-            || nearBank(x, z) || inRoundView(x, z)) continue;
+            || nearBank(x, z) || inHeap(x, z) || inRoundView(x, z)) continue;
           const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
           const scale = (12 + draw() * 6) * (0.6 + 0.4 * shelter);
           this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0, shed: 0 });
@@ -1357,6 +1373,13 @@ export class AutumnBirches {
     this.kicking.set(x, z, splashReach * Math.sqrt(strength), -splashThrow * strength);
     this.kickFor = 0.7;
     this.onLeafScuff?.(x, z, 1);
+  }
+
+  /** Something burrowing under the leaves at (x, z), heaving them up `rise` (0..1 of a full hump); null when nothing is. */
+  burrow(at: { x: number; z: number } | null, rise = 1): void {
+    const { burrowReach, burrowRise } = tuning.birches;
+    if (at) this.burrowing.set(at.x, at.z, burrowReach, burrowRise * rise);
+    else this.burrowing.w = 0;
   }
 
   /**

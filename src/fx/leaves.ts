@@ -136,12 +136,14 @@ vec4 heapShape(vec2 xz, float top) {
   return vec4(lean, 1.0 - shade * 0.9, 1.0 - clamp(hollow * 1.2, 0.0, 0.45));
 }`;
 
-/** Heaps that can be held against the wind at once. */
+/** Heaps that can be held against the wind at once, and heaps raked loose. */
 export const LITTER_HOLDS = 6;
+export const LITTER_LOOSE = 6;
 
 const LITTER_SIM_FRAG = /* glsl */ `
 uniform sampler2D uField;
 uniform vec4 uHold[${LITTER_HOLDS}];
+uniform vec3 uLoose[${LITTER_LOOSE}];
 uniform sampler2D uWindTex;
 uniform vec4 uDomain;
 uniform vec4 uWade;
@@ -175,11 +177,31 @@ float litterFlux(vec4 a, vec4 b, bool x) {
   return velocity * (velocity > 0.0 ? ma : mb);
 }
 
+/**
+ * How loose the leaves are here: raked into a heap they go at a lighter touch, and to air passing a little way off as
+ * well as straight over them, so a gust near a heap thins it as it would a heap of real leaves.
+ */
+float loosened(vec2 p) {
+  float k = 0.0;
+  for (int i = 0; i < ${LITTER_LOOSE}; i++) {
+    k = max(k, 1.0 - smoothstep(uLoose[i].z, uLoose[i].z + 0.8, distance(p, uLoose[i].xy)));
+  }
+  return k;
+}
+
 void main() {
   vec2 p = litterWorld(vUv);
   vec4 state = texture(uField, vUv);
   float d = state.r;
   vec4 w = airAt(p);
+  float loose = loosened(p);
+  if (loose > 0.0) {
+    for (int i = 0; i < 4; i++) {
+      vec2 off = vec2(i == 0 ? 1.0 : i == 1 ? -1.0 : 0.0, i == 2 ? 1.0 : i == 3 ? -1.0 : 0.0) * ${glsl(tuning.birches.looseReach)} * loose;
+      vec4 near = airAt(p + off);
+      if (near.z + near.w > w.z + w.w) w = near;
+    }
+  }
   float arrived = smoothstep(0.02, 0.25, w.z + w.w);
   vec2 target = w.xy * ${glsl(tuning.birches.litterCarry)} * arrived;
   /** An updraft throws what lies under it outward from its middle, down the slope of its lift, so a heap it stands over thins from the top. */
@@ -188,7 +210,7 @@ void main() {
   target *= min(1.0, ${glsl(tuning.birches.litterMaxSpeed)} / max(length(target), 0.001));
   float response = 1.0 - exp(-uDt / ${glsl(tuning.birches.litterResponse)});
   vec2 velocity = mix(state.gb, target, response);
-  float mobile = mix(state.a, lifting(w) * arrived, response);
+  float mobile = mix(state.a, lifting(w) * arrived * (1.0 + loose * ${glsl(tuning.birches.looseLift - 1)}), response);
   /** A heap held against the wind (centre, radius, how firmly) stirs on top, but none of it goes anywhere. */
   float held = 0.0;
   for (int i = 0; i < ${LITTER_HOLDS}; i++) {
@@ -219,8 +241,9 @@ void main() {
   /**
    * And feet scuff a way through it: a walk over this island leaves a track in the leaves behind it. Lightly —
    * what goes up round a pair of knees is the loose leaves, and a heap somebody has just gone into is still a heap.
+   * A held heap is not scuffed at all: something bursting out of it to dive into the next leaves it whole.
    */
-  float tread = max(uWade.w, 0.0) * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
+  float tread = max(uWade.w, 0.0) * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy))) * (1.0 - held);
   d -= d * min(0.7, tread * 0.7 * uDt);
   gl_FragColor = vec4(max(d, 0.0), velocity, mobile);
 }`;
@@ -530,7 +553,7 @@ export class LitterField {
   private readonly reading = new Map<number, { query: DepthQuery; from: number; count: number }>();
   private serial = 0;
 
-  constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4) {
+  constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4, loose: readonly { x: number; z: number; r: number }[]) {
     this.gpu = new GpuRunner(renderer);
     // Repeated transport needs full precision or small rounding losses slowly erase the floor. A float texture
     // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
@@ -555,6 +578,7 @@ export class LitterField {
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
       uHold: { value: this.holds },
+      uLoose: { value: Array.from({ length: LITTER_LOOSE }, (_, i) => new THREE.Vector3(loose[i]?.x ?? 1e6, loose[i]?.z ?? 1e6, loose[i]?.r ?? 0)) },
     }, this.field);
     this.probeMat = simMaterial(PROBE_FRAG, { ...this.uniforms, uPoints: { value: this.probeTex } }, this.probeTarget);
     this.probeRead = new Readback<number>(renderer, 'litter', PROBE, 1, (data, tag) => {

@@ -1379,6 +1379,12 @@ export const tuning = {
     /** How fast a gust sweeps the floor bare where it blows, and the share of the wind speed the swept litter travels at. */
     litterSweep: 1.35,
     litterCarry: 0.6,
+    /**
+     * A raked heap's leaves are loose: they feel the strongest air within `looseReach` m as well as the air over them,
+     * and go `looseLift` times as readily.
+     */
+    looseReach: 1.6,
+    looseLift: 1.6,
     /** How hard an updraft throws the litter under it outward, per unit of lift it falls by over 2 m. */
     litterLiftThrow: 9,
     /** How fast leaves heaped steeper than they will stand run off sideways, and the slope they will stand at. */
@@ -1412,6 +1418,9 @@ export const tuning = {
     /** A heap held against the wind until the squirrel is in it: how far past its rim it is held, and in how many seconds it is held or let go. */
     holdReach: 0.6,
     holdEase: 0.5,
+    /** Something burrowing under the leaves heaves them into a hump this far across (m, from its middle) and this high. */
+    burrowReach: 1.3,
+    burrowRise: 0.6,
     /** A squirrel diving into a heap: how far round it the loose leaves go up, and how hard they are thrown (over 1 throws them higher and wider). */
     splashReach: 3.4,
     splashThrow: 2.6,
@@ -1485,6 +1494,20 @@ export const tuning = {
       pounceFrom: 0.8,
       /** How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest. */
       splash: 1, meetSplash: 1.3,
+      /**
+       * The shuffle, at a round with no counting. It runs on ahead `shuffleRunOn` times its pace and sits up waiting; once
+       * she has stood watching `shuffleLook` s it sits up and chatters, and dives in `shuffleDare` s later, into a heap
+       * whose rim is within `shuffleNear` m. In each heap it rests `shuffleRest` s by move, shorter each time; it bounds
+       * across at `shufflePace` by move and dives in throwing the leaves up `shuffleSplash` (the first as `splash`), and
+       * bursts out heard at `shuffleBurst`. Under the leaves it goes `shuffleUnder` m/s by move, stirring the loose ones
+       * over it every `burrowStirEvery` s as hard as `burrowStir`, heard every `burrowRustleEvery` s. It settles for
+       * `shuffleSettle` s before the wind may find it.
+       */
+      shuffleRunOn: 1.3, shuffleLook: 1.2, shuffleDare: 1.6, shuffleNear: 3.5,
+      shuffleRest: [0.9, 0.65, 0.5, 0.4, 0.35], shufflePace: [1.15, 1.5, 1.8], shuffleSplash: 0.6, shuffleBurst: 0.7,
+      shuffleUnder: [3, 3.8], burrowStirEvery: 0.07, burrowStir: 0.35, burrowRustleEvery: 0.16, shuffleSettle: 0.8,
+      /** Wind on a heap it is not in: the one it is in answers `answerAfter` s later with a tell, at most every `answerEvery` s. */
+      answerAfter: 0.3, answerEvery: 1.5,
       /** The leap: her run-up speed and spring, how hard the leaves go up, and how long she sits in them. */
       leapRun: 3.2, leapUp: 2.6, leapBurst: 1.4, leapSitFor: 1.8,
       /** Through a bare hollow she runs, kicking up what is left this often and this hard. */

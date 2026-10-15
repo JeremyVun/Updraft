@@ -139,12 +139,19 @@ export interface Round {
   face: THREE.Vector3;
   /** Where it was last seen as the round begins: in the first, the log it dives from into the heap in plain sight. */
   lastSeen: THREE.Vector3;
+  /**
+   * A round with no counting before it: it waits sitting up here in plain view, dives into one of the heaps while
+   * she watches, and shuffles from heap to heap before it settles.
+   */
+  shuffle?: { at: THREE.Vector3; yaw: number };
   /** Where the cygnet is likely to be: beside her, and at the rim of each heap nearest her. */
   cygnet: readonly THREE.Vector3[];
   frames: Frames;
 }
 
-const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 13.5, -9.4)];
+const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 7, -10.8)];
+/** Between the third round's near heap and its middle one, on her side of them: where it sits up and waits for her. */
+const SHUFFLE_FROM = birchesGap(2, 15.4, -11.4);
 
 export const ROUNDS: readonly Round[] = [
   {
@@ -172,14 +179,15 @@ export const ROUNDS: readonly Round[] = [
     frames: { landscape: view(1, 15, 3.4), portrait: tall(birchesGap(1, 13.6, 4.6), 65, 14, 4.5, 1) },
   },
   {
-    area: { ...STAND[2], r: 14 },
+    area: { ...pile(7), r: 13 },
     heaps: [6, 7, 8],
     hides: [crest(6, 2), crest(7, 2), crest(8, 2)],
     stand: lifted(STAND[2]),
     face: lifted(pile(7), 0.5),
-    lastSeen: lifted(birchesGap(2, 11, -10.5)),
-    cygnet: [lifted(birchesGap(2, 14.3, -8.3)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: view(2, 15, 4), portrait: tall(birchesGap(2, 13.8, -11.7), 45, 18, 4.5, 1) },
+    lastSeen: lifted(SHUFFLE_FROM),
+    shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
+    cygnet: [lifted(birchesGap(2, 9, -9.6)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
+    frames: { landscape: view(2, 19, 6), portrait: tall(birchesGap(2, 18, -14), 8, 25, 12, 0, 1.35) },
   },
 ];
 
@@ -209,9 +217,9 @@ const BOW_TREE = { x: SCARF_SNAGS[3].treeX, z: SCARF_SNAGS[3].treeZ };
 const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
 const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
-/** The hollow's far trunk: the bank of its farthest heap (`world/birches.ts` BANKS). */
-const FAR_TREE = birchesGap(2, 23.5, -17.8);
-const ROUND_3_LENS = lensOf(2, 15);
+/** The birch behind the hollow's middle heap and its far one (`world/birches.ts` BANKS). */
+const FAR_TREE = birchesAt(-17.4, -1154.4);
+const ROUND_3_LENS = lensOf(2, 19);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
 /** Where the swing's lens stands, three-quarters on to the seat, so the trunk's face toward it faces the lens. */
@@ -280,17 +288,17 @@ export const PATHS = {
     bark(SWING_TREE, 3.4, SWING_LENS), bark(SWING_TREE, 0.5, SWING_LENS), g(-0.2, -1118.5),
     g(-4.5, -1124), g(-8, -1133), g(-9.3, -1137.5), bark(STUMP, 0.4, T2_STOP), bark(STUMP, 2, T2_STOP), bark(STUMP, 3.9, T2_STOP),
   ],
-  /** Down the broken birch's far side and across the hollow, past the deep heap, to the third round. */
+  /** Down the broken birch's far side and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [
     bark(STUMP, 3.9, birchesAt(-10, -1145)), bark(STUMP, 0.4, birchesAt(-10, -1145)),
-    g(-10, -1144), g(-9.5, -1151), gap(2, 4, -8.8), gap(2, 11, -10.5),
+    g(-10, -1144), g(-9.5, -1151), gap(2, 4, -8.8), gap(2, 9.5, -9.6), { ground: SHUFFLE_FROM },
   ],
-  /** From the found heap between the far two and up the hollow's far trunk. */
-  toFarTrunk: [gap(2, 18.3, -15.5), gap(2, 23.6, -15.4), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
-  /** Down the far trunk, behind the third tangle's watchers, to the birch beyond the slipped loop. */
+  /** On her side of the heaps, between the middle one and the far one, and up the birch behind them. */
+  toFarTrunk: [gap(2, 22.4, -11.6), g(-15.6, -1154.3), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  /** Down the far trunk, between the middle heap and the far one and past the far one, to the birch beyond the slipped loop. */
   toTangle3: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
-    g(-14, -1157), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),
+    g(-11.4, -1154.2), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),
   ],
   /** Down, along the top of the beach's wood to the bow's birch, and up above its low limb. */
   toTangle4: [

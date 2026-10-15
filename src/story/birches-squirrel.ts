@@ -60,7 +60,29 @@ interface Hide {
   trunk: { at: THREE.Vector3; up: THREE.Vector3; radius: number } | null;
 }
 
-type Mode = 'idle' | 'meeting' | 'going' | 'glancing' | 'choosing' | 'hiding' | 'hidden' | 'exposed' | 'flushed';
+type Mode = 'idle' | 'meeting' | 'going' | 'glancing' | 'choosing' | 'hiding' | 'hidden' | 'exposed' | 'flushed' | 'waiting' | 'shuffling';
+type ShuffleStep = 'dare' | 'dive' | 'rest' | 'burst' | 'bound' | 'burrow' | 'settle';
+
+/**
+ * Its shuffle at a round with no counting: the heaps it goes through in order (the round's own indices), the first
+ * dived into from where it sat; how many of the last moves are under the leaves; the move under way and its step.
+ */
+interface Shuffle {
+  round: number;
+  order: number[];
+  under: number;
+  move: number;
+  step: ShuffleStep;
+  until: number;
+  /** How far above the ground its paws are set in each heap's leaves. */
+  sinks: number[];
+  /** Under the leaves: from where to where, how far along (m), and when the leaves are next stirred and heard. */
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  along: number;
+  nextStir: number;
+  nextRustle: number;
+}
 type Leap = 'none' | 'reading' | 'waiting' | 'running' | 'flying' | 'sitting' | 'kicking' | 'done';
 
 /**
@@ -94,7 +116,12 @@ export class BirchesSquirrel {
   private coiled: 'none' | 'startled' | 'indignant' = 'none';
   private readonly woolGone = new THREE.Vector3();
   private readonly overBack: THREE.Vector3[] = Array.from({ length: 5 }, () => new THREE.Vector3());
-  private lastHeap = -1;
+  /** The heap it was last turned out of, in its round, so it hides in another while there is one. */
+  private readonly lastHide = { round: -1, heap: -1 };
+  private shuffle: Shuffle | null = null;
+  /** What she and the cygnet follow with their eyes while it shuffles: it, or the hump of leaves it heaves along. */
+  private readonly tracked = new THREE.Vector3();
+  private nextAnswer = 0;
   private generation = 0;
   private now = 0;
   private setOffAt = -1e9;
@@ -155,7 +182,9 @@ export class BirchesSquirrel {
 
   /** Hidden in round `round`, so she may come and look; in the first, it is seen going in. */
   ready(round: number): boolean {
-    return round === 0 || (this.rounds === round && this.mode === 'hidden');
+    if (round === 0) return true;
+    if (ROUNDS[round].shuffle) return this.rounds === round;
+    return this.rounds === round && this.mode === 'hidden';
   }
 
   get leaping(): boolean {
@@ -173,6 +202,7 @@ export class BirchesSquirrel {
     this.rounds = rounds;
     this.wentIn = rounds - 1;
     this.coiled = 'none';
+    this.endShuffle();
     this.leapt = rounds >= 3;
     this.leap = 'none';
     this.cue = cue;
@@ -184,6 +214,10 @@ export class BirchesSquirrel {
     this.station = this.stationFor(cue);
     if (this.station === 'meeting') { this.meet(); return; }
     const round = ROUND_OF[this.station];
+    if (round !== undefined && ROUNDS[round].shuffle) {
+      this.wait(round, true);
+      return;
+    }
     if (round !== undefined) {
       this.cast.squirrel.visible = false;
       this.choose(round, true);
@@ -204,6 +238,7 @@ export class BirchesSquirrel {
     const { child, squirrel } = this.cast;
     child.face(this.face);
     squirrel.eye(this.eye);
+    if (this.shuffle?.step !== 'burrow') this.tracked.copy(this.eye);
     for (let i = this.later.length - 1; i >= 0; i--) {
       const l = this.later[i];
       if (l.generation !== null && l.generation !== this.generation) this.later.splice(i, 1);
@@ -213,6 +248,8 @@ export class BirchesSquirrel {
     const scolding = this.coiled === 'indignant' && this.station === 'tangle2' && this.cast.squirrel.busy;
     if (want !== this.station && this.mode !== 'flushed' && this.mode !== 'glancing' && !scolding) this.goTo(want);
     if (this.mode === 'meeting') this.meeting();
+    else if (this.mode === 'waiting') this.waiting();
+    else if (this.mode === 'shuffling') this.shuffling(dt);
     else if (this.mode === 'hiding') this.hiding();
     else if (this.mode === 'hidden') this.lying(dt);
     else if (this.mode === 'flushed') this.flushed();
@@ -241,7 +278,7 @@ export class BirchesSquirrel {
     }
   }
 
-  /** Each round's heaps stand against the wind until it has gone into hiding in one of them. */
+  /** Each round's heaps stand against the wind until it has gone into hiding in one of them, and has done shuffling. */
   private holdHeaps(): void {
     this.holding.length = 0;
     ROUNDS.forEach((r, round) => { if (this.rounds <= round && this.wentIn < round) this.holding.push(...r.heaps); });
@@ -312,6 +349,7 @@ export class BirchesSquirrel {
     this.station = station;
     this.hidden = null;
     this.invitation = null;
+    this.endShuffle();
     const s = this.cast.squirrel;
     if (station === 'meeting') { this.meet(); return; }
     let points = route(this.cast.birches, WAYS[station]);
@@ -335,8 +373,10 @@ export class BirchesSquirrel {
         }
       }
     }
-    /** On ahead to hide, it dashes, so it is under the leaves before she gets there. */
-    s.follow(points, () => this.arrive(station), { floor: floorTo(station), pace: ROUND_OF[station] === undefined ? 1 : tuning.birches.squirrel.dash });
+    /** On ahead to hide, it dashes, so it is under the leaves before she gets there; to wait for her, it only runs. */
+    const round = ROUND_OF[station], k = tuning.birches.squirrel;
+    const pace = round === undefined ? 1 : ROUNDS[round].shuffle ? k.shuffleRunOn : k.dash;
+    s.follow(points, () => this.arrive(station), { floor: floorTo(station), pace });
   }
 
   /** It stops, sits up and looks back at her once: come on, then. */
@@ -354,6 +394,7 @@ export class BirchesSquirrel {
   private arrive(station: Station): void {
     if (station !== this.station) return;
     const round = ROUND_OF[station];
+    if (round !== undefined && ROUNDS[round].shuffle) { this.wait(round, false); return; }
     if (round !== undefined) { this.choose(round, false); return; }
     this.mode = 'idle';
     this.settle(this.perchOf(station), false);
@@ -381,6 +422,171 @@ export class BirchesSquirrel {
       this.cast.cygnet.watch(null);
       this.choose(0, false);
     });
+  }
+
+  /** Sitting up in plain view at a round with no counting, nut in paws, waiting for her to come and watch. */
+  private wait(round: number, put: boolean): void {
+    const { at, yaw } = ROUNDS[round].shuffle!;
+    this.mode = 'waiting';
+    this.stoodSince = -1;
+    this.cast.squirrel.visible = true;
+    this.cast.squirrel.act('sit', { ...(put ? { at, floor: ground } : {}), yaw, look: this.face, nut: true });
+  }
+
+  /**
+   * Once she has come and stands watching, it sees her, sits up and chatters (watch this), and the shuffle begins:
+   * one readback of how deep each heap lies, then the dive into the first heap in plain view.
+   */
+  private waiting(): void {
+    const round = ROUND_OF[this.station]!, k = tuning.birches.squirrel, s = this.cast.squirrel;
+    if (this.cue.round !== round || !this.cue.standing) { this.stoodSince = -1; return; }
+    if (this.stoodSince < 0) this.stoodSince = this.now;
+    if (this.now - this.stoodSince < k.shuffleLook || s.busy) return;
+    const generation = ++this.generation;
+    this.mode = 'shuffling';
+    s.act('freeze', { yaw: Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z), look: this.face });
+    this.after(k.meetFreeze, () => { s.act('scold', { look: this.face }); s.call('chitter', 1); });
+    const r = ROUNDS[round];
+    void this.cast.birches.depthAt(r.hides).then((depths) => {
+      if (generation !== this.generation) return;
+      if (depths.some((d) => d < k.buryDepth)) { this.choose(round, false); return; }
+      this.shuffle = this.plan(round, depths);
+      this.after(k.shuffleDare, () => this.diveInto(0));
+    });
+  }
+
+  /**
+   * The heaps it goes through: three or four moves, only ever to a heap beside the one it is in, so it doubles back
+   * from either end. It goes in nearer her than the far heap; the last one or two moves are under the leaves.
+   */
+  private plan(round: number, depths: number[]): Shuffle {
+    const r = ROUNDS[round], k = tuning.birches.squirrel, from = r.shuffle!.at;
+    const near = r.heaps.map((_, i) => i).filter((i) => {
+      const p = BIRCH_PILES[r.heaps[i]];
+      return Math.hypot(p.x - from.x, p.z - from.z) < p.r + k.shuffleNear;
+    });
+    const order = [near[Math.floor(Math.random() * near.length)] ?? 0];
+    const moves = Math.random() < 0.5 ? 3 : 4;
+    while (order.length <= moves) {
+      const here = order[order.length - 1];
+      const beside = [here - 1, here + 1].filter((i) => i >= 0 && i < r.heaps.length);
+      order.push(beside[Math.floor(Math.random() * beside.length)]);
+    }
+    const sinks = r.hides.map((h, i) => depths[i] - this.cast.birches.buryDepth(h.x, h.z, depths[i]));
+    return { round, order, under: moves - 2, move: 0, step: 'dare', until: 0, sinks, from: new THREE.Vector3(), to: new THREE.Vector3(), along: 0, nextStir: 0, nextRustle: 0 };
+  }
+
+  private hideAt(sh: Shuffle, i: number): Hide {
+    const heap = sh.order[i], r = ROUNDS[sh.round];
+    return { round: sh.round, heap, at: r.hides[heap].clone(), sink: sh.sinks[heap], reach: BIRCH_PILES[r.heaps[heap]].r, trunk: null };
+  }
+
+  /** Into the heap of move `i`: a pounce from close enough, or a bound to its rim first. */
+  private diveInto(i: number): void {
+    const sh = this.shuffle, s = this.cast.squirrel;
+    if (!sh || this.mode !== 'shuffling') return;
+    sh.move = i;
+    sh.step = 'dive';
+    const h = this.hideAt(sh, i), k = tuning.birches.squirrel;
+    this.tailOut = false;
+    const into = () => s.act('dive', { at: h.at.clone().setY(this.inLeaves(h)(h.at.x, h.at.z)), tailOut: false, floor: this.inLeaves(h), yaw: Math.random() * Math.PI * 2 });
+    if (Math.hypot(h.at.x - s.position.x, h.at.z - s.position.z) < k.pounceFrom + 0.6) { into(); return; }
+    const rim = onGround(h.at.clone().addScaledVector(flat(h.at, s.position), k.pounceFrom + BIRCH_PILES[ROUNDS[sh.round].heaps[h.heap]].r * 0.35));
+    s.follow([{ at: rim, on: 'ground' }], () => { if (this.shuffle === sh && sh.step === 'dive') into(); }, { floor: ground, pace: k.shufflePace[Math.min(i, k.shufflePace.length - 1)] });
+  }
+
+  /**
+   * Polled while it shuffles. Landed in a heap, the leaves go up round it and it rests a moment, a shorter one each
+   * time; then it bursts out toward the heap beside it and bounds across, or, for the last one or two moves, goes on
+   * under the leaves: a hump of them heaving along the floor, the loose ones popping up over it, heard as it goes.
+   */
+  private shuffling(dt: number): void {
+    const sh = this.shuffle, s = this.cast.squirrel, k = tuning.birches.squirrel;
+    if (!sh) return;
+    const last = sh.order.length - 1;
+    if (sh.step === 'dive' && s.action === 'buried' && !s.busy) {
+      const h = this.hideAt(sh, sh.move), strength = sh.move === 0 ? k.splash : k.shuffleSplash;
+      this.cast.leafSound?.('dive', h.at, strength);
+      this.cast.birches.splash(h.at.x, h.at.z, strength);
+      sh.step = 'rest';
+      sh.until = this.now + k.shuffleRest[Math.min(sh.move, k.shuffleRest.length - 1)];
+    } else if (sh.step === 'rest' && this.now >= sh.until) {
+      if (sh.move === last) {
+        sh.step = 'settle';
+        sh.until = this.now + k.shuffleSettle;
+        const h = this.hideAt(sh, last);
+        this.cast.leafSound?.('rustle', h.at, 1);
+        this.cast.birches.shiver(h.at.x, h.at.z, k.tellStrength);
+      } else if (sh.move + 1 > last - sh.under) this.burrowFrom(sh);
+      else {
+        const from = this.hideAt(sh, sh.move), to = this.hideAt(sh, sh.move + 1);
+        const out = onGround(from.at.clone().addScaledVector(flat(from.at, to.at), from.reach * 0.75));
+        sh.step = 'burst';
+        this.cast.leafSound?.('burst', from.at, k.shuffleBurst);
+        s.act('burst', { at: out, look: to.at, floor: this.inLeaves(from) });
+      }
+    } else if (sh.step === 'burst' && !s.busy) {
+      sh.step = 'bound';
+      this.diveInto(sh.move + 1);
+    } else if (sh.step === 'burrow') this.burrowing(sh, dt);
+    else if (sh.step === 'settle' && this.now >= sh.until) {
+      const h = this.hideAt(sh, last);
+      this.endShuffle();
+      this.hide(h, true);
+    }
+  }
+
+  /** Under the leaves from the heap it is in to the one beside it: it goes out of sight, and the hump sets off. */
+  private burrowFrom(sh: Shuffle): void {
+    const s = this.cast.squirrel, k = tuning.birches.squirrel;
+    const from = this.hideAt(sh, sh.move), to = this.hideAt(sh, sh.move + 1);
+    sh.step = 'burrow';
+    sh.from.copy(from.at);
+    sh.to.copy(to.at);
+    sh.along = 0;
+    sh.nextStir = sh.nextRustle = this.now;
+    this.cast.leafSound?.('rustle', from.at, 1);
+    this.cast.birches.shiver(from.at.x, from.at.z, k.tellStrength);
+    s.visible = false;
+  }
+
+  private burrowing(sh: Shuffle, dt: number): void {
+    const k = tuning.birches.squirrel, birches = this.cast.birches;
+    const span = sh.from.distanceTo(sh.to), under = sh.move + 1 - (sh.order.length - 1 - sh.under);
+    sh.along = Math.min(span, sh.along + k.shuffleUnder[Math.min(under - 1, k.shuffleUnder.length - 1)] * dt);
+    const t = sh.along / span, eased = t * t * (3 - 2 * t) * 0.35 + t * 0.65;
+    const at = this.v.lerpVectors(sh.from, sh.to, eased);
+    onGround(at);
+    /** It heaves the floor up between the heaps; inside one the heap is already over it. */
+    const rise = THREE.MathUtils.smoothstep(Math.min(t, 1 - t) * span, 0.4, 2);
+    birches.burrow(at, rise);
+    this.tracked.copy(at).setY(at.y + 0.25);
+    if (this.now >= sh.nextStir) {
+      sh.nextStir = this.now + k.burrowStirEvery;
+      birches.shiver(at.x, at.z, k.burrowStir);
+    }
+    if (this.now >= sh.nextRustle) {
+      sh.nextRustle = this.now + k.burrowRustleEvery;
+      this.cast.leafSound?.('rustle', at, 1);
+    }
+    if (sh.along < span) return;
+    birches.burrow(null);
+    const h = this.hideAt(sh, sh.move + 1), s = this.cast.squirrel;
+    s.visible = true;
+    s.hide(h.at, { tailOut: false, yaw: Math.random() * Math.PI * 2, floor: this.inLeaves(h) });
+    this.cast.leafSound?.('rustle', h.at, 1);
+    birches.shiver(h.at.x, h.at.z, k.tellStrength);
+    sh.move++;
+    sh.step = 'rest';
+    sh.until = this.now + k.shuffleRest[Math.min(sh.move, k.shuffleRest.length - 1)];
+  }
+
+  private endShuffle(): void {
+    if (!this.shuffle) return;
+    this.shuffle = null;
+    this.seekRound = -1;
+    this.cast.birches.burrow(null);
+    this.cast.squirrel.visible = true;
   }
 
   /**
@@ -420,7 +626,8 @@ export class BirchesSquirrel {
     const k = tuning.birches.squirrel;
     const r = ROUNDS[round];
     const deep = r.hides.map((_, i) => i).filter((i) => depths[i] >= k.buryDepth);
-    const choices = deep.length > 1 ? deep.filter((i) => i !== this.lastHeap) : deep;
+    const turnedOut = this.lastHide.round === round ? this.lastHide.heap : -1;
+    const choices = deep.length > 1 ? deep.filter((i) => i !== turnedOut) : deep;
     const sunk = (at: THREE.Vector3, depth: number) => depth - this.cast.birches.buryDepth(at.x, at.z, depth);
     if (choices.length > 0) {
       const i = choices[Math.floor(Math.random() * choices.length)];
@@ -645,7 +852,8 @@ export class BirchesSquirrel {
   private flush(): void {
     const h = this.hidden!;
     const { squirrel: s, child } = this.cast;
-    this.lastHeap = h.heap;
+    this.lastHide.round = h.round;
+    this.lastHide.heap = h.heap;
     this.hidden = null;
     this.invitation = null;
     this.mode = 'flushed';
@@ -708,13 +916,28 @@ export class BirchesSquirrel {
         const top = this.v.set(p.x, ground(p.x, p.z), p.z);
         if (time - (this.heapBurstAt.get(heap) ?? -1e9) < 1.5 || this.windOn(top, p.r) + this.liftOn(round, top) < 0.45) continue;
         this.heapBurstAt.set(heap, time);
-        if (this.hidden === null || r.heaps[this.hidden.heap] !== heap) this.cast.leafSound?.('burst', top, 0.7);
         this.lookUntil = time + 2;
         c.lookAt = this.heapLook.set(p.x, top.y + 0.3, p.z);
+        if (this.hidden === null || r.heaps[this.hidden.heap] !== heap) {
+          this.cast.leafSound?.('burst', top, 0.7);
+          this.answer(time);
+        }
       }
       if (time > this.lookUntil) c.lookAt = r.face;
     }
+    /** While it waits for her and shuffles, she stands watching it and the cygnet stands by her watching too. */
+    const shuffling = (this.mode === 'waiting' || this.mode === 'shuffling') && this.cue.round === round && ROUNDS[round].shuffle;
+    if (shuffling && this.cue.standing) c.lookAt = this.tracked;
     if (carry.busy || bird.seating.move || bird.seating.held || bird.state !== 'following') return;
+    if (shuffling) {
+      if (this.seekRound !== round) {
+        this.seekRound = round;
+        bird.stay = false;
+        bird.errand = r.cygnet[0].clone();
+      } else if (!bird.errand) bird.stay = true;
+      bird.watch(this.tracked, true);
+      return;
+    }
     if (this.rounds > round) {
       if (!this.chased && this.mode === 'going') {
         this.chased = true;
@@ -782,6 +1005,27 @@ export class BirchesSquirrel {
   }
 
   /**
+   * Wind on a heap it is not in, while it lies hidden in the leaves: the one it is in answers a moment later, its tail
+   * up and waving with a chitter, so a child who has lost track of it is told where it went. She turns to look.
+   */
+  private answer(time: number): void {
+    const h = this.hidden, k = tuning.birches.squirrel;
+    if (!h || h.trunk || this.mode !== 'hidden' || time < this.nextAnswer) return;
+    this.nextAnswer = time + k.answerEvery;
+    this.after(k.answerAfter, () => {
+      const s = this.cast.squirrel;
+      if (this.hidden !== h || this.mode !== 'hidden' || s.busy) return;
+      this.nextTell = this.now + between(k.tellFrom, k.tellTo);
+      this.tailOut = Math.random() < k.tailOut[h.round];
+      if (!s.tell({ tailOut: this.tailOut })) return;
+      this.cast.leafSound?.('rustle', h.at, 1);
+      this.cast.birches.shiver(h.at.x, h.at.z, k.tailTellStrength);
+      this.lookUntil = this.now + 1.6;
+      this.cast.child.lookAt = this.heapLook.set(h.at.x, h.at.y + 0.4, h.at.z);
+    });
+  }
+
+  /**
    * After the third round she takes a run at the deepest leaves left in the hollow (one readback), the cygnet already
    * in them, and lands sitting in a burst of gold; with nothing left to jump into she runs through the hollow
    * kicking up what there is.
@@ -798,10 +1042,12 @@ export class BirchesSquirrel {
     }
     void this.cast.birches.depthAt(points).then((depths) => {
       if (this.leap !== 'reading') return;
-      /** Only leaves the lens can see: she lands in the round's frame, never at its edge. */
-      let best = -1;
-      depths.forEach((d, i) => { if ((best < 0 || d > depths[best]) && this.inView(2, points[i])) best = i; });
-      const { child: c, cygnet: bird } = this.cast;
+      /** Only leaves the lens can see, so she lands in the round's frame; of those deep enough, the nearest, so the run is short. */
+      const { child: c, cygnet: bird } = this.cast, k = tuning.birches.squirrel;
+      const seen = points.map((p, i) => i).filter((i) => this.inView(2, points[i]));
+      const deep = seen.filter((i) => depths[i] >= k.leapDepth * 1.6);
+      const by = (score: (i: number) => number) => (deep.length ? deep : seen).reduce((a, i) => (a < 0 || score(i) < score(a) ? i : a), -1);
+      const best = deep.length ? by((i) => points[i].distanceTo(c.position)) : by((i) => -depths[i]);
       c.kneeling = 0;
       c.stop();
       bird.stay = false;
@@ -891,7 +1137,7 @@ export class BirchesSquirrel {
     const ahead = perched && !cue.atTangle && !cue.atSwing;
     let want = 0;
     if (this.station === 'meeting' && this.seen && (this.mode === 'meeting' || this.mode === 'choosing')) want = 1;
-    else if (this.station === 'meeting' && cue.round < 0) want = nearing;
+    else if ((this.station === 'meeting' || this.mode === 'waiting') && cue.round < 0) want = nearing;
     else if (this.mode === 'flushed') want = 1;
     else if (this.station === 'tangle2' && this.coiled !== 'none' && (this.cast.squirrel.busy || this.coiled === 'startled')) want = 1;
     else if (ahead) want = nearing;
@@ -901,8 +1147,9 @@ export class BirchesSquirrel {
 
     const playing = this.hidden !== null && cue.round === this.hidden.round;
     const waiting = perched && this.mode === 'idle' && (cue.atTangle || cue.atSwing);
-    const sharp = (this.station === 'meeting' && cue.round >= 0) || playing || this.mode === 'flushed' || waiting ? 1 : want;
+    const shuffling = (this.mode === 'waiting' || this.mode === 'shuffling') && cue.round >= 0;
+    const sharp = (this.station === 'meeting' && cue.round >= 0) || playing || this.mode === 'flushed' || waiting || shuffling ? 1 : want;
     this.sharpness.weight += (sharp - this.sharpness.weight) * (1 - Math.exp(-dt * k.sharpIn));
-    this.sharpness.at.copy(this.eye);
+    this.sharpness.at.copy(this.tracked);
   }
 }

@@ -1,9 +1,11 @@
 // The birches' squirrel hide-and-seek with real pointer strokes: each round found on the right heap once the wind has
-// uncovered it, by a stroke and by an updraft, wrong heaps first, a child's random swipes, a stalled player through the
-// hint and the drawn updraft, heaps held against strokes until it is in (and the drift and trunk fallbacks), the leap
-// into a deep drift and through a bare hollow, resumed saves at every new checkpoint and from names saved before the
-// game, and stills of each round's frame with the squirrel's height on screen and how much of it shows buried tail in.
-// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong random stall flat leap bare resume frames]
+// uncovered it, by a stroke and by an updraft, wrong heaps first and the right heap answering them, a child's random
+// swipes (counted per round), a stalled player through the hint and the drawn updraft, heaps held against strokes until
+// it is in (and the drift and trunk fallbacks), round 3's shuffle (its plan, its frame, the heaps held through it, her
+// and the cygnet watching), the leap into a deep drift and through a bare hollow, resumed saves at every new checkpoint
+// and from names saved before the game, and stills of each round's frame with the squirrel's height on screen and how
+// much of it shows buried tail in.
+// Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer random shuffle plans stall flat leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
 // the squirrel's size at runtime.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
@@ -13,7 +15,7 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600), H = Number(process.env.H ?? 900);
 const out = process.env.OUT ?? '/tmp/updraft-squirrel-rounds';
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'random', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'answer', 'random', 'shuffle', 'plans', 'stall', 'flat', 'leap', 'bare', 'resume', 'frames'];
 const { browser, close } = await openBrowser();
 const errors = [];
 const results = {};
@@ -60,10 +62,17 @@ async function jump(round, patch = null) {
     c.update(0, c.now);
     g.rig.cut(c.shot);
   }, { round, patch });
-  await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 30000);
+  await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 60000);
   await page.evaluate(() => __game.rig.cut(__game.story.current.shot));
   await page.waitForTimeout(800);
 }
+
+/** Every tell the squirrel gives from now on, by the story's clock. */
+const watchTells = () => page.evaluate(() => {
+  const s = __game.squirrel, told = (window.__told = []);
+  if (!s.__tell) { s.__tell = s.tell; s.tell = function (...a) { const ok = s.__tell.apply(this, a); if (ok) window.__told.push(__game.story.current.now); return ok; }; }
+  return told.length;
+});
 
 /** Forces the hide into heap `heap` of the round being played, so a case can choose which heaps are wrong. */
 const hideIn = (heap) => page.evaluate(async (heap) => {
@@ -229,31 +238,146 @@ const cased = {
     return rows;
   },
 
+  /** A child's random swipes over the frame, counted until each round's squirrel is found, for each of `SEEDS`. */
   async random() {
-    await load();
     const rows = [];
-    let seed = Number(process.env.SEED ?? 7);
-    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (const round of [0, 1, 2]) {
-      if (round === 0) await until(() => __game.story.current.beat === 'round', null, 90000);
-      else await jump(round);
-      let strokes = 0;
-      let at = [0.05 + rand() * 0.9, 0.3 + rand() * 0.6];
-      await page.evaluate(() => { __game.input.present = false; });
-      await page.mouse.move(at[0] * W, at[1] * H);
-      while (!(await found(round, 50)) && strokes < 40) {
-        const angle = rand() * Math.PI * 2, length = 0.08 + rand() * 0.35;
-        const to = [Math.min(0.97, Math.max(0.03, at[0] + Math.cos(angle) * length * H / W)), Math.min(0.95, Math.max(0.25, at[1] + Math.sin(angle) * length))];
-        await stroke([at, to], 150 + rand() * 450, false);
-        at = to;
-        strokes++;
-        await page.waitForTimeout(rand() * 700);
+    for (const start of (process.env.SEEDS ?? process.env.SEED ?? '7,11,23').split(',').map(Number)) {
+      await load();
+      let seed = start;
+      const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const row = { seed: start };
+      for (const round of [0, 1, 2]) {
+        if (round === 0) await until(() => __game.story.current.beat === 'round', null, 90000);
+        else await jump(round);
+        let strokes = 0;
+        let at = [0.05 + rand() * 0.9, 0.3 + rand() * 0.6];
+        await page.evaluate(() => { __game.input.present = false; });
+        await page.mouse.move(at[0] * W, at[1] * H);
+        while (!(await found(round, 50)) && strokes < 40) {
+          const angle = rand() * Math.PI * 2, length = 0.08 + rand() * 0.35;
+          const to = [Math.min(0.97, Math.max(0.03, at[0] + Math.cos(angle) * length * H / W)), Math.min(0.95, Math.max(0.25, at[1] + Math.sin(angle) * length))];
+          await stroke([at, to], 150 + rand() * 450, false);
+          at = to;
+          strokes++;
+          await page.waitForTimeout(rand() * 700);
+        }
+        assert.ok(await found(round, 3000), `seed ${start}, round ${round + 1}: forty random swipes never found it`);
+        row[`round${round + 1}`] = strokes;
+        await afterFind(round);
       }
-      assert.ok(await found(round, 3000), `round ${round + 1}: forty random swipes never found it`);
-      rows.push({ round: round + 1, strokes });
-      await afterFind(round);
+      rows.push(row);
+    }
+    const all = rows.flatMap((r) => [r.round1, r.round2, r.round3]);
+    assert.ok(all.every((n) => n <= 15), `random swipes took up to ${Math.max(...all)} strokes: ${JSON.stringify(rows)}`);
+    return { rows, mean: +(all.reduce((a, b) => a + b, 0) / all.length).toFixed(1), most: Math.max(...all) };
+  },
+
+  /** Wind on a wrong heap: the right one answers with a tell at once, with no tells of its own due, and she looks at it. */
+  async answer() {
+    const rows = [];
+    for (const round of [1, 2]) {
+      await load();
+      await jump(round);
+      await hideIn(0);
+      await watchTells();
+      await page.evaluate(() => { __game.story.current.squirrel.nextTell = Infinity; });
+      await page.waitForTimeout(1800);
+      const wrong = round === 1 ? 1 : 1;
+      const [a, b] = await acrossHeap(wrong), [rx] = await heapOnScreen(0);
+      const began = await page.evaluate(() => __game.story.current.now);
+      await page.evaluate(() => { window.__told.length = 0; });
+      await stroke(rx > a[0] ? [b, a] : [a, b]);
+      await page.waitForTimeout(1800);
+      const r = await page.evaluate(() => {
+        const g = __game, c = g.story.current, h = c.squirrel.hideout, look = g.child.lookAt;
+        return { told: window.__told.slice(), found: c.squirrel.rounds > c.round || c.squirrel.mode !== 'hidden', looked: look ? +Math.hypot(look.x - h.at.x, look.z - h.at.z).toFixed(2) : null };
+      });
+      const after = r.told.map((t) => +(t - began).toFixed(2));
+      rows.push({ round: round + 1, after, found: r.found, lookedFromHide: r.looked });
+      assert.ok(!r.found, `round ${round + 1}: the wrong heap found it`);
+      assert.ok(after.length >= 1 && after[0] < 1.6, `round ${round + 1}: the right heap did not answer: ${JSON.stringify(after)}`);
     }
     return rows;
+  },
+
+  /**
+   * Round 3 from the walk in: no counting; it waits sitting up in the frame; she stands and watches; it dives in, moves
+   * heap to heap (neighbours only, the last one or two under the leaves) and settles, never found on the way however
+   * hard the heaps are blown; she and the cygnet follow it with their eyes; every heap and the squirrel stay in frame.
+   */
+  async shuffle() {
+    await load();
+    await page.evaluate(async () => {
+      const g = __game, c = g.story.current;
+      g.child.stop(); g.child.place(-143.2, -1196, Math.PI); g.glider.hold(g.child);
+      if (!g.cygnet.carried) g.cygnet.rideIn('satchel');
+      c.restoreCheckpoint(__sq.birchesPoint(2, 2, true), [4, 1, 0.62, 2, 2]);
+      c.update(0, c.now); g.rig.cut(c.shot);
+    });
+    const log = [];
+    const sample = () => page.evaluate(() => {
+      const g = __game, c = g.story.current, q = c.squirrel, s = g.squirrel, r = __sq.ROUNDS[2];
+      const pts = r.heaps.flatMap((i) => { const p = __sq.BIRCH_PILES[i], y = Math.max(0, __sq.heightAt(p.x, p.z));
+        return [[p.x - p.r, p.z], [p.x + p.r, p.z], [p.x, p.z - p.r], [p.x, p.z + p.r]].map(([x, z]) => window.__screen(s.position.clone().set(x, y, z))); });
+      const face = g.child.face(g.child.position.clone());
+      return { t: c.now, beat: c.beat, mode: q.mode, step: q.shuffle?.step ?? null, move: q.shuffle?.move ?? null, order: q.shuffle?.order ?? null, under: q.shuffle?.under ?? null,
+        visible: s.visible, at: window.__screen(s.position.clone().setY(s.position.y + 0.3)), tracked: window.__screen(q.tracked.clone()),
+        herEyes: g.child.lookAt === q.tracked, birdEyes: g.cygnet.mind.told === q.tracked, hump: g.birches.burrowing.w,
+        heaps: pts, head: window.__screen(face.setY(face.y + 0.55)), feet: window.__screen(g.child.position.clone()), found: q.rounds > 2 };
+    });
+    for (let i = 0; i < 600; i++) {
+      const s = await sample();
+      log.push(s);
+      assert.notEqual(s.beat, 'counting', 'she counted before round 3');
+      if (s.beat === 'round') break;
+      if (s.step === 'rest' && s.move === 1 && !log.some((l) => l.blown)) {
+        s.blown = true;
+        const before = await page.evaluate(() => __game.birches.depthAt(__sq.ROUNDS[2].hides).then((d) => d.map((v) => +v.toFixed(2))));
+        for (const heap of [0, 1, 2]) await stroke(await acrossHeap(heap, 1.8), 260);
+        await page.waitForTimeout(1500);
+        const after = await page.evaluate(() => __game.birches.depthAt(__sq.ROUNDS[2].hides).then((d) => d.map((v) => +v.toFixed(2))));
+        s.held = { before, after };
+        assert.ok(after.every((d, i) => d >= before[i] * 0.85), `the heaps did not hold through the shuffle: ${JSON.stringify(s.held)}`);
+      }
+      await page.waitForTimeout(100);
+    }
+    const shuffling = log.filter((l) => l.mode === 'shuffling');
+    const plan = shuffling.find((l) => l.order)?.order;
+    const end = log[log.length - 1];
+    assert.equal(end.beat, 'round', 'the shuffle never settled');
+    const hide = await page.evaluate(() => __game.story.current.squirrel.hideout.heap);
+    const inFrame = ([u, v]) => u > 0.02 && u < 0.98 && v > 0.02 && v < 0.98;
+    const watched = shuffling.filter((l) => l.step && l.step !== 'dare');
+    const outside = shuffling.filter((l) => (l.visible ? !inFrame(l.at) : !inFrame(l.tracked)) || !l.heaps.every(inFrame) || !inFrame(l.head) || !inFrame(l.feet));
+    const humps = shuffling.filter((l) => l.step === 'burrow');
+    assert.ok(plan && plan.length >= 4 && plan.length <= 5, `plan ${plan}`);
+    assert.ok(plan.every((h, i) => i === 0 || Math.abs(h - plan[i - 1]) === 1), `a move skipped a heap: ${plan}`);
+    assert.equal(hide, plan[plan.length - 1], 'it did not stay where it settled');
+    assert.ok(!shuffling.some((l) => l.found), 'found while it shuffled');
+    assert.ok(humps.length > 0 && humps.every((l) => !l.visible) && humps.filter((l) => l.hump > 0).length >= humps.length / 2, 'no hump under the leaves');
+    assert.ok(watched.every((l) => l.herEyes && l.birdEyes), 'she or the cygnet looked away from it');
+    assert.ok(outside.length === 0, `out of frame: ${JSON.stringify(outside.slice(0, 3))}`);
+    const dare = shuffling[0].t;
+    await page.screenshot({ path: `${out}-shuffle-settled-${W}x${H}.png` });
+    return { plan, under: shuffling.find((l) => l.under !== null)?.under, hide, seconds: +(end.t - dare).toFixed(1), held: log.find((l) => l.held)?.held, samples: log.length };
+  },
+
+  /** The shuffle's plans: three or four moves to a heap beside the one it is in, the last one or two under, ending anywhere. */
+  async plans() {
+    await load();
+    return page.evaluate(() => {
+      const q = __game.story.current.squirrel, ends = [0, 0, 0], moves = {}, unders = {};
+      for (let i = 0; i < 600; i++) {
+        const p = q.plan(2, [1, 1, 1]);
+        if (!p.order.every((h, j) => j === 0 || Math.abs(h - p.order[j - 1]) === 1)) throw new Error(`plan ${p.order}`);
+        ends[p.order[p.order.length - 1]]++;
+        moves[p.order.length - 1] = (moves[p.order.length - 1] ?? 0) + 1;
+        unders[p.under] = (unders[p.under] ?? 0) + 1;
+        if (p.under < 1 || p.under > 2 || p.order.length - 1 - p.under < 2) throw new Error(`under ${p.under} of ${p.order}`);
+      }
+      if (ends.some((n) => n < 60)) throw new Error(`it ends in some heaps too rarely: ${ends}`);
+      return { ends, moves, unders };
+    });
   },
 
   async stall() {
@@ -388,12 +512,12 @@ const cased = {
     const expect = {
       'squirrel1-scarf0': [[0, 0, 0.6, 0, 1], 'tangle1', 'idle'], 'squirrel1-scarf1': [[1, 0, 0.6, 1, 1], 'round2', 'hidden'],
       'squirrel2-scarf1': [[2, 0, 0.6, 1, 2], 'swing', 'idle'], 'squirrel2-scarf1-swing': [[3, 1, 0.6, 1, 2], 'tangle2', 'idle'],
-      'squirrel2-scarf2-swing': [[3, 1, 0.6, 2, 2], 'round3', 'hidden'], 'squirrel3-scarf2-swing': [[4, 1, 0.6, 2, 3], 'tangle3', 'idle'],
+      'squirrel2-scarf2-swing': [[3, 1, 0.6, 2, 2], 'round3', 'waiting'], 'squirrel3-scarf2-swing': [[4, 1, 0.6, 2, 3], 'tangle3', 'idle'],
       'squirrel3-scarf3-swing': [[4, 1, 0.6, 3, 3], 'tangle4', 'idle'], 'squirrel3-scarf4-swing': [[5, 1, 0.7, 4, 3], 'goodbye', 'idle'],
       'scarf4-1': [[1, 0, 0.6, 1], 'round2', 'hidden'], 'scarf4-1-swing': [[3, 1, 0.6, 1], 'tangle2', 'idle'],
-      'scarf4-2': [[3, 0, 0.6, 2], 'round3', 'hidden'], 'scarf4-3': [[4, 0, 0.6, 3], 'tangle4', 'idle'],
-      'scarf4-4-swing': [[5, 1, 0.7, 4], 'goodbye', 'idle'], 'scarf-2': [[3, 0, 0.6, 2], 'round3', 'hidden'],
-      'scarf-3': [[4, 0, 0.6, 3], 'goodbye', 'idle'], swing: [[3, 1, 0.6], 'tangle2', 'idle'], leaves: [[3, 0, 0.6], 'round3', 'hidden'],
+      'scarf4-2': [[3, 0, 0.6, 2], 'round3', 'waiting'], 'scarf4-3': [[4, 0, 0.6, 3], 'tangle4', 'idle'],
+      'scarf4-4-swing': [[5, 1, 0.7, 4], 'goodbye', 'idle'], 'scarf-2': [[3, 0, 0.6, 2], 'round3', 'waiting'],
+      'scarf-3': [[4, 0, 0.6, 3], 'goodbye', 'idle'], swing: [[3, 1, 0.6], 'tangle2', 'idle'], leaves: [[3, 0, 0.6], 'round3', 'waiting'],
     };
     const rows = [];
     for (const [point, [data, station, mode]] of Object.entries(expect)) {
