@@ -102,7 +102,7 @@ const FLOOR = { x: 0.5, z: 4.5, r: 6.2, top: 0.5 };
 const BED = -6;
 /** The places in the yard, in its own space: x to its left (east), z ahead (south, out to sea), y up off its floor. */
 const HEAP = { x: 0.9, z: 4.1, r: 1.2, top: 0.42 };
-const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.26 } as const;
+const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.31 } as const;
 const TRUNK = { x: 2.7, z: 6.9, r: 0.21, top: 6 };
 /** A second birch across the yard, the wool tied between the two. */
 const TRUNK_B = { x: -2.4, z: 7.6, r: 0.19, top: 5.5 };
@@ -211,8 +211,9 @@ export class SquirrelYard {
   /**
    * Each action from its own place: on the log, on the limb, in the heap, up the trunk, out on the open leaves; and
    * the motions, each from where it starts: `run` across the yard, `dive` into the heap, `dive-burst` into it and out
-   * again to scold, `burst` out of it, `climb-up` and `climb-down` the first birch, `run-line` along the wool, and
-   * `follow`, the whole way round: over the ground, up the second birch, along the wool, down the first and home.
+   * again to scold, `burst` out of it, `tell` (and `tell-in`, its tail tucked) twice from the heap, `climb-up` and
+   * `climb-down` the first birch, `run-line` along the wool, and `follow`, the whole way round: over the ground, up
+   * the second birch, along the wool, down the first and home.
    */
   play(name: string, squirrel: Squirrel): boolean {
     this.playing = true;
@@ -265,6 +266,11 @@ export class SquirrelYard {
         squirrel.act('climb', { at, up: out, forward: new THREE.Vector3(0, 1, 0), radius: r, look });
         break;
       }
+      case 'tell':
+      case 'tell-in':
+        squirrel.hide(inHeap, { tailOut: name === 'tell', yaw: toward(inHeap) + 1, floor: this.ground });
+        this.later([[0.6, () => squirrel.tell()], [3.4, () => squirrel.tell()]]);
+        break;
       case 'burst':
         squirrel.hide(inHeap, { tailOut: true, yaw: toward(inHeap), floor: this.ground });
         squirrel.look(look);
