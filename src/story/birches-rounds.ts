@@ -187,7 +187,7 @@ export const ROUNDS: readonly Round[] = [
     lastSeen: lifted(SHUFFLE_FROM),
     shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
     cygnet: [lifted(birchesGap(2, 9, -9.6)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: view(2, 19, 6), portrait: tall(birchesGap(2, 18, -14), 8, 25, 12, 0, 1.35) },
+    frames: { landscape: view(2, 20, 6.5), portrait: tall(birchesGap(2, 18, -14), 8, 25, 12, 0, 1.3) },
   },
 ];
 
@@ -224,7 +224,7 @@ const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
 /** The birch behind the hollow's middle heap and its far one (`world/birches.ts` BANKS). */
 const FAR_TREE = birchesAt(-17.4, -1154.4);
-const ROUND_3_LENS = lensOf(2, 19);
+const ROUND_3_LENS = lensOf(2, 20);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
 /** Where the swing's lens stands, three-quarters on to the seat, so the trunk's face toward it faces the lens. */

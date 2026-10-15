@@ -119,7 +119,7 @@ const inHeap = (x: number, z: number): boolean => BIRCH_PILES.some(p => p.raked 
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
-  { at: birchesGap(2, 15.8, -12.6), from: { x: 0.819, z: 0.574 } },
+  { at: birchesGap(2, 14.8, -12.3), from: { x: 0.819, z: 0.574 } },
 ] as const;
 const inRoundView = (x: number, z: number): boolean => ROUND_VIEWS.some(v => {
   const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(20, ax * v.from.x + az * v.from.z));

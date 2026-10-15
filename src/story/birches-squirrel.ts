@@ -50,6 +50,8 @@ export interface SquirrelCue {
   /** She is at a tangle, working it or counting there; on her way to the swing or on it. */
   atTangle: boolean;
   atSwing: boolean;
+  /** The lens has all but come to rest on the frame it was going to. */
+  framed: boolean;
 }
 
 interface Hide {
@@ -127,6 +129,8 @@ export class BirchesSquirrel {
   private readonly tracked = new THREE.Vector3();
   private nextAnswer = 0;
   private greeted = false;
+  /** She is looking at the heap that answered until then, whatever else the wind throws up. */
+  private answeredUntil = 0;
   private generation = 0;
   private now = 0;
   private setOffAt = -1e9;
@@ -153,7 +157,7 @@ export class BirchesSquirrel {
   private hinting = false;
   private chased = false;
   private lookUntil = 0;
-  private cue: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false, atTangle: false, atSwing: false };
+  private cue: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false, atTangle: false, atSwing: false, framed: false };
   private readonly later: { at: number; generation: number | null; run: () => void }[] = [];
   private readonly face = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
@@ -460,7 +464,8 @@ export class BirchesSquirrel {
     const round = ROUND_OF[this.station]!, k = tuning.birches.squirrel, s = this.cast.squirrel;
     if (this.cue.round !== round || !this.cue.standing) { this.stoodSince = -1; return; }
     if (this.stoodSince < 0) this.stoodSince = this.now;
-    if (this.now - this.stoodSince < k.shuffleLook || s.busy) return;
+    const stood = this.now - this.stoodSince;
+    if (stood < k.shuffleLook || (!this.cue.framed && stood < k.shuffleLookMost) || s.busy) return;
     const generation = ++this.generation;
     this.mode = 'shuffling';
     s.act('freeze', { yaw: Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z), look: this.face });
@@ -935,8 +940,10 @@ export class BirchesSquirrel {
         const top = this.v.set(p.x, ground(p.x, p.z), p.z);
         if (time - (this.heapBurstAt.get(heap) ?? -1e9) < 1.5 || this.windOn(top, p.r) + this.liftOn(round, top) < 0.45) continue;
         this.heapBurstAt.set(heap, time);
-        this.lookUntil = time + 2;
-        c.lookAt = this.heapLook.set(p.x, top.y + 0.3, p.z);
+        if (time >= this.answeredUntil) {
+          this.lookUntil = time + 2;
+          c.lookAt = this.heapLook.set(p.x, top.y + 0.3, p.z);
+        }
         if (this.hidden === null || r.heaps[this.hidden.heap] !== heap) {
           this.cast.leafSound?.('burst', top, 0.7);
           this.answer(time);
@@ -1039,7 +1046,7 @@ export class BirchesSquirrel {
       if (!s.tell({ tailOut: this.tailOut })) return;
       this.cast.leafSound?.('rustle', h.at, 1);
       this.cast.birches.shiver(h.at.x, h.at.z, k.tailTellStrength);
-      this.lookUntil = this.now + 1.6;
+      this.lookUntil = this.answeredUntil = this.now + 1.6;
       this.cast.child.lookAt = this.heapLook.set(h.at.x, h.at.y + 0.4, h.at.z);
     });
   }

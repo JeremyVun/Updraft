@@ -61,6 +61,10 @@ export class BirchesChapter implements Chapter {
   private boatMoved = false;
   /** When the boat was last in the picture on the beach they landed on. */
   private boatSeenAt = 0;
+  /** How fast the lens is moving (m/s, smoothed), so a show can wait for the frame to settle round it. */
+  private lensSpeed = 0;
+  private lensAt = 0;
+  private readonly lensWas = new THREE.Vector3();
   private beatStart = 0;
   private holdUntil = 0;
   private now = 0;
@@ -106,7 +110,7 @@ export class BirchesChapter implements Chapter {
   private readonly herFace = new THREE.Vector3();
   private lens = 1;
   private lensRate = 0;
-  private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false, atTangle: false, atSwing: false };
+  private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false, atTangle: false, atSwing: false, framed: false };
 
   constructor(private readonly cast: Cast) {
     this.leafPlay = new BirchLeafPlay(cast);
@@ -206,6 +210,7 @@ export class BirchesChapter implements Chapter {
     c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
     c.atTangle = AT_TANGLE.includes(this.beat);
     c.atSwing = swinging;
+    c.framed = this.lensSpeed < tuning.birches.squirrel.framedBelow;
     return c;
   }
 
@@ -336,6 +341,13 @@ export class BirchesChapter implements Chapter {
    * she is well up the ride, so it is never seen to go; past the crest that beach is behind them for good.
    */
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    const dt = this.now - this.lensAt;
+    if (dt > 0) {
+      const speed = camera.position.distanceTo(this.lensWas) / dt;
+      this.lensSpeed += (speed - this.lensSpeed) * Math.min(1, dt * 4);
+      this.lensWas.copy(camera.position);
+      this.lensAt = this.now;
+    }
     if (this.boatMoved) return;
     const { boat, child } = this.cast;
     const seen = [0, 5].some((up) => {

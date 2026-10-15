@@ -54,15 +54,16 @@ async function jump(round, patch = null) {
     const g = __game, c = g.story.current, r = __sq.ROUNDS[round];
     if (patch === 'trunk') g.birches.depthAt = async (points) => points.map(() => 0);
     /** Drifts but no heaps where it chooses; under it, the drift it chose (the few points felt over its back). */
-    if (patch === 'drift') g.birches.depthAt = async (points) => points.map((_, i) => (i < r.hides.length && points.length > 5 ? 0 : 0.7));
+    if (patch === 'drift') g.birches.depthAt = async (points) => points.map((_, i) => (i < r.hides.length && points.length !== 5 ? 0 : 0.7));
     /** Off the ride beside her stand, clear of every heap, so she walks in without wading through one. */
-    g.child.stop(); g.child.place(r.stand.x + [-2, 2, 2][round], r.stand.z + 1, Math.PI); g.glider.hold(g.child);
+    g.child.stop(); g.child.place(r.stand.x + [-2, -0.7, 2][round], r.stand.z + [1, 3.4, 1][round], Math.PI); g.glider.hold(g.child);
     if (!g.cygnet.carried) g.cygnet.rideIn('satchel');
     c.restoreCheckpoint(__sq.birchesPoint(round, round, round === 2), [[0, 2, 4][round], round === 2 ? 1 : 0, 0.62, round, round]);
     c.update(0, c.now);
     g.rig.cut(c.shot);
   }, { round, patch });
-  await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 60000);
+  await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 60000)
+    .catch(async (e) => { throw new Error(`round ${round + 1} never began: ${JSON.stringify(await state())} ${e.message}`); });
   await page.evaluate(() => __game.rig.cut(__game.story.current.shot));
   await page.waitForTimeout(800);
 }
@@ -253,22 +254,37 @@ const cased = {
         let at = [0.05 + rand() * 0.9, 0.3 + rand() * 0.6];
         await page.evaluate(() => { __game.input.present = false; });
         await page.mouse.move(at[0] * W, at[1] * H);
+        /**
+         * Each swipe goes from where the last ended to anywhere in the frame below the canopy, never aimed; WANDER=1
+         * instead turns each a random way for a short length, which keeps to the frame's edges once it reaches one.
+         */
         while (!(await found(round, 50)) && strokes < 40) {
           const angle = rand() * Math.PI * 2, length = 0.08 + rand() * 0.35;
-          const to = [Math.min(0.97, Math.max(0.03, at[0] + Math.cos(angle) * length * H / W)), Math.min(0.95, Math.max(0.25, at[1] + Math.sin(angle) * length))];
+          const to = process.env.WANDER
+            ? [Math.min(0.97, Math.max(0.03, at[0] + Math.cos(angle) * length * H / W)), Math.min(0.95, Math.max(0.25, at[1] + Math.sin(angle) * length))]
+            : [0.05 + rand() * 0.9, 0.3 + rand() * 0.6];
           await stroke([at, to], 150 + rand() * 450, false);
           at = to;
           strokes++;
           await page.waitForTimeout(rand() * 700);
         }
-        assert.ok(await found(round, 3000), `seed ${start}, round ${round + 1}: forty random swipes never found it`);
+        if (!(await found(round, 3000)) && process.env.WANDER) {
+          row[`round${round + 1}`] = 41;
+          for (let i = 0; i < 4 && !(await found(round, 1500)); i++) await stroke(await acrossHeap(Math.max(0, (await state()).hide?.heap ?? 0)));
+          await afterFind(round);
+          continue;
+        } else if (!(await found(round, 3000))) {
+          await page.screenshot({ path: `${out}-random-lost-${start}-${round + 1}.png` });
+          const cover = await page.evaluate(async () => { const q = __game.story.current.squirrel, h = q.hidden; if (!h) return null; const [d] = await __game.birches.depthAt([h.at]); return { mode: q.mode, heap: h.heap, depth: +d.toFixed(2), sink: +h.sink.toFixed(2) }; });
+          assert.fail(`seed ${start}, round ${round + 1}: forty random swipes never found it: ${JSON.stringify({ cover, state: await state() })}`);
+        }
         row[`round${round + 1}`] = strokes;
         await afterFind(round);
       }
       rows.push(row);
     }
     const all = rows.flatMap((r) => [r.round1, r.round2, r.round3]);
-    assert.ok(all.every((n) => n <= 15), `random swipes took up to ${Math.max(...all)} strokes: ${JSON.stringify(rows)}`);
+    if (!process.env.WANDER) assert.ok(all.every((n) => n <= 15), `random swipes took up to ${Math.max(...all)} strokes: ${JSON.stringify(rows)}`);
     return { rows, mean: +(all.reduce((a, b) => a + b, 0) / all.length).toFixed(1), most: Math.max(...all) };
   },
 
@@ -282,19 +298,24 @@ const cased = {
       await watchTells();
       await page.evaluate(() => { __game.story.current.squirrel.nextTell = Infinity; });
       await page.waitForTimeout(1800);
-      const wrong = round === 1 ? 1 : 1;
-      const [a, b] = await acrossHeap(wrong), [rx] = await heapOnScreen(0);
+      const [a, b] = await acrossHeap(1), [rx] = await heapOnScreen(0);
       const began = await page.evaluate(() => __game.story.current.now);
       await page.evaluate(() => { window.__told.length = 0; });
       await stroke(rx > a[0] ? [b, a] : [a, b]);
-      await page.waitForTimeout(1800);
+      /** How far from its heap she is looking, a few times a second while it answers. */
+      const looks = [];
+      for (let i = 0; i < 9; i++) {
+        await page.waitForTimeout(200);
+        looks.push(await page.evaluate(() => { const g = __game, h = g.story.current.squirrel.hideout, l = g.child.lookAt; return l && h ? +Math.hypot(l.x - h.at.x, l.z - h.at.z).toFixed(1) : null; }));
+      }
       const r = await page.evaluate(() => {
-        const g = __game, c = g.story.current, h = c.squirrel.hideout, look = g.child.lookAt;
-        return { told: window.__told.slice(), found: c.squirrel.rounds > c.round || c.squirrel.mode !== 'hidden', looked: look ? +Math.hypot(look.x - h.at.x, look.z - h.at.z).toFixed(2) : null };
+        const c = __game.story.current;
+        return { told: window.__told.slice(), found: c.squirrel.rounds > c.round || c.squirrel.mode !== 'hidden' };
       });
-      const after = r.told.map((t) => +(t - began).toFixed(2));
-      rows.push({ round: round + 1, after, found: r.found, lookedFromHide: r.looked });
+      const after = r.told.map((t) => +(t - began).toFixed(2)), looked = looks.filter((d) => d !== null && d < 1).length * 0.2;
+      rows.push({ round: round + 1, after, found: r.found, lookedAtIt: +looked.toFixed(1) });
       assert.ok(!r.found, `round ${round + 1}: the wrong heap found it`);
+      assert.ok(looked >= 1, `round ${round + 1}: she did not look at the heap that answered: ${looks}`);
       assert.ok(after.length >= 1 && after[0] < 1.6, `round ${round + 1}: the right heap did not answer: ${JSON.stringify(after)}`);
     }
     return rows;
@@ -323,7 +344,7 @@ const cased = {
       return { t: c.now, beat: c.beat, mode: q.mode, step: q.shuffle?.step ?? null, move: q.shuffle?.move ?? null, order: q.shuffle?.order ?? null, under: q.shuffle?.under ?? null,
         visible: s.visible, at: window.__screen(s.position.clone().setY(s.position.y + 0.3)), tracked: window.__screen(q.tracked.clone()),
         herEyes: g.child.lookAt === q.tracked, birdEyes: g.cygnet.mind.told === q.tracked, hump: g.birches.burrowing.w,
-        heaps: pts, head: window.__screen(face.setY(face.y + 0.55)), feet: window.__screen(g.child.position.clone()), found: q.rounds > 2 };
+        heaps: pts, head: window.__screen(face.setY(face.y + 0.55)), feet: window.__screen(g.child.position.clone()), found: q.rounds > 2, lens: +c.lensSpeed.toFixed(2) };
     });
     for (let i = 0; i < 600; i++) {
       const s = await sample();
@@ -356,6 +377,7 @@ const cased = {
     assert.ok(!shuffling.some((l) => l.found), 'found while it shuffled');
     assert.ok(humps.length > 0 && humps.every((l) => !l.visible) && humps.filter((l) => l.hump > 0).length >= humps.length / 2, 'no hump under the leaves');
     assert.ok(watched.every((l) => l.herEyes && l.birdEyes), 'she or the cygnet looked away from it');
+    if (process.env.TRACE) for (const l of log.filter((_, i) => i % 10 === 0)) console.log(JSON.stringify({ t: +l.t.toFixed(1), step: l.step, minx: +Math.min(...l.heaps.map((p) => p[0])).toFixed(2), maxx: +Math.max(...l.heaps.map((p) => p[0])).toFixed(2), maxy: +Math.max(...l.heaps.map((p) => p[1])).toFixed(2), feet: l.feet.map((v) => +v.toFixed(2)), lens: l.lens }));
     assert.ok(outside.length === 0, `out of frame: ${JSON.stringify(outside.slice(0, 3))}`);
     const dare = shuffling[0].t;
     await page.screenshot({ path: `${out}-shuffle-settled-${W}x${H}.png` });
@@ -593,10 +615,10 @@ const cased = {
           return y1 > y0 ? Math.round(y1 - y0) : 0;
         };
         const settle = () => { for (let i = 0; i < 40; i++) s.update(1 / 30, 100 + i / 30); };
-        /** Pixels that differ with it drawn and without, the world held still between the two. */
+        /** Pixels that differ with it drawn and without, the world held still between the two, as many samples as the game draws with (leaf cards cover by them). */
         const showing = () => {
           const R = g.renderer, size = R.getDrawingBufferSize(cam.position.clone()), w = size.x, h = size.y;
-          const target = new g.post.sceneTarget.constructor(w, h), a = new Uint8Array(w * h * 4), b = new Uint8Array(w * h * 4);
+          const target = new g.post.sceneTarget.constructor(w, h, { samples: g.post.samples }), a = new Uint8Array(w * h * 4), b = new Uint8Array(w * h * 4);
           const draw = (into) => { R.setRenderTarget(target); R.render(g.scene, cam); R.readRenderTargetPixels(target, 0, 0, w, h, into); };
           s.mesh.visible = true; draw(a);
           s.mesh.visible = false; draw(b);

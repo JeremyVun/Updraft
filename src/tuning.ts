@@ -1498,14 +1498,15 @@ export const tuning = {
       splash: 1, meetSplash: 1.3,
       /**
        * The shuffle, at a round with no counting. It runs on ahead `shuffleRunOn` times its pace and sits up waiting; once
-       * she has stood watching `shuffleLook` s it sits up and chatters, and dives in `shuffleDare` s later, into a heap
+       * she has stood watching `shuffleLook` s and the lens has slowed below `framedBelow` m/s (or `shuffleLookMost` s
+       * have gone), it sits up and chatters, and dives in `shuffleDare` s later, into a heap
        * whose rim is within `shuffleNear` m. In each heap it rests `shuffleRest` s by move, shorter each time; it bounds
        * across at `shufflePace` by move and dives in throwing the leaves up `shuffleSplash` (the first as `splash`), and
        * bursts out heard at `shuffleBurst`. Under the leaves it goes `shuffleUnder` m/s by move, stirring the loose ones
        * over it every `burrowStirEvery` s as hard as `burrowStir`, heard every `burrowRustleEvery` s. It settles for
        * `shuffleSettle` s before the wind may find it.
        */
-      shuffleRunOn: 1.3, shuffleLook: 1.2, shuffleDare: 1.6, shuffleNear: 3.5,
+      shuffleRunOn: 1.3, shuffleLook: 2, shuffleLookMost: 7, framedBelow: 0.35, shuffleDare: 1.6, shuffleNear: 3.5,
       shuffleRest: [0.9, 0.65, 0.5, 0.4, 0.35], shufflePace: [1.15, 1.5, 1.8], shuffleSplash: 0.6, shuffleBurst: 0.7,
       shuffleUnder: [3, 3.8], burrowStirEvery: 0.07, burrowStir: 0.35, burrowRustleEvery: 0.16, shuffleSettle: 0.8,
       /** Wind on a heap it is not in: the one it is in answers `answerAfter` s later with a tell, at most every `answerEvery` s. */
