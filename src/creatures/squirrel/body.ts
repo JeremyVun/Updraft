@@ -349,10 +349,41 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   ] as const) {
     pair(lock(EAR_L, TUFT, add(tip, [dx, -0.004, dz]), [lean - 0.15, 0.4, -0.22 + splay], length, 0.0021, bow));
   }
-  /** A nut held in the forepaws; the shader hides it when there is none. */
-  if (!coat) rigid({ part: HAND_R, mat: NUT, at: add(REST[HAND_R], [0.0075, -0.007, 0.004]), size: [0.0068, 0.0072, 0.0082], detail: 2, shape: (u) => { u.x *= 1 - 0.25 * ramp(u.z, 0, 1); u.y *= 1 - 0.25 * ramp(u.z, 0, 1); } });
+  if (!coat) rigid(acorn());
   return out;
 }
+
+/** How long the acorn is from its point to its cap's end, and how wide; a big one, so it reads from across the wood. */
+export const ACORN_LONG = 0.0118;
+const ACORN_WIDE = 0.0078;
+
+/**
+ * Its acorn, about its own middle with its point along +z and its cap at -z: a smooth nut swelling to the shoulder
+ * and drawn to a point, sitting in a wider scaly cup with a lip at its rim and a stub of a stalk. Blend 1 is the cap.
+ * The shader carries it in the paws (`ACORN_PAWS`) or the mouth (`ACORN_MOUTH`); it is never skinned where it is made.
+ */
+function acorn(): BlobSpec {
+  return {
+    part: HAND_R,
+    mat: NUT,
+    at: [0, 0, 0],
+    size: [ACORN_WIDE, ACORN_WIDE, ACORN_LONG],
+    detail: 4,
+    shape: (u) => {
+      const point = ramp(u.z, 0.15, 1);
+      const cup = ramp(-u.z, 0.18, 0.3);
+      const r = (1 - 0.42 * point * point) * (1 + 0.1 * cup - 0.12 * ramp(-u.z, 0.75, 1));
+      u.x *= r;
+      u.y *= r;
+      u.z += 0.12 * ramp(u.z, 0.9, 1) - 0.2 * ramp(-u.z, 0.97, 1);
+    },
+    blend: (u) => ramp(-u.z, 0.2, 0.26),
+  };
+}
+
+/** Where its acorn is held and how it is turned (YXZ), in rest space: between its forepaws, and in its teeth. */
+export const ACORN_PAWS = { at: add(REST[HAND_R], [0.0072, -0.006, 0.004]), turn: [0, 0, 0] as V3 };
+export const ACORN_MOUTH = { at: add(H, [0, -0.0088, 0.034]), turn: [0.35, 0, 0] as V3 };
 
 export function squirrelGeometry(): THREE.BufferGeometry {
   return merge(parts(false));

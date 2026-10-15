@@ -153,9 +153,19 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 
 > And when the squirrel jumps into a leaf pile, it should be obvious with leaves flying everywhere and a sound effect.
 
+On the meadow sail after it was lengthened along the meadow's coast (2026-10-16):
+
+> are these screens showing the 30 seconds? The island is still so close by visually
+
+> holy hell just move the birches out a bit. Don't touch the stairs chapter. i dont want to mess with that
+
+> It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
+
 What follows from it (Claude's calls, 2026-10-16):
-- **The meadow sail** (`toBirches`) gets about 5 s more sea by distance alone. Revision 12 has not shipped, so its
-  shift is amended rather than a revision 13 added. The stairs sail stays about 30 s.
+- **The meadow sail** (`toBirches`) crosses real open sea. The birches move further out from the meadow (west, where
+  the meadow's shore falls away) and the boat sails straight across instead of along the meadow's coast. The stairs
+  room is not touched; the stairs sail grows with the move. Revision 12 has not shipped, so its shift is amended
+  rather than a revision 13 added.
 - **The squirrel reads at a glance.** Its scale goes from 3 to about 3.6. Its calls show `CallMarks`, the small
   visual echo of a voice the cygnet and the cat already use. Its idle is livelier: stop-start twitches, tail flicks,
   quick head turns and small hops. While hidden, the tell is the tail. More of it comes out, more often, and it
@@ -195,7 +205,7 @@ What follows from it (Claude's calls, 2026-10-16):
 - **As built (phase 2).** The handoff's real entrance is 9 s before the landing, about 20 s after the push-off, so a
   pass fading 10 s before it would fade as the boat gathers way. Red Door fades when the crossing's estimate
   (`arrivalIn`, at the boat's speed now) reaches 15 s, and the stairs song waits 10 s after Red Door was last heard:
-  with no input Red Door fades 8.7–13.7 s after the push-off and the song begins at 23.7 s, 5.7 s before the landing.
+  with no input Red Door fades 8.2–13.1 s after the push-off and the song begins at 23.2 s, 6.5 s before the landing.
   A `toStairs` start never begins Red Door. Numbers and checks: build_plan.md phase 2 and the audio contract.
 
 ### The island moves and grows
@@ -292,9 +302,11 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   −1080.95 (A, between the log's north end at −1080.6 and tangle 1's stop at −1081), −1101.5 (B, between perch 0's
   coil and perch 1's) and −1154 (C, past heap 2's edge at −1153.6 and perch 6's coil, before tangle 3's stop at
   −1157), opened 16, 16 and 24 m: C is the longest because round 3 is the biggest. No stop point moved.
-  `BIRCHES_SHIFT` (revision 12, `world/geography.ts`) is (−40, +16): west, and 16 m south so the meadow hop stays
-  short. The shift and every opening are whole grass tiles (8 m) so each band keeps its own grass. The island's
-  world ellipse (`ISLES.birches`, `BIRCHES_ISLE`) is centred at (−40, −1140), 48 × 108.
+  `BIRCHES_SHIFT` (revision 12, `world/geography.ts`) is (−136, −16): well west, out where the meadow's shore falls
+  away, and 16 m north. Phase 1 chose (−40, +16) to keep the meadow hop short; after Jeremy's playtest the island
+  moved out over open sea ("Moved out after the playtest" below). The shift and every opening are whole grass tiles
+  (8 m) so each band keeps its own grass. The island's world ellipse (`ISLES.birches`, `BIRCHES_ISLE`) is centred at
+  (−136, −1172), 48 × 108.
 - **Terrain.** Every band's ground is exactly the first-built island's: the noise is read in band-local terms and, in
   a gap, eased from the band behind into the band ahead at full strength (`birchesNoise`); the broad shape (coast,
   dome, rise and hollow) is read through `birchesShape`, which eases across each cut over 30% of its gap either side,
@@ -321,18 +333,42 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   as first wound (`carry`), each grown run turns gradually to meet the next knot, and the first length is laid
   across as first wound so it meets perch 0 turned as it was. `gatherSeconds` is unchanged: the draw-in is 6% faster
   for 6% more wool. (The tuning comment's "135 m" was stale; the strip was 613 m.)
-- **Crossings.** `toBirches` leaves the far shore already bearing west (`FAR_SHORE` + (−18, −22)) and runs up the
-  landing straight on as before. `toStairs` leaves the berth as before (its first waypoint moves with the band),
-  passes south of the village's edge at (26, −1239) and comes in to the stairs as before; it starts 140 m from the
-  stairs, so the cloud deck builds over the crossing and the landing is under it as now.
-- **Clearances.** Dry land runs from x −85 to 4 and z −1040 to −1238. The south waterline is about 70 m off the
-  meadow's north shore (about 79 before); the north waterline is 29 m short of the drowned village's ellipse (67
-  before), open sea that the room partition gives to whichever room is nearer. The village and the meadow stay
-  hidden from the birches and both crossings by that partition as before (checked in free-running stills; a held
-  `hold=` frame redraws every room and shows them, so it cannot judge visibility).
+- **Crossings.** `toBirches` leaves the far shore already bearing west (`FAR_SHORE` + (−18, −22)) and sails straight
+  across open sea, west-north-west, to a point 30 m off the landing (band (14, −1022)), then runs up the beach straight
+  on. The meadow's shore falls away south behind it, and for the middle of the crossing there is only sea. On this
+  crossing the island lies in its own mist (`tuning.world.birchesMist`, clear 60 m to hidden 110 m from the eye, as
+  the wood and the boats do): it stays hidden to about 34 s, its beach comes out of the haze then, the trees on the
+  run-in, and the mist lifts once they are ashore. `toStairs` leaves the berth east (its first waypoint, band
+  (16, −1204), moves with the band), passes south of the village's edge at (26, −1239) and comes in to the stairs as
+  before; it starts about 240 m from the stairs, so the cloud deck builds over the crossing and the landing is under
+  it as now. The stairs and their island are in view well before the landing, from about 210 m out.
+- **Clearances.** Dry land runs from x −181 to −92 and z −1071 to −1270. The island's south shore is about 122 m of
+  open water from the meadow's nearest shore (the landing beach 120 m; 76 at phase 1); the north waterline is 22 m
+  short of the drowned village's ellipse (29 at phase 1, 67 before), open sea that the room partition gives to
+  whichever room is nearer. The village and the meadow stay hidden from the birches and both crossings by that
+  partition as before (checked in free-running stills; a held `hold=` frame redraws every room and shows them, so it
+  cannot judge visibility).
 - **Saves.** Revision 12 moves the child, bird and boat of `birches`, `toStairs` and old `drowned` saves that lie on
   or just off the old island (`geography-progress.ts`) through `birchesAt`; `drowned.ts` carries its old-save
   threshold with the island (`birchesZ(-1240)`).
+
+**Moved out after the playtest (2026-10-16).** Jeremy found the meadow sail short and the island too close: "The
+island is still so close by visually ... just move the birches out a bit", with the stairs room untouched and both
+sails allowed to grow ("if both become 40 seconds or whatever"). The meadow's shore curves away south toward the
+west, so the island moved out that way and a little north, until about 120 m of open water lies between the meadow's
+nearest shore and the landing beach. The boat crosses straight, the meadow falling away behind before the birches
+come out of their mist. The stairs sail grows with the distance; only its first waypoint, on the birches side, moved.
+Measured with no input in shot mode (frames / 60) on the dev server:
+
+| | phase 1 (−40, +16) | moved out (−136, −16) |
+| --- | --- | --- |
+| `toBirches` from the meadow's far shore (boat put at `FAR_SHORE`) | 25.08 s | 47.28 s (straight line 177 m) |
+| push-off at the berth to the stairs chapter (`village-music-browser-check sail`) | 29.4 s | 45.8 s |
+| open water, meadow shore to the island's south shore | 76 m | 122 m |
+
+On the stairs sail Red Door fades 22.2–27.2 s after the push-off, the handoff is asked for at 29.1 s and ready at
+36.9 s, the quiet is 10.0 s, and the stairs song starts at 37.2 s, 8.6 s before the landing; it fades over 3.0 s in
+the white. The island still has 146 trees.
 
 ### The squirrel
 

@@ -34,7 +34,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
-| birches | (−40, −1140) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
+| birches | (−136, −1172) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
 | stairs | (100, −1236) | 30 × 26 | `STAIRS_ISLE` (`stairs-layout.ts`) |
 | drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
 | dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
@@ -66,10 +66,12 @@ The departure measures 45.5 s against 31.9 s before the move, without changing s
 conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
 
 Revision 12 grows the birches and moves them. The island as first built is cut across its walk into bands
-(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−40, +16); everything on it is authored in
+(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−136, −16); everything on it is authored in
 those band-local terms and placed with `birchesAt` / `birchesGap`. Each band keeps its ground, grass patterns,
-trees and scarf exactly; the shift and openings are whole grass tiles (8 m). Push-off to the stairs measures 29.4 s
-against 23.3 s; `toBirches` 24.6 s against 23.3 s from the meadow's far shore. Saves on the old island, at its
+trees and scarf exactly; the shift and openings are whole grass tiles (8 m). The island stands out over open sea,
+about 120 m of water from the meadow's nearest shore. With no input, `toBirches` measures 47.3 s from the meadow's
+far shore and push-off to the stairs 45.8 s (both 23.3 s before the revision); boat speed is unchanged. Saves on
+the old island, at its
 berth and old village saves that began there migrate once. The birches' design record:
 [birches-uplift](../backlog/birches-uplift/design.md).
 
@@ -148,7 +150,8 @@ The player never sees the next island before it is time.
   `journeyVeilAt` so emissive props obey it): sightlines over that coast dissolve into `skyRadiance` beyond a
   distance, so the near shore comes out first and nothing behind shows through. The drowned village keeps the wood
   in it beyond its drawn trees; the crossing to the sleeping island keeps all but the landing shore in it, so the
-  summit window is found ashore (`tuning.world.woodMist`, `sleepingMist`; lifted at `isleMistLift` on landing).
+  summit window is found ashore; the meadow's sail keeps the birches in it until the run-in up their beach
+  (`tuning.world.woodMist`, `sleepingMist`, `birchesMist`; lifted at `isleMistLift` on landing).
 - **First-crossing horizon.** `Chapter.horizonMist` feeds `uHorizonMist`, a sky-colour distance veil across every
   bearing, without coast-shaped boundaries. It keeps the farewell clear to 140 units and fully dissolves scenery
   beyond 240; after the title it eases over 16 seconds to the 55–110 unit approach range. It releases gradually

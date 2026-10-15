@@ -692,6 +692,7 @@ const breezeAngle = THREE.MathUtils.degToRad(-18);
 const shown = { breeze: NaN, rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
 const ISLE_MISTS = {
   boats: { isle: ISLES.boats, range: tuning.world.boatsMist },
+  birches: { isle: ISLES.birches, range: tuning.world.birchesMist },
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
   mirror: { isle: { ...SKY_MIRROR, rx: SKY_MIRROR.rx * tuning.world.mirrorMist.core, rz: SKY_MIRROR.rz * tuning.world.mirrorMist.core },
@@ -981,6 +982,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   // The island ahead is seen only as near as its detail is drawn, and not at all from across the water.
   // The mirror's own mist lifts only once the whale has gone and the pod with it.
   const mistAhead = story.name === 'toBoats' || story.name === 'lines' ? ISLE_MISTS.boats
+    : story.name === 'toBirches' ? ISLE_MISTS.birches
     : story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
     : story.name === 'toSleeping' ? ISLE_MISTS.sleeping
     : story.name === 'toMirror' && story.current.mirrorArrival === 0 ? ISLE_MISTS.mirror : null;

@@ -8,10 +8,12 @@
 //            (pose-<name>-b.png), and all of them on one sheet (sheet-poses.png). Prints each pose's contact: how
 //            far the deepest vertex is inside the floor, log, trunk or limb (clip; the heap is leaves and does not
 //            count), and each paw's gap to the nearest of them (front L R, hind L R).
-//     close  The face, the ear tufts, the tail and the back, close to (close-*.png, sheet-close.png).
+//     close  The face, the ear tufts, the tail and the back, close to, the acorn in its paws (face, profile) and in its
+//            teeth as it bounds, and a tell from the heap mid-wave with its call marks (close-*.png, sheet-close.png).
 //     room   ?chapter=birches: round 1's place staged by eval (heap 0 from `BIRCH_PILES`, the child at its near rim,
-//            the cygnet beside her, the squirrel at the heap's edge), posed sitting (with its nut), scolding and
-//            peeking from the heap's shoulder, shot through the game's own lens
+//            the cygnet beside her, the squirrel at the heap's edge), posed sitting (with its acorn), scolding (a
+//            chuck's call marks up), peeking from the heap's shoulder, and buried in it as a round hides it, mid-way
+//            through a `tell()` (its plume waving, the marks over the heap), shot through the game's own lens
 //            (its vertical field of view for the aspect) from three-quarters behind her at 15 m and 12 m, at
 //            1600x900 and 390x844 (room-<w>x<h>-<pose>-<m>m.png, sheet-room.png). Prints the squirrel's height on
 //            screen in pixels (its skinned vertices projected), the measure the plan's portrait gate uses.
@@ -23,7 +25,8 @@
 //            `short`, the furthest a leg fell short of its planted paw (the squirrel's own QA probe). Limits as the
 //            cat's: slip none, sink and float a few millimetres, short a few millimetres. EVERY=2 keeps every
 //            second frame; NEAR=0.4 brings the lens in to 0.4 of its distance, following the squirrel;
-//            WINDOW=5.8-8.2 keeps frames only between those seconds.
+//            WINDOW=5.8-8.2 keeps frames only between those seconds. `stand`, `sit`, `perch` and `freeze` are its
+//            idles held six seconds (fidgets, hops on the spot, tail flicks); `tell` and `tell-in` are two tells.
 //     clips  The same motions (CLIPS=run,dive-burst,climb-up,run-line,follow by default; dash is follow's way at the dash) stepped two frames at a
 //            time, shot through the motion's lens trailing the squirrel smoothly, and made into a 30 fps webm with
 //            ffmpeg (clip-<name>.webm), so the clip plays at true speed however slow the GPU. Only record what
@@ -39,7 +42,7 @@
 //   - Blinks and glances are random. Each pose puts off the next blink; glances are left alone (they are its life).
 //   - The lens is set by hand on a held world; set `post.focusOn` round the subject or the depth of field blurs it.
 //   - Vertex maths here mirrors the shader's skinning (two bones per vertex, `aSkin` = bone, bone, share); whiskers
-//     and a hidden nut are left out of every measurement.
+//     and the acorn (which the shader carries between paws and teeth) are left out of every measurement.
 //   - One browser at a time across sessions: `lib/browser.mjs` holds a lock and waits for it.
 //   - A motion's frames are stepped one at a time (about 25 a second of real time): `follow` takes a few minutes.
 import { openBrowser } from './lib/browser.mjs';
@@ -52,7 +55,7 @@ fs.mkdirSync(out, { recursive: true });
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const list = (v, all) => (v ? v.split(',') : all);
 const modes = list(process.env.MODES, ['poses', 'close', 'room']);
-const SIZE = Number(process.env.SCALE ?? 3) / 1.7;
+const SIZE = Number(process.env.SCALE ?? 3.6) / 1.7;
 
 /** Each pose, and where the lens stands for it: bearing from the way it faces (to its left positive) and how high it looks down from. */
 const POSES = {
@@ -82,12 +85,18 @@ const MOTIONS = {
   'climb-down': { for: 4.6, eye: [1.4, 4.1, 1.2], every: 6 },
   'run-line': { for: 3.6, eye: [0.0, 3.4, 1.7], every: 5 },
   scold: { for: 2.6, eye: [-0.8, 1.6, 0.6], every: 4 },
+  stand: { for: 8, eye: [-3.8, 1.8, 0.9], every: 15 },
+  sit: { for: 6, eye: [-0.6, 2.4, 1.2], every: 15 },
+  perch: { for: 6, eye: [-0.2, 4.6, 2.6], every: 15 },
+  freeze: { for: 6, eye: [-0.6, 2.4, 1.2], every: 15 },
+  tell: { for: 5.4, eye: [-1.6, 1.6, 0.9], every: 6 },
+  'tell-in': { for: 5.4, eye: [-1.6, 1.6, 0.9], every: 6 },
   follow: { for: 15, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 12 },
   dash: { for: 7, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 6 },
 };
 const motions = list(process.env.MOTIONS, Object.keys(MOTIONS));
 const clips = list(process.env.CLIPS, ['run', 'dive-burst', 'climb-up', 'run-line', 'follow']);
-const roomPoses = list(process.env.ROOM_POSES, ['sit', 'scold', 'peek']);
+const roomPoses = list(process.env.ROOM_POSES, ['sit', 'scold', 'peek', 'tell']);
 
 const { browser, close } = await openBrowser();
 const errors = [];
@@ -116,15 +125,14 @@ const HELPERS = `(() => {
   const sq = () => window.__game.squirrel;
   const mul = (e, x, y, z) => [e[0]*x + e[4]*y + e[8]*z + e[12], e[1]*x + e[5]*y + e[9]*z + e[13], e[2]*x + e[6]*y + e[10]*z + e[14]];
   window.__sq = {
-    /** World positions of every vertex but whiskers (5) and a hidden nut (6), each with the bone it hangs off. */
+    /** World positions of every vertex but whiskers (5) and the acorn (6, placed by the shader alone), each with the bone it hangs off. */
     verts() {
       const s = sq();
       const g = s.mesh.geometry.attributes;
-      const nut = s.lookNow.nut;
       const out = [];
       for (let i = 0; i < g.position.count; i++) {
         const m = Math.round(g.aMat.getX(i));
-        if (m === 5 || (m === 6 && !nut)) continue;
+        if (m === 5 || m === 6) continue;
         const x = g.position.getX(i), y = g.position.getY(i), z = g.position.getZ(i);
         const a = mul(s.rig.bones[g.aSkin.getX(i)].elements, x, y, z);
         const k = g.aSkin.getZ(i);
@@ -300,12 +308,28 @@ try {
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-tufts.png')), label: 'ear tufts from behind' });
       await frameWhole(page, { bearing: Math.PI / 2 + 0.25, elev: 0.1 }, 20, 1.05);
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-tail.png')), label: 'tail, side on' });
-      await frameWhole(page, { bearing: Math.PI - 0.35, elev: 0.3 }, 20, 1.05);
+      await frameWhole(page, { bearing: Math.PI + 0.45, elev: 0.3 }, 20, 1.1);
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-back.png')), label: 'back and tail from behind' });
       await page.evaluate(() => window.__game.story.current.play('squirrel:perch'));
       await advance(1.6);
       await frameWhole(page, { bearing: Math.PI / 2, elev: 0.05 }, 20, 1.05);
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-perch-tail.png')), label: 'perch, tail over its back' });
+      await page.evaluate(() => window.__game.story.current.play('squirrel:run'));
+      await advance(1.25);
+      await frameWhole(page, { bearing: 1.2, elev: 0.15 }, 20, 1.05);
+      sheets.close.push({ file: await shoot(page, path.join(out, 'close-bound-acorn.png')), label: 'bounding, the acorn in its teeth' });
+      /** Mid-wave in a tell, from about where a round's lens would be were it close: the plume and the marks over the heap. */
+      await page.evaluate(() => window.__game.story.current.play('squirrel:tell'));
+      await advance(1.15);
+      await page.evaluate(async () => {
+        const b = window.__sq.bounds();
+        const aim = [b.c[0], b.c[1] + 0.5, b.c[2]];
+        const w = window.__game.story.current.squirrels.watcher;
+        const v = [w.x - aim[0], 0, w.z - aim[2]];
+        const l = Math.hypot(v[0], v[2]);
+        await window.__sq.lens([aim[0] + (v[0] / l) * 5.5, aim[1] + 1.6, aim[2] + (v[2] / l) * 5.5], aim, 30);
+      });
+      sheets.close.push({ file: await shoot(page, path.join(out, 'close-tell.png')), label: 'a tell, mid-wave, its call marks over the heap' });
     }
     await context.close();
   }
@@ -375,6 +399,16 @@ try {
       const { context, page, advance } = await open(`chapter=birches${process.env.LIGHT ? '&' + process.env.LIGHT : ''}`, w, h);
       await advance(9);
       for (const pose of roomPoses) {
+        if (pose === 'tell') {
+          /** The leaves' depth is read back from the GPU, so the world has to run a few frames to answer. */
+          await page.evaluate(async () => {
+            const { BIRCH_PILES } = await import('/src/world/birches.ts');
+            const heap = BIRCH_PILES[0];
+            window.__game.birches.depthAt([{ x: heap.x - 0.4, z: heap.z + 0.3 }]).then(([d]) => { window.__sqDepth = d; });
+          });
+          await advance(0.3);
+          await page.waitForFunction(() => window.__sqDepth !== undefined, null, { timeout: 30000 });
+        }
         /**
          * Round 1's frame as the design draws it: heap 0 by the fallen log, the child at its near rim watching, the
          * cygnet beside her, the squirrel on the litter at the heap's west edge (peeking from the heap's shoulder).
@@ -382,10 +416,23 @@ try {
         await page.evaluate(async (pose) => {
           const { heightAt } = await import('/src/world/island.ts');
           const { BIRCH_PILES } = await import('/src/world/birches.ts');
-          const { squirrel: s, child: c, cygnet: k } = window.__game;
+          const { squirrel: s, child: c, cygnet: k, birches } = window.__game;
           const heap = BIRCH_PILES[0];
           c.place(heap.x + 0.6, heap.z + heap.r + 0.9, Math.PI);
           c.stop();
+          if (pose === 'tell') {
+            /** Buried in the heap as a round hides it, its paws `buryDepth` under the live leaves' surface. */
+            const at = s.position.clone().set(heap.x - 0.4, 0, heap.z + 0.3);
+            const depth = window.__sqDepth;
+            at.y = heightAt(at.x, at.z) + depth - birches.buryDepth(at.x, at.z, depth);
+            const y = at.y;
+            s.visible = true;
+            s.hide(at, { tailOut: true, yaw: Math.atan2(c.position.x - at.x, c.position.z - at.z) + 1.4, floor: () => y });
+            k.position.set(heap.x + 0.1, heightAt(heap.x + 0.1, heap.z + heap.r + 0.3), heap.z + heap.r + 0.3);
+            c.lookAt = s.position;
+            k.watch(s.position);
+            return;
+          }
           const at = s.position.clone().set(heap.x - heap.r * (pose === 'peek' ? 0.55 : 0.95), 0, heap.z + heap.r * (pose === 'peek' ? 0.45 : 0.2));
           at.y = heightAt(at.x, at.z);
           k.position.set(heap.x + 0.1, heightAt(heap.x + 0.1, heap.z + heap.r + 0.3), heap.z + heap.r + 0.3);
@@ -398,6 +445,14 @@ try {
           window.__sq.calm();
         }, pose);
         await advance(1.6);
+        /** A tell caught mid-wave; a scold caught with a chuck's marks up. */
+        if (pose === 'tell') {
+          await page.evaluate(() => window.__game.squirrel.tell());
+          await advance(0.55);
+        } else if (pose === 'scold') {
+          await page.evaluate(() => window.__game.squirrel.call('chuck', 1));
+          await advance(0.2);
+        }
         for (const metres of [15, 12]) {
           const size = await page.evaluate(async (metres) => {
             const { squirrel: s, child: c, rig } = window.__game;

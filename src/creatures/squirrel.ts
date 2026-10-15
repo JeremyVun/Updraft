@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { ease } from './motion';
-import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, PELVIS, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
+import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, META, PELVIS, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
 import { boundShape, type BoundShape } from './squirrel/bound';
 import { PATTERNS, SquirrelGait, type Support } from './squirrel/gait';
+import { Idle, type Still } from './squirrel/idle';
 import { SquirrelRig, STANCES, type Drives, type Stance, type StanceName } from './squirrel/pose';
 import { Route, type Floor, type Kind, type SquirrelPoint } from './squirrel/route';
 import { applySquirrelLook, coatShells, squirrelMaterial, type SquirrelLook } from './squirrel/shader';
+import { CallMarks } from '../fx/call-marks';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
 
@@ -42,7 +44,7 @@ export interface ActOptions {
   look?: THREE.Vector3 | null;
   /** Buried, diving or peeking: the tip of its tail left out of the leaves. */
   tailOut?: boolean;
-  /** Sitting: a nut in its paws. */
+  /** Sitting: nibbling at its acorn (by default), or only holding it. */
   nut?: boolean;
   /** Peeking: seconds its head stays up before it goes back under. */
   for?: number;
@@ -57,7 +59,12 @@ type Num = { [K in keyof Stance]: Stance[K] extends number ? K : never }[keyof S
 const NUMBERS = (Object.keys(STANCES.stand) as (keyof Stance)[]).filter((k) => typeof STANCES.stand[k] === 'number') as Num[];
 /** Its tail under the leaves: curled round its side and laid low, or with the last of it standing up out of them. */
 const TAIL_IN: Partial<Stance> = { tailLift: -0.28, tailCurve: 0.0, tailTip: 0.02, tailBend: 1.25 };
-const TAIL_OUT: Partial<Stance> = { tailLift: 0.6, tailCurve: 0.3, tailTip: 0.05, tailBend: 0.15 };
+const TAIL_OUT: Partial<Stance> = { tailLift: 1.15, tailCurve: 0.13, tailTip: -0.05, tailBend: 0.08 };
+/** A tell: its rump pushed up under the leaves and the whole plume stood straight up out of them to be waved. */
+const TAIL_TELL: Partial<Stance> = { bodyY: 0.058, pitch: -0.3, seat: false, tailLift: 1.45, tailCurve: 0.04, tailTip: -0.06, tailBend: 0 };
+/** How long a tell lasts, and the hop it turns round on the spot in, seconds. */
+const TELL = 1.6;
+const HOP = 0.24;
 /** Standing on the wool, every paw on the one line. */
 const ON_LINE: Partial<Stance> = { front: [0.002, 0.042], hind: [0.003, -0.012] };
 /** Springing out of the leaves: stretched out up and on, ears back, tail flung up behind. */
@@ -88,11 +95,17 @@ export class Squirrel {
   onLeaves: ((stir: LeafStir) => void) | null = null;
   /** QA: the furthest a planted paw moved in one frame, and the furthest a leg was asked to reach past its length. */
   readonly probe = { slip: 0, reach: 0, where: '' };
+  /** It has its acorn: in its paws while it sits or holds them up, in its teeth otherwise, hidden with it under the leaves. */
+  acorn = true;
   private readonly mesh: THREE.Mesh;
   private readonly mat: THREE.ShaderMaterial;
   private readonly rig = new SquirrelRig();
   private readonly gait = new SquirrelGait();
-  private readonly lookNow: SquirrelLook = { blink: 0, air: 0.6, nut: false };
+  private readonly lookNow: SquirrelLook = { blink: 0, air: 0.6, nut: true, carry: 1 };
+  private readonly idle = new Idle();
+  private readonly callMarks = new CallMarks(tuning.squirrel.calls);
+  private readonly callAt = new THREE.Vector3();
+  private callFor = 0;
   private readonly d: Drives;
   private readonly homes = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly runHomes = [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()];
@@ -124,6 +137,12 @@ export class Squirrel {
   private busyFor = 0;
   private seatOff = 0;
   private tailOut = false;
+  private nibbling = false;
+  private hopT = -1;
+  private hopFrom = 0;
+  private hopTurn = 0;
+  private hopDown = false;
+  private tellT = -1;
 
   private route: Route | null = null;
   private routeEnd: SquirrelPoint | null = null;
@@ -191,7 +210,7 @@ export class Squirrel {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.mesh];
+    return [this.mesh, this.callMarks.sprite];
   }
 
   /** True while it is on its way somewhere or in the middle of something it was asked to do. */
@@ -228,6 +247,7 @@ export class Squirrel {
     this.crossing = -1;
     this.airRise = 0;
     this.airPitch = 0;
+    this.stopFidgets();
     if (opts.look !== undefined) this.target = opts.look;
     if (name === 'dive') return this.dive(opts);
     if (name === 'burst') return this.burst(opts);
@@ -237,11 +257,12 @@ export class Squirrel {
     this.doing = name;
     if (name === 'buried' || name === 'peek') this.tailOut = opts.tailOut ?? (name === 'buried' ? false : this.tailOut);
     this.hold(stance, name === 'buried' ? (this.tailOut ? TAIL_OUT : TAIL_IN) : name === 'run-line' ? ON_LINE : null);
-    this.lookNow.nut = name === 'sit' && opts.nut !== false;
+    this.nibbling = name === 'sit' && opts.nut !== false;
     this.busyFor = 0;
     if (name === 'peek') {
       this.peekT = 0;
       this.peekFor = opts.for ?? 1.6;
+      this.chuckIn = 0.3;
       this.stir('peek', 0.2, this.at);
     }
     if (name === 'scold') {
@@ -282,13 +303,44 @@ export class Squirrel {
     this.pace = opts.pace ?? 1;
     this.mode = 'travel';
     this.stoppedOn = null;
-    this.lookNow.nut = false;
+    this.stopFidgets();
     this.busyFor = 0;
     this.seg = this.route.sample(0, this.v, this.upWant, this.fwdWant);
     this.kind = this.route.kind(this.seg, 'from');
     this.doing = this.kind === 'trunk' ? 'climb' : this.kind === 'line' ? 'run-line' : 'bound';
     this.hold(KIND_STANCE[this.kind], null);
     for (let i = 0; i < 4; i++) this.runHomes[i].set(...(i < 2 ? PATTERNS[this.kind].front : PATTERNS[this.kind].hind));
+  }
+
+  /**
+   * A tell for whoever is looking for it. Buried, its whole tail pops up out of the leaves and waves hard with a
+   * chitter, then settles back to lying out over them or tucked in (`tailOut`, by default as it was); on a trunk it
+   * chucks and flicks its tail. Busy while it does; false, and nothing done, if it is neither buried nor on a trunk.
+   */
+  tell(opts: { tailOut?: boolean } = {}): boolean {
+    if (this.mode !== 'hold' || (this.doing !== 'buried' && this.doing !== 'climb')) return false;
+    if (opts.tailOut !== undefined) this.tailOut = opts.tailOut;
+    this.stopFidgets();
+    this.tellT = 0;
+    this.busyFor = TELL;
+    if (this.doing === 'buried') {
+      this.hold('buried', TAIL_TELL);
+      this.stir('peek', 0.12, this.at);
+      this.call('chitter', 1);
+    } else {
+      this.idle.flick(5);
+      this.chuckT = 0;
+      this.call('chuck', 0.9);
+    }
+    this.callFor = Math.max(this.callFor, TELL);
+    return true;
+  }
+
+  /** Chucks, chitters or squeaks now, its call marks up over it a moment (a chitter's twice as long). */
+  call(kind: 'chuck' | 'chitter' | 'squeak', amount: number): void {
+    this.heard.push({ kind, amount });
+    const hold = tuning.squirrel.calls.hold;
+    this.callFor = Math.max(this.callFor, kind === 'chitter' ? hold * 2 : hold);
   }
 
   /** Under the leaves at `at`, the tip of its tail out of them or not. */
@@ -308,7 +360,11 @@ export class Squirrel {
 
   update(dt: number, time: number): void {
     this.mesh.visible = this.visible;
-    if (!this.visible) return;
+    if (!this.visible) {
+      this.callFor = 0;
+      this.callMarks.hide();
+      return;
+    }
     this.time = time;
     this.busyFor = Math.max(0, this.busyFor - dt);
     this.support.scale = this.scale;
@@ -323,6 +379,49 @@ export class Squirrel {
     this.placed = false;
     this.position.copy(this.at);
     this.yaw = Math.atan2(this.fwd.x, this.fwd.z);
+    this.showCalls(dt);
+  }
+
+  /** Its call marks over it while it calls; buried, they rise out of the leaves over it. */
+  private showCalls(dt: number): void {
+    const look = tuning.squirrel.calls;
+    this.callFor = Math.max(0, this.callFor - dt);
+    const size = this.scale / 3.6;
+    if (this.doing === 'buried' || this.doing === 'dive') this.callAt.copy(this.at).addScaledVector(this.up, look.buried * size);
+    else this.eye(this.callAt);
+    this.callMarks.update(dt, this.callAt, this.callFor > 0 ? 1 : 0, Math.sqrt(size));
+  }
+
+  /** Whatever fidget, hop or tell it was in the middle of is over. */
+  private stopFidgets(): void {
+    this.idle.reset();
+    this.tellT = -1;
+    if (this.hopT >= 0) this.airRise = 0;
+    this.hopT = -1;
+  }
+
+  /** How it is holding still, if it is one of the ways that fidget. */
+  private still(): Still | null {
+    if (this.mode !== 'hold' || this.tellT >= 0 || this.settled < 0.5) return null;
+    switch (this.doing) {
+      case 'stand':
+      case 'sit':
+      case 'perch':
+      case 'freeze':
+        return this.doing;
+      case 'run-line':
+        return 'perch';
+      case 'climb':
+        return 'climb';
+      case 'buried':
+        return this.tailOut ? 'buried' : null;
+      default:
+        return null;
+    }
+  }
+
+  private get canHop(): boolean {
+    return (this.doing === 'stand' || this.doing === 'sit') && this.up.y > 0.9 && this.radius === 0 && this.floor !== null;
   }
 
   private place(at: THREE.Vector3, yaw: number, opts: ActOptions): void {
@@ -459,7 +558,6 @@ export class Squirrel {
     this.doing = 'dive';
     this.radius = 0;
     this.stoppedOn = null;
-    this.lookNow.nut = false;
     this.hold('crouch', null);
     return true;
   }
@@ -481,10 +579,9 @@ export class Squirrel {
     this.doing = 'burst';
     this.radius = 0;
     this.stoppedOn = null;
-    this.lookNow.nut = false;
     this.hold('dive', SPRING);
     this.stir('burst', 1, this.at);
-    this.heard.push({ kind: 'squeak', amount: 1 });
+    this.call('squeak', 1);
     this.blinkT = -1;
     return true;
   }
@@ -528,16 +625,28 @@ export class Squirrel {
     }
   }
 
-  /** Holding still: a peek runs its course, a scold its bouts of chucks, a sit its nibbling. */
+  /** Holding still: a peek runs its course with a chuck at what it sees, a scold its bouts of chucks, a sit its nibbling, a tell its waving. */
   private stay(dt: number): void {
+    this.chuckT += dt;
     if (this.doing === 'peek') {
       this.peekT += dt;
+      if (this.chuckIn > 0 && (this.chuckIn -= dt) <= 0) {
+        this.chuckT = 0;
+        this.call('chuck', 0.6);
+      }
       if (this.peekT >= this.peekFor) {
         this.doing = 'buried';
         this.hold('buried', this.tailOut ? TAIL_OUT : TAIL_IN);
       }
     }
-    this.chuckT += dt;
+    if (this.tellT >= 0) {
+      this.tellT += dt;
+      if (this.tellT >= TELL) {
+        this.tellT = -1;
+        if (this.doing === 'buried') this.hold('buried', this.tailOut ? TAIL_OUT : TAIL_IN);
+      }
+    }
+    this.hop(dt);
     if (this.doing === 'scold') {
       this.chuckIn -= dt;
       if (this.chuckIn <= 0) {
@@ -545,11 +654,11 @@ export class Squirrel {
         this.chucksLeft--;
         this.chuckT = 0;
         const chitter = this.chucksLeft === 0 && Math.random() < 0.35;
-        this.heard.push({ kind: chitter ? 'chitter' : 'chuck', amount: 0.85 + Math.random() * 0.3 });
+        this.call(chitter ? 'chitter' : 'chuck', 0.85 + Math.random() * 0.3);
         this.chuckIn = this.chucksLeft > 0 ? 0.13 + Math.random() * 0.06 : (chitter ? 1.1 : 0.55) + Math.random() * 0.6;
       }
     }
-    if (this.doing === 'sit' && this.lookNow.nut) {
+    if (this.doing === 'sit' && this.nibbling && this.acorn) {
       this.biteT -= dt;
       if (this.biteT <= 0) {
         this.biting = !this.biting;
@@ -563,6 +672,37 @@ export class Squirrel {
     }
   }
 
+  /** A hop round on the spot when it fidgets: up off all four paws together, turned, and down again. */
+  private hop(dt: number): void {
+    const turn = this.idle.takeHop();
+    if (turn && this.canHop && this.hopT < 0 && this.level()) {
+      this.hopT = 0;
+      this.stoppedOn = null;
+      this.hopFrom = Math.atan2(this.fwd.x, this.fwd.z);
+      this.hopTurn = turn;
+    }
+    if (this.hopT < 0) return;
+    this.hopT += dt;
+    const u = Math.min(1, this.hopT / HOP);
+    const yaw = this.hopFrom + this.hopTurn * smooth(u);
+    this.fwd.set(Math.sin(yaw), 0, Math.cos(yaw));
+    this.fwdWant.copy(this.fwd);
+    this.airRise = Math.sin(Math.PI * u) * (this.doing === 'sit' ? 0.012 : 0.02) * this.scale;
+    if (u < 1) return;
+    this.hopT = -1;
+    this.airRise = 0;
+    this.hopDown = true;
+  }
+
+  /** Whether its floor is near enough flat all round it to hop round on: not the round top of a log. */
+  private level(): boolean {
+    const r = 0.07 * this.scale;
+    const most = 0.012 * this.scale;
+    const { x, y, z } = this.at;
+    return Math.abs(this.floorAt(x + r, z) - y) < most && Math.abs(this.floorAt(x - r, z) - y) < most
+      && Math.abs(this.floorAt(x, z + r) - y) < most && Math.abs(this.floorAt(x, z - r) - y) < most;
+  }
+
   private ease(dt: number): void {
     const rate = this.placed || this.settled < 0.05 ? 1e3 : this.mode === 'air' ? 18 : tuning.squirrel.snap;
     this.settled += dt;
@@ -574,10 +714,12 @@ export class Squirrel {
     this.now.seat = this.want.seat;
   }
 
-  /** What makes it alive while it holds still: quick breath, blinks, an ear flicked at a sound, glances in sudden snaps. */
+  /** What makes it alive while it holds still: quick breath, blinks, an ear flicked at a sound, glances in sudden snaps, its fidgets. */
   private life(dt: number): void {
     const frozen = this.doing === 'freeze' || this.doing === 'burst';
     const going = this.mode !== 'hold';
+    const still = this.still();
+    this.idle.update(dt, still, this.canHop);
     this.nextBlink -= dt;
     if (this.nextBlink <= 0 && this.blinkT < 0) {
       this.blinkT = 0;
@@ -588,20 +730,21 @@ export class Squirrel {
       if (this.blinkT > 0.12) this.blinkT = -1;
     }
     this.nextGlance -= dt;
-    if (this.nextGlance <= 0) {
+    if (still && still !== 'buried') this.glance.copy(this.idle.glance).multiplyScalar(this.target ? 0.5 : 1);
+    else if (this.nextGlance <= 0) {
       const wide = this.doing === 'peek' ? 1.2 : this.target ? 0.25 : 0.9;
       this.glance.set((Math.random() - 0.5) * wide, (Math.random() - 0.45) * 0.4 * wide);
       this.nextGlance = this.doing === 'peek' ? 0.3 + Math.random() * 0.5 : 0.5 + Math.random() * 2;
     }
     const snap = 1 - Math.exp(-dt * tuning.squirrel.glanceSnap);
-    const still = frozen || going ? 0 : 1;
-    this.glanceNow.x += (this.glance.x * still - this.glanceNow.x) * snap;
-    this.glanceNow.y += (this.glance.y * still - this.glanceNow.y) * snap;
+    const looking = going || (frozen && !still) ? 0 : 1;
+    this.glanceNow.x += (this.glance.x * looking - this.glanceNow.x) * snap;
+    this.glanceNow.y += (this.glance.y * looking - this.glanceNow.y) * snap;
     const twitch = (x: number) => (Math.random() < dt * (frozen ? 0 : this.doing === 'scold' ? 1.2 : 0.35) ? 1 : x * Math.exp(-dt * 9));
-    this.twitchL = twitch(this.twitchL);
-    this.twitchR = twitch(this.twitchR);
+    this.twitchL = Math.max(twitch(this.twitchL), this.idle.earL);
+    this.twitchR = Math.max(twitch(this.twitchR), this.idle.earR);
     this.d.breath += dt * (frozen || going ? 7 : 4.2);
-    this.d.tailWave += dt * (this.kind === 'line' && going ? 2.4 : 1.6);
+    this.d.tailWave += dt * (this.tellT >= 0 ? TAU * 2.6 : this.kind === 'line' && going ? 2.4 : 1.6);
   }
 
   private drive(dt: number): void {
@@ -664,10 +807,32 @@ export class Squirrel {
       tailFlick = 0.9 * pulse;
       tailLift += 0.2 * pulse;
     }
-    if (this.doing === 'sit' && this.lookNow.nut) {
+    if (this.doing === 'peek') jaw = 0.8 * (this.chuckT < 0.09 ? Math.sin((this.chuckT / 0.09) * Math.PI) : 0);
+    const nibbling = this.doing === 'sit' && this.nibbling && this.acorn;
+    if (nibbling) {
       const bite = this.biting ? Math.max(0, Math.sin(this.time * TAU * 6.5)) : 0;
       jaw = s.jaw + bite * 0.14;
       headPitch += this.biting ? -0.12 : 0.05;
+    }
+    if (this.mode === 'hold') {
+      const f = this.idle;
+      tailLift += f.tailLift;
+      tailFlick += f.tailFlick;
+      d.tailRipple = f.ripple;
+      d.tailRipplePhase = f.ripplePhase;
+      bodyY -= 0.005 * f.bob;
+      pitch += 0.1 * f.bob;
+      if (this.doing === 'climb' && this.tellT >= 0) jaw = 0.8 * (this.chuckT < 0.09 ? Math.sin((this.chuckT / 0.09) * Math.PI) : 0);
+    }
+    let wave = this.mode === 'travel' ? 0 : this.doing === 'buried' ? (this.tailOut ? 0.08 : 0) : 0.035;
+    if (this.tellT >= 0 && this.doing === 'buried') {
+      /** Waved hard from side to side, a flick running up it at each turn. */
+      const t = this.tellT;
+      const on = smooth(t / 0.15) * (1 - smooth((t - TELL + 0.4) / 0.4));
+      wave += 0.3 * on;
+      tailFlick += 0.6 * Math.abs(Math.sin(TAU * 2.6 * t)) * on;
+      d.tailRipple = 0.3 * on;
+      d.tailRipplePhase = TAU * 5.2 * t;
     }
     d.bodyX = 0;
     d.bodyY = bodyY + this.seatOff;
@@ -687,7 +852,7 @@ export class Squirrel {
     d.tailTip = s.tailTip;
     d.tailBend = s.tailBend;
     d.tailSwing = tailSwing;
-    d.tailWaveSize = this.doing === 'buried' || this.mode === 'travel' ? 0 : 0.035;
+    d.tailWaveSize = wave;
     d.tailFlick = tailFlick;
     d.hold = s.hold;
     d.holdHigh = s.holdHigh;
@@ -702,13 +867,15 @@ export class Squirrel {
     }
     d.headYaw = headYaw;
     d.headPitch = headPitch;
-    d.headRoll = this.lookNow.nut ? -0.12 : 0;
+    d.headRoll = nibbling ? -0.12 : 0;
 
     this.paws(dt);
     this.rig.pose(d);
     this.seat(dt);
     this.lookNow.blink = this.blinkT >= 0 ? Math.sin((this.blinkT / 0.12) * Math.PI) : 0;
     this.lookNow.air = this.up.y > 0.9 && !this.radius ? 0.6 : 1;
+    this.lookNow.nut = this.acorn;
+    this.lookNow.carry = 1 - clamp(this.now.hold / 0.6, 0, 1);
     applySquirrelLook(this.mat, this.lookNow, this.rig.nodes[HEAD].getWorldQuaternion(this.q));
   }
 
@@ -737,12 +904,19 @@ export class Squirrel {
           p.addScaledVector(this.side, this.radius * Math.sin(a) - across).addScaledVector(this.up, -this.radius * (1 - Math.cos(a)));
         }
         if (this.stoppedOn) this.stoppedOn(p);
-        else if (this.up.y > 0.9) p.y = this.floorAt(p.x, p.z);
-        p.addScaledVector(this.up, lift + (this.mode === 'air' ? this.airRise : 0));
+        else if (this.up.y > 0.9) {
+          p.y = this.floorAt(p.x, p.z);
+          if (!front) this.heelUp(i - 2, p);
+        }
+        p.addScaledVector(this.up, lift + (this.mode === 'air' || this.hopT >= 0 ? this.airRise : 0));
       }
       if (this.placed) g.reset(this.homes);
-      else if (this.mode === 'air') g.lift(this.homes, s.curl);
-      else {
+      else if (this.mode === 'air' || this.hopT >= 0) g.lift(this.homes, s.curl);
+      else if (this.hopDown) {
+        this.hopDown = false;
+        g.reset(this.homes);
+        this.heard.push({ kind: 'patter', amount: 0.5 });
+      } else {
         g.hold(dt, this.homes, this.up, 0.014 * k, 0.003 * k);
         if (g.landed.length && this.doing !== 'buried') this.heard.push({ kind: this.up.y < 0.7 ? 'claw' : 'patter', amount: 0.3 });
       }
@@ -751,6 +925,15 @@ export class Squirrel {
       const p = g.paws[i];
       this.d.paws[i].curl = i < 2 && (p.planted || this.mode === 'air') ? Math.max(s.curl, p.curl) : p.curl;
     }
+  }
+
+  /** Where the floor rises behind a hind toe, as on the round of a log, the heel is raised off it rather than sunk in. */
+  private heelUp(leg: number, toe: THREE.Vector3): void {
+    const tilt = this.d.hock[leg];
+    const long = META * this.scale;
+    const back = Math.sin(tilt) * long;
+    const rise = this.floorAt(toe.x - this.fwd.x * back, toe.z - this.fwd.z * back) - toe.y;
+    if (rise > 0) this.d.hock[leg] = Math.acos(clamp(Math.cos(tilt) + rise / long, -1, 1));
   }
 
   private tread(): void {
@@ -773,7 +956,7 @@ export class Squirrel {
    */
   private seat(dt: number): void {
     const s = this.now;
-    if (this.mode === 'air') return;
+    if (this.mode === 'air' || this.hopT >= 0) return;
     let want = 0;
     if (s.seat && this.up.y > 0.9) {
       const low = this.lowest();
