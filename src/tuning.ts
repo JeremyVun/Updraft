@@ -66,35 +66,62 @@ export const tuning = {
     seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
     /** `village_approach.ogg` opens on 0.2 s of silence and then its loudest note, so it comes in at full level. */
     villageArrivalFadeIn: 0,
+    /** Sleeping's lullaby opens on near-silence and a soft first note, so it too comes in at full level. */
+    sleepingArrivalFadeIn: 0,
     /** Seconds after the boat leaves the Mirror that `home.ogg` begins, from its first second. */
     homeStartAfter: 12.5,
     /**
-     * The Mirror stops at the latest phrase seam (`MIRROR_SEAMS`) at least `mirrorSeamLead` before Home and at least
-     * `mirrorSeamSoonest` after leaving, fading over `mirrorSeamRelease` into it. Failing that, the earliest seam still
-     * `mirrorSeamLatest` before Home; failing that, a `mirrorFallbackFade` fade at once.
+     * As the cygnet is set down, Home goes on into its own quiet opening (`HOME_ASK`) at the first cycle seam from
+     * `homeAskEarly` before the set-down to `homeAskWithin` after it; with none then it fades over `fogFade` as the ask
+     * begins and the opening follows. The opening loops while the cygnet asks. At the updraft's success it hands over
+     * at its next exit to the first attack of `HOME_ENDING.passages`, and the ending's clock is set so that attack lands
+     * `homeJumpAt` into it and the success no later than `homeAnswerBy`. Later passages take over attack to attack, the
+     * one before fading over `homeSpliceFade`; each passage, the first too, rises over `homeSpliceFadeIn`, which keeps
+     * one that begins mid-breath from clicking. Each pass of the opening is cut over `homeSeamCut` into the rest before
+     * the next attack; the one exit with no rest breathes over `homeBreathRelease`. The sound places that exit within
+     * `homeExitSnap` of where the story's clock puts it. With no opening sounding, a pass still sounding ends at a seam
+     * within `homeQuickFade` or fades over it, and the return joins after it, at its place in the phrase, rising over
+     * `homeQuickFadeIn`.
      */
-    mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorSeamLatest: 1, mirrorFallbackFade: 3,
+    homeJumpAt: .5, homeQuickFade: 1.5, homeQuickFadeIn: .4,
+    homeAskEarly: 2, homeAskWithin: 16, homeSeamCut: .06, homeAnswerBy: .5, homeSpliceFade: .01, homeSpliceFadeIn: .004,
+    homeBreathRelease: .35, homeExitSnap: .1,
+    /**
+     * The Mirror stops at the latest phrase seam (`MIRROR_SEAMS`) at least `mirrorSeamLead` before Home and at least
+     * `mirrorSeamSoonest` after leaving, fading over up to `mirrorFade` into it; failing that, a `mirrorFade` fade at
+     * once. Other recordings fade into a seam over up to `mirrorSeamRelease`.
+     */
+    mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorFade: 3,
+    /** Sleeping's fog takes the climb theme at its next seam within `fogSeamWithin`, or fades it over `fogFade`. */
+    fogSeamWithin: 6, fogFade: 3,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3,
+      sleeping: -12.7, cygnetBrave: -14 },
     recordedMusicFade: .65,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
      * Recordings played once rather than looped: from `from` seconds where given, to `end`, fading out over the last
      * `fadeOut`. `enterFrom` starts an on-time start at that share of its level, rising to full over `enterOver`.
-     * `holdsHandoff` keeps the next room's music waiting until the end fade is done.
+     * `holdsHandoff` keeps the next room's music waiting until the end fade is done. `ending` hands over at `at`
+     * seconds, crossfading over `crossfade`, to a derived file that carries the recording's time line on from `from`.
      */
     recordedMusicOnce: {
       stillDeparture: { end: 118, fadeOut: 4, holdsHandoff: false },
       clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 1.75, holdsHandoff: true },
       /** To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. */
       villageApproach: { end: 36.93, fadeOut: .5, holdsHandoff: false },
-      /** Just before the attack at 8.0 s to just before the next at 54.1 s, coming in slowly after the last bell. */
-      belfry: { from: 7.97, end: 54.05, fadeOut: 2, enterFrom: 0, enterOver: 5, holdsHandoff: false },
-    } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean }>>,
+      /**
+       * From just before the attack at 8.0 s, coming in slowly after the last bell. `belfry_ending.ogg` (46.0–54.05 s
+       * slowing over its last 3 s, its fade baked in) takes over in the quiet before the attack at 50.275 s.
+       */
+      belfry: { from: 7.97, end: 55.0315, fadeOut: 0, enterFrom: 0, enterOver: 5, holdsHandoff: false,
+        ending: { from: 46, at: 50.24, crossfade: .03 } },
+    } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean;
+      ending?: { from: number; at: number; crossfade: number } }>>,
     /** Going up into the white, a birches pass still playing stops over this long. */
     birchesCloudFade: 1,
     /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
@@ -138,6 +165,8 @@ export const tuning = {
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
     playerWindEase: .5, playerWindDb: -6, grassRustleDb: -9,
+    /** On Home's island the player's wind (gust, whistle and updraft rush) sits this much louder. */
+    homePlayerWindDb: 4,
     windDb: -3,
     /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
@@ -253,12 +282,16 @@ export const tuning = {
   homeReveal: {
     /** A slight angle keeps the real cottage natural while echoing the drawing's front. */
     cottageTurn: -0.12,
+    /** Seconds the child watches the family go before walking on: long enough for the V to grow small. */
+    watchFlockFor: 13,
+    /** Her run down to the door, as a share of her usual running speed. */
+    runHomePace: 0.815,
     /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
     stopAfter: 24,
     /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
-    recogniseFor: 8,
+    recogniseFor: 6,
     lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.04,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
@@ -993,6 +1026,11 @@ export const tuning = {
   summit: {
     /** A tangent approach, then a readable circuit before the small one asks to join. */
     arriveAt: 1.5, turnAt: 5, callAt: 14, setDownAt: 17,
+    /**
+     * The summit begins short of the top, with the last of the climb slowed to `topPace`, so the child reaches the top
+     * `swansIn` after it begins, as the family first flies into frame, and stops because of them.
+     */
+    swansIn: 3.1, topPace: 0.5,
     wheelRadius: 22, wheelAhead: 38, wheelHeight: 13,
     arrivalBack: 32, portraitBack: 64, arrivalRise: 7, arrivalLookAhead: 22,
     flightSide: -7, flightBack: 20, flightEye: 4, flightLookUp: 2.6, flightLookAhead: 5,
@@ -1008,6 +1046,8 @@ export const tuning = {
     sink: 1.4,
     rise: 0.9,
     liftTo: 5.5,
+    /** Once the family answers it holds itself up on its wings, sinking only this slowly while the music comes back. */
+    answeredSink: 0.3,
     callEvery: 9,
     /** While it is up, the invitation keeps winding round it at least this insistently, and this much of it shows under the player's own trace. */
     coaxAloft: 0.7,
@@ -3277,6 +3317,12 @@ export const tuning = {
     winterFirstCold: .16,
     winterBedCold: .65,
     winterBeginsAt: 2.1,
+    /**
+     * Winter waits for the bedtime lullaby: the frost comes at least `frostRest` after it ends, and at most
+     * `frostWaitMost` later than `winterBeginsAt`. Everything from the bird's first try on waits with it.
+     */
+    frostRest: 1.5,
+    frostWaitMost: 12,
     winterArrivesFor: 8.6,
     winterBreeze: 1.05,
     winterGreen: .66,

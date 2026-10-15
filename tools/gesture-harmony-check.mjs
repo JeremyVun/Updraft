@@ -21,11 +21,11 @@ try {
     cases.push(...plain,{name:'boats',state:{music:'boats'},key:'boatsScore',seconds:BOATS_PHRASE_SECONDS,
       changes:BOATS_CHORDS.map((_,i)=>i*4.5),harmony:(at,score)=>BOATS_CHORDS[Math.floor(Math.max(0,at-score.epoch)%BOATS_PHRASE_SECONDS/4.5)]});
     for(const [file,key,music,table] of [['lines','linesScore','lines','LINES_SECTIONS'],['birches','birchesScore','birches','BIRCHES_SECTIONS'],
-      ['meadow','meadowScore','meadow','MEADOW_SECTIONS'],['sleeping','sleepingScore','wood','SLEEPING_SECTIONS'],['sea','seaScore','sea','SEA_SECTIONS']]) {
+      ['meadow','meadowScore','meadow','MEADOW_SECTIONS'],['sea','seaScore','sea','SEA_SECTIONS']]) {
       const module=await productionModule(`/src/audio/${file}-score.ts`);
       for(const [phase,pattern] of Object.entries(module[table])) {
         const chords=file==='sea'?pattern.chords.map(([at,index])=>({at,tones:module.SEA_CHORDS[index]})):pattern.chords;
-        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase,sleepingWind:file==='sleeping'&&phase==='climb'},key,seconds:pattern.seconds,
+        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase},key,seconds:pattern.seconds,
           changes:chords.map(c=>c.at),harmony:(at,score)=>{
             if(!chords.length)return [50,57,64,69];
             const local=phrasePosition(pattern,score.current.epoch,at);
@@ -33,6 +33,10 @@ try {
           }});
       }
     }
+    // Sleeping's recordings keep one set of chime tones; only the feather climb answers gestures.
+    const {SLEEPING_CHIME_TONES}=await productionModule('/src/audio/sleeping-music.ts');
+    for(const phase of ['shelter','cold','climb','summit','morning'])cases.push({name:`sleeping/${phase}`,
+      state:{music:'wood',sleepingScore:phase,sleepingWind:phase==='climb'},seconds:32,changes:[0,8,16,24],harmony:()=>SLEEPING_CHIME_TONES});
     let notes=0,boundaryNotes=0;
     for(const c of cases) {
       const {ctx,sound}=offlineSound(1),events=[];
@@ -62,20 +66,19 @@ try {
       notes+=events.length;
       delete ctx.currentTime;
     }
-    check(boundaryNotes>0,'Queued notes crossing a chord boundary use the next harmony');
+    // The forest's whole scale and Sleeping's fixed tones never change under a queued note.
+    check(boundaryNotes===0,'No chiming scene changes harmony under a queued note');
     const {ctx,sound}=offlineSound(1),events=[];
     sound.chime=(...args)=>events.push(args);
     const tick=(now,state)=>{Object.defineProperty(ctx,'currentTime',{configurable:true,value:now});sound.update(.1,{...baseState,...state});};
     tick(0,{music:'wood',sleepingScore:'climb'});
     for (let now=.1; now<10; now+=.1) tick(now,{music:'wood',sleepingScore:'climb',sleepingWind:true,gust:26,charge:.8});
     check(events.length>=7&&events.length<=9,'Feather climb offers sparse notes, at most once every four pulses');
-    check(events.every(e=>e[5]&&Math.abs(e[1]-(.25+.8*.35)*.7)<1e-9&&pitchIn(e[0],sound.sleepingScore.chordAt(e[3]))),'Feather climb uses a soft, quiet voice following its own score');
+    check(events.every(e=>e[5]&&Math.abs(e[1]-(.25+.8*.35)*.7)<1e-9&&pitchIn(e[0],SLEEPING_CHIME_TONES)),'Feather climb uses a soft, quiet voice on C, E♭, G and A♭');
     events.length=0;tick(11,{music:'wood',sleepingScore:'climb',sleepingWind:true,gliderLift:1});
     check(events.length===0,'The stowed glider cannot add chimes during the feather climb');
     tick(12,{music:'wood',sleepingScore:'climb'});
-    const climb=sound.sleepingScore.current, epoch=climb.epoch;
     tick(13,{music:'wood',sleepingScore:'summit',gust:20,charge:.8});
-    check(sound.sleepingScore.current===climb&&climb.epoch===epoch,'Sleeping carries the ongoing harmony and clock through the summit');
     check(events.length===0,'Sleeping summit wind has no chimes');
     events.length=0;tick(15,{music:'wood',forestWind:true,caringWind:true,gust:20,charge:.8,gliderLift:.8});
     check(events.length>0&&events.every(e=>e[5]===true&&e[1]<.4&&pitchIn(e[0],[38,45])),'Forest rescue keeps its quiet caring timbre and stable harmony');

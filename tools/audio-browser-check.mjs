@@ -38,19 +38,19 @@ try {
     await page.waitForFunction(() => audioStates.length >= 6);
     // A departure holds a musical rest before the crossing's arrangement enters.
     if (name === 'boats') await page.waitForFunction(() => __game.sound.boatsScore?.source?.buffer, null, { timeout: 20000 });
-    if (name === 'toMirror') await page.waitForFunction(() => __game.sound.seaMusic && !__game.sound.sleepingScore, null, { timeout: 20000 });
+    if (name === 'toMirror') await page.waitForFunction(() => __game.sound.seaMusic && !__game.sound.sleepingMusic, null, { timeout: 20000 });
     const state = await page.evaluate(() => ({ name: __game.story.name, audio: audioStates.at(-1), sounds: materials,
       boatsScore: !!__game.sound.boatsScore, boatsPlaying: !!__game.sound.boatsScore?.source?.buffer,
       seaMusic: !!__game.sound.seaMusic,
-      sleepingScore: __game.sound.sleepingScore?.current?.phase }));
+      sleepingMusic: !!__game.sound.sleepingMusic }));
     if (name === 'boats') {
       assert.equal(state.audio.music, 'boats', 'Little Boats selects its approved composition');
       assert(state.boatsScore && state.boatsPlaying, 'Little Boats starts sounding in the real game loop');
     } else assert.equal(state.boatsScore, false, `${name}: Little Boats score cannot leak into another chapter`);
     if (name === 'toMirror') assert(state.seaMusic && state.audio.seaMusicTime !== undefined, 'The open sea prepares its recording on the passage clock');
     else assert.equal(state.seaMusic, false, `${name}: the sea's recording cannot leak into other chapters`);
-    if (name === 'sleeping') assert.equal(state.sleepingScore, 'shelter', 'Sleeping enters its approved bedside arrangement');
-    else assert.equal(state.sleepingScore, undefined, `${name}: Sleeping arrangement cannot leak into another chapter`);
+    if (name === 'sleeping') assert.equal(state.sleepingMusic, true, 'Sleeping enters its recordings at bedtime');
+    else assert.equal(state.sleepingMusic, false, `${name}: Sleeping's recordings cannot leak into another chapter`);
     for (const field of ['land', 'sea', 'meadow', 'cold']) assert(Number.isFinite(state.audio[field]), `${name}: finite ${field}`);
     for (const source of [state.audio.cygnet, state.audio.flock]) {
       assert(Number.isFinite(source.pan) && Number.isFinite(source.distance), `${name}: valid positioned source`);
@@ -100,7 +100,7 @@ try {
   await page.waitForFunction(() => audioStates.length >= 4);
   assert.equal(await page.evaluate(() => audioStates.at(-1).music), 'sea');
   assert.equal(await page.evaluate(() => __game.sound.seaMusic), null, 'Sleeping morning does not borrow the sea\'s recording');
-  assert.equal(await page.evaluate(() => __game.sound.sleepingScore.current.phase), 'morning', 'Restoring morning selects the approved warm answer');
+  assert(await page.evaluate(() => !__game.sound.sleepingMusic?.lullaby && !__game.sound.sleepingMusic?.brave), 'Restoring morning stays silent until the sea');
   assert.equal(await page.evaluate(() => audioStates.at(-1).sleepingWind), false, 'Sleeping morning has no gesture chimes');
   await page.evaluate(() => {
     __game.story.current.restoreCheckpoint('feather');

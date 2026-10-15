@@ -49,7 +49,7 @@ const OBSTACLES = [...ROCKS, { x: TREE.x, z: TREE.z, radius: 1.3 }];
 export type { Deck } from '../world/decks';
 /** Where the paper's grip sits when it is put away: against the bag's outer face, low enough that the bird shows above it. */
 export const PAPER_STOW = new THREE.Vector3(0.06, 0.48, -0.69);
-const WALK = 2.6;
+export const WALK = 2.6;
 const RUN = 5.4;
 const TURN_RATE = 7;
 const SHADOW_FRAG = /* glsl */ `
@@ -105,6 +105,8 @@ export class Traveller {
   presenting = 0;
   /** Walking speed as a share of the usual: slowed for a walk nothing hurries. */
   stroll = 1;
+  /** Her running speed, as a share of the usual. */
+  runPace = 1;
   /** Where the child is looking, if anywhere in particular. */
   lookAt: THREE.Vector3 | null = null;
   /** Down on their knees with the hem of the coat on the ground, 0 to 1: the height a child talks to something small at. */
@@ -774,7 +776,7 @@ export class Traveller {
         this.goal = null;
         g.onArrive?.();
       } else {
-        target = (g.run ? RUN : WALK * this.stroll) * Math.min(1, da / 1.5 + 0.3);
+        target = (g.run ? RUN * this.runPace : WALK * this.stroll) * Math.min(1, da / 1.5 + 0.3);
         const want = this.steer(Math.atan2(dx, dz), da);
         let dy = want - this.yaw;
         dy = Math.atan2(Math.sin(dy), Math.cos(dy));

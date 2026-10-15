@@ -3127,3 +3127,86 @@ Jeremy asked to fix the two pre-existing failures; his exact request is in `desi
 Evidence: `/tmp/updraft-baseline-fixes-hVoE9o/`. Related meadow route, plane, piano framing, flock flight and
 camera-direction checks pass. This work changes the pond framing and test fixtures, not the village's approved
 camera, mist, sound or animation.
+
+### The belfry goodbye (2026-10-15)
+
+Design, Jeremy's words and rulings: [design.md](design.md) § "The belfry goodbye". After the fourth ring's answer
+she says goodbye to the mother cat (it rubs its cheek along her mitten), the ginger kitten at her side and the
+cygnet looking out of the satchel at the cat; `belfry.ogg` fades in as she kneels; then `goDown` as today. About
+10 s from the fourth answer to her turning to the ivy, framed by a new low view just above the west sill.
+Run the phases in order; G1a and G1b may not overlap with G2 because both edit `drowned-church.ts`.
+
+#### Phase G1a: the cat's goodbye — not started
+
+**Owns:** `src/creatures/cat.ts` and `src/creatures/cat/pose.ts` (the nuzzle and an approach to a hand), the QA
+stage's cat actions in `src/story/cat-yard.ts`, `tools/cat-check.mjs`.
+
+**Does:** an approach that walks a still or curled cat to a hand and stops with its head under it (the head about
+0.55 m from the child's chest at her kneeling scale, turned toward a given side); a nuzzle that, once there, presses
+forward and rubs the cheek along the hand toward that side, eyes shut in a slow blink, held for as long as asked and
+released cleanly back to standing or sitting. Today `nuzzle(hand)` only aims a still cat's head (lids 0.9).
+
+**Seams:** existing cat actions and the cat-yard nuzzle precedent (~lines 333–343) keep working; no change to the
+drowned story yet.
+
+**Verify:** `play('cat:<new action>')` on `?chapter=stage` with the child kneeling and reaching; `tools/cat-check.mjs`
+stills and a motion strip; skinned-vertex contact: the mitten within about 0.05 m of the cat's cheek during the rub,
+no paw sliding, no clipping through her coat.
+
+#### Phase G1b: the goodbye step — not started
+
+**Owns:** `src/story/drowned-church.ts` (a `goodbye` step between `ring` and `down`), `src/story/drowned.ts`
+(the music trigger), the goodbye knobs in `tuning.drowned.church`, `tools/drowned-run-check.mjs` and the village music
+checks' expectations.
+
+**Does:** after the fourth answer the step, not `answerFor`, leads to `goDown`. She turns from the arch away from the
+lens (her face never toward it), walks to the kneel spot (design.md positions), kneels, reaches out her lens-side
+mitten; the mother cat gets up and comes to the hand (G1a) and rubs, with a slow blink; the ginger kitten comes to
+her hip; the other two keep their tumbling clear of the mother; the cygnet lifts its head out of the satchel and
+watches the cat without flinching. She draws back her hand and stands, and `goDown` runs unchanged. The step owns her
+`lookAt`, `lean`, `kneeling` and `reachFor` every frame. Fog, lantern glow and the boat at the end of its home way
+keep their after-ring state through it. `belfry.ogg` starts from the kneel (today `bellsRung` turns on at the fourth
+ring), with its existing 5 s fade-in. `seeOff` later starts from wherever the goodbye leaves the cat and kitten.
+
+**Seams:** bell input after the fourth ring stays ignored; the `belfry` checkpoint still resumes at `sea` and plays
+the whole sequence; the storm save and skip paths (`lensCut` on skips and restores) are unaffected; everything from
+`goDown` on is unchanged apart from starting later. The camera keeps today's `ring` framing until G2.
+
+**Verify:** `drowned-run-check FROM=belfry` with real gestures, landscape and portrait; a timing table from the
+fourth answer (turn, kneel, cat at hand, rub, stand, `goDown`) totalling about 10 s; the music's start at the kneel
+(±0.1 s) in a browser check with a real AudioContext (`tools/village-music-browser-check.mjs`); skinned-vertex
+contact and clipping as in G1a against the straw, bell and walls; her face's angle from the lens over 70° on the turn.
+
+#### Phase G2: the low view — not started
+
+**Owns:** `tuning.drownedCamera.church` (new `goodbye` and `uprightGoodbye` views and their pace) and the `goodbye`
+case of the church's framing in `src/story/drowned-church.ts` (~lines 790–1045).
+
+**Does:** the storyboard's low view (design.md numbers): the lens glides in from `ring` while she walks to the cat,
+holds through the kneel and the rub, and eases out to `bring` as she stands and goes to the arch. It holds her face,
+the mitten and the cat's head, with the kitten and the cygnet's head in frame. In portrait it avoids the ivy twig
+across the kittens and the mother's tail. The lens stays outside the belfry, orbiting like the room's other views.
+
+**Seams:** continuous with `ring` before and `bring` after; `down`'s framing unchanged once the ease-out is done.
+
+**Verify:** a camera trace (`TRACE=1`, `tools/camera-intent-report.mjs`) from the fourth ring through boarding: no
+reversal, no swing, peak rotation and translation within what the room's existing moves reach (measure and cite
+them); stills at the three storyboard moments in both aspects; one `VIDEO=1` run in each aspect, reviewed by the
+lead in motion.
+
+#### Phase G3: music and review — not started
+
+**Owns:** `docs/contracts/audio.md` (the belfry's timing lines), the village music checks.
+
+**Does:** measure `belfry.ogg` against the new timeline (fade-in from the kneel; where its slowed ending, 47.1 s after
+it starts, now falls in the storm) and record it. The lead reviews the whole sequence from the fourth ring to the
+storm with sound, then hands Jeremy `?chapter=belfry` to play.
+
+**Verify:** the browser music check with a real AudioContext; Jeremy's playtest.
+
+#### Phase G4: docs on approval — not started
+
+Fold the goodbye into `docs/chapters.md` (the belfry), `docs/backlog/path-puzzles/camera-grammar.md` (the belfry's
+shots) and `docs/contracts/progress.md` if it describes the kneel. Correct their drift from the code while there:
+on arrival she kneels on the floor at `BELFRY.stand`, not in the opening; the lens orbits and no longer cuts into or
+out of the belfry; `goDown` steers the boat in, not sail strokes. Mark the design section built.

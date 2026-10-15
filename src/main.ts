@@ -555,7 +555,7 @@ function syncMusicLoading(): void {
     return;
   }
   if (!playing) return;
-  const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase);
+  const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase, story.current.sleepingMusic);
   if (track !== nextMusic) { prefetchMusic(track); nextMusic = track; }
 }
 controls.onMusicChange = on => { sound.setMusicMuted(!on); syncMusicLoading(); };
@@ -1037,6 +1037,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.homewardTime = story.current.homewardTime;
   soundState.summitScore = story.current.summitScore;
   soundState.homeEndingTime = story.current.homeEndingTime;
+  soundState.homeAsk = story.current.homeAsk;
+  soundState.homeSetDownIn = story.current.homeSetDownIn;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
   soundState.drownedQuiet = story.current.drownedQuiet;
@@ -1046,6 +1048,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.seaPhrase = story.current.seaPhrase;
   soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
+  soundState.sleepingMusic = story.current.sleepingMusic;
   soundState.meadowScore = story.current.meadowScore;
   soundState.birchesScore = story.current.birchesScore;
   soundState.birchesLoop = story.name === 'toBirches' || story.name === 'birches';
@@ -1217,6 +1220,8 @@ function prepareFrame(dt: number): void {
   soundState.cues = takeCues();
   soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
   sound.update(dt, soundState);
+  story.current.hearLullaby?.(sound.lullabyLeft);
+  story.current.hearHome?.(sound.homeReturnIn);
   syncMusicLoading();
   prepareWorldAudio(dt);
 }

@@ -8,9 +8,9 @@ import { heightAt } from '../world/island';
 import { SLEEP_SNOW_STOP, SLEEP_MIST_STOP } from '../world/sleeping-layout';
 import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
 import { FEATHER_LENGTH } from '../fx/feather';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
+import { winterHold, type SleepingGate } from '../audio/sleeping-music';
 
 type Beat =
   | 'ashore'
@@ -96,6 +96,18 @@ export class SleepingChapter implements Chapter {
     if (['feather', 'edge'].includes(this.beat) || this.beat === 'asleep' && this.t >= T.winterBeginsAt) return 'cold';
     return 'shelter';
   }
+  /** The recordings follow the feather freed, the fog, its catch, the summit and the glide home. */
+  get sleepingMusic(): SleepingGate {
+    if (['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'glide';
+    if (['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat)) return 'summit';
+    if (this.mistDone) return 'catch';
+    if (this.beat === 'mist') return 'mist';
+    return this.beat === 'asleep' ? 'asleep' : ['ashore', 'toBed', 'tuckIn'].includes(this.beat) ? 'bedtime' : 'feather';
+  }
+  /** Seconds the lullaby has left, negative once it is over: winter waits for it (`winterHold`), `frostWait` so far. */
+  private lullaby = -Infinity;
+  private frostWait = 0;
+  hearLullaby(left: number): void { this.lullaby = left; }
   hush = 0.5;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 16, height: 5, carry: false, clearance: 2.4, smoothFit: 3 };
   readonly focus = new THREE.Vector3();
@@ -557,6 +569,9 @@ export class SleepingChapter implements Chapter {
    */
   private asleep(dt: number): void {
     const { child: c, cygnet: k, sleeping } = this.cast;
+    const held = winterHold(this.t, this.lullaby, this.frostWait);
+    this.beatStart += held;
+    this.frostWait += held;
     k.perch(ON_BLANKET, this.onBlanket(dt));
     const noticing = this.called && this.t - this.callAt > 2 && this.t - this.callAt < 7.5;
     k.watch(this.t > T.winterBeginsAt && this.t < T.winterBeginsAt+1.2 ? this.told.copy(ON_BLANKET).add(new THREE.Vector3(-.7,1.8,.2)) : noticing ? this.told.copy(WINDOW) : c.face(this.told));
@@ -626,7 +641,6 @@ export class SleepingChapter implements Chapter {
     sleeping.feather.goal.copy(EDGE).setY(EDGE.y + 1.4);
     sleeping.feather.keepNear = 16;
     sleeping.feather.routeStart = ROUTE_START;
-    cue('feather');
   }
 
   private theFeather(dt: number): void {
@@ -896,7 +910,6 @@ export class SleepingChapter implements Chapter {
     sleeping.laneOpen = 0;
     sleeping.feather.goal.copy(BED).setY(BED.y + 2.6);
     this.music = 'sea';
-    cue('lifted');
   }
 
   /**
