@@ -1048,10 +1048,12 @@ export class Traveller {
      * Arms swing against the legs, a beat behind them, as far back past the hip as forward. Running they pump from
      * the shoulder: the elbow opens as the arm drives back past the hip and closes as the mitten comes up to the chest.
      */
-    const pace = 0.5 * moving + 0.25 * running;
+    const hill = this.motion.uphill;
+    /** Climbing, the arms work: a wider swing with the elbows bent, the mittens coming up in front. */
+    const pace = 0.5 * moving + 0.25 * running + 0.15 * hill;
     const armSwing = Math.cos(this.gait - 0.35);
-    const armBack = 0.04 * moving + 0.12 * running;
-    const walkBend = 0.22 * moving * (1 - running);
+    const armBack = 0.04 * moving + 0.12 * running - 0.04 * hill;
+    const walkBend = 0.22 * moving * (1 - running) + 0.3 * hill;
     const pump = 0.4 * running;
     arm(L, -pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running - pump * armSwing + Math.max(0, -armSwing) * walkBend, 0.12);
     arm(R, pace * armSwing - armBack, 0.22 + 0.1 * running, 0, 0.2 + 1.15 * running + pump * armSwing + Math.max(0, armSwing) * walkBend, 0.12);

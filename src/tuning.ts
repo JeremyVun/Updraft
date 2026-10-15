@@ -5,7 +5,18 @@
 export const tuning = {
   catGround: { sample: 0.07, edge: 0.2, follow: 14 },
   catVoice: { minimumGap: 12, callEvery: 18, callVariation: 8, strandedGap: 7, strandedEvery: 9, strandedVariation: 4 },
-  childGround: { follow: 2 },
+  childGround: {
+    /** Seconds the hips stay let down for a lower boot once it no longer needs them to be. */
+    hold: 0.8,
+    /** The rise over run where a slope starts to show in the walk, and where it shows fully. */
+    gentle: 0.06, steep: 0.35,
+    /** Up a hill: the lean into it (radians), the boots lifted higher (bone units), the heel peeled early (radians). */
+    climbLean: 0.2, kneeLift: 0.05, heelPeel: 0.4,
+    /** And the plod: the weight rolled further over each boot, and the vault over it deeper (bone units). */
+    plodSway: 0.4, plodBounce: 0.012,
+    /** Down a hill, sitting back against it (radians). */
+    descentLean: 0.06,
+  },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,
