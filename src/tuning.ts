@@ -1397,7 +1397,7 @@ export const tuning = {
       /** Share of the time the tail tip is out of the leaves, by round; the chance a tell is a peek, and how long it looks. */
       tailOut: [0.5, 0.33, 0.2], peekChance: 0.22, peekFor: 1.3,
       /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
-      buryDepth: 0.5, leapDepth: 0.35,
+      buryDepth: 0.35, leapDepth: 0.35,
       /**
        * Finding: the air over its heap (`driftReach` round a drift, `trunkReach` round a trunk) as the trees feel it
        * when they shed, each rise of it counted: `findWork` by round flushes it (in the first, any gust over the heap),
