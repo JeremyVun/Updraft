@@ -314,7 +314,21 @@ broken matte rill; `driftCornice` 0.62. The boat crossing the grass after a scri
 harness skipping the save system's boat placement (a real save or normal play puts it on the west strand), and the
 base does the same: left. Crossings in and out show no sky or fog change. Peak climb lens rotation 0.397 rad/s.
 
-## Phase 4: review, playtest, close — awaiting Jeremy's playtest
+## Phase 4: review, playtest, close — Jeremy's playtest notes being addressed (4b)
+
+### Jeremy's playtest, verbatim (2026-10-15)
+
+> Only one small thing, i think the forced pause with the cygnet looking back at the child is a bit too long, and the jump up over the small cliff could have a slightly better animation, maybe some feathers flying off as well kind of like the jump scare in the woods, but not as many feathers. The snow bank also doesn't appear to the player as something that the cygnet should have had problem walking over, maybe something to consider to make it slightly steeper and more formidable from it's perspective? There also seems to be some kind of stuck rabbit frozen under a tree which looks a bit strange.
+
+### 4b — the playtest fixes
+
+1. **The look back** (lead): shorter.
+2. **The scramble over the bank:** a better animation, and a few loose feathers shed as it goes (`src/fx/loose-down.ts`,
+   the wood's startle), fewer than the wood's.
+3. **The drift:** steeper and more formidable from the bird's height and the player's lens, so its failed wade reads as
+   earned.
+4. **The rabbit under the hawthorn** reads as stuck and frozen: make it read as a live rabbit asleep, or fix whatever
+   makes it look stuck.
 
 Lead watches the whole room in motion with sound beside the owl and the clouds, fixes what does not earn its place,
 then hands Jeremy a build to play. On approval: migrate the durable rules into `docs/chapters.md` § The sleeping
