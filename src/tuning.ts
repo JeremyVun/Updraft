@@ -864,6 +864,7 @@ export const tuning = {
       [-21, -681, 38, 34, 13], [-76, -746, 52, 66, 17],
       [48, -743, 48, 57, 14], [60, -811, 49, 49, 15],
       [-45, -823, 48, 37, 10], [8, -843, 55, 21, 10],
+      [-17, -677, 12, 12, 3],
     ] },
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
@@ -1016,7 +1017,7 @@ export const tuning = {
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
     /** The playing view after each answer: it steps back and up over `restEase` seconds and stays. */
-    restEase: 4.5, restBack: [24, 29, 34], restUp: [7, 10.5, 14], restOn: [8.5, 11, 13.5],
+    restEase: 4.5, restBack: [21, 23, 25], restUp: [1.7, 2.4, 3], restOn: [6.5, 7, 7.5],
     waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,
     growthRoughness: 14, growthSoftness: 6,
     traceCurl: 0.9, traceOrbit: 0.9, traceDrift: 0.55,
@@ -1085,7 +1086,7 @@ export const tuning = {
      */
     frameTurn: 0.28,
     frameBack: 19,
-    frameUp: 4,
+    frameUp: 0,
     frameLook: 1.2,
     frameOn: 6,
     frameWide: 3,
@@ -1100,9 +1101,9 @@ export const tuning = {
      */
     riseFor: 10,
     riseTo: -0.12,
-    riseBack: 42,
-    riseUp: 18,
-    riseOn: 14,
+    riseBack: 32,
+    riseUp: 3.5,
+    riseOn: 9,
     risePace: 0.6,
     restFor: 6,
     riseQuiet: 0.72,
