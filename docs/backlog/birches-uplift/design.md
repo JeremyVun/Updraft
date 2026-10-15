@@ -412,9 +412,23 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   side view keeps the backlit gold against a bright sky while reading the island as a place. Still not right: in the
   birches' first shot the sail stands between the lens and the child for the few seconds she steps off the bow
   (unchanged; the walk's view from the south keeps it).
-- **The stairs sail.** `toStairs` leaves the berth east (its first waypoint, band (16, −1204), moves with the band),
-  passes south of the village's edge at (26, −1239) and comes in to the stairs as before; it starts about 240 m from
-  the stairs, so the cloud deck builds over the crossing and the landing is under it as now. The stairs and their island are in view well before the landing, from about 210 m out.
+- **The stairs sail.** Jeremy: "the route that the boat takes to the stairs island needs to be taken a look at. The
+  route now has the boat sailing literally across the shore line and the stairs island is not hidden in haze until
+  the child gets closer. camera direction and haze are important to get just right." When the island moved out, the
+  first waypoint came within the 22 m rounding radius of the berth, so the boat turned at once and ran about 35 m
+  along the north-east beach in under 0.4 m of water. It now sails out north-east to band (44, −1228) before the turn
+  (2 m of water from 34 m out), then east past (26, −1239) onto the knoll as before, under the cloud deck building
+  from 150 m out. Push-off to landing is 49.4 s (45.8 before). The stairs lie in their own mist on the sail
+  (`tuning.world.stairsMist`, clear 70 m to hidden 130 m, edge 2): hidden through the first two-thirds, a faint hump
+  about 80 m out, then the stair climbing into the cloud. The lens rides behind the boat out of the birches, then from
+  about halfway turns in one slow arc (`tuning.crossingCamera.arrivals.stairs`, an `IslandReveal`), lifting toward the
+  stair as it comes out of the mist: in landscape from the starboard quarter, the boat at the left third and the
+  stair rising to the right into the cloud; in portrait from astern, the stair rising behind the boat, its gaze held
+  lower so the boat stays whole. Over the last 80 m it comes round low beside the hull onto the beach (world bearing
+  −0.6, 14.5 m, 1.5 m up) and the stairs' own first view takes it from the south-west. Before, the lens rode astern
+  with the island in view for half the sail and swung 60° round the boat in the last six seconds. Music unchanged
+  (`village-music-browser-check sail`): Red Door fades 26–31 s after the push-off, 10 s of quiet in which the stairs
+  come out of the mist, the stairs song at 41 s, 8.5 s before the landing.
 - **Clearances.** Dry land runs from x −181 to −92 and z −1071 to −1270. The island's south shore is about 122 m of
   open water from the meadow's nearest shore (the landing beach 120 m; 76 at phase 1); the north waterline is 22 m
   short of the drowned village's ellipse (29 at phase 1, 67 before), open sea that the room partition gives to
