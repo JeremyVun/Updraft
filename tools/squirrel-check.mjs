@@ -25,7 +25,7 @@
 //            `short`, the furthest a leg fell short of its planted paw (the squirrel's own QA probe). Limits as the
 //            cat's: slip none, sink and float a few millimetres, short a few millimetres. EVERY=2 keeps every
 //            second frame; NEAR=0.4 brings the lens in to 0.4 of its distance, following the squirrel;
-//            WINDOW=5.8-8.2 keeps frames only between those seconds. `stand`, `sit`, `perch` and `freeze` are its
+//            WINDOW=5.8-8.2 keeps frames only between those seconds; FOV=50 widens the lens (30° by default). `stand`, `sit`, `perch` and `freeze` are its
 //            idles held six seconds (fidgets, hops on the spot, tail flicks); `tell` and `tell-in` are two tells.
 //     clips  The same motions (CLIPS=run,dive-burst,climb-up,run-line,follow by default; dash is follow's way at the dash) stepped two frames at a
 //            time, shot through the motion's lens trailing the squirrel smoothly, and made into a 30 fps webm with
@@ -97,6 +97,10 @@ const MOTIONS = {
   'tell-in': { for: 5.4, eye: [-1.6, 1.6, 0.9], every: 6 },
   follow: { for: 15, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 12 },
   dash: { for: 7, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 6 },
+  startle: { for: 4, eye: [4.7, 1.2, 1.6], every: 6 },
+  indignant: { for: 6, eye: [4.7, 1.2, 1.6], every: 6 },
+  'startle-perch': { for: 4, eye: [-0.2, 4.6, 2.6], every: 6 },
+  'indignant-perch': { for: 6, eye: [-0.2, 4.6, 2.6], every: 6 },
 };
 const motions = list(process.env.MOTIONS, Object.keys(MOTIONS));
 const clips = list(process.env.CLIPS, ['run', 'dive-burst', 'climb-up', 'run-line', 'follow']);
@@ -214,7 +218,7 @@ const STEP_CONTACT = `(async (t) => {
 })`;
 
 /** Page-side: the lens set for a motion, aimed at the squirrel (trailing it smoothly when filmed) or held on the yard. */
-const MOTION_LENS = `(async ([eye, hold, near]) => {
+const MOTION_LENS = `(async ([eye, hold, near, fov = 30]) => {
   const { story } = window.__game;
   const yard = story.current.squirrels;
   const m = window.__sqMotion;
@@ -227,7 +231,7 @@ const MOTION_LENS = `(async ([eye, hold, near]) => {
   }
   let at = place(eye);
   if (near !== 1) at = at.map((v, i) => aim[i] + (v - aim[i]) * near);
-  await window.__sq.lens(at, aim, 30);
+  await window.__sq.lens(at, aim, fov);
 })`;
 
 /**
@@ -409,7 +413,7 @@ try {
         await advance(1 / 60);
         await page.evaluate(([src, arg]) => eval(src)(arg), [STEP_CONTACT, f / 60]);
         if ((f - 1) % m.every || f / 60 < window[0] || f / 60 > window[1]) continue;
-        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, m.hold ?? null, m.near ?? 1]]);
+        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, m.hold ?? null, m.near ?? 1, Number(process.env.FOV ?? 30)]]);
         const file = path.join(out, 'frames', `${name}-${String(f).padStart(4, '0')}.png`);
         fs.mkdirSync(path.dirname(file), { recursive: true });
         await page.screenshot({ path: file });
@@ -463,7 +467,7 @@ try {
       for (let f = 0; f < frames; f++) {
         await advance(2 / 60);
         const near = process.env.NEAR ? Number(process.env.NEAR) : 1;
-        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, near !== 1 ? null : m.hold ?? null, near]]);
+        await page.evaluate(([src, arg]) => eval(src)(arg), [MOTION_LENS, [m.eye, near !== 1 ? null : m.hold ?? null, near, Number(process.env.FOV ?? 30)]]);
         await page.screenshot({ path: path.join(dir, `${String(f).padStart(4, '0')}.png`) });
       }
       const file = path.join(out, `clip-${name}.webm`);

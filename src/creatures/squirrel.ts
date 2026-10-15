@@ -14,7 +14,7 @@ import { tuning } from '../tuning';
 export type { Floor, SquirrelPoint } from './squirrel/route';
 export { sagging, spiral } from './squirrel/route';
 
-export type SquirrelAction = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'dive' | 'burst' | 'run-line';
+export type SquirrelAction = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'dive' | 'burst' | 'run-line' | 'startle' | 'indignant';
 
 /** Something it did this frame that can be heard. The squirrel only says what happened; the sound is made elsewhere. */
 export interface SquirrelSound {
@@ -52,8 +52,10 @@ export interface ActOptions {
 
 const ACTION_STANCE: Record<SquirrelAction, StanceName> = {
   stand: 'stand', sit: 'sit', freeze: 'freeze', scold: 'scold', perch: 'perch', buried: 'buried', peek: 'peek',
-  bound: 'bound', climb: 'climb', dive: 'dive', burst: 'freeze', 'run-line': 'wool',
+  bound: 'bound', climb: 'climb', dive: 'dive', burst: 'freeze', 'run-line': 'wool', startle: 'startle', indignant: 'startle',
 };
+/** What it goes back to after an indignant shake: how it was holding itself on its perch before it was startled. */
+const PERCHED: readonly SquirrelAction[] = ['stand', 'sit', 'freeze', 'scold', 'perch', 'run-line'];
 const KIND_STANCE: Record<Kind, StanceName> = { ground: 'run', trunk: 'trunk', line: 'wool' };
 type Num = { [K in keyof Stance]: Stance[K] extends number ? K : never }[keyof Stance];
 const NUMBERS = (Object.keys(STANCES.stand) as (keyof Stance)[]).filter((k) => typeof STANCES.stand[k] === 'number') as Num[];
@@ -64,8 +66,14 @@ const TAIL_OUT: Partial<Stance> = { tailLift: 1.15, tailCurve: 0.13, tailTip: -0
 const TAIL_TELL: Partial<Stance> = { bodyY: 0.058, pitch: -0.3, seat: false, tailLift: 1.45, tailCurve: 0.04, tailTip: -0.06, tailBend: 0 };
 /** How long a tell lasts, seconds. */
 const TELL = 1.6;
+/** An indignant shake, seconds: the shake from nose to tail tip, the scolding after it, and all of it. */
+const SHAKE = 0.75;
+const SCOLDING = 2.1;
+const INDIGNANT = 2.5;
 /** Standing on the wool, every paw on the one line. */
 const ON_LINE: Partial<Stance> = { front: [0.002, 0.042], hind: [0.003, -0.012] };
+/** On a limb, its paws close in along the top of it. */
+const ON_LIMB: Partial<Stance> = { front: [0.005, 0.05], hind: [0.007, -0.01] };
 /** Springing out of the leaves: stretched out up and on, ears back, tail flung up behind. */
 const SPRING: Partial<Stance> = { tailLift: 1.0, tailCurve: 0.2, tailTip: -0.2, earBack: 0.5 };
 const PAWS = [HAND_L, HAND_R, FOOT_L, FOOT_R];
@@ -142,6 +150,12 @@ export class Squirrel {
   private hopTurn = 0;
   private hopDown = false;
   private tellT = -1;
+  /** Seconds since it was startled, or since it began to shake itself off; -1 when it is neither. */
+  private startleT = -1;
+  private indignantT = -1;
+  private squeakIn = 0;
+  private perchedAs: SquirrelAction = 'sit';
+  private puff = 0;
 
   private route: Route | null = null;
   private routeEnd: SquirrelPoint | null = null;
@@ -214,7 +228,7 @@ export class Squirrel {
       frame: new THREE.Matrix4(), scale: this.scale, origin: new THREE.Vector3(), forward: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0),
       bodyX: 0, bodyY: 0, bodyZ: 0, pitch: 0, roll: 0, flex: 0, stretch: 0, chestUp: 0, bend: 0, neckLow: 0,
       headYaw: 0, headPitch: 0, headRoll: 0, jaw: 0, earBack: 0, earTwitch: [0, 0],
-      tailLift: 0, tailSwing: 0, tailCurve: 0, tailTip: 0, tailBend: 0, tailWave: 0, tailWaveSize: 0, tailFlick: 0, tailRipple: 0, tailRipplePhase: 0,
+      tailLift: 0, tailSwing: 0, tailCurve: 0, tailTip: 0, tailBend: 0, tailWave: 0, tailWaveSize: 0, tailFlick: 0, tailPuff: 0, tailRipple: 0, tailRipplePhase: 0,
       paws: this.gait.paws.map((p) => ({ at: p.at, curl: 0 })), hold: 0, holdHigh: 0, hock: [1.45, 1.45], breath: 0,
     };
     this.support = { origin: this.at, forward: this.fwd, up: this.up, side: this.side, scale: this.scale, snap: (p) => this.route!.snap(p, this.seg, this.crossing >= 0 ? this.route!.kind(this.seg, 'to') : this.kind) };
@@ -263,6 +277,7 @@ export class Squirrel {
     if (opts.look !== undefined) this.target = opts.look;
     if (name === 'dive') return this.dive(opts);
     if (name === 'burst') return this.burst(opts);
+    if ((name === 'startle' || name === 'indignant') && PERCHED.includes(this.doing)) this.perchedAs = this.doing;
     if (opts.at) this.place(opts.at, opts.yaw ?? this.yaw, opts);
     else if (opts.yaw !== undefined) this.face(opts.yaw);
     this.mode = 'hold';
@@ -280,6 +295,17 @@ export class Squirrel {
     if (name === 'scold') {
       this.chuckIn = 0.1;
       this.chucksLeft = 0;
+    }
+    if (name === 'startle') {
+      this.startleT = 0;
+      this.squeakIn = 0.32;
+      this.busyFor = 0.4;
+      this.call('squeak', 1);
+    }
+    if (name === 'indignant') {
+      this.indignantT = 0;
+      this.busyFor = INDIGNANT;
+      this.twitchL = this.twitchR = 1;
     }
     return true;
   }
@@ -409,6 +435,8 @@ export class Squirrel {
   private stopFidgets(): void {
     this.idle.reset();
     this.tellT = -1;
+    this.startleT = -1;
+    this.indignantT = -1;
     if (this.hopT >= 0) this.airRise = 0;
     this.hopT = -1;
   }
@@ -736,7 +764,8 @@ export class Squirrel {
       }
     }
     this.hop(dt);
-    if (this.doing === 'scold') {
+    this.alarm(dt);
+    if (this.doing === 'scold' || this.scolding) {
       this.chuckIn -= dt;
       if (this.chuckIn <= 0) {
         if (this.chucksLeft <= 0) this.chucksLeft = 3 + Math.floor(Math.random() * 5);
@@ -759,6 +788,39 @@ export class Squirrel {
         this.gnawIn = 0.35 + Math.random() * 0.3;
       }
     }
+  }
+
+  /**
+   * Startled, it squeaks again a moment after the first and now and then while it stays covered. Indignant, it
+   * shakes itself off, sits up and scolds what startled it, then settles back to how it was perched.
+   */
+  private alarm(dt: number): void {
+    if (this.startleT >= 0) {
+      this.startleT += dt;
+      if ((this.squeakIn -= dt) <= 0) {
+        this.call('squeak', this.startleT < 1 ? 0.9 : 0.5);
+        this.squeakIn = 1.4 + Math.random() * 1.4;
+      }
+    }
+    if (this.indignantT < 0) return;
+    const was = this.indignantT;
+    this.indignantT += dt;
+    if (was < SHAKE && this.indignantT >= SHAKE) {
+      this.hold('scold', this.radius > 0 ? ON_LIMB : null);
+      this.call('chitter', 1);
+      this.chuckIn = 0.35;
+      this.chucksLeft = 4 + Math.floor(Math.random() * 3);
+      this.chuckT = 0;
+    }
+    if (this.indignantT < INDIGNANT) return;
+    this.indignantT = -1;
+    this.doing = this.perchedAs;
+    this.hold(ACTION_STANCE[this.doing], this.doing === 'run-line' ? ON_LINE : null);
+    this.nibbling = this.doing === 'sit';
+  }
+
+  private get scolding(): boolean {
+    return this.indignantT >= SHAKE && this.indignantT < SCOLDING;
   }
 
   /** A hop round on the spot when it fidgets: up off all four paws together, turned, and down again. */
@@ -796,7 +858,7 @@ export class Squirrel {
   }
 
   private ease(dt: number): void {
-    const rate = this.placed || this.settled < 0.05 ? 1e3 : this.mode === 'air' ? 18 : tuning.squirrel.snap;
+    const rate = this.placed || this.settled < 0.05 ? 1e3 : this.mode === 'air' || (this.startleT >= 0 && this.startleT < 0.3) ? 30 : tuning.squirrel.snap;
     this.settled += dt;
     for (const k of NUMBERS) (this.now[k] as number) = ease(this.now[k] as number, this.want[k] as number, rate, dt);
     for (const i of [0, 1] as const) {
@@ -823,7 +885,11 @@ export class Squirrel {
     }
     this.nextGlance -= dt;
     if (still && still !== 'buried') this.glance.copy(this.idle.glance).multiplyScalar(this.target ? 0.5 : 1);
-    else if (this.nextGlance <= 0) {
+    else if (this.startleT >= 0 && this.nextGlance <= 0) {
+      /** Quick, nervous looks up and about at what has come over it. */
+      this.glance.set((Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
+      this.nextGlance = 0.18 + Math.random() * 0.3;
+    } else if (this.nextGlance <= 0) {
       const wide = this.doing === 'peek' ? 1.2 : this.target ? 0.25 : 0.9;
       this.glance.set((Math.random() - 0.5) * wide, (Math.random() - 0.45) * 0.4 * wide);
       this.nextGlance = this.doing === 'peek' ? 0.3 + Math.random() * 0.5 : 0.5 + Math.random() * 2;
@@ -835,7 +901,9 @@ export class Squirrel {
     const twitch = (x: number) => (Math.random() < dt * (frozen ? 0 : this.doing === 'scold' ? 1.2 : 0.35) ? 1 : x * Math.exp(-dt * 9));
     this.twitchL = Math.max(twitch(this.twitchL), this.idle.earL);
     this.twitchR = Math.max(twitch(this.twitchR), this.idle.earR);
-    this.d.breath += dt * (frozen || going ? 7 : 4.2);
+    this.d.breath += dt * (this.startleT >= 0 ? 10 : frozen || going ? 7 : 4.2);
+    const puffed = this.startleT >= 0 || (this.indignantT >= 0 && this.indignantT < 0.3);
+    this.puff = ease(this.puff, puffed ? 0.6 : 0, puffed ? 14 : 4, dt);
     this.d.tailWave += dt * (this.tellT >= 0 ? TAU * 2.6 : this.kind === 'line' && going ? 2.4 : 1.6);
   }
 
@@ -859,6 +927,7 @@ export class Squirrel {
     let neckLow = s.neckLow;
     let jaw = s.jaw;
     let roll = 0;
+    let headRoll = 0;
     let tailSwing = 0;
     let tailFlick = 0;
     d.tailRipple = 0;
@@ -895,7 +964,7 @@ export class Squirrel {
         tailSwing = -0.4 * sway;
       }
     }
-    if (this.doing === 'scold') {
+    if (this.doing === 'scold' || this.scolding) {
       /** Each chuck jerks the whole of it: the jaw snaps open, the body bobs and the tail flicks up its length. */
       const c = this.chuckT;
       const pulse = c < 0.16 ? Math.sin((c / 0.16) * Math.PI) : 0;
@@ -922,6 +991,26 @@ export class Squirrel {
       pitch += 0.1 * f.bob;
       if (this.doing === 'climb' && this.tellT >= 0) jaw = 0.8 * (this.chuckT < 0.09 ? Math.sin((this.chuckT / 0.09) * Math.PI) : 0);
     }
+    if (this.startleT >= 0) {
+      /** A jolt up off its perch at the fright, and a tremble after. */
+      const t = this.startleT;
+      const jolt = t < 0.22 ? Math.sin((Math.PI * t) / 0.22) : 0;
+      bodyY += 0.016 * jolt;
+      pitch += 0.25 * jolt;
+      tailLift += 0.35 * jolt;
+      roll += 0.025 * Math.sin(TAU * 15 * t) * Math.min(1, t / 0.3);
+    }
+    if (this.indignantT >= 0 && this.indignantT < SHAKE) {
+      /** A shake that runs from its nose down its body to the tip of its tail, each part a moment after the last. */
+      const t = this.indignantT;
+      const part = (from: number, to: number) => (t > from && t < to ? Math.sin((Math.PI * (t - from)) / (to - from)) : 0);
+      const shake = Math.sin(TAU * 11 * t);
+      headRoll += 0.55 * shake * part(0, 0.35);
+      roll += 0.22 * shake * part(0.1, 0.5);
+      tailSwing += 0.7 * Math.sin(TAU * 9 * t) * part(0.3, SHAKE);
+      tailFlick += 0.8 * Math.abs(shake) * part(0.4, SHAKE);
+    }
+    d.tailPuff = this.puff;
     if (this.thud > 0) {
       /** Down from the air its legs give under it, its back rounds and its tail swings on over it. */
       this.thud = Math.max(0, this.thud - dt / 0.2);
@@ -967,14 +1056,14 @@ export class Squirrel {
 
     let headYaw = this.glanceNow.x;
     headPitch += this.glanceNow.y;
-    if (this.target && this.mode === 'hold') {
+    if (this.target && this.mode === 'hold' && this.startleT < 0) {
       const l = this.toLocal(this.target, this.v);
       headYaw = clamp(Math.atan2(l.x, l.z - 0.08), -1.4, 1.4) + this.glanceNow.x;
       headPitch = clamp(Math.atan2(l.y - 0.12, Math.hypot(l.x, l.z - 0.08)), -0.8, 0.9) + this.glanceNow.y * 0.5;
     }
     d.headYaw = headYaw;
     d.headPitch = headPitch;
-    d.headRoll = nibbling ? -0.12 : 0;
+    d.headRoll = headRoll + (nibbling ? -0.12 : 0);
 
     this.paws(dt);
     this.rig.pose(d);
