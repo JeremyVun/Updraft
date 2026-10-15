@@ -1430,9 +1430,10 @@ export const tuning = {
       circledBy: 0.02,
       /**
        * The meeting: how near she comes before the lens glances at it on its log, how long she stands at the heap
-       * looking at it (the round's frame easing in) before it sees her, and how long it freezes before it drops in.
+       * looking at it (the round's frame easing in) before it sees her, how long it freezes before it sits up and
+       * chatters at her, and how long it holds her look after that before it dives in.
        */
-      meetGlance: 30, meetPause: 1.4, meetFreeze: 0.9,
+      meetGlance: 30, meetPause: 1.4, meetFreeze: 0.5, meetHold: 1.8,
       /** Found: sitting up scolding her, then off, glancing back once a few metres on. */
       sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
       /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */

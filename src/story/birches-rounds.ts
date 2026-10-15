@@ -65,6 +65,7 @@ const lensOf = (i: number, distance: number): Spot =>
   ({ x: ROUND_VIEWS[i].at.x + ROUND_VIEWS[i].from.x * distance, z: ROUND_VIEWS[i].at.z + ROUND_VIEWS[i].from.z * distance });
 
 const pile = (i: number): Spot => BIRCH_PILES[i];
+const toward = (a: Spot, b: Spot, t: number): Spot => ({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t });
 /** A point in a heap `share` of its radius out from its middle toward `toward`. */
 const inPile = (i: number, toward: Spot, share: number): THREE.Vector3 => {
   const p = pile(i), d = Math.hypot(toward.x - p.x, toward.z - p.z) || 1, r = BIRCH_PILES[i].r * share;
@@ -118,13 +119,13 @@ export type PerchSpec =
   | { action: 'sit' | 'perch'; at: THREE.Vector3; yaw: number; floor?: Floor; radius?: number }
   | { action: 'climb'; trunk: OnTrunk };
 
-const MEETING_LOG = fallen(0.68, 0.88);
+const MEETING_LOG = fallen(0.8, 1);
 
 /**
- * The meeting: sitting up on the fallen birch where it comes out of the heap's near flank, nut in paws, facing down the
- * ride at them. From the round's lens it stands clear of the heap; at the far rim the heap hid half of it.
+ * The meeting: sitting up on the fallen birch's end, out past the heap, nut in paws, facing down the ride at them: red
+ * on the white bark and the bare ground there, where by the heap's flank it was lost in the gold.
  */
-export const MEETING = { action: 'sit', at: onLimb(MEETING_LOG, 0.5), yaw: Math.atan2(-0.6, 0.8), floor: overLimb(MEETING_LOG) } satisfies PerchSpec;
+export const MEETING = { action: 'sit', at: onLimb(MEETING_LOG, 0.75), yaw: Math.atan2(-0.6, 0.8), floor: overLimb(MEETING_LOG) } satisfies PerchSpec;
 
 export interface Round {
   /** Where the round is played: its hides are within it, and so is the readback for the live leaf depth. */
@@ -154,8 +155,11 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(0), 0.5),
     lastSeen: MEETING.at.clone(),
     cygnet: [lifted(birchesAt(7.6, -1074.4)), rimOf(0, STAND[0])],
-    /** Portrait looks from further east, so she, the heap and the squirrel on its log fit across its narrow field. */
-    frames: { landscape: view(0, 14, 4), portrait: tall(birchesAt(9.6, -1074.1), 60, 20, 5, 0.9, 1.5) },
+    /**
+     * Landscape looks a little toward the squirrel on its log's end, so she and it stand near the thirds; portrait
+     * from further east, so she, the heap and the squirrel fit across its narrow field.
+     */
+    frames: { landscape: { ...view(0, 14, 4), at: toward(ROUND_VIEWS[0].at, MEETING.at, 0.2) }, portrait: tall(birchesAt(9.6, -1074.1), 60, 20, 5, 0.9, 1.5) },
   },
   {
     area: { ...STAND[1], r: 10 },

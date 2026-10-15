@@ -318,16 +318,28 @@ export class BirchesSquirrel {
     this.settle(this.perchOf(station), false);
   }
 
-  /** Once she has come up to the heap and stands looking at it on its log, it sees her, freezes, and drops into the heap. */
+  /**
+   * Once she has come up to the heap and stands looking at it on its log, it sees her and freezes, sits up and
+   * chatters at her while she and the cygnet look straight at it, then dives into the heap.
+   */
   private meeting(): void {
-    const s = this.cast.squirrel;
+    const s = this.cast.squirrel, k = tuning.birches.squirrel;
     if (this.seen) return;
     if (!this.cue.standing) { this.stoodSince = -1; return; }
     if (this.stoodSince < 0) this.stoodSince = this.now;
-    if (this.now - this.stoodSince < tuning.birches.squirrel.meetPause) return;
+    if (this.now - this.stoodSince < k.meetPause) return;
     this.seen = true;
-    s.act('freeze', { yaw: Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z), look: this.face });
-    this.after(tuning.birches.squirrel.meetFreeze, () => this.choose(0, false));
+    const yaw = Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z);
+    s.act('freeze', { yaw, look: this.face });
+    this.cast.cygnet.watch(this.eye, true);
+    this.after(k.meetFreeze, () => {
+      s.act('scold', { yaw, look: this.face });
+      s.call('chitter', 1);
+    });
+    this.after(k.meetFreeze + k.meetHold, () => {
+      this.cast.cygnet.watch(null);
+      this.choose(0, false);
+    });
   }
 
   /**
@@ -803,7 +815,8 @@ export class BirchesSquirrel {
     const perched = ROUND_OF[this.station] === undefined && this.station !== 'meeting' && this.station !== 'goodbye' && this.station !== 'farTrunk';
     const ahead = perched && !cue.atTangle && !cue.atSwing;
     let want = 0;
-    if (this.station === 'meeting' && cue.round < 0) want = nearing;
+    if (this.station === 'meeting' && this.seen && (this.mode === 'meeting' || this.mode === 'choosing')) want = 1;
+    else if (this.station === 'meeting' && cue.round < 0) want = nearing;
     else if (this.mode === 'flushed') want = 1;
     else if (ahead) want = nearing;
     else if (this.station === 'goodbye' && cue.leaving) want = 1;
