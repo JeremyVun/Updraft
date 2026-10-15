@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ease } from './motion';
-import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, PELVIS, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
+import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, META, PELVIS, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
 import { boundShape, type BoundShape } from './squirrel/bound';
 import { PATTERNS, SquirrelGait, type Support } from './squirrel/gait';
 import { Idle, type Still } from './squirrel/idle';
@@ -106,7 +106,6 @@ export class Squirrel {
   private readonly callMarks = new CallMarks(tuning.squirrel.calls);
   private readonly callAt = new THREE.Vector3();
   private callFor = 0;
-  private heardSeen = 0;
   private readonly d: Drives;
   private readonly homes = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly runHomes = [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()];
@@ -327,14 +326,21 @@ export class Squirrel {
     if (this.doing === 'buried') {
       this.hold('buried', TAIL_TELL);
       this.stir('peek', 0.12, this.at);
-      this.heard.push({ kind: 'chitter', amount: 1 });
+      this.call('chitter', 1);
     } else {
       this.idle.flick(5);
       this.chuckT = 0;
-      this.heard.push({ kind: 'chuck', amount: 0.9 });
+      this.call('chuck', 0.9);
     }
     this.callFor = Math.max(this.callFor, TELL);
     return true;
+  }
+
+  /** Chucks, chitters or squeaks now, its call marks up over it a moment (a chitter's twice as long). */
+  call(kind: 'chuck' | 'chitter' | 'squeak', amount: number): void {
+    this.heard.push({ kind, amount });
+    const hold = tuning.squirrel.calls.hold;
+    this.callFor = Math.max(this.callFor, kind === 'chitter' ? hold * 2 : hold);
   }
 
   /** Under the leaves at `at`, the tip of its tail out of them or not. */
@@ -373,19 +379,12 @@ export class Squirrel {
     this.placed = false;
     this.position.copy(this.at);
     this.yaw = Math.atan2(this.fwd.x, this.fwd.z);
-    this.calls(dt);
+    this.showCalls(dt);
   }
 
-  /** Its call marks over it while it chucks, chitters or squeaks; buried, they rise out of the leaves over it. */
-  private calls(dt: number): void {
+  /** Its call marks over it while it calls; buried, they rise out of the leaves over it. */
+  private showCalls(dt: number): void {
     const look = tuning.squirrel.calls;
-    if (this.heard.length < this.heardSeen) this.heardSeen = 0;
-    for (let i = this.heardSeen; i < this.heard.length; i++) {
-      const kind = this.heard[i].kind;
-      if (kind === 'chuck' || kind === 'squeak') this.callFor = Math.max(this.callFor, look.hold);
-      else if (kind === 'chitter') this.callFor = Math.max(this.callFor, look.hold * 2);
-    }
-    this.heardSeen = this.heard.length;
     this.callFor = Math.max(0, this.callFor - dt);
     const size = this.scale / 3.6;
     if (this.doing === 'buried' || this.doing === 'dive') this.callAt.copy(this.at).addScaledVector(this.up, look.buried * size);
@@ -422,7 +421,7 @@ export class Squirrel {
   }
 
   private get canHop(): boolean {
-    return (this.doing === 'stand' || this.doing === 'sit') && this.up.y > 0.9 && this.radius === 0;
+    return (this.doing === 'stand' || this.doing === 'sit') && this.up.y > 0.9 && this.radius === 0 && this.floor !== null;
   }
 
   private place(at: THREE.Vector3, yaw: number, opts: ActOptions): void {
@@ -582,7 +581,7 @@ export class Squirrel {
     this.stoppedOn = null;
     this.hold('dive', SPRING);
     this.stir('burst', 1, this.at);
-    this.heard.push({ kind: 'squeak', amount: 1 });
+    this.call('squeak', 1);
     this.blinkT = -1;
     return true;
   }
@@ -633,7 +632,7 @@ export class Squirrel {
       this.peekT += dt;
       if (this.chuckIn > 0 && (this.chuckIn -= dt) <= 0) {
         this.chuckT = 0;
-        this.heard.push({ kind: 'chuck', amount: 0.6 });
+        this.call('chuck', 0.6);
       }
       if (this.peekT >= this.peekFor) {
         this.doing = 'buried';
@@ -655,7 +654,7 @@ export class Squirrel {
         this.chucksLeft--;
         this.chuckT = 0;
         const chitter = this.chucksLeft === 0 && Math.random() < 0.35;
-        this.heard.push({ kind: chitter ? 'chitter' : 'chuck', amount: 0.85 + Math.random() * 0.3 });
+        this.call(chitter ? 'chitter' : 'chuck', 0.85 + Math.random() * 0.3);
         this.chuckIn = this.chucksLeft > 0 ? 0.13 + Math.random() * 0.06 : (chitter ? 1.1 : 0.55) + Math.random() * 0.6;
       }
     }
@@ -678,6 +677,7 @@ export class Squirrel {
     const turn = this.idle.takeHop();
     if (turn && this.canHop && this.hopT < 0 && this.level()) {
       this.hopT = 0;
+      this.stoppedOn = null;
       this.hopFrom = Math.atan2(this.fwd.x, this.fwd.z);
       this.hopTurn = turn;
     }
@@ -694,7 +694,7 @@ export class Squirrel {
     this.hopDown = true;
   }
 
-  /** Whether what it stands on is near enough flat all round it to hop round on: not the round top of a log. */
+  /** Whether its floor is near enough flat all round it to hop round on: not the round top of a log. */
   private level(): boolean {
     const r = 0.07 * this.scale;
     const most = 0.012 * this.scale;
@@ -904,7 +904,10 @@ export class Squirrel {
           p.addScaledVector(this.side, this.radius * Math.sin(a) - across).addScaledVector(this.up, -this.radius * (1 - Math.cos(a)));
         }
         if (this.stoppedOn) this.stoppedOn(p);
-        else if (this.up.y > 0.9) p.y = this.floorAt(p.x, p.z);
+        else if (this.up.y > 0.9) {
+          p.y = this.floorAt(p.x, p.z);
+          if (!front) this.heelUp(i - 2, p);
+        }
         p.addScaledVector(this.up, lift + (this.mode === 'air' || this.hopT >= 0 ? this.airRise : 0));
       }
       if (this.placed) g.reset(this.homes);
@@ -922,6 +925,15 @@ export class Squirrel {
       const p = g.paws[i];
       this.d.paws[i].curl = i < 2 && (p.planted || this.mode === 'air') ? Math.max(s.curl, p.curl) : p.curl;
     }
+  }
+
+  /** Where the floor rises behind a hind toe, as on the round of a log, the heel is raised off it rather than sunk in. */
+  private heelUp(leg: number, toe: THREE.Vector3): void {
+    const tilt = this.d.hock[leg];
+    const long = META * this.scale;
+    const back = Math.sin(tilt) * long;
+    const rise = this.floorAt(toe.x - this.fwd.x * back, toe.z - this.fwd.z * back) - toe.y;
+    if (rise > 0) this.d.hock[leg] = Math.acos(clamp(Math.cos(tilt) + rise / long, -1, 1));
   }
 
   private tread(): void {

@@ -450,7 +450,7 @@ try {
           await page.evaluate(() => window.__game.squirrel.tell());
           await advance(0.55);
         } else if (pose === 'scold') {
-          await page.evaluate(() => window.__game.squirrel.heard.push({ kind: 'chuck', amount: 1 }));
+          await page.evaluate(() => window.__game.squirrel.call('chuck', 1));
           await advance(0.2);
         }
         for (const metres of [15, 12]) {

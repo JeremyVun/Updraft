@@ -102,7 +102,7 @@ const FLOOR = { x: 0.5, z: 4.5, r: 6.2, top: 0.5 };
 const BED = -6;
 /** The places in the yard, in its own space: x to its left (east), z ahead (south, out to sea), y up off its floor. */
 const HEAP = { x: 0.9, z: 4.1, r: 1.2, top: 0.42 };
-const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.31 } as const;
+const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.26 } as const;
 const TRUNK = { x: 2.7, z: 6.9, r: 0.21, top: 6 };
 /** A second birch across the yard, the wool tied between the two. */
 const TRUNK_B = { x: -2.4, z: 7.6, r: 0.19, top: 5.5 };
@@ -364,7 +364,7 @@ export class SquirrelYard {
     const base = limb.a.clone().setY(this.top);
     const radius = (h: number) => this.radiusAt(limb, this.top + h);
     const out = new THREE.Vector3(Math.cos(from), 0, Math.sin(from));
-    const foot: SquirrelPoint = { at: base.clone().addScaledVector(out, radius(0) + 0.42), on: 'ground' };
+    const foot: SquirrelPoint = { at: base.clone().addScaledVector(out, radius(0) + 0.14 * tuning.squirrel.scale), on: 'ground' };
     const bark = spiral(base, radius, { height: low, angle: from }, { height: high, angle: to ?? from + turns * Math.PI * 2 });
     return { foot, way: [foot, ...bark] };
   }

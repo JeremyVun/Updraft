@@ -15,7 +15,7 @@ export const tuning = {
   squirrel: {
     scale: 3.6, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6,
     /**
-     * The cygnet's call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
+     * Its call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
      * than `least` of the view's height so they read over a heap from a round's lens, edged dark against the gold.
      * `hold` is the least time they show for a chuck (a chitter twice that); buried, they rise from `buried` over its
      * paws, about the height of its raised tail over the leaves.

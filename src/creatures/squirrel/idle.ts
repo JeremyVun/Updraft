@@ -7,8 +7,8 @@ type Fidget = 'glance' | 'flick' | 'hop' | 'bob' | 'ears';
 
 /** For each way of holding still, how long it stays still between fidgets (s) and how often it does each. */
 const HABITS: Record<Still, { gap: [number, number]; does: Partial<Record<Fidget, number>> }> = {
-  stand: { gap: [0.3, 1.3], does: { glance: 3, flick: 3, hop: 2, bob: 1, ears: 1 } },
-  sit: { gap: [0.4, 1.6], does: { glance: 3, flick: 2, hop: 1, ears: 2 } },
+  stand: { gap: [0.25, 1.1], does: { glance: 3, flick: 3, hop: 3, bob: 1, ears: 1 } },
+  sit: { gap: [0.35, 1.4], does: { glance: 3, flick: 3, hop: 2, ears: 2 } },
   perch: { gap: [0.4, 1.6], does: { glance: 3, flick: 3, ears: 2 } },
   freeze: { gap: [0.8, 2.2], does: { flick: 2, ears: 1, glance: 0.6 } },
   climb: { gap: [0.5, 1.8], does: { glance: 2, flick: 2, ears: 1 } },
@@ -136,8 +136,8 @@ export class Idle {
       }
       if (this.flicks > 0) pulse = Math.sin((this.flickT / FLICK) * Math.PI);
     }
-    this.tailFlick = 1.1 * pulse;
-    this.tailLift = 0.22 * pulse;
+    this.tailFlick = 1.4 * pulse;
+    this.tailLift = 0.32 * pulse;
     this.ripple += ((this.flicks > 0 ? 0.28 : 0) - this.ripple) * (1 - Math.exp(-dt * 12));
     this.ripplePhase += dt * TAU * 5;
     if (this.bobT >= 0) {
