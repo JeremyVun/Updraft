@@ -152,9 +152,17 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 
 > And when the squirrel jumps into a leaf pile, it should be obvious with leaves flying everywhere and a sound effect.
 
+On the meadow sail after it was lengthened along the meadow's coast (2026-10-16):
+
+> are these screens showing the 30 seconds? The island is still so close by visually
+
+> holy hell just move the birches out a bit. Don't touch the stairs chapter. i dont want to mess with that
+
 What follows from it (Claude's calls, 2026-10-16):
-- **The meadow sail** (`toBirches`) gets about 5 s more sea by distance alone. Revision 12 has not shipped, so its
-  shift is amended rather than a revision 13 added. The stairs sail stays about 30 s.
+- **The meadow sail** (`toBirches`) crosses real open sea. The birches move further out from the meadow (west, where
+  the meadow's shore falls away) and the boat sails straight across instead of along the meadow's coast. The stairs
+  room is not touched; the stairs sail grows with the move. Revision 12 has not shipped, so its shift is amended
+  rather than a revision 13 added.
 - **The squirrel reads at a glance.** Its scale goes from 3 to about 3.6. Its calls show `CallMarks`, the small
   visual echo of a voice the cygnet and the cat already use. Its idle is livelier: stop-start twitches, tail flicks,
   quick head turns and small hops. While hidden, the tell is the tail. More of it comes out, more often, and it
