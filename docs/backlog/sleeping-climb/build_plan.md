@@ -382,6 +382,10 @@ island and `docs/contracts/world.md`, delete this folder, and merge.
    lift is now their own height off the ground rather than their height on the hill), which takes toes in the 0.45
    slope at the bank's foot from about 0.16 m to 0.10 m; what remains is the tips of its long webbed toes in the grass.
 4. The tall white line during the bank's circles is the updraft's own wind effect (Jeremy's ruling): left as it is.
+5. **`cygnet-gates` stow turn** (lead's report, 0.1014 once): not a regression. Stow measures 0.0619 in every run on
+   this branch, on the build before 4b (`7fd52e5d`) and on `main`. The 0.10 is an intermittent one-frame turn spike that
+   lands in a random gate each run, on the pre-4b build as often as on this one (idle, walk or down in 2 of 3 runs on
+   each); a full clean pass came on the next run.
 
 ### Jeremy on the 4c rabbit, verbatim (2026-10-15)
 
