@@ -1407,8 +1407,8 @@ export const tuning = {
     squirrel: {
       /** Seconds between the hidden heap's tells, and how hard each shivers it; under a waving tail, less. */
       tellFrom: 2.5, tellTo: 4, tellStrength: 0.18, tailTellStrength: 0.1,
-      /** Share of the time the tail tip is out of the leaves, by round; the chance a tell is a peek, and how long it looks. */
-      tailOut: [0.5, 0.33, 0.2], peekChance: 0.22, peekFor: 1.3,
+      /** Share of the time the tail tip is out of the leaves, by round, and how long a peek at a gust that shaved it looks. */
+      tailOut: [0.5, 0.33, 0.2], peekFor: 1.3,
       /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
       buryDepth: 0.35, leapDepth: 0.35,
       /**

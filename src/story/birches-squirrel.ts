@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { verticalFov, type Shot } from '../camera';
 import type { CameraAttention } from '../camera-direction';
-import type { Floor, Squirrel, SquirrelPoint } from '../creatures/squirrel';
+import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { BIRCH_PILES, ROUND_VIEWS } from '../world/birches';
@@ -535,20 +535,13 @@ export class BirchesSquirrel {
     if (playing && this.now >= this.nextTell && !s.busy) {
       this.nextTell = this.now + between(k.tellFrom, k.tellTo);
       if (h.trunk) {
-        s.heard.push({ kind: 'chuck', amount: 0.7 });
+        if (!s.tell()) s.call('chuck', 0.7);
       } else {
         this.cast.leafSound?.('rustle', h.at, 1);
         this.tailOut = Math.random() < k.tailOut[h.round];
-        /** The tail pops up out of the leaves and waves with a chitter; the heap only shivers under it. */
-        const tells = s as Squirrel & { tell?: () => void };
-        if (Math.random() < k.peekChance) {
-          this.cast.birches.shiver(h.at.x, h.at.z, k.tellStrength);
-          s.act('peek', { for: k.peekFor, tailOut: this.tailOut, look: this.face });
-        } else {
-          s.act('buried', { tailOut: this.tailOut });
-          if (tells.tell) tells.tell();
-          this.cast.birches.shiver(h.at.x, h.at.z, tells.tell ? k.tailTellStrength : k.tellStrength);
-        }
+        const told = s.tell({ tailOut: this.tailOut });
+        if (!told) s.act('buried', { tailOut: this.tailOut });
+        this.cast.birches.shiver(h.at.x, h.at.z, told ? k.tailTellStrength : k.tellStrength);
       }
     }
     const pile = h.heap >= 0 ? BIRCH_PILES[ROUNDS[h.round].heaps[h.heap]] : null;
