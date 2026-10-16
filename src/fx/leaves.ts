@@ -136,14 +136,14 @@ vec4 heapShape(vec2 xz, float top) {
   return vec4(lean, 1.0 - shade * 0.9, 1.0 - clamp(hollow * 1.2, 0.0, 0.45));
 }`;
 
-/** Heaps that can be held against the wind at once, and heaps raked loose. */
+/** Heaps that can be held against the wind at once, and heaps (and one spot more) that only an updraft takes. */
 export const LITTER_HOLDS = 6;
-export const LITTER_LOOSE = 6;
+export const LITTER_HEAPS = 10;
 
 const LITTER_SIM_FRAG = /* glsl */ `
 uniform sampler2D uField;
 uniform vec4 uHold[${LITTER_HOLDS}];
-uniform vec3 uLoose[${LITTER_LOOSE}];
+uniform vec4 uHeaps[${LITTER_HEAPS}];
 uniform sampler2D uWindTex;
 uniform vec4 uDomain;
 uniform vec4 uWade;
@@ -183,8 +183,18 @@ float litterFlux(vec4 a, vec4 b, bool x) {
  */
 float loosened(vec2 p) {
   float k = 0.0;
-  for (int i = 0; i < ${LITTER_LOOSE}; i++) {
-    k = max(k, 1.0 - smoothstep(uLoose[i].z, uLoose[i].z + 0.8, distance(p, uLoose[i].xy)));
+  for (int i = 0; i < ${LITTER_HEAPS}; i++) {
+    k = max(k, uHeaps[i].w * (1.0 - smoothstep(uHeaps[i].z, uHeaps[i].z + 0.8, distance(p, uHeaps[i].xy))));
+  }
+  return k;
+}
+
+/** How much of a heap this is: a heap stands against any gust, and only the rising air wound up over it takes it. */
+float heaped(vec2 p) {
+  float k = 0.0;
+  for (int i = 0; i < ${LITTER_HEAPS}; i++) {
+    float reach = uHeaps[i].z + ${glsl(tuning.birches.heapGuardReach)};
+    k = max(k, 1.0 - smoothstep(reach, reach + 1.0, distance(p, uHeaps[i].xy)));
   }
   return k;
 }
@@ -195,11 +205,12 @@ void main() {
   float d = state.r;
   vec4 w = airAt(p);
   float loose = loosened(p);
+  float heap = heaped(p);
   if (loose > 0.0) {
     for (int i = 0; i < 4; i++) {
       vec2 off = vec2(i == 0 ? 1.0 : i == 1 ? -1.0 : 0.0, i == 2 ? 1.0 : i == 3 ? -1.0 : 0.0) * ${glsl(tuning.birches.looseReach)} * loose;
       vec4 near = airAt(p + off);
-      if (near.z + near.w > w.z + w.w) w = near;
+      if (near.z * (1.0 - heap) + near.w > w.z * (1.0 - heap) + w.w) w = near;
     }
   }
   float arrived = smoothstep(0.02, 0.25, w.z + w.w);
@@ -210,7 +221,8 @@ void main() {
   target *= min(1.0, ${glsl(tuning.birches.litterMaxSpeed)} / max(length(target), 0.001));
   float response = 1.0 - exp(-uDt / ${glsl(tuning.birches.litterResponse)});
   vec2 velocity = mix(state.gb, target, response);
-  float mobile = mix(state.a, lifting(w) * arrived * (1.0 + loose * ${glsl(tuning.birches.looseLift - 1)}), response);
+  float lifted = smoothstep(${glsl(tuning.birches.heapLiftFrom)}, ${glsl(tuning.birches.heapLiftFull)}, w.w) * ${glsl(tuning.birches.heapLiftTakes)};
+  float mobile = mix(state.a, mix(lifting(w), lifted, heap) * arrived * (1.0 + loose * ${glsl(tuning.birches.looseLift - 1)}), response);
   /** A heap held against the wind (centre, radius, how firmly) stirs on top, but none of it goes anywhere. */
   float held = 0.0;
   for (int i = 0; i < ${LITTER_HOLDS}; i++) {
@@ -541,6 +553,8 @@ export class LitterField {
   readonly uniforms: Record<string, THREE.IUniform>;
   /** Heaps held against the wind: x, z, the radius held whole, and how firmly (0..1). */
   readonly holds = Array.from({ length: LITTER_HOLDS }, () => new THREE.Vector4(1e6, 1e6, 0, 0));
+  /** Heaps only an updraft takes: x, z, radius, and 1 where raked loose; the last is free for a drift something lies in. */
+  readonly heaps = Array.from({ length: LITTER_HEAPS }, () => new THREE.Vector4(1e6, 1e6, 0, 0));
   private readonly gpu: GpuRunner;
   private readonly field: PingPong;
   private readonly mat: THREE.ShaderMaterial;
@@ -553,7 +567,8 @@ export class LitterField {
   private readonly reading = new Map<number, { query: DepthQuery; from: number; count: number }>();
   private serial = 0;
 
-  constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4, loose: readonly { x: number; z: number; r: number }[]) {
+  constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4, heaps: readonly { x: number; z: number; r: number; raked: boolean }[] = []) {
+    heaps.slice(0, LITTER_HEAPS - 1).forEach((h, i) => this.heaps[i].set(h.x, h.z, h.r, h.raked ? 1 : 0));
     this.gpu = new GpuRunner(renderer);
     // Repeated transport needs full precision or small rounding losses slowly erase the floor. A float texture
     // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
@@ -578,7 +593,7 @@ export class LitterField {
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
       uHold: { value: this.holds },
-      uLoose: { value: Array.from({ length: LITTER_LOOSE }, (_, i) => new THREE.Vector3(loose[i]?.x ?? 1e6, loose[i]?.z ?? 1e6, loose[i]?.r ?? 0)) },
+      uHeaps: { value: this.heaps },
     }, this.field);
     this.probeMat = simMaterial(PROBE_FRAG, { ...this.uniforms, uPoints: { value: this.probeTex } }, this.probeTarget);
     this.probeRead = new Readback<number>(renderer, 'litter', PROBE, 1, (data, tag) => {

@@ -255,16 +255,17 @@ What follows from it (Claude's calls, 2026-10-16):
   up on the log's end, red on white bark and bare ground rather than in the gold by the heap. When she stops at the
   heap it sees her, freezes, then sits up and chatters at her with call marks while she and the cygnet look straight
   at it and the lens glances at it; it holds that look about two seconds before it dives.
-- **Heaps hold until it is in.** Each round's heaps stand against the wind until the squirrel has gone into hiding in
-  that round: the wind flutters their tops and lifts a few loose leaves, and takes none of the heap.
+- **Heaps hold until it is in.** Each round's heaps stand against the wind, updrafts included, until the squirrel
+  has gone into hiding in that round: the wind flutters their tops and lifts a few loose leaves, and takes none of
+  the heap.
 - **It is found when it is uncovered,** not the instant the wind arrives. The live floor over its back is read a few
-  times a second; when the wind has taken enough leaves off that it shows, it starts with a squeak, sitting up in
-  what is left, then bursts out. One deliberate swipe or about two loops of updraft over the right heap is enough.
+  times a second; when the updraft has taken enough leaves off that it shows, it starts with a squeak, sitting up in
+  what is left, then bursts out. About two loops of updraft over the right heap are enough.
 - **Under the coils at the second tangle** it startles as they close over it on the way up, and scolds the wool once
   they have lifted clear and slid off.
 - **It carries an acorn**: in its mouth while it runs, in its paws while it sits and nibbles.
 - **The heaps' invitation is an updraft** (the circling gesture), and an updraft over the right heap finds it,
-  lifting the leaves off in a whirl. A swipe still counts.
+  lifting the leaves off in a whirl.
 - **The heap before the swing** is heap 1, one of the island's original free-play heaps. It isn't a round heap
   and isn't raked, so it doesn't promise a squirrel. Blowing it away before the swing is fine.
 
@@ -294,6 +295,15 @@ Fixed (`b3348d9a`): the raked heaps start held in `world/birches.ts`, before the
 > Can you please take a look at the performance profile of the birches chapter? I notice the auto quality always
 > dropping to medium at some point or other.
 
+> ok yea the fallen birch makes sense. Speaking of the three leaf pile game later on, you need to also make that those
+> leaf piles can't be blown away too early. And their layout is also not the best as a line leading away from the
+> child. They should be roughly presented infront of her. There's also an issue where if the player guesses wrong,
+> then there's no leaf pile for the child to jump into... how can this be solved
+
+On the proposal that a wrong guess in round 3 only lifts a heap's top and leaves it standing (2026-10-16):
+
+> ok cool sounds good
+
 What follows from it (2026-10-16):
 - **Red Door enters with the reveal.** On the meadow sail its entrance coincides with the lens beginning its swing
   round to the port side to reveal the island, not after it.
@@ -304,6 +314,11 @@ What follows from it (2026-10-16):
   takes more than now (about two loops, generous to children's circles). Supersedes "A swipe still counts" above:
   a round's squirrel is found by updrafts only.
 - **No heap can be blown away before the squirrel has gone into it**, whatever the route, save or gesture.
+- **A wrong guess in round 3 leaves the heap standing** (ruling, 2026-10-16). An updraft over a heap the squirrel is
+  not in lifts a whirl of leaves off its top, so the player sees it is empty; they rain back down and the heap stands.
+  The real heap answers with its tail and chitter. Only the squirrel's heap bursts apart, and only to an updraft, so
+  after the find both wrong heaps still stand and the leap always has a heap to land in. Round 2 is unchanged: a
+  wrong heap there bursts apart harmlessly.
 - **At the first knot** she stops closer to the knot and stands facing it, body and head, not turned away with her
   head looking back.
 - **The swing:** proposal pending Jeremy's answer (below, once given).
@@ -568,13 +583,28 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
   heaps that are still deep enough to bury it. If the player has already blown them flat, it uses the deepest drifts
   in the area instead.
 - If nothing in the area is deep enough to bury it, it hides **behind a trunk**, peeking round, as real squirrels
-  do. A gust at it flushes it out just the same. The round never breaks and never waits for leaves that are gone.
-- **The heaps hold until it is in.** Each round's heaps (`ROUNDS[i].heaps`) stand against the wind from the start
-  until the squirrel has gone into hiding in that round (in round 3, until its shuffle has settled) (`AutumnBirches.hold`, eased on and off over `holdEase`,
-  0.5 s). The litter field takes them as up to six held circles (`LitterField.holds`: centre, the heap's radius plus
-  `holdReach`, and how firmly) and the wind's mobility there is held at nothing, so the wind stirs their tops and lifts
-  a few loose leaves but takes none of the heap. Heaps after their round and the free-play heaps are never held. So
-  the drift and trunk fallbacks only come into play for heaps blown away after it is in.
+  do. An updraft over it, or over the heap beside it, flushes it out just the same. The round never breaks and never
+  waits for leaves that are gone.
+- **Heaps yield only to updrafts.** Every heap in `BIRCH_PILES`, the squirrel's and the free-play ones, stands against
+  gusts: within `heapGuardReach` (0.6 m) of its rim the litter is moved only by lift, from `heapLiftFrom` (1.0) and in
+  full flood at `heapLiftFull` (1.7), `heapLiftTakes` (2.4) times as readily as a full gust takes the open floor
+  (`LitterField.heaps`, the shader's `heaped`). A swipe flutters its top and lifts its loose leaves, and takes none of
+  it. Lift builds with time spent circling (about 0.6 after a loop, 1.3 after two), so a heap holds through the first
+  loop and a half and goes over the next half loop, in a whirl. A drift the squirrel lies in is guarded the same way
+  (`AutumnBirches.guard`, `driftReach` round it).
+- **The heaps hold until it is in.** Each round's heaps (`ROUNDS[i].heaps`) stand against all wind, updrafts included,
+  from the start until the squirrel has gone into hiding in that round (in round 3, until its shuffle has settled)
+  (`AutumnBirches.hold`, eased on and off over `holdEase`, 0.5 s). The litter field takes them as up to six held
+  circles (`LitterField.holds`: centre, the heap's radius plus `holdReach`, and how firmly) and the leaves' mobility
+  there is held at nothing, so the air stirs their tops and lifts a few loose leaves but takes none of the heap.
+  Measured with real gestures, hard strokes and full-charge circles over the first heap from the boat, from landing
+  and through the meeting, and over rounds 2 and 3 before it is in, leave every heap as it was (0.87–0.98 m).
+- **Round 3's empty heaps stand.** From the shuffle until she leaps, the round's heaps it is not in (nor was found
+  in) are held too (`BirchesSquirrel.emptyHeaps`). An updraft over one lifts its top in a whirl
+  (`AutumnBirches.splash` at `emptySplash`, 1.1, as the lift there passes `heapLiftFrom`) and the heap stands; the
+  real heap answers. So when it is found both wrong heaps are still standing to leap into. Round 2's wrong heap is
+  not held and bursts apart under an updraft. Heaps after their round and the free-play heaps are otherwise never
+  held, so the drift and trunk fallbacks only come into play for heaps taken after it is in.
 - Round 1's heap is the one the squirrel is seen diving into, so its hide is never a choice.
 - Diving in is a splash (`AutumnBirches.splash`): the loose leaves round it go up high and wide, lit against the low
   sun the round's lens looks into, with a crunching whumph (`BirchesFoley.leaves('dive')`), and none of the heap is
@@ -596,25 +626,27 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
 - **Finding is uncovering.** In the leaves it is found when the wind has actually taken enough of them off it: every
   `feelEvery` (0.25 s) one batched readback of the live depth over its back and `feelAcross` (0.35 m) round it, and
   once that is less than `uncovered` (0.3 m) over its paws, the red shows through. It starts (`freeze` with a squeak,
-  sitting up in what is left of the leaves) for `startledFor` (0.4 s), then bursts out. Measured with real strokes:
-  one deliberate swipe across the right heap uncovers it in every round, found 1.3–1.9 s after the swipe begins; a
-  stroke across a wrong heap aimed away from the right one never does. An updraft thins a heap from the top too: the
-  litter under a column is thrown outward down the slope of its lift (`litterLiftThrow`), so circles over the right
-  heap uncover it in two or three loops. A column is wider than the gap between neighbouring heaps, so while circles
-  are wound over one heap of the round, the others hold against it (`circleLinger`), and circles over another heap
-  never uncover it.
-  Behind a trunk there are no leaves to read, so there the wind on it is counted as before (each rise of energy plus
-  speed above `gripSpeed`, `findWork`; circles wound over another heap count only there). A gust that only shaves the
-  right heap makes it `peek`, as a "nearly". Wrong heaps simply burst, or whirl up under an updraft.
+  sitting up in what is left of the leaves) for `startledFor` (0.4 s), then bursts out. Only an updraft takes the
+  leaves off it: the litter under a column is thrown outward down the slope of its lift (`litterLiftThrow`) and
+  whirled round with the circles, so the heap thins from the top. Measured with real circles over the right heap,
+  it starts (`freeze`) after about two loops and is out about 2.5 s after the circling began, in every round; hard
+  strokes across it take none of it. A column is wider than the gap between neighbouring heaps, so while circles are
+  wound over one heap of the round, the others hold against it (`circleLinger`), and circles over another heap never
+  uncover it.
+  Behind a trunk there are no leaves to read, so there each rise of the updraft over it, or over the heap it stands
+  behind, is counted (`liftWork`, `findWork`; circles wound over another heap count only there). A gust that only
+  shaves the right heap makes it `peek`, as a "nearly", and a gust on a wrong heap makes the right one answer. A wrong
+  heap bursts apart under an updraft in round 2, and in round 3 only its top whirls up.
 - **Found.** `burst`, a beat of `sit` and `scold` facing the child, then `bound` to the next waypoint, glancing back
   once (an invitation to chase). The cygnet chases a few steps (its own errand, not a script) and the child
   `cheer`s, then follows.
 - **The cygnet seeks too,** through its own mind and errands (`watch`, `peer`, `delve`, `shake`, `look-back`). It
   goes heap to heap. It is right about as often as chance, so it is a companion, not a solver.
-- **A stalled player.** After 10 s without wind on the right heap, the cygnet goes and stands at the right heap,
-  peering into it (the in-story hint, no fourth wall). After 18 s the drawn updraft (the chapter's `coax`, the swirl
-  the scarf's second tangle uses) turns over that heap, its loops most of the heap's width, plainer over 4 s. Neither
-  ever supplies wind.
+- **A stalled player.** After `hintAfter` (7 s) without an updraft on the right heap, swiping or not, the cygnet goes
+  and stands at the right heap, peering into it (the in-story hint, no fourth wall). After `inviteAfter` (12 s) the
+  drawn updraft (the chapter's `coax`, the swirl the scarf's second tangle uses) turns over that heap, its loops most
+  of the heap's width, plainer over 4 s. Swipes no longer put either off, since they cannot find it. Neither ever
+  supplies wind.
 - **Camera.** Each round has its own frame, like the tangles' frames: the child, the heaps and the squirrel's last
   sighting in view. It is lower and closer than the walking shot so the squirrel reads (about the swing's 14–17 m,
   storyboarded per round). Portrait stands further back on a longer lens, so its far heaps read nearly as large as its
@@ -649,7 +681,8 @@ haze. Round 3 has no count: after the second tangle the squirrel runs on ahead a
 
 ### The leap
 
-After round 3, the child runs at the nearest heap in the hollow still deep enough to land in (found by the same readback), leaps
+After round 3, the child runs at the nearest heap in the hollow still deep enough to land in (found by the same readback;
+a standing heap of the round before any drift, and round 3's empty heaps always stand), leaps
 (`child.leap`, landing on her seat), the leaves burst round her (`burst` at 1.4), and she sits up as the cygnet's
 head pops up beside her. Then they get up and walk on. If the hollow has been blown bare,
 she runs through what is left kicking leaves up instead. The moment always happens in some form.
@@ -802,11 +835,11 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   lies at `AutumnBirches.buryDepth` under the leaves' surface, under each heap's crest (0.1 of the radius past its
   middle from the lens) so the tail tip shows over the top. Turned out before she arrives, it hides again.
 - **Tells and finding.** The tell is a `shiver` at 0.18 with a rustle; the tail is re-dealt at each tell by round
-  (0.5, 0.33, 0.2); a fifth of tells are a peek. Each rise of the air over the heap counts; 0.12 flushes it in round
-  1 and 0.25 after. Measured strokes: across a heap 0.3–0.6, along its rim 0.1–0.17, a metre outside it about 0.1.
-  Round 3's heaps are told apart cleanly. In round 2 a hard stroke over the far heap also blows the near one (its air
-  reaches there at 0.4–0.6), so it finds a squirrel in the near heap: generous, and what the leaves show. A child's
-  random swipes find it in 2–13 strokes a round, about 4 on average ("As built: the shuffle and the rounds polish").
+  (0.5, 0.33, 0.2); a fifth of tells are a peek. In the leaves it is found when an updraft has uncovered it ("A
+  round"); behind a trunk each rise of the updraft counts, 0.12 flushing it in round 1 and 0.25 after. A child's
+  random swipes take no heap and never find it; sloppy circles drawn round the right heap on the screen (off its
+  middle, 0.04–0.12 screen heights, squashed, 0.6–1.4 s a loop) find it in 2–3 loops ("Heaps yield only to
+  updrafts").
 - **Her and the cygnet.** She walks round any heap between her and her stand rather than through it, kneels there
   (`kneel`) and turns to each heap the wind bursts; found, she gets up and cheers. The cygnet first stands beside her,
   then looks into heaps of its own choosing from the rim nearest her (`ROUNDS[].cygnet`), delving or peering and
@@ -871,8 +904,8 @@ verification's own list. Built on `birches-uplift-heaps`.
 - It settles for `shuffleSettle` and lies hidden as in any round; the tells start, and from then on the wind may find
   it. Measured: 16–23 s from the dare to settled.
 - Through all of it the heaps hold (`holdHeaps` until it is hidden), and a held heap is not scuffed by its burst out
-  either, so every heap is whole when the shuffle settles. Measured with hard strokes over all three mid-shuffle:
-  depths 0.89, 0.95, 0.88 m before and after.
+  either, so every heap is whole when the shuffle settles. Measured with hard strokes and then two loops of circles
+  over each of the three mid-shuffle: every depth as it was.
 - She stands at her place and follows it with her head the whole way, the hump while it is under (`tracked`); the
   cygnet comes to her side and watches it too. The depth blur keeps it sharp. In both orientations every heap, the
   squirrel or its hump, and the whole child stay in frame from the dare to settled (checked a few times a second).
@@ -883,21 +916,15 @@ verification's own list. Built on `birches-uplift-heaps`.
 - Found, it bounds between the middle and far heaps and up the birch behind them; the leap goes to the nearest heap
   still deep enough to land in.
 
-**Uncovering is generous again.** Raked heaps are loose (`LitterField` `uLoose`, `tuning.birches.looseReach`,
-`looseLift`): their leaves feel the strongest gust within 1.6 m as well as the air over them, and go 1.6 times as
-readily. A deliberate swipe across the right heap still uncovers it in one stroke in every round (found 1.75–2.07 s
-after it begins), and the heap visibly thins first; circles uncover it in two or three loops; a stroke across a wrong heap
-aimed away from the right one never does. Random swipes over the frame (each from where the last ended to anywhere in
-the frame below the canopy, six seeds) found it in 2–4, 2–6 and 2–13 strokes in rounds 1, 2 and 3, means 3.7–4.2,
-13 at most once (19–30 before); round 3 is slowest when it has settled in the far heap. The previous random model, short swipes that wander and pin to the frame's edges once they reach
-one, is kept as `WANDER=1`; with it one seed in three never reaches the heaps in rounds 1 and 2 in 40 strokes.
+**Uncovering is generous.** Raked heaps are loose (`LitterField.heaps`, `tuning.birches.looseReach`, `looseLift`):
+their leaves feel the strongest lift within 1.6 m as well as the air over them, and go 1.6 times as readily. Circles
+over the right heap find it in two to three loops whatever their size, centre or pace; strokes never do (above).
 
-**Spacing.** Round 3's heaps are 3 m apart at the rim (1.2 m before) and erode on their own: a stroke across the
-near heap takes it from 0.90 to 0.31 m and leaves the middle and far ones standing (1.03, 0.90). An updraft's column
-is wider than any spacing the frame allows (5–9 m), so once circles over one heap of the round being played have
-wound the charge past `circleHoldFrom` (0.35, well past what random swipes wind up), and for `circleLinger` (3 s)
-after, the round's other heaps hold against it: three loops over the middle heap take it to nothing and leave the far
-one standing (before, they took all three). Round 2's two heaps were already 7 m apart.
+**Spacing.** Round 3's heaps are 3 m apart at the rim. An updraft's column is wider than any spacing the frame allows
+(5–9 m), so once circles over one heap of the round being played have wound the charge past `circleHoldFrom` (0.35,
+well past what random swipes wind up), and for `circleLinger` (3 s) after, the round's other heaps hold against it:
+circles over the heap it is in take that one to nothing and leave the other two standing. Round 2's two heaps are
+7 m apart.
 
 **Frames** (the storyboard table above): round 2 is looked at from the south, high enough that the near heap and
 its burst sit well inside the frame (portrait from the east along the two heaps, the near one whole at the frame's

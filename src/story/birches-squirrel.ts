@@ -141,6 +141,7 @@ export class BirchesSquirrel {
   private scoldAt = -1;
   private work = 0;
   private rate = 0;
+  private lifted = 0;
   private gust = 0;
   private calm = 0;
   private quiet = 0;
@@ -305,10 +306,12 @@ export class BirchesSquirrel {
   }
 
   /**
-   * Each round's heaps stand against the wind until it has gone into hiding in one of them, and has done shuffling.
-   * While the player winds an updraft over one heap of the round being played, and until its rising air has died
-   * away, the others stand against it: the column is wider than the loops drawn, and circles over one heap should take
-   * that heap.
+   * Each round's heaps stand against the wind, updrafts included, until it has gone into hiding in one of them, and
+   * has done shuffling. While the player winds an updraft over one heap of the round being played, and until its
+   * rising air has died away, the others stand against it: the column is wider than the loops drawn, and circles over
+   * one heap should take that heap. In the shuffle's round the heaps it is not in stand until the leap, so a wrong
+   * guess only lifts their tops and there is always a heap to jump into. A drift it lies in yields only to updrafts,
+   * as a heap does.
    */
   private holdHeaps(): void {
     this.holding.length = 0;
@@ -319,10 +322,22 @@ export class BirchesSquirrel {
     } else if (this.now > this.circledUntil || this.cue.round < 0) this.circled = -1;
     const circled = this.circled;
     ROUNDS.forEach((r, round) => {
-      if (this.rounds <= round && this.wentIn < round) this.holding.push(...r.heaps);
-      else if (circled >= 0 && round === this.cue.round) this.holding.push(...r.heaps.filter((heap) => heap !== circled));
+      if (this.rounds <= round && this.wentIn < round) { this.holding.push(...r.heaps); return; }
+      const empty = this.emptyHeaps(round);
+      this.holding.push(...r.heaps.filter((heap) => empty.includes(heap) || (circled >= 0 && round === this.cue.round && heap !== circled)));
     });
     this.cast.birches.hold(this.holding);
+    const h = this.hidden;
+    this.cast.birches.guard(h && h.heap < 0 && !h.trunk ? h.at : null, tuning.birches.squirrel.driftReach);
+  }
+
+  /** The heaps of the shuffle's round it is not in (nor was found in), from the shuffle until she leaps. */
+  private emptyHeaps(round: number): readonly number[] {
+    const r = ROUNDS[round];
+    if (!r.shuffle || this.leapt || this.leap === 'flying' || this.leap === 'sitting' || this.leap === 'done') return [];
+    const h = this.hidden?.round === round ? this.hidden : null;
+    const mine = h ? h.heap : this.lastHide.round === round ? this.lastHide.heap : -1;
+    return r.heaps.filter((_, i) => i !== mine);
   }
 
   /** The heap of the round being played that the player's circles are wound over, or −1. */
@@ -721,7 +736,7 @@ export class BirchesSquirrel {
     const s = this.cast.squirrel;
     const k = tuning.birches.squirrel;
     this.hidden = h;
-    this.work = this.rate = this.gust = this.calm = this.quiet = 0;
+    this.work = this.rate = this.lifted = this.gust = this.calm = this.quiet = 0;
     this.hinting = false;
     this.tailOut = Math.random() < k.tailOut[h.round];
     this.nextTell = this.now + between(k.tellFrom, k.tellTo);
@@ -801,14 +816,15 @@ export class BirchesSquirrel {
   }
 
   /**
-   * How much more updraft stands over `at` than over any other heap of round `round`, as air on it. A column is wider
-   * than the gaps between the heaps, so it is the heap it stands over that counts, never the one beside it.
+   * How much more updraft stands over `at` than over any other heap of round `round` further than `reach` from it, as
+   * air on it. A column is wider than the gaps between the heaps, so it is the heap it stands over that counts, never
+   * the one beside it; a trunk or drift it lies at counts with the heap beside it.
    */
-  private liftOn(round: number, at: Spot): number {
+  private liftOn(round: number, at: Spot, reach = 0): number {
     this.lifts.length = 0;
     for (const heap of ROUNDS[round].heaps) {
       const p = BIRCH_PILES[heap];
-      if (Math.hypot(p.x - at.x, p.z - at.z) > p.r) this.lifts.push(this.cast.wind.sample(p.x, p.z, this.air).lift);
+      if (Math.hypot(p.x - at.x, p.z - at.z) > p.r + reach) this.lifts.push(this.cast.wind.sample(p.x, p.z, this.air).lift);
     }
     const over = this.cast.wind.sample(at.x, at.z, this.air).lift - Math.max(0, ...this.lifts);
     return THREE.MathUtils.clamp(over * tuning.birches.squirrel.liftWork, 0, 1);
@@ -818,12 +834,12 @@ export class BirchesSquirrel {
    * Circles wound over another heap of round `round` are that heap's: how much of their gusts, which spill metres
    * past the loop, still count on `at` (1 when the player is not circling over another heap).
    */
-  private notCircledElsewhere(round: number, at: Spot): number {
+  private notCircledElsewhere(round: number, at: Spot, reach = 0): number {
     const { charge, updraftAt: u } = this.cast.input;
     if (charge <= 0) return 1;
     for (const heap of ROUNDS[round].heaps) {
       const p = BIRCH_PILES[heap];
-      if (Math.hypot(p.x - at.x, p.z - at.z) > p.r && Math.hypot(p.x - u.x, p.z - u.z) < p.r) {
+      if (Math.hypot(p.x - at.x, p.z - at.z) > p.r + reach && Math.hypot(p.x - u.x, p.z - u.z) < p.r) {
         return 1 - THREE.MathUtils.smoothstep(charge, 0, tuning.birches.squirrel.circledBy);
       }
     }
@@ -840,17 +856,22 @@ export class BirchesSquirrel {
     const h = this.hidden!;
     const s = this.cast.squirrel;
     const k = tuning.birches.squirrel;
-    const rate = this.windOn(h.at, h.reach) + this.liftOn(h.round, h.at);
-    const rise = (rate - this.rate > 0.004 ? rate - this.rate : 0) * this.notCircledElsewhere(h.round, h.at);
+    const beside = h.heap < 0 ? h.reach : 0;
+    const lift = this.liftOn(h.round, h.at, beside), rate = this.windOn(h.at, h.reach) + lift;
+    const elsewhere = this.notCircledElsewhere(h.round, h.at, beside);
+    const rise = (rate - this.rate > 0.004 ? rate - this.rate : 0) * elsewhere;
+    const lifting = (lift - this.lifted > 0.004 ? lift - this.lifted : 0) * elsewhere;
     this.rate = rate;
-    this.work = Math.max(0, this.work + rise - k.findForget * dt);
+    this.lifted = lift;
+    this.work = Math.max(0, this.work + lifting - k.findForget * dt);
+    /** Only an updraft finds it, so only one over it puts off the cygnet's hint and the drawn updraft. */
+    if (lift > 0.05) this.quiet = 0;
+    else if (this.cue.seeking) this.quiet += dt;
     if (rate > 0.05) {
       this.gust += rise;
       this.calm = 0;
-      this.quiet = 0;
     } else {
       this.calm += dt;
-      if (this.cue.seeking) this.quiet += dt;
       /** A gust that only shaved it: a nose up out of the leaves to see what that was. */
       if (this.calm > 0.35 && this.gust > 0) {
         if (this.gust >= k.nearlyWork && !h.trunk && !s.busy) s.act('peek', { for: k.peekFor * 0.8, look: this.face });
@@ -980,12 +1001,15 @@ export class BirchesSquirrel {
         const top = this.v.set(p.x, ground(p.x, p.z), p.z);
         if (time - (this.heapBurstAt.get(heap) ?? -1e9) < 1.5 || this.windOn(top, p.r) + this.liftOn(round, top) < 0.45) continue;
         this.heapBurstAt.set(heap, time);
+        const lifted = this.cast.wind.sample(p.x, p.z, this.air).lift >= tuning.birches.heapLiftFrom;
+        /** A heap it is not in lifted by the column in the shuffle's round: a whirl off its top, and the heap stands. */
+        if (lifted && this.emptyHeaps(round).includes(heap)) this.cast.birches.splash(p.x, p.z, k.emptySplash);
         if (time >= this.answeredUntil) {
           this.lookUntil = time + 2;
           c.lookAt = this.heapLook.set(p.x, top.y + 0.3, p.z);
         }
         if (this.hidden === null || r.heaps[this.hidden.heap] !== heap) {
-          this.cast.leafSound?.('burst', top, 0.7);
+          this.cast.leafSound?.(lifted ? 'burst' : 'rustle', top, 0.7);
           this.answer(time);
         }
       }
@@ -1111,7 +1135,8 @@ export class BirchesSquirrel {
       /** Only leaves the lens can see, so she lands in the round's frame; of those deep enough, the nearest, so the run is short. */
       const { child: c, cygnet: bird } = this.cast, k = tuning.birches.squirrel;
       const seen = points.map((p, i) => i).filter((i) => this.inView(2, points[i]));
-      const deep = seen.filter((i) => depths[i] >= k.leapDepth * 1.6);
+      const deepest = seen.filter((i) => depths[i] >= k.leapDepth * 1.6), heaps = deepest.filter((i) => i < piles.length);
+      const deep = heaps.length ? heaps : deepest;
       const by = (score: (i: number) => number) => (deep.length ? deep : seen).reduce((a, i) => (a < 0 || score(i) < score(a) ? i : a), -1);
       const best = deep.length ? by((i) => points[i].distanceTo(c.position)) : by((i) => -depths[i]);
       c.kneeling = 0;

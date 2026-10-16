@@ -879,7 +879,7 @@ export class AutumnBirches {
     this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
     this.treeTex.needsUpdate = true;
     this.litterCover = this.litterSeed(rand);
-    this.litter = new LitterField(renderer, this.litterCover, this.wade, BIRCH_PILES.filter((p) => p.raked));
+    this.litter = new LitterField(renderer, this.litterCover, this.wade, BIRCH_PILES);
     const shared = {
       ...atmo.uniforms,
       ...this.litter.uniforms,
@@ -1411,6 +1411,13 @@ export class AutumnBirches {
       if (h) h.set(p.x, p.z, p.r + tuning.birches.holdReach, now);
     }
     for (; slot < this.litter.holds.length; slot++) this.litter.holds[slot].w = 0;
+  }
+
+  /** Leaves at `at`, `r` m round, that only an updraft takes, as it does a heap (a drift something lies in); null for none. */
+  guard(at: { x: number; z: number } | null, r = 0): void {
+    const spot = this.litter.heaps[this.litter.heaps.length - 1];
+    if (at) spot.set(at.x, at.z, r, 0);
+    else spot.set(1e6, 1e6, 0, 0);
   }
 
   /** How high the leaves stand over the ground at each point, in metres, read back from the live floor. */
