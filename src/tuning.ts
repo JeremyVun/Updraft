@@ -1097,7 +1097,7 @@ export const tuning = {
   /** The meadow's recordings (`audio/meadow-music.ts`); cuts and measured gains live in `audio/meadow-cuts.ts`. */
   meadowMusic: {
     /** Trims (dB) on the gains that level each part to the room reference. */
-    walkDb: 0, callDb: 0, answerDb: 0, finaleDb: 0, afterDb: 0, endingDb: 0,
+    walkDb: 0, callDb: 0, answerDb: 0, finaleDb: 0, afterDb: 0,
     /**
      * The cygnet's steps under the finale sit `stepDb` under the answers, so the flute leads; `stepVelocity` is their
      * strike on the piano's own strings until the recording is decoded.
@@ -1105,10 +1105,13 @@ export const tuning = {
     stepDb: -10, stepVelocity: 0.12,
     /** With no answer begun this long after a call, the bough says it once more, `callAgainDb` softer, and then waits. */
     callAgainAfter: 25, callAgainDb: -4,
-    /** The warm bed fades over this long for the listening rest before the family's call. */
-    listenFade: 1.8,
-    /** And swells in over this long when it begins, after the finale has rung down. */
+    /** The warm bed swells in over this long when it begins, after the finale has rung down. */
     afterFadeIn: 6,
+    /**
+     * From the listening rest until the family has flown out of sight, the warm bed sits `swanDipDb` lower so their
+     * calls carry, going down over `swanDipIn` seconds and back up over `swanDipOut`.
+     */
+    swanDipDb: -4, swanDipIn: 3, swanDipOut: 6,
   },
   piano: {
     place: [-18, -678],

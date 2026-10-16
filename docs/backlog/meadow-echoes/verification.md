@@ -219,3 +219,53 @@ Before/after stills from the actual play camera are in `/tmp/updraft-flowers/` a
   no reversals in them.
 
 Not established: a human motion review of the rise and of the bed waking, and Jeremy's creative verdict.
+
+## Music: answers that ring out, one warm bed — 2026-10-17
+
+Branch `meadow-fix-music` (third playthrough, items 4 and 5). Evidence in `/tmp/meadow-music.Wo0mJa/` (scratch).
+
+As a listener moving through it:
+- Each answer now ends as a pedalled piano in that room does: it rings on under the bough's next call, which
+  enters over its last breath (about 40 dB under the answer's peak), like two players in one room. Pacing is
+  unchanged: the next call still comes 9 s after the answer began; the finale comes 0.3 s later than before.
+- The first call no longer stops on a held F4; it tapers away as the flute take's own phrases do.
+- From the duet the warm bed never stops. At the listening rest it eases down 4 dB over 3 s so the family's first
+  distant call carries, stays down through the walk to the crest, the reveal, the departure and the cygnet's cries,
+  and comes back over 6 s once they have flown out of sight, so it is full again as the feather comes down. Lower,
+  never silent: the family's calls are the scene's foreground, but losing the music there was what felt abrupt.
+- At the push off it stops looping and at its next cadence turns into the take's own last phrase and soft close.
+  Birches waits for that end, rests and fades in on the approach: the meadow ends on its own music on the water and
+  the two never overlap.
+
+Measured:
+- Take B's decay between its phrases (broadband level regression from 0.4 s after each phrase's last attack to the
+  next attack): 1.7, 4.3, 3.5, 5.8 dB/s; median 3.9 dB/s, RT60 15.4 s, the pedalled strings in the take's room. Its
+  silence is −80 dBFS. The ensemble's stops later in B fall 45–130 dB/s in the low bands while other voices hold, so
+  they give no clean room tail; no phrase in B rings out to silence.
+- Answers, old → new: the old cuts ended at 5.6, 5.3, 5.6 and 5.8 s with a 0.8 s fade begun 22–30 dB under the
+  phrase's peak, while the take was still ringing 22–27 dB under it. The new ones keep the take to 6.28, 6.08, 6.56
+  and 5.94 s (60 ms before the next attack; the last 50 ms sit within 1 dB of the quarter second before), at 27, 27,
+  31 and 28 dB under the peak, then ring 8.9, 8.2, 7.8 and 7.6 s to −80 dBFS, the last second faded: 15.2, 14.2,
+  14.3 and 13.5 s each. Partials carry on phase-continuous from the take; spectrograms show no step at the handover.
+- Call 1: was a 0.35 s fade from 20 dB under its peak; now 1.4 s shaped as the median of the flute take's seven
+  endings into silence (0 to −28 dB), then a 0.3 s fade. Calls 2–4 and the finale already end in silence.
+- The close: ten phrase ends into 3:43.6 (92.6 s on the first pass only), mostly 3–12 s apart, the longest wait 23.8
+  s once it loops; at each, the crossfade's level step is 0.1–1.0 dB and flux 171–177, against 0.5 dB and 173 for
+  the take's own continuation there.
+- Renders through the game's sound (`meadow-bed-render.mjs`, the crossing's measured times): a typical push off went
+  into the close 4 s later, ended 19 s into the 47 s crossing, and Birches came in at its approach (26 s); pushed off
+  just after a cadence, the close began 23 s later and Birches came in 5 s before landing. The bed's gain stepped
+  −13.4 → −17.4 dB over 3 s and back over 6 s.
+- In the real game loop from a pond restore (shot mode, which runs the story faster than the audio clock): the bed
+  began at its loop, the push off scheduled the close, Birches held in `wait` until it ended, then rested and came in.
+  Before the restore change the bed began at its opening, whose first 70 s have no cadence into the close.
+
+Checks: typecheck, production build and `production-build-check.mjs`; `meadow-duet-check.mjs` (updated, both new
+guards shown to fail when broken); `audio-check`, `piano-audio-check`, `meadow-echoes-state-check`,
+`audio-continuity-check`, real-input `piano-check.mjs` (the four answers play their full 13.5–15.2 s) and
+`ONLY=meadow progress-check.mjs` pass. Failing, unrelated to this change: `meadow-score-check.mjs` (its fake chapter
+has no `song`, since 13 October), `meadow-score-browser-check.mjs` (expects the old note-array `piano.expect`) and
+`audio-browser-check.mjs` (toLines delivers three of its five whale events).
+
+Not established: nobody has listened to any of it. The seams into the close, the ring-outs and the dip are judged
+from measurements, envelopes and spectrograms only.

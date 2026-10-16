@@ -244,9 +244,9 @@ Jeremy's 2026-10-12 instruction: remove the Little Boats "puzzle completed" soun
 **Meadow and the piano.** The meadow plays cuts of four supplied takes (the playable prototype of 2026-10-15; Jeremy's
 brief and the cut list are in [the design](../backlog/meadow-echoes/design.md), "Piano hill and the meadow score").
 `audio/meadow-cuts.ts` is the one table of cuts per beat; `node tools/meadow-music-cuts.mjs` (SOURCES=<folder of the
-takes>) cuts them from the takes into `meadow-walk.ogg`, `meadow-duet.ogg` (calls, answer notes and finale packed with
-0.25 s gaps), `meadow-after.ogg` and `meadow-ending.ogg` (Ogg Opus, 48 kHz stereo, 20 ms edges unless a tail fade is
-given), levels each to the room reference by measured loudness, and writes what it measured to
+takes>) cuts them from the takes into `meadow-walk.ogg`, `meadow-duet.ogg` (calls, answers, steps and finale packed
+with 0.25 s gaps) and `meadow-after.ogg` (the warm bed and its close; Ogg Opus, 48 kHz stereo, 20 ms edges unless a
+tail fade is given), levels each to the room reference by measured loudness, and writes what it measured to
 `audio/meadow-cuts-measured.ts`. Swapping a take or a cut is an edit to the table and a rerun.
 
 - Landing to the stool: the walk (O 0–27.2) loops with 3 s rests. It arrives through the ordinary handoff from Little
@@ -258,31 +258,54 @@ given), levels each to the room reference by measured loudness, and writes what 
   inhale ends; reply input opens after the flute's measured end. With no answer begun `callAgainAfter` (25 s) later
   the bough says the call once more, `callAgainDb` (−4 dB) softer, and then stays silent. Following the guide far
   enough plays the answer whole at its own tempo; her hands and the keys follow its measured onsets and melody notes,
-  and stroke speed changes nothing. The next call waits for the answer to ring down, and the finale for the last.
-  The guide tilts with the answer's overall rise or fall (`tilt`). Until the duet file is decoded the piano strings
+  and stroke speed changes nothing. The guide tilts with the answer's overall rise or fall (`tilt`).
+- The answers ring out. Take B plays its phrases straight on, pedal down, so each answer keeps the take up to 60 ms
+  before the next phrase's attack (`ringOut`; the tool checks nothing of the attack reaches it) and there crossfades,
+  over the last 0.34 s it measured, into the ring of its own sound: its partials, each at a frequency taken from the
+  channels' mid so the image holds and nothing beats that did not, and the noise under them, falling at the decay B
+  measures between its phrases (the median of its four gaps, 3.9 dB a second, RT60 15 s) down to the take's own
+  silence (−80 dBFS), with a last second's fade. Each rings 7.6–8.9 s past the handover. `end` is the handover: the
+  next call waits for it and for `phraseRest` after the answer began, and the finale follows the last by
+  `finalRest`; the ring carries on, softly, under them. The first call is held into the flute take's next phrase, so it
+  ends over its last 1.4 s (`release`) as the take's own seven phrase endings into silence do (their median level
+  curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Until the duet file is decoded the piano strings
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
   (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
   answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
   end raises no `restored`: the flute's finale is the reward.
-- From the duet's end the warm bed swells in over `afterFadeIn` (6 s) and plays through the flowers and seeds from
-  `meadow_extended.ogg` (take E as Jeremy extended it): 0:22.60 to 2:53.05, then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`).
-  The cut's last 0.6 s carries the source's lead into 1:36.60 under its own end (an equal-power crossfade baked in by
-  the tool), so the seam continues the phrase; the tool's seam check measures it against the source's own
-  continuation there. It fades over `listenFade` for the listening rest. The family's departure is silent. The ending
-  (3:16.30 to the file's end, whose tail still sounds, so its last 0.5 s fade) plays once from the feather
-  (`dropFeather`) or a `pond` restore; then silence until Birches' handoff.
+- One warm bed from the duet to the boat. From the duet's end it swells in over `afterFadeIn` (6 s) and plays
+  unbroken through the flowers, the seeds, the listening rest, the pond, the family's departure, the feather, the
+  shower and the walk to the boat, from `meadow_extended.ogg` (take E as Jeremy extended it): 0:22.60 to 2:53.05,
+  then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`). The cut's last 0.6 s carries the
+  source's lead into 1:36.60 under its own end (an equal-power crossfade baked in by the tool), so the seam continues
+  the phrase; the tool's seam check measures it against the source's own continuation there.
+- Room for the family. From the listening rest, whose distant call draws her to the crest, until the family has flown
+  out of sight over the pond (`swans`), the bed sits `swanDipDb` (−4 dB) lower, easing down over `swanDipIn` (3 s)
+  and back up over `swanDipOut` (6 s), so it is up again as the feather comes down. After the family (`boat`) a bed
+  begun afresh, as on a `pond` restore, starts at 1:36.60 rather than at its opening.
+- The meadow ends on its own music. At the push off (`onward`, which the crossing carries on) the bed stops looping:
+  at its next phrase end into the close (`seams`: the bed's recurring cadence, wherever its chord and level over the
+  crossfade, and its chord over the second before, match the take's own lead into 3:43.60; mostly 3–12 s apart, the
+  longest wait 23.8 s) it crossfades over 0.6 s, equal power, into 3:43.60 and plays the take's final cadence and soft
+  close to the end of the file (19.3 s; the last note still sounds there, so the last 2 s fade). The tool measures
+  each way in against the take's own continuation there. Birches' arrival handoff waits for that end
+  (`meadowMusic.closesAt`, held like a once-played recording: no fade of its own), then rests `arrivalQuiet` and fades
+  in, so the two never sound together and the meadow is not cut. Typically the close ends about 20 s into the 47 s
+  crossing and Birches comes in at its approach (26 s); at worst about 42 s in, 5 s before landing. A start on the
+  crossing itself has no bed and is quiet until Birches. `node tools/meadow-bed-render.mjs` renders the whole run
+  from the duet's end to Birches through the game's sound (LISTEN, GONE and PUSH set the story's times).
 - `MeadowChapter.meadowMusic` names the part; `audio/meadow-music.ts` plays it. The shared pad is silent in the meadow
   (`MOODS.meadow.level` 0) and the synthesised `MeadowScore` no longer plays; `meadowScore` remains story state.
-  `hush` does not apply. Files are fetched ahead in Little Boats and on the crossing (walk, duet), during the duet
-  (warm bed, ending) and after it (ending), decoded as their part nears and released once played; a start or restore
-  in the meadow waits behind the veil for its first part. Music mute and hidden pages behave as for the other
-  recordings. Decoded sizes: walk 10 MiB, duet 31 MiB, warm bed 55 MiB, ending 17 MiB.
+  `hush` does not apply. Files are fetched ahead in Little Boats and on the crossing (walk, duet) and during the duet
+  (warm bed), decoded as their part nears and released once played: the walk as she sits, the duet as the warm bed
+  begins, the warm bed once its close has played. A start or restore in the meadow waits behind the veil for its first
+  part. Music mute and hidden pages behave as for the other recordings. Decoded sizes: walk 10 MiB, duet 44 MiB, warm
+  bed with its close 63 MiB, so the duet holds about 107 MiB once the walk is released.
 
 The flower bed, the seed heads and the harebells make no notes (Jeremy, 2026-10-16: "None of the flower challenges
 should make that bell sound anymore. It no loner fits with the meadow music"; "the bluebells should go quiet as well");
 they answer with sight and the ordinary sound of the wind. `MeadowSong` smoothly shares the existing
-`pianoMix` gate while the child and wind exchange seeds, then releases it; the warm bed ignores that duck. The final
-listening rest gives the distant family call space before the crest.
+`pianoMix` gate while the child and wind exchange seeds, then releases it; the warm bed ignores that duck.
 
 **Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
 `assets/music/birches.ogg` ("A Question, Then a Gentle Answer") replaces the synthesised score from the approach
@@ -716,7 +739,8 @@ the Meadow melody itself.
 
 - A once-played recording marked `holdsHandoff` holds any request until its own end fade is done, with no phrase-wait
   cap; the handoff then skips its fade (the recording has faded itself) and keeps the rest and fade-in. A recording
-  already over leaves the handoff as it was.
+  already over leaves the handoff as it was. The meadow's warm bed, once it is playing out to its close
+  (`meadowMusic.closesAt`), holds Birches the same way.
 
 A gain whose first event is scheduled ahead starts at 0, not its default of 1: a source starting between samples
 lets one sample through before that event, a click (the piano's hammer did this).
