@@ -1590,8 +1590,8 @@ export const tuning = {
       shuffleUnder: [2.5, 3.2], burrowStirEvery: 0.07, burrowStir: 0.45, burrowRustleEvery: 0.16, shuffleSettle: 0.8,
       /** Wind on a heap it is not in: the one it is in answers `answerAfter` s later with a tell, at most every `answerEvery` s. */
       answerAfter: 0.3, answerEvery: 1.5,
-      /** The leap: her run-up speed and spring, how hard the leaves go up, and how long she sits in them. */
-      leapRun: 3.2, leapUp: 2.6, leapBurst: 1.4, leapSitFor: 1.8,
+      /** The leap: her run-up speed and spring, how high and wide the leaves go up round her, and how long she sits in them. */
+      leapRun: 3.2, leapUp: 2.6, leapSplash: 1.4, leapSitFor: 1.8,
       /** Through a bare hollow she runs, kicking up what is left this often and this hard. */
       kickEvery: 0.28, kickStrength: 0.4,
     },

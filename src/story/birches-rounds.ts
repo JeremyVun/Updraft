@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import { FALLEN_LOG, FORK_BRANCH, SCARF_SNAGS } from '../world/birch-scarf';
-import { BIRCH_PILES, ROUND_VIEWS, ROUND_VIEWS_TALL, type AutumnBirches } from '../world/birches';
+import { BIRCH_PILES, HOLLOW_FAR_TREE, ROUND_VIEWS, ROUND_VIEWS_TALL, type AutumnBirches } from '../world/birches';
 import { birchesAt, birchesGap } from '../world/birches-layout';
 import { heightAt } from '../world/island';
 
@@ -146,10 +146,10 @@ export interface Round {
   frames: Frames;
 }
 
-/** STAGING (birches-uplift-concept): the third stand is on the ride's west edge, the three heaps on an arc in front of her. */
+/** The third stand is on the ride's west edge, the three heaps on an arc in front of her. */
 const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 11, -8)];
 /** In the gap between the third round's left heap and its middle one, a little toward her: where it sits up and waits for her. */
-const SHUFFLE_FROM = birchesGap(2, 10.7, -15.6);
+const SHUFFLE_FROM = birchesGap(2, 10.91, -14.66);
 
 export const ROUNDS: readonly Round[] = [
   {
@@ -189,7 +189,12 @@ export const ROUNDS: readonly Round[] = [
     lastSeen: lifted(SHUFFLE_FROM),
     shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
     cygnet: [lifted(birchesGap(2, 9.2, -7.4)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: view(2, 19.5, 7), portrait: tall(2, 19, 10, 2, 0.78) },
+    /**
+     * From behind her, a little to her left, so she stands between the middle heap and the right one and the three are
+     * set out across the frame, low enough that they stand up as mounds. Portrait stands further back on a wider lens
+     * to hold all three across its width, looking over them into the gold, the heaps and her in its lower half.
+     */
+    frames: { landscape: view(2, 17, 5.5), portrait: tall(2, 23, 4.5, 6, 0.7) },
   },
 ];
 
@@ -226,9 +231,8 @@ const BOW_TREE = { x: SCARF_SNAGS[3].treeX, z: SCARF_SNAGS[3].treeZ };
 const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
 const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
-/** The birch behind the hollow's middle heap (`world/birches.ts` BANKS). */
-const FAR_TREE = birchesGap(2, 16.1, -20.3);
-const ROUND_3_LENS = lensOf(2, 21);
+const FAR_TREE = HOLLOW_FAR_TREE;
+const ROUND_3_LENS = lensOf(2, 17);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
 /** Where the swing's lens stands, three-quarters on to the seat, so the trunk's face toward it faces the lens. */
@@ -303,11 +307,13 @@ export const PATHS = {
   /** Down the broken birch on the side the lens sees, round it, and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [
     bark(STUMP, 3.9, STUMP_FRONT), bark(STUMP, 0.4, STUMP_FRONT),
-    g(-11.1, -1140.6), g(-10, -1144), g(-9.5, -1151), gap(2, 4, -9.5), gap(2, 8.5, -13.5), { ground: SHUFFLE_FROM },
+    g(-11.1, -1140.6), g(-10, -1144), g(-9.5, -1151), gap(2, 4, -9.5), gap(2, 8.3, -12.8), { ground: SHUFFLE_FROM },
   ],
-  /** Behind the heaps, and up the birch behind the middle one. */
-  toFarTrunk: [gap(2, 12, -20.2), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
-  /** Down the far trunk, between the middle heap and the far one and past the far one, to the birch beyond the slipped loop. */
+  /** Between the left heap and the middle one, round behind the middle one and up the birch there. */
+  toFarTrunk: [gap(2, 12, -18.5), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  /** From the right heap the same way round, between it and the middle one. */
+  toFarTrunkRight: [gap(2, 18.5, -15.6), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  /** Down the far trunk, behind the right heap, to the birch beyond the slipped loop. */
   toTangle3: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
     g(-14.5, -1155.4), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),

@@ -26,9 +26,17 @@ const WAYS: Record<Exclude<Station, 'meeting'>, readonly Step[]> = {
 };
 const ROUND_OF: Partial<Record<Station, number>> = { meeting: 0, round2: 1, round3: 2 };
 const wide = (): boolean => window.innerWidth >= window.innerHeight;
-/** Its way to a station; landscape's third tangle has a perch of its own, nearer the lens. */
-const wayTo = (station: Exclude<Station, 'meeting'>): readonly Step[] =>
-  station === 'tangle3' && wide() ? PATHS.toTangle3Wide : station === 'tangle4' && wide() ? PATHS.toTangle4Wide : WAYS[station];
+/**
+ * Its way to a station from `from`; landscape's third tangle has a perch of its own, nearer the lens. From round 3's
+ * right heap it goes round to the far trunk between that heap and the middle one, not across the middle one.
+ */
+const wayTo = (station: Exclude<Station, 'meeting'>, from: Spot): readonly Step[] => {
+  if (station === 'farTrunk') {
+    const [left, , right] = ROUNDS[2].heaps.map((i) => BIRCH_PILES[i]);
+    return Math.hypot(from.x - right.x, from.z - right.z) < Math.hypot(from.x - left.x, from.z - left.z) ? PATHS.toFarTrunkRight : PATHS.toFarTrunk;
+  }
+  return station === 'tangle3' && wide() ? PATHS.toTangle3Wide : station === 'tangle4' && wide() ? PATHS.toTangle4Wide : WAYS[station];
+};
 /** The meeting's log and the ground either side of it, for the dive off it into the heap. */
 const OFF_THE_LOG: Floor = (x, z) => Math.max(ground(x, z), MEETING.floor(x, z));
 const floorTo = (station: Station): Floor => (station === 'tangle2' ? ON_THE_STUMP : ground);
@@ -340,14 +348,16 @@ export class BirchesSquirrel {
     return r.heaps.filter((_, i) => i !== mine);
   }
 
-  /** The heap of the round being played that the player's circles are wound over, or −1. */
+  /** The heap of the round being played that the player's circles are wound over (the nearest rim, as round 3's are 2 m apart), or −1. */
   private circledHeap(): number {
     const round = this.cue.round, { charge, updraftAt: u } = this.cast.input;
     if (round < 0 || this.rounds > round || charge <= tuning.birches.squirrel.circleHoldFrom) return -1;
-    return ROUNDS[round].heaps.find((heap) => {
-      const p = BIRCH_PILES[heap];
-      return Math.hypot(p.x - u.x, p.z - u.z) < p.r + 1;
-    }) ?? -1;
+    let best = -1, nearest = 1;
+    for (const heap of ROUNDS[round].heaps) {
+      const p = BIRCH_PILES[heap], off = Math.hypot(p.x - u.x, p.z - u.z) - p.r;
+      if (off < nearest) { nearest = off; best = heap; }
+    }
+    return best;
   }
 
   /** The round is over: the cygnet goes back to its own play and she gets up. */
@@ -419,7 +429,7 @@ export class BirchesSquirrel {
     this.endShuffle();
     const s = this.cast.squirrel;
     if (station === 'meeting') { this.meet(); return; }
-    let points = route(this.cast.birches, wayTo(station));
+    let points = route(this.cast.birches, wayTo(station, s.position));
     /** Sent on before it got where it was going, it cuts in at the nearest point of its new way. */
     if (points[0].at.distanceTo(s.position) > 1.5) {
       let near = 0;
@@ -1199,7 +1209,8 @@ export class BirchesSquirrel {
     const way = flat(c.position, this.land);
     c.leap(new THREE.Vector3(way.x * k.leapRun, k.leapUp, way.z * k.leapRun), this.land, 9.81, () => {
       this.cast.leafSound?.('leap', this.land, 1);
-      this.cast.birches.burst(this.land.x, this.land.z, k.leapBurst);
+      /** The leaves go up all round her and the heap stays, so she sits in it. */
+      this.cast.birches.splash(this.land.x, this.land.z, k.leapSplash);
       c.lookAt = bird.position;
       this.after(0.5, () => { bird.mind.perform('shake'); bird.watch(this.face); }, false);
     }, () => {

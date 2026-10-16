@@ -78,14 +78,14 @@ export const BIRCH_PILES = [
   { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8, raked: true },
   { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8, raked: true },
   /**
-   * Its third, on the hollow's west bank. STAGING (birches-uplift-concept): set out side by side across her view like
-   * cups on a table, on an arc round where she stands (`ROUNDS[2].stand`, gap C 11 m in, x −8): the left one
-   * west-south-west of her, the middle one west-north-west and a little nearer, the right one north-north-west, 10–10.5 m
-   * off and 2.8 m apart at the rim.
+   * Its third, on the hollow's west bank, set out side by side in front of her like cups on a table: on an arc round
+   * where she stands (`ROUNDS[2].stand`, gap C 11 m in, x −8), the left one west-south-west of her, the middle one
+   * west-north-west, the right one north-north-west, 9.3 m off and the middle one a little nearer, 2 m apart at the rim
+   * so one portrait frame from behind her holds all three.
    */
-  { ...birchesGap(2, 6.47, -17.48), r: 2.6, deep: 5, raked: true },
-  { ...birchesGap(2, 14.83, -17.24), r: 2.8, deep: 5.4, raked: true },
-  { ...birchesGap(2, 20.9, -11.5), r: 2.6, deep: 5, raked: true },
+  { ...birchesGap(2, 7.19, -16.48), r: 2.6, deep: 5, raked: true },
+  { ...birchesGap(2, 14.58, -16.04), r: 2.8, deep: 5.4, raked: true },
+  { ...birchesGap(2, 19.85, -10.85), r: 2.6, deep: 5, raked: true },
 ];
 
 /** The steepest a heap is laid, in depth a metre: a little under what the litter field lets stand (`litterRepose`). */
@@ -105,14 +105,16 @@ function pileDepth(pile: (typeof BIRCH_PILES)[number], from: number): number {
 /** How far out a heap's own leaves and the floor raked into it reach. */
 const pileReach = (pile: (typeof BIRCH_PILES)[number]): number => pile.r + (pile.raked ? tuning.birches.heapRaked : 1.2);
 
-/** The trunks the gaps' heaps are banked against (the far one in round 3 against the last perch's birch): placed rather than grown, so a heap never loses its tree. */
+/** The birch behind round 3's middle heap, which the squirrel climbs to watch her leap. */
+export const HOLLOW_FAR_TREE = birchesGap(2, 15.96, -19.15);
+/** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
 const BANKS = [
   { ...birchesGap(1, 13.8, 10.1), scale: 15, variant: 2 },
   { ...birchesGap(1, 15.5, -4.1), scale: 16, variant: 0 },
-  /** STAGING (birches-uplift-concept): behind each of the third round's heaps from where she stands; the middle one's is the birch the squirrel watches the leap from. */
-  { ...birchesGap(2, 5.1, -20.4), scale: 14.5, variant: 1 },
-  { ...birchesGap(2, 16.1, -20.3), scale: 16.4, variant: 2 },
-  { ...birchesGap(2, 23.9, -12.6), scale: 13.3, variant: 0 },
+  /** Behind each of the third round's heaps from where she stands; the middle one's is the birch the squirrel watches the leap from. */
+  { ...birchesGap(2, 5.88, -19.4), scale: 14.5, variant: 1 },
+  { ...HOLLOW_FAR_TREE, scale: 16.4, variant: 2 },
+  { ...birchesGap(2, 22.9, -11.83), scale: 13.3, variant: 0 },
   /** STAGING (birches-uplift-concept): standing birches at both ends of the fallen one, so there is no way round. */
   { ...birchesAt(-12.4, -1118.6), scale: 15.5, variant: 0 },
   { ...birchesAt(14.2, -1123.4), scale: 14.5, variant: 3 },
@@ -131,16 +133,19 @@ const bearing = (degrees: number): { x: number; z: number } =>
 export const ROUND_VIEWS_TALL = [
   { at: birchesAt(11.5, -1075), from: bearing(75) },
   { at: birchesGap(1, 13, 3), from: bearing(65) },
-  { at: birchesGap(2, 13.3, -13.5), from: bearing(64) },
+  { at: birchesGap(2, 12.52, -12.23), from: { x: 0.85, z: 0.527 } },
 ] as const;
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
-  { at: birchesGap(2, 13.3, -13.5), from: { x: 0.883, z: 0.469 } },
+  { at: birchesGap(2, 11.37, -13.03), from: { x: 0.819, z: 0.574 } },
 ] as const;
-const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some(v => {
-  const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(24, ax * v.from.x + az * v.from.z));
-  return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5;
+/** How much wider a round's view is kept clear from what it looks at back toward the lens, narrowing to it: round 3's heaps stand across its view. */
+const VIEW_FAN = [0, 0, 8];
+const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some((v, i) => {
+  const ax = x - v.at.x, az = z - v.at.z, toward = ax * v.from.x + az * v.from.z, along = Math.max(0, Math.min(24, toward));
+  const fan = toward < 0 ? 0 : VIEW_FAN[i % ROUND_VIEWS.length] * (1 - along / 24);
+  return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5 + fan;
 });
 
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
