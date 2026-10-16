@@ -490,6 +490,8 @@ export const tuning = {
     bankHeight: 28, bankDensity: 0.14, bankFloor: 0.3, bankLow: 1.1, bankFront: 28, bankBack: 16, bankSoft: 4.5,
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
+    /** Close the white over the visible sail before its hidden change of side. */
+    bankSwapDensity: 3.5,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */

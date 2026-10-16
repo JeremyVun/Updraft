@@ -28,7 +28,7 @@ uniform vec3 uRay;
 out vec4 result;
 void main() {
   float far = (gl_FragCoord.x - 0.5) * 0.01;
-  result = vec4(fogBank(cameraPosition, normalize(uRay), far).a, 0, 0, 1);
+  result = fogBank(cameraPosition, normalize(uRay), far);
 }`],
     ]) {
       const shader = gl.createShader(type);
@@ -51,6 +51,7 @@ void main() {
     gl.viewport(0, 0, width, 1);
     const set = (name, values) => gl[`uniform${values.length}fv`](gl.getUniformLocation(program, name), values);
     set('uFogBank', [0, 0, 0, 1]);
+    set('uFogBankFrame', [1, 0, 0]);
     const pixels = new Float32Array(width * 4);
     const cases = [];
     for (const floor of [0, 50]) for (const clear of [0, 0.3, 0.85]) {
@@ -64,14 +65,14 @@ void main() {
         gl.readPixels(0, 0, width, 1, gl.RGBA, gl.FLOAT, pixels);
         let jump = 0, decrease = 0;
         for (let i = 0; i < width; i++) {
-          const a = pixels[i * 4];
+          const a = pixels[i * 4 + 3];
           if (!Number.isFinite(a) || a < 0 || a > 1) throw Error('Invalid fog coverage');
           if (i > 0) {
-            jump = Math.max(jump, Math.abs(a - pixels[(i - 1) * 4]));
-            decrease = Math.max(decrease, pixels[(i - 1) * 4] - a);
+            jump = Math.max(jump, Math.abs(a - pixels[(i - 1) * 4 + 3]));
+            decrease = Math.max(decrease, pixels[(i - 1) * 4 + 3] - a);
           }
         }
-        cases.push({ floor, clear, name, near: pixels[400 * 4], atEight: pixels[800 * 4], jump, decrease });
+        cases.push({ floor, clear, name, near: pixels[400 * 4 + 3], atEight: pixels[800 * 4 + 3], jump, decrease });
       }
     }
     // Outside the bank, a surface before its front (or a ray pointing away) must remain clear.
@@ -83,13 +84,51 @@ void main() {
       set('uRay', ray);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.readPixels(0, 0, width, 1, gl.RGBA, gl.FLOAT, pixels);
-      for (let i = 0; i < width; i++) outside = Math.max(outside, Math.abs(pixels[i * 4]));
+      for (let i = 0; i < width; i++) outside = Math.max(outside, Math.abs(pixels[i * 4 + 3]));
+    }
+    set('uFogBankLight', [0.8, 0.73, 0.61, 1]);
+    set('uSunDir', [0, 0.12, Math.sqrt(1 - 0.12 ** 2)]);
+    set('uSunColor', [1.3, 1, 0.8]);
+    const relocations = [];
+    for (const density of [1, 3.5]) for (const turn of [-0.905, 0, 1.7]) for (const ray of [[0, 0, 1], [0.3, -0.15, 1], [-0.3, 0.2, 1]]) {
+      set('uFogBankEye', [0.3, 0.8 * density]);
+      const c = Math.cos(turn), s = Math.sin(turn), shift = [180, -34.3, 130];
+      const rotate = ([x, y, z]) => [c * x + s * z, y, c * z - s * x];
+      const move = p => rotate(p).map((v, i) => v + shift[i]);
+      set('uFogBank', [0, 0, 0, 1]);
+      set('uFogBankFrame', [1, 0, 0]);
+      set('uFogBankShape', [50, 78, 1000, density]);
+      set('uCloudBubble', [0, 51.8, 65, 10]);
+      set('cameraPosition', [0, 53.4, 60]);
+      set('uRay', ray);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const original = new Float32Array(width * 4);
+      gl.readPixels(0, 0, width, 1, gl.RGBA, gl.FLOAT, original);
+      set('uFogBank', [shift[0], shift[2], s, c]);
+      set('uFogBankFrame', [c, s, -shift[1]]);
+      set('uFogBankShape', [50 + shift[1], 78 + shift[1], 1000, density]);
+      set('uCloudBubble', [...move([0, 51.8, 65]), 10]);
+      set('cameraPosition', move([0, 53.4, 60]));
+      set('uRay', rotate(ray));
+      const difference = () => {
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.readPixels(0, 0, width, 1, gl.RGBA, gl.FLOAT, pixels);
+        let worst = 0;
+        for (let i = 0; i < pixels.length; i++) {
+          if (!Number.isFinite(pixels[i])) throw Error('Invalid relocated fog');
+          worst = Math.max(worst, Math.abs(pixels[i] - original[i]));
+        }
+        return worst;
+      };
+      const carried = difference();
+      set('uFogBankFrame', [1, 0, 0]);
+      relocations.push({ density, turn, ray, carried, broken: difference() });
     }
     const error = gl.getError();
     gl.deleteFramebuffer(framebuffer);
     gl.deleteTexture(texture);
     gl.deleteProgram(program);
-    return { cases, outside, error };
+    return { cases, outside, relocations, error };
   });
   console.log(JSON.stringify({
     cases: result.cases.length,
@@ -97,9 +136,15 @@ void main() {
     largestStep: Math.max(...result.cases.map(c => c.jump)),
     outside: result.outside,
     error: result.error,
+    relocationError: Math.max(...result.relocations.map(r => r.carried)),
+    negativeControl: Math.min(...result.relocations.map(r => r.broken)),
   }));
   assert.equal(result.error, 0);
   assert.equal(result.outside, 0, 'surfaces outside the bank stay clear');
+  for (const r of result.relocations) {
+    assert(r.carried < 0.001, `relocation changes fog colour/coverage: ${JSON.stringify(r)}`);
+    assert(r.broken > 0.02, `uncarried reference must expose the original defect: ${JSON.stringify(r)}`);
+  }
   for (const c of result.cases) {
     const name = `${c.name}, floor=${c.floor}, clearing=${c.clear}`;
     assert(c.near > 0.05, `${name}: nearby surfaces inside the bank must receive fog`);

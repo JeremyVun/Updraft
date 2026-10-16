@@ -88,7 +88,8 @@ edit.
   uses SwiftShader without the GPU lock. The intentional slow pulse is covered by `sky-mirror-logic-check`.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
-  and clear surfaces outside it. Needs a dev server for the shader import.
+  and clear surfaces outside it. Also checks colour and coverage after translating and rotating the bank;
+  an uncarried reference exposes the descent discontinuity. Needs a dev server for the shader import.
 - `stairs-fog-motion-check`: compares moving checkpoint views, including an ultrawide viewport, against the
   original per-ray fog in the same world state. Checks cloud edges per pixel; a whole-image average alone missed
   the rejected cloud-cache artifacts. Needs Vite; `OUT` sets the evidence prefix.
@@ -150,7 +151,7 @@ edit.
 **Camera**
 
 - `camera-direction-check`: orbital clearance, eased turns, focus, dolly and height at 10–120 Hz, carry, attention,
-  stable composition choices, interaction holds, exact paths and portrait resize.
+  stable composition choices, interaction holds, exact paths, portrait resize and hidden camera relocation.
 - `crossing-camera-check`, `drowned-camera-check`, `storm-camera-trace`, `chapter-view-check`, `ending-view-check`
   (fails any staged view whose turn rate changes by 2.5°/s or more within a quarter second), `piano-frame-check`,
   `pond-view-check` (the meadow family seen stirring, running and lifting, then let out of the frame without the

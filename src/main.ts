@@ -1091,7 +1091,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     lastCameraCut = cut;
   } else if (cut !== lastCameraCut) {
     lastCameraCut = cut;
-    rig.cut(story.shot);
+    if (story.current.cameraRelocation) rig.relocate(story.shot, story.current.cameraRelocation, time);
+    else rig.cut(story.shot);
   }
   rig.update(dt, time, story.shot, story.pace, !!(story.current.scripted || story.current.invitesSail
     || story.current.invitesFlight || story.current.windInvitation || story.current.updraftTarget || story.current.pianoActive));

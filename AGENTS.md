@@ -11,7 +11,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Chapter paintings and current art studies: `assets/art-direction/continue/README.md`; sea approval, dolphin variant and mirror perspective brief: `assets/art-direction/sea-mirror-study-2026-10-05/round-3.json`.
 - Every room, how it plays and Jeremy's rulings for it: `docs/chapters.md`. The stairs in the clouds (work in progress, Jeremy's brief verbatim): `docs/stairs.md`.
 - Rotary washing-line design prototype, Jeremy's brief and verification plan: `docs/backlog/lines-rotary/design.md`. Preserve the original irregular washing funnel and early field when extending the route; camera clearances can erase it, and rectangular cloth walls destroy its character. Design the level as the sequence the player camera reveals: what can be seen, understood and anticipated at each stopping point. Let character movement earn the next view before shifting attention; keep the whole child and companion readable. Use the existing landscape to guide them, since clear topology from above can become clutter or an artificial maze at eye level. Check visible bypasses, concealed reveals and the complete approach–interaction–departure in moving player cameras, including gusts; start transition checks before the handoff.
-- The drowned village being rebuilt (work in progress under Claude's creative lead; the vision, the sequence step by step and Jeremy's brief verbatim): `docs/backlog/path-puzzles/design.md`, phases in `build_plan.md`.
+- The drowned village being rebuilt (work in progress under Claude's creative lead; the vision, the sequence step by step and Jeremy's brief verbatim): `docs/backlog/path-puzzles/design.md`, phases in `build_plan.md`. Cloud-to-village haze and flat fog horizon diagnosis: `docs/backlog/path-puzzles/fog-diagnosis.md`.
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
 - Meadow musical encounter in development: `docs/backlog/meadow-echoes/design.md` holds Jeremy's exact brief, the intended player experience and verification findings.
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.
@@ -36,8 +36,9 @@ for comparison; `villagefog=1` and `villagefog=mist` both enable it. Keep shippi
 `tools/production-build-check.mjs` checks that parity. Final review: `docs/backlog/path-puzzles/final-review.md`. Brief and status:
 `docs/backlog/path-puzzles/design.md`, items 55–83 and “Tub control and rescue sound correction”. Verify transition
 bugs from before the transition: an idle test begun after the boat stopped missed its hull pushing the tub.
-For fog QA, freeze the world and move the camera, then replay the actual story transitions and track the whole
-bank's edges: isolated shader probes miss controller-driven retreat and pivoting. Verify a visual rollback against
+For fog QA, freeze the world and move the camera, then replay from an unchanged chapter checkpoint and track the whole
+bank's edges, including consecutive frames across hidden relocations: seeded probes miss handoff discontinuities,
+and isolated shader probes miss controller-driven retreat and pivoting. Verify a visual rollback against
 a separate pre-change build; toggling paths inside the changed build alone cannot establish restoration. Rescue timing starts at visible
 sailing speed; counting from a release flag includes sail recovery and can erase the intended pause.
 

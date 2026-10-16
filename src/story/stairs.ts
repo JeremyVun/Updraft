@@ -271,6 +271,7 @@ export class StairsChapter implements Chapter {
   private readonly theirWay = new THREE.Vector3();
   private readonly waiting = new THREE.Vector2();
   private cuts = 0;
+  readonly cameraRelocation = new THREE.Matrix4();
   /** How far the boat has come over the cloud, metres. */
   private sailed = 0;
   /** How much of the bank of mist there is; it is there by the time they are aboard. */
@@ -1274,9 +1275,14 @@ export class StairsChapter implements Chapter {
     boat.altitude = null;
     boat.sailMirrored = false;
     const c = Math.cos(turn), s = Math.sin(turn);
+    this.cameraRelocation.makeRotationY(turn).setPosition(
+      x - c * (x - dx) - s * (z - dz), dy, z + s * (x - dx) - c * (z - dz));
+    fog.frame.set(c, s, -dy);
     const ax = fog.at.x + dx - x, az = fog.at.y + dz - z;
     fog.at.set(x + ax * c + az * s, z - ax * s + az * c);
     fog.into.set(fog.into.x * c + fog.into.y * s, fog.into.y * c - fog.into.x * s);
+    const ex = this.eye.x + dx - x, ez = this.eye.z + dz - z;
+    this.eye.set(x + ex * c + ez * s, this.eye.y + dy, z - ex * s + ez * c);
     this.voyageYaw += turn;
     this.world.cloud.wake.shift(dx, dy, dz);
     this.world.sailing(null, 0);
@@ -1332,22 +1338,23 @@ export class StairsChapter implements Chapter {
       fog.floor = CLOUD.top - 0.3;
       fog.top = CLOUD.top + k.bankHeight;
       fog.deep = 1e4;
-      fog.amount = this.mist;
       const depth = fog.depthOf(boat.position.x, boat.position.z);
+      const hidden = S(depth, k.bankSwap - 12, k.bankSwap);
+      fog.amount = this.mist * THREE.MathUtils.lerp(1, k.bankSwapDensity, hidden);
       this.white = S(depth, -6, k.bankSwap);
-      fog.clear = 0.85 - 0.55 * S(depth, k.bankSwap - 12, k.bankSwap);
+      fog.clear = 0.85 - 0.55 * hidden;
       return;
     }
     // On the sea: the same bank over the water, which the boat sails out of the back of as the white thins.
     const t = this.t, lift = k.fogLift;
-    fog.floor = SEA_RIDE - (RIDE - CLOUD.top + 0.3);
-    fog.top = fog.floor + k.bankHeight;
+    fog.floor = CLOUD.top - 0.3 - fog.frame.z;
+    fog.top = CLOUD.top + k.bankHeight - fog.frame.z;
     // Its back comes to meet them unseen, then goes by slowly over the last tens of metres, where the white can be seen
     // to thin, so they drift out of it, with the bank left lying behind them on the water and melting away.
     const out = THREE.MathUtils.clamp((t - 7) / (lift * 0.85 - 7), 0, 1);
     const ahead = THREE.MathUtils.lerp(300, 30, S(t, 2, 7)) - 42 * out;
     fog.deep = fog.depthOf(boat.position.x, boat.position.z) + ahead;
-    fog.amount = 1 - S(t, lift * 0.65, lift);
+    fog.amount = (1 - S(t, lift * 0.65, lift)) * THREE.MathUtils.lerp(k.bankSwapDensity, 1, S(t, 0.3, 3));
     fog.clear = 0.3 + 0.55 * S(t, 0.3, 3);
     this.white = 1 - S(t, 5, lift * 0.8);
     // From the gold of the cloud to the grey and blue of the dusk over the sea, and the sun going out of it.
