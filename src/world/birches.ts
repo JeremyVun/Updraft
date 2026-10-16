@@ -131,7 +131,7 @@ const bearing = (degrees: number): { x: number; z: number } =>
 export const ROUND_VIEWS_TALL = [
   { at: birchesAt(11.5, -1075), from: bearing(75) },
   { at: birchesGap(1, 13, 3), from: bearing(65) },
-  { at: birchesGap(2, 12.4, -13.6), from: bearing(38) },
+  { at: birchesGap(2, 13.3, -13.5), from: bearing(64) },
 ] as const;
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },

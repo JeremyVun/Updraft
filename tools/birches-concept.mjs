@@ -10,8 +10,6 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5249/';
 const [W, H] = orientation === 'portrait' ? [900, 1600] : [1600, 900];
 fs.mkdirSync(outDir, { recursive: true });
 
-/** Waits for the shared browser lock as closely as the next job does, then takes it through `openBrowser`. */
-for (const lock = '/tmp/updraft-chromium.lock'; fs.existsSync(lock);) await new Promise((r) => setTimeout(r, 25));
 const { browser, close } = await openBrowser();
 const errors = [];
 try {

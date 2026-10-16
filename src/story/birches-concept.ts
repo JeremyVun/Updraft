@@ -92,7 +92,7 @@ function swingLens(game: Game, landed = 0): void {
   const p = game.birches.swing.pivot;
   const mid = new THREE.Vector3(p.x - 0.6, 0, p.z - 3.4 - landed * 4);
   mid.y = ground(mid.x, mid.z) + 2.4 - landed;
-  const [fx, fz, d, h, zoom, lift] = (window as any).__swingLens ?? (tall() ? [0.3, 0.95, 22, 5, 1.15, 0] : [0.6, 0.8, 20, 4.8, 0, 0]);
+  const [fx, fz, d, h, zoom, lift] = (window as any).__swingLens ?? (tall() ? [0.22, 0.97, 24, 4.5, 1.2, 2.2] : [0.6, 0.8, 20, 4.8, 0, 0]);
   mid.y += lift ?? 0;
   const lifted = (window as any).__landedLift ?? 3;
   lens(game, mid, { x: fx, z: fz }, d, h + landed * lifted, zoom || undefined);
