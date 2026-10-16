@@ -211,10 +211,12 @@ export class SleepingChapter implements Chapter {
     if (['feather', 'edge'].includes(this.beat) || this.beat === 'asleep' && this.t >= T.winterBeginsAt) return 'cold';
     return 'shelter';
   }
-  /** The recordings follow the feather freed, the fog, its catch, the summit and the curtains opening. */
+  /** The recordings follow the feather freed, the fog, its catch, the summit, the bandage freed and the curtains. */
   get sleepingMusic(): SleepingGate {
     if (this.cast.sleeping.ribbon.released || ['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'glide';
-    if (['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat)) return 'summit';
+    // The music lets go with the bandage, so the bird faces the ribbon in silence.
+    if (['hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat) || this.beat === 'unbinding' && this.unboundAt >= 0) return 'ribbon';
+    if (this.beat === 'unbinding') return 'summit';
     if (this.mistDone) return 'catch';
     if (this.beat === 'mist') return 'mist';
     return this.beat === 'asleep' ? 'asleep' : ['ashore', 'toBed', 'tuckIn'].includes(this.beat) ? 'bedtime' : 'feather';

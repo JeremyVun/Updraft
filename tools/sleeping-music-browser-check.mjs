@@ -5,8 +5,9 @@
 //          parts against the beats; the morning from the curtains, and the sea. Saves the feather and morning
 //          checkpoints for the restores.
 // `sleeping`  `?chapter=sleeping`: the lullaby from load and the frost's wait.
-// `ribbon`  `?chapter=ribbon`, the summit's circles: the summit part, then the curtains, the morning's entry and its
-//          next seams against the glide, the waking and the child sitting up.
+// `ribbon`  `?chapter=ribbon`, the summit's circles: the summit part a second after the top, rising in, let go as the
+//          bandage comes free, silence through the turn to the ribbon, the leap and the tug, then the curtains, the morning's entry and its
+//          next seams against the glide, the waking and the child sitting up, and its fade as the boat leaves for the sea.
 // `feather`, `morning`  those saves continued: the climb theme from its top as the climb resumes; silence until the sea.
 // Usage: node tools/sleeping-music-browser-check.mjs [climb sleeping ribbon feather morning]; `climb` before the
 // restores (about 5 minutes, the rest 1–2 each). Vite on 5230, or BASE. SLOW=2.5 holds every stop that much longer.
@@ -73,6 +74,7 @@ try {
         if (seen[key] !== value) { seen[key] = value; w.events.push({ key, value, ...at, t: c.t }); }
       }
       if (c.beat === 'asleep') { w.marks.frostWait = c.frostWait; w.marks.lullabyLeft = c.lullaby; }
+      if (w.marks.seaGate === undefined && w.clips.some(clip => clip.track === 'sea' && clip.when <= ctx)) w.marks.seaGate = sound.backgroundGate.gain.value;
     };
   });
   const begin = async (page, query) => {
@@ -107,7 +109,8 @@ try {
     const w = await page.evaluate(async () => {
       const { MORNING_FROM, MORNING_SEAMS } = await import('/src/audio/sleeping-music.ts'), A = __game.tuning.audio;
       return { ...sleepWatch, loud: undefined, loudness: sleepWatch.loud, MORNING_FROM, MORNING_SEAMS,
-        giveWay: Math.max(A.curtainsFade, A.mirrorSeamRelease) };
+        giveWay: Math.max(A.curtainsFade, A.mirrorSeamRelease), letGo: Math.max(A.ribbonFade, A.ribbonSeamWithin),
+        summitDelay: A.summitDelay, departureFade: A.sleepingDepartureFade, seaLead: A.seaMusicLead };
     });
     const quiet = (from, to) => Math.max(-200, ...w.loudness.filter(([t]) => t >= from && t <= to).map(([, v]) => v));
     return { w, quiet, errors, requests };
@@ -179,7 +182,7 @@ try {
       const e = when(w, 'beat', name);
       if (e) console.log('  ' + row(name, e) + `   (+${(e.ctx - feather.ctx).toFixed(1)} s from the feather)`);
     }
-    for (const gate of ['feather', 'mist', 'catch', 'summit', 'glide']) { const e = when(w, 'gate', gate); if (e) console.log('  ' + row(`gate ${gate}`, e)); }
+    for (const gate of ['feather', 'mist', 'catch', 'summit', 'ribbon', 'glide']) { const e = when(w, 'gate', gate); if (e) console.log('  ' + row(`gate ${gate}`, e)); }
     console.log('  ' + row('ribbon released', when(w, 'released', true)));
     for (const track of ['brave', 'morning', 'sea']) for (const line of clipRows(w, track)) console.log('  ' + line);
     console.log('  ' + row('toMirror', when(w, 'chapter', 'toMirror')));
@@ -191,9 +194,11 @@ try {
     assert(silent < -90, 'silence from the lullaby\'s end until the feather');
     assert(parts[0]?.offset === 0 && Math.abs(parts[0].when - feather.ctx) < .2, 'the climb theme enters with the freed feather');
     assert(parts.every((c, i) => !i || c.when >= parts[i - 1].end - 1e-3), 'parts never overlap');
+    ribbonHolds(w, parts, quiet);
     curtainsHold(w, parts);
     const morning = w.clips.find(c => c.track === 'morning');
     assert(sea && morning.end <= sea.when + 1e-3, 'the sea begins after the morning');
+    departureHolds(w);
     assert(captured.feather && captured.morning, 'both checkpoints were saved');
     assert.deepEqual(errors, [], 'no console errors');
   };
@@ -207,6 +212,30 @@ try {
     assert(!parts.some(c => c.offset > 152), 'the coda never plays');
     assert(when(w, 'gate', 'glide').ctx <= released.ctx + .05, 'the glide gate is the release');
   };
+  // The bandage freed: no climb part begins from it, the one sounding is let go within `letGo`, and silence holds
+  // through the turn to the ribbon, the leap and the tug until the curtains.
+  const ribbonHolds = (w, parts, quiet) => {
+    const turn = when(w, 'beat', 'hilltop'), released = when(w, 'released', true), gate = when(w, 'gate', 'ribbon');
+    assert(gate && gate.ctx > when(w, 'beat', 'unbinding').ctx && gate.ctx < turn.ctx, 'the ribbon gate comes with the bandage, before the turn');
+    assert(!parts.some(c => c.when >= gate.ctx - .05), 'no climb part begins once the bandage is freed');
+    const end = Math.max(gate.ctx, ...parts.map(c => c.end));
+    assert(end <= gate.ctx + w.letGo + .05, `the climb lets go within ${w.letGo} s of the bandage freed (${(end - gate.ctx).toFixed(2)} s)`);
+    const loudest = quiet(end + .1, released.ctx - .1);
+    assert(loudest < -90, `silence from the climb's end until the curtains (${loudest.toFixed(1)} dBFS)`);
+    return end;
+  };
+  // Leaving for the sea: the morning fades over `sleepingDepartureFade` as the passage begins, and the sea's recording begins
+  // `seaMusicLead` into the passage.
+  const departureHolds = w => {
+    const aboard = when(w, 'beat', 'aboard'), passage = when(w, 'chapter', 'toMirror');
+    const morning = w.clips.find(c => c.track === 'morning'), sea = w.clips.find(c => c.track === 'sea');
+    const heard = w.loudness.filter(([t, v]) => t >= aboard.ctx && t < sea.when && v > -90).map(([t]) => t);
+    const lastHeard = Math.max(aboard.ctx, ...heard);
+    console.log(`  departure: aboard audio ${aboard.ctx.toFixed(2)}, passage ${passage.ctx.toFixed(2)}, morning stops ${morning.end.toFixed(2)} (+${(morning.end - passage.ctx).toFixed(2)} s from the passage), last heard over −90 dBFS +${(lastHeard - aboard.ctx).toFixed(2)} s, sea begins ${sea.when.toFixed(2)} (+${(sea.when - passage.ctx).toFixed(2)} s into the passage on the audio clock, +${(sea.game - passage.game).toFixed(2)} s on the game's, ${(sea.when - morning.end).toFixed(2)} s after the morning), gate ${w.marks.seaGate?.toFixed(3)} as it begins`);
+    assert(Math.abs(morning.end - passage.ctx - w.departureFade) < .2, `the morning fades over ${w.departureFade} s as the boat leaves`);
+    assert(Math.abs(sea.game - passage.game - w.seaLead) < .2, `the sea begins ${w.seaLead} s into the passage`);
+    assert(sea.when >= morning.end + .5 && w.marks.seaGate > .99, 'a rest, and the gates open, before the sea begins');
+  };
   const ribbon = async () => {
     const { page, errors, requests } = await open();
     await begin(page, 'progress=0&chapter=ribbon');
@@ -215,13 +244,14 @@ try {
     for (let i = 0; i < 6 && await page.evaluate(() => __game.story.current.beat === 'hilltop'); i++) await sweep(page, 'bird');
     await beat(page, 'glide');
     await beat(page, 'lap');
-    await page.waitForTimeout(3000);
-    const { w, errors: errs } = await report(page, errors, requests);
+    await page.waitForFunction(() => sleepWatch.clips.some(c => c.track === 'sea'), null, { timeout: 180000 });
+    await page.waitForTimeout(1500);
+    const { w, quiet, errors: errs } = await report(page, errors, requests);
     const parts = w.clips.filter(c => c.track === 'brave' && c.end > c.when), morning = w.clips.find(c => c.track === 'morning');
     const released = when(w, 'released', true);
     console.log('\n?chapter=ribbon (from Begin)');
-    for (const [label, e] of [['gate summit', when(w, 'gate', 'summit')], ['unbinding', when(w, 'beat', 'unbinding')], ['hilltop', when(w, 'beat', 'hilltop')],
-      ['pullRibbon', when(w, 'beat', 'pullRibbon')], ['ribbon released', released], ['gate glide', when(w, 'gate', 'glide')],
+    for (const [label, e] of [['gate summit', when(w, 'gate', 'summit')], ['unbinding', when(w, 'beat', 'unbinding')], ['gate ribbon (bandage free)', when(w, 'gate', 'ribbon')], ['hilltop (turn)', when(w, 'beat', 'hilltop')],
+      ['reachRibbon (leap)', when(w, 'beat', 'reachRibbon')], ['pullRibbon', when(w, 'beat', 'pullRibbon')], ['ribbon released', released], ['gate glide', when(w, 'gate', 'glide')],
       ['glide', when(w, 'beat', 'glide')], ['waking', when(w, 'beat', 'waking')], ['eyes open', when(w, 'eyes', true)], ['sits up', when(w, 'sitsUp', true)], ['lap', when(w, 'beat', 'lap')]]) {
       if (e) console.log('  ' + row(label, e) + `   (${(e.ctx - released.ctx >= 0 ? '+' : '')}${(e.ctx - released.ctx).toFixed(2)} s from the release)`);
     }
@@ -230,9 +260,15 @@ try {
       const at = morning.when + seam - morning.offset;
       console.log(`  morning seam ${seam.toFixed(2)} s sounds at audio ${at.toFixed(2)}   (+${(at - released.ctx).toFixed(2)} s from the release)`);
     }
+    const unbound = when(w, 'gate', 'ribbon'), leap = when(w, 'beat', 'reachRibbon'), summit = when(w, 'gate', 'summit');
+    const end = ribbonHolds(w, parts, quiet), part = parts[0];
+    const seamed = Math.abs(part.offset + part.end - part.when - 126.67) < .02;
+    console.log(`  summit part begins +${(part.when - summit.ctx).toFixed(2)} s after the top, ends ${seamed ? 'at its 126.67 s seam' : 'in a fade'} +${(part.end - unbound.ctx).toFixed(2)} s after the bandage is freed (${(part.offset + part.end - part.when).toFixed(2)} s in the recording);`
+      + ` silence ${(leap.ctx - end).toFixed(2)} s before the leap, ${(released.ctx - end).toFixed(2)} s before the curtains`);
+    departureHolds(w);
     console.log(`  requests: ${requests.join(', ')}`);
-    assert(parts.length === 1 && Math.abs(parts[0].offset - 112.11) < 1e-3 && Math.abs(parts[0].when - when(w, 'gate', 'summit').ctx) < .2,
-      'the summit part as the bird reaches the top');
+    assert(parts.length === 1 && Math.abs(part.offset - 112.11) < 1e-3 && Math.abs(part.when - summit.ctx - w.summitDelay) < .2,
+      `the summit part ${w.summitDelay} s after the bird reaches the top`);
     curtainsHold(w, parts);
     assert(requests.includes('sleeping_morning.ogg'), 'the morning is loaded');
     assert.deepEqual(errs, [], 'no console errors');

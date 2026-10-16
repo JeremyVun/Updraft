@@ -255,13 +255,15 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
   `sleeping-music-check` decodes `sleeping.ogg`, `cygnet_brave.ogg` and `sleeping_morning.ogg` and checks the
   lullaby's end, every seam, the climb's part boundaries and the morning's entry on the samples; the frost's bounded
-  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the climb theme cut at its
-  seam by the fog, queued, passed over and joined unbroken; the morning from its second phrase as the curtains open,
-  the part still sounding giving way at a seam or a short fade; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
+  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the summit begun on its own
+  a second late and rising in, the climb theme cut at its seam by the fog, queued, passed over and joined unbroken;
+  the part sounding as the bandage comes free let go at a seam or a short fade, and silence from there to the
+  curtains; the morning from its second phrase as the curtains open; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
   each player's timeline (main's measured climb, the rebuilt climb, a slow player, `?chapter=sleeping`).
   `sleeping-music-browser-check [climb sleeping ribbon feather morning]` measures the same in the real game with a real
   AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue; `ribbon` drives the
-  summit's circles from `?chapter=ribbon` and logs the morning's seams against the waking).
+  summit's circles from `?chapter=ribbon`, logs the summit part against the top, the bandage freed, the turn and the leap, the morning's
+  seams against the waking, and its departure fade against the sea's entry).
   `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
   the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.

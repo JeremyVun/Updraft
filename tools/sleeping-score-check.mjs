@@ -72,8 +72,12 @@ try {
     ]) for (const beat of beats) { story.beat = beat; check(phase.call(story) === expected, `${beat} selects ${expected}`); }
     // The recordings' last gate is the ribbon released, as the curtains begin to open, ahead of the glide beat.
     const gate = Object.getOwnPropertyDescriptor(SleepingChapter.prototype, 'sleepingMusic').get;
-    const ribbon = { released: false }, climber = { beat: 'pullRibbon', mistDone: true, cast: { sleeping: { ribbon } } };
-    check(gate.call(climber) === 'summit', 'The summit gate holds while the ribbon is pulled');
+    const ribbon = { released: false }, climber = { beat: 'unbinding', mistDone: true, cast: { sleeping: { ribbon } } };
+    check(gate.call(climber) === 'summit', 'The summit gate holds while the bird unwinds its bandage');
+    for (const beat of ['hilltop', 'reachRibbon', 'pullRibbon']) {
+      climber.beat = beat;
+      check(gate.call(climber) === 'ribbon', `${beat}: the ribbon gate holds from the turn until the ribbon is released`);
+    }
     ribbon.released = true;
     check(gate.call(climber) === 'glide', 'Releasing the ribbon opens the curtains gate');
     for (const beat of ['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard']) {

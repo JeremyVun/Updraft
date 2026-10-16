@@ -118,7 +118,8 @@ export class ArrivalTransition {
           if (this.stage === 'incoming' && !s.arrivalMusic && landed) { this.target = undefined; this.stage = 'none'; }
           return step;
         }
-        const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0 : tuning.audio.arrivalFadeOut;
+        const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0
+          : this.outgoing?.sleepingScore ? tuning.audio.sleepingDepartureFade : tuning.audio.arrivalFadeOut;
         const quiet = arrivalQuiet(this.target);
         const fadeIn = this.target === 'sea' ? tuning.audio.seaArrivalFadeIn
           : this.target === 'drowned' ? tuning.audio.villageArrivalFadeIn

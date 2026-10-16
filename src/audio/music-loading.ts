@@ -128,7 +128,7 @@ export function nextMusicForChapter(chapter: string, stairs?: StairsPhase, sleep
   if (chapter === 'wood' || chapter === 'toSleeping') return 'sleeping';
   if (chapter === 'sleeping') {
     if (sleeping === 'bedtime' || sleeping === 'asleep') return 'cygnetBrave';
-    return sleeping === 'summit' || sleeping === 'glide' ? 'sea' : 'sleepingMorning';
+    return sleeping === 'summit' || sleeping === 'ribbon' || sleeping === 'glide' ? 'sea' : 'sleepingMorning';
   }
   if (chapter === 'toMirror') return 'mirror';
   if (chapter === 'mirror') return 'home';
