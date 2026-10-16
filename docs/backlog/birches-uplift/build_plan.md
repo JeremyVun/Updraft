@@ -296,3 +296,20 @@ what the branch changes, with stills and the clip paths, and merges only on his 
   drops the planned entry and lists the birches listen and the tangle-4 stroke count; the audio contract's Birches
   section reads forward and gains the squirrel's sounds; testing.md lists `squirrel-check` and
   `squirrel-rounds-check`; progress.md's swing perch is the trunk; AGENTS.md points at the squirrel's files.
+
+### 8. Second playtest. Opus. Done: ☐
+
+Jeremy's notes and what follows from them: design.md "Jeremy's second playtest". Four parallel parcels; each but 8a
+builds in its own worktree branched from `birches-uplift` and is merged back by the orchestrator. 8a first merges
+`main` into `birches-uplift` (main's Home summit music and hill walk conflict in the audio code, `tuning.ts` and the
+music checks), so the music work sits on the merged code.
+
+- **8a. Merge main, then the music.** `/Users/jeremy/projects/updraft-birches`, port 5241. Red Door's entrance on the
+  meadow sail coincides with the reveal's swing to port; the loop's pause at least 3 s shorter.
+- **8b. Heaps.** `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps2`, port 5242. Heaps
+  yield only to updrafts; none can be taken before the squirrel is in (reproduce Jeremy's case first).
+- **8c. The first knot.** `/Users/jeremy/projects/updraft-birches-knot`, branch `birches-uplift-knot`, port 5243.
+  She stops closer to tangle 1 and faces it.
+- **8d. Performance.** `/Users/jeremy/projects/updraft-birches-perf`, branch `birches-uplift-perf`, port 5244. Why
+  the quality governor steps down to medium on the birches; fix the cause without changing the look.
+- **8e. The swing.** Waits on Jeremy's answer to the proposal.

@@ -268,6 +268,48 @@ What follows from it (Claude's calls, 2026-10-16):
 - **The heap before the swing** is heap 1, one of the island's original free-play heaps. It isn't a round heap
   and isn't raked, so it doesn't promise a squirrel. Blowing it away before the swing is fine.
 
+## Jeremy's second playtest (2026-10-16, verbatim)
+
+> so like.. i can blow away the first leaf pile from the crossing. Before the child even sets onto the island
+
+Fixed (`b3348d9a`): the raked heaps start held in `world/birches.ts`, before the island's story first calls `hold`.
+
+> The start of the birches music should coincide with the camera panning to reveal it, so it needs to start a bit
+> earlier now.
+>
+> I can also still blow away the leaf pile before the squirrel has ever jumped into it...
+>
+> For the first knot, the child should stop a bit closer to the knot and be facing it, not facing away with her head
+> turned towards it
+>
+> leaf piles are too easily blown away, and they should only blow away from updrafts.
+>
+> Right now, it's not clear why the child gets on the swing, any thoughts on adding some kind of mini puzzle or fun
+> thing to the swing so there's a natural conclusion instead of the player figuring out they have to stop blowing on
+> the swing to continue on? Maybe we can do some training here before the drowned village and have the swing be a way
+> for the child to swing over a leaf pile or some kind of obstacle like a tree trunk blocking the way?
+>
+> There's too much of a pause in between the looping of the birches music, reduce it by atleast 3 seconds.
+>
+> Can you please take a look at the performance profile of the birches chapter? I notice the auto quality always
+> dropping to medium at some point or other.
+
+What follows from it (2026-10-16):
+- **Red Door enters with the reveal.** On the meadow sail its entrance coincides with the lens beginning its swing
+  round to the port side to reveal the island, not after it.
+- **The loop's pause is at least 3 s shorter** than the 3.5 s rest plus the track's own quiet tail and fade-in give
+  now, measured from the last audible sound of one pass to the first of the next.
+- **Heaps yield only to updrafts.** Every leaf heap (the squirrel's and the free-play ones) stands against swipes:
+  a swipe flutters its top and lifts loose leaves, and takes no heap. An updraft wound over a heap takes it, and it
+  takes more than now (about two loops, generous to children's circles). Supersedes "A swipe still counts" above:
+  a round's squirrel is found by updrafts only.
+- **No heap can be blown away before the squirrel has gone into it**, whatever the route, save or gesture.
+- **At the first knot** she stops closer to the knot and stands facing it, body and head, not turned away with her
+  head looking back.
+- **The swing:** proposal pending Jeremy's answer (below, once given).
+- **Performance:** find why the quality governor steps down to medium on the birches, and fix the cause without
+  changing the look.
+
 ## Mechanisms
 
 ### Music
