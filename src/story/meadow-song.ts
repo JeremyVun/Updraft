@@ -31,6 +31,7 @@ export class MeadowSong {
   private readonly placedEye = new THREE.Vector3();
   private readonly walkEye = new THREE.Vector3();
   private readonly walkLook = new THREE.Vector3();
+  private readonly played = new THREE.Vector3();
   private readonly gaze = new THREE.Vector3();
   private readonly onScreen = new THREE.Vector3();
   private readonly kept = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
@@ -169,12 +170,13 @@ export class MeadowSong {
     shot.height = portrait ? pick(t.cameraPortraitBedUp, t.cameraPortraitSeedUp, t.cameraPortraitUp) : pick(t.cameraBedUp, t.cameraSeedUp, t.cameraUp);
     shot.eye = undefined; shot.attention = undefined; shot.composition = 'hold';
     shot.carry = true; shot.carryAnchor = c; shot.clearance = 2.5; shot.smoothFit = 2;
-    if (this.beat === 'follow' && this.index === 1) {
-      // Leaving the woken bed, the lens waits where it looked down on it until she has walked into the next view,
-      // so the cygnet, a step behind her and below the steep view, is not left out of the bottom of the frame.
-      const stand = garden.stands[0], gone = Math.hypot(c.x - stand.x, c.z - stand.z);
+    if (this.beat === 'follow') {
+      // Leaving a play, the lens waits where it watched it until she has walked into the next view, so the cygnet, a
+      // step behind her and low in the frame, is not left out of the bottom of it.
+      const was = this.index - 1, stand = garden.stands[was], gone = Math.hypot(c.x - stand.x, c.z - stand.z);
+      this.played.copy(garden.patches[was]).y += was === 1 ? t.cameraSeedRise : 0;
       this.gaze.copy(stand).y += 1.25;
-      this.gaze.lerp(garden.patches[0], t.cameraBedAim);
+      this.gaze.lerp(this.played, was === 0 ? t.cameraBedAim : t.cameraSeedAim);
       shot.target.lerpVectors(this.gaze, shot.target, THREE.MathUtils.smootherstep(gone, 0, t.cameraSetOff));
       shot.carry = false;
     }

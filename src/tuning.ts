@@ -383,12 +383,12 @@ export const tuning = {
     departureWalk: 16,
     /**
      * The play's camera: looking down on the flower bed from close behind her (`Bed`, aimed `cameraBedAim` of the
-     * way from her to it, and waiting there for her first `cameraSetOff` metres on), then round to the seed heads
-     * against the far slope (`Seed`, rising `cameraSeedRise` with the down and keeping its column in frame to
-     * `cameraSeedHold` metres), then the listening rise (plain names), each blended in as she walks. Coming to a
-     * stand the walk's view gives way to it over her last `approach` metres, followed at `cameraArrivePace`.
+     * way from her to it), then round to the seed heads against the far slope (`Seed`, rising `cameraSeedRise` with
+     * the down and keeping its column in frame to `cameraSeedHold` metres), then the listening rise (plain names),
+     * each blended in as she walks. Coming to a stand the walk's view gives way to it over her last `approach`
+     * metres, followed at `cameraArrivePace`; leaving a play it waits where it watched for her first `cameraSetOff`.
      */
-    cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .25, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
+    cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .15, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
     cameraSetOff: 8,
     cameraSeedSide: 2.5, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedSide: -1, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 1.5, cameraSeedHold: 4,
