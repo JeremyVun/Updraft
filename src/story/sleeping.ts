@@ -407,7 +407,10 @@ export class SleepingChapter implements Chapter {
    * walks into the summit as in play and the summit's music starts there.
    */
   private atTheTop(): void {
-    const { sleeping, cygnet: k } = this.cast;
+    const { sleeping, cygnet: k, boat } = this.cast;
+    // No save placed the boat, so it goes round to the far shore here, as it does while they walk to the bed.
+    boat.beach(SLEEP_BERTH.x, SLEEP_BERTH.z, -1.76);
+    boat.grounded = true;
     this.snowDone = this.stepDone = this.mistDone = true;
     this.trickle = 2; this.glances = 3; this.reached = 1;
     sleeping.trail.snow = sleeping.trail.mist = 1;
