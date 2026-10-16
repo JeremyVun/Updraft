@@ -371,22 +371,34 @@ export const tuning = {
     /**
      * Circling over the seed heads lifts their down: `releaseTime` seconds of a well-wound updraft (charge from
      * `chargeFrom` to `chargeFull`) take it all. Lifted down rides the column to `columnTop` and never sinks back;
-     * once all of it is up the column stands to `releaseTop` for `afterlift` seconds, and the cloud drifts off on
-     * `drift` (metres a second).
+     * once all of it is up the column stands to `releaseTop` for `afterlift` seconds, and the cloud drifts off at
+     * `drift` and rises at `driftRise` (metres a second, a mote's own share varying round them), away from where it
+     * is watched and turned `driftTurn` radians off the pond's side, thinning out from `downFade` seconds after the
+     * release.
      */
     liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
-    down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
-    hoverHeight: 3, afterlift: 5, drift: [-0.55, -1.05], downFade: 16,
-    inviteAfter: 5, arrivalRest: 3, seedRest: 6, listenFor: 5.5, familyAfter: 2,
+    down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 9, columnRise: 1.7, columnSwirl: 2.4,
+    hoverHeight: 3, afterlift: 5, drift: 1.6, driftTurn: 1.3, driftRise: 0.2, downFade: 12,
+    inviteAfter: 5, arrivalRest: 3, seedRest: 20, listenFor: 5.5, familyAfter: 2,
     departureWalk: 16,
     /**
      * The play's camera: over the flower bed (`Bed`), then round to the seed heads against the far slope (`Seed`,
      * rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold` metres), then the
      * listening rise (plain names), each blended in as she walks.
      */
-    cameraBedBack: 18, cameraBedUp: 6, cameraPortraitBedBack: 21, cameraPortraitBedUp: 7,
+    cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .35, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
     cameraSeedSide: 2.5, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedSide: -1, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 1.5, cameraSeedHold: 4,
+    /**
+     * She watches the released down go (`seedRest` seconds from its release until she walks on): `watchFrom` seconds
+     * after the release the lens starts to lift its gaze after the cloud, taking `watchShare` of the way to it over
+     * `watchRise` seconds while drawing back `watchBack` metres (`watchPortraitBack` on a tall screen, which has the
+     * height already) and up to `watchClearance` over the grass, never so far that she leaves the middle
+     * `watchFrame` of the frame or the cygnet `watchBirdFrame` (their framing margin opens to `watchMargin`
+     * meanwhile); it comes back to her over `watchReturn` seconds as she walks on.
+     */
+    watchFrom: 1, watchRise: 8, watchShare: .85, watchBack: 10, watchPortraitBack: 3, watchClearance: 4.5,
+    watchFrame: .86, watchBirdFrame: .94, watchMargin: .93, watchReturn: 6,
     cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
     cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65,
     musicDuck: 0.65,
@@ -1131,8 +1143,6 @@ export const tuning = {
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
-    /** The playing view after each answer: it steps back and up over `restEase` seconds and stays. */
-    restEase: 4.5, restBack: [21, 23, 25], restUp: [1.7, 2.4, 3], restOn: [6.5, 7, 7.5],
     waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,
     growthRoughness: 14, growthSoftness: 6,
     traceCurl: 0.9, traceOrbit: 0.9, traceDrift: 0.55,
@@ -1188,23 +1198,19 @@ export const tuning = {
     framePace: 0.32,
     approachShare: 0.65, approachBack: 0.45, approachMargin: 0.84, approachExtra: 35,
     /**
-     * And the one move out of it under the finale, when the tune is whole and the island goes green: `riseFor`
-     * seconds up and out to a view of the whole island, looking at `riseLook` (metres east and north of the piano)
-     * from bearing `riseTo`, `riseBack` back and `riseUp` above it, at any shape of screen; held for
-     * `riseHold`, then `descendFor` down to the walk's view of her as she gets up. The final wave crosses the island
-     * at `finaleSpeed`, so its far shores turn green while the camera is up. `risePace` is how closely the camera
-     * follows the move, and `riseQuiet` how much less of it a wake nobody answered gets.
+     * And how it widens with the duet: after each answer it eases `steps[n]` of the way from the playing view to the
+     * walk's view of her, over `stepEase` seconds from `stepAfter` after the answer is traced, and stays there; under
+     * the finale it goes the rest of the way over `finaleEase` seconds, so it is on the walk's view before she gets
+     * up. `stepPace` is how closely the lens follows while it moves (`stepSettle` seconds longer for it to arrive).
+     * The final wave crosses the island at `finaleSpeed`, pouring down the slopes that face her while the view opens.
      */
-    riseFor: 11,
-    riseHold: 7,
-    descendFor: 9,
-    riseTo: 0.1,
-    riseLook: [5, -100],
-    riseBack: 220,
-    riseUp: 110,
-    finaleSpeed: 16,
-    risePace: 1,
-    riseQuiet: 0.72,
+    steps: [0.14, 0.28, 0.41, 0.54],
+    stepAfter: 0.6,
+    stepEase: 6,
+    stepSettle: 2,
+    stepPace: 1.3,
+    finaleEase: 18,
+    finaleSpeed: 24,
   },
   wood: {
     lightningScale: 0.28,

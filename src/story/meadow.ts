@@ -317,6 +317,7 @@ export class MeadowChapter implements Chapter {
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
     this.lensBearing = Math.atan2(camera.position.x - this.shot.target.x, camera.position.z - this.shot.target.z);
+    this.song.seenFrom(camera);
     const flock = this.cast.flock;
     this.familySeen = flock.active && flock.shown < 1 && this.cast.life.at(POND.x, POND.z) >= 0.75
       && this.seesPond(camera, flock.bounds(this.flockBounds));
@@ -595,8 +596,9 @@ export class MeadowChapter implements Chapter {
 
     /** Asleep with the island, the family wakes with it when the lullaby reaches the hollow, as the sheep do. */
     const flock = this.cast.flock;
-    // They only come in out of sight, so the finale's view over the whole island finds the water still empty.
-    const waking = life.at(POND.x, POND.z) >= 0.75 ? (this.familySeen && !this.crestDone ? 0 : 1 / 2.5) : -1;
+    // They only come in out of sight, and not before she stops to listen: views from the piano to there can see the water.
+    const due = this.crestDone || this.song.listening && !this.familySeen;
+    const waking = life.at(POND.x, POND.z) >= 0.75 ? (due ? 1 / 2.5 : 0) : -1;
     if (flock.active) flock.shown = THREE.MathUtils.clamp(flock.shown + dt * waking, 0, 1);
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
     if (!this.wentOn && boat && time > this.nextBugle && flock.shown > 0.5) {
