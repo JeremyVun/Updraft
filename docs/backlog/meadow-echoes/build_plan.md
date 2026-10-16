@@ -15,6 +15,36 @@
 - [x] Add a soft green trail on the climb and piano approach; inspect it from the player camera and verify that
   untouched ground still waits for the piano.
 
+## Piano hill and recorded score prototype (2026-10-15)
+
+Worktree `.claude/worktrees/agent-af871ede7cd7aa843`, branch `worktree-agent-af871ede7cd7aa843`, dev server 5251.
+Brief and the cut table: "Piano hill and the meadow score" in [design.md](design.md).
+
+- [x] Raise the piano's crown and keep the duet camera low behind her (`caf20a2d`); pond hidden through the duet
+  in landscape and portrait; protected terrain identical. Open: finale camera move, first-answer visibility,
+  portrait framing, the walk camera's pond view after the duet.
+- [x] Cut list → small assets (reproducible tool from the source takes), gains to the room reference.
+  Seam: one table of segments per beat; swapping a take is an edit to that table.
+- [x] Wire the beats: walk loop to the stool, flute calls, traced piano answers sliced at note onsets with the
+  outline following the answer's melody, finale greening on its arrival, warm bed, silence for the family,
+  ending from the feather; loading/prefetch and checkpoint restores. Retune breath notes and harebells.
+  Gate: typecheck, build, real-input duet (four answers required, idle never completes, greening fires on the
+  finale cue), a rendered audio timeline of the duet and walk for Jeremy, dev server left on 5251. Done in `fbc3d86f`;
+  awaiting Jeremy's listen. Open: the four traced outlines come out nearly alike, answers 2 and 4 trace right to
+  left over rising melodies, the guide is faint against the sky, and the answers' synthesised rings need a listen.
+
+## Second playthrough corrections (2026-10-16)
+
+Brief: "Second playthrough of the recorded duet" in [design.md](design.md). Two parallel worktrees off the prototype
+branch, merged back into it for Jeremy on 5251.
+
+- [ ] Story and camera (`src/story/meadow.ts`, `src/story/piano.ts`, `src/audio/meadow-music.ts`, the `piano`,
+  `meadowMusic` and `crest` tuning): finale rise and descent with the surprises absent while it is up; the walk
+  round the piano; the warm bed's fade-in; the slower brow turn; no trodden grass in the flower and seed play.
+- [ ] Flowers and seeds (`src/world/meadow-echoes.ts`, `src/world/meadow-seeds.ts`, `src/story/meadow-song.ts`,
+  `src/audio/meadow-breath.ts`, the `meadowEchoes` tuning): legible cluster opening, no pitched notes, updraft
+  seeds that rise smoothly and never sink back, seed framing against the hills.
+
 ## Wind instrument foundation
 
 - [x] Add the hollow wooden bough, reed and local breeze in the piano composition.
