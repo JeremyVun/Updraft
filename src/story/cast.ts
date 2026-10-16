@@ -10,6 +10,7 @@ import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
+import type { SleepingGate } from '../audio/sleeping-music';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import type { StairsAir } from '../audio/stairs-air';
@@ -147,6 +148,12 @@ export interface Chapter {
   readonly stillDepartureSoon?: boolean;
   readonly summitScore?: SummitScorePhase;
   readonly homeEndingTime?: number;
+  /** The cygnet is on the ground asking for the wind: Home plays its quiet opening until the updraft answers. */
+  readonly homeAsk?: boolean;
+  /** Seconds until the cygnet is set down on the summit, and 0 through the ask: Home moves into its opening then. */
+  readonly homeSetDownIn?: number;
+  /** Told each frame when Home's ending attack would land on a success now (`Soundscape.homeReturnIn`). */
+  hearHome?(returnIn: number | undefined): void;
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;
@@ -160,6 +167,10 @@ export interface Chapter {
   readonly whaleCalling?: number;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;
+  /** How far Sleeping's story has come, for its recordings. */
+  readonly sleepingMusic?: SleepingGate;
+  /** Told each frame how long Sleeping's lullaby has left (`Soundscape.lullabyLeft`), so its frost can wait for it. */
+  hearLullaby?(left: number): void;
   /** The background after Meadow's piano follows the flock, paddle and return to the child. */
   readonly meadowScore?: MeadowScorePhase;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */

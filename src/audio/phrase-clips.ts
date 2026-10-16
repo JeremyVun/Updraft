@@ -17,7 +17,7 @@ export class PhraseClips {
 
   private async load(): Promise<void> {
     try {
-      const buffer = await decodeMusic(this.ctx, this.track, this.request.signal);
+      const [buffer] = await decodeMusic(this.ctx, this.track, this.request.signal);
       if (!this.stopped) this.buffer = buffer;
     } catch (error) {
       if (!this.stopped) console.warn(`Could not load ${this.track} phrases`, error);

@@ -107,7 +107,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  const beats=[],lastEye=rig.camera.position.clone();
  let farewellEye=null;
  const lastRotation=rig.camera.quaternion.clone();
- const turns=[],span=Math.round(.25*fps),peaks={};let jolt=0,joltAt='';
+ const turns=[],span=Math.round(.25*fps),peaks={};let jolt=0,joltAt='',moonDrift=0;
  for(let frame=0;frame<fps*160;frame++) {
   const time=frame*dt;
   if(resize&&!changed&&chapter.beat==='unfold'&&drawing.open>.5){
@@ -131,6 +131,7 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
   }
   // How fast the view turns, and how suddenly that changes: a staged shot should start and stop at rest.
   const turn=THREE.MathUtils.radToDeg(lastRotation.angleTo(rig.camera.quaternion))/dt;
+  if((chapter.homeEndingTime??0)>=HOME_ENDING.moonAt+1)moonDrift=Math.max(moonDrift,turn);
   if(time>1){
    turns.push(turn);peaks[chapter.beat]=Math.max(peaks[chapter.beat]??0,turn);
    if(turns.length>span&&Math.abs(turn-turns[turns.length-1-span])>jolt){jolt=Math.abs(turn-turns[turns.length-1-span]);joltAt=`${chapter.beat} ${chapter.t.toFixed(2)}`;}
@@ -217,7 +218,9 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  }
  assert(chapter.finished,'ending must reach credits without input');
  assert(Math.abs(chapter.homeEndingTime-HOME_ENDING.creditsAt)<=1/fps+.001,'credits share the ending score clock');
- assert(Math.abs(chapter.homeEndingTime-silenceAt-2)<=1/fps+.001,'credits leave two seconds after the music cut');
+ assert(Math.abs(chapter.homeEndingTime-silenceAt-(HOME_ENDING.creditsAt-HOME_ENDING.musicEndsAt))<=1/fps+.001,'credits follow the music\'s end on the ending clock');
+ assert(HOME_ENDING.musicEndsAt<=HOME_ENDING.creditsAt&&HOME_ENDING.creditsAt-HOME_ENDING.moonAt>=5,'the moon shot holds as the music rings out before the closing line');
+ if(restore!=='complete')assert(moonDrift<.05,`the camera holds still once the pan settles on the moon: ${moonDrift.toFixed(3)} deg/s`);
  assert(maxCameraStep<1,'the reveal-to-descent camera must move continuously');
  if(!resize)assert(jolt<2.5,`staged views must start and stop at rest, not jolt: ${jolt.toFixed(1)} deg/s within 0.25 s at ${joltAt}`);
  assert(descent&&insideDusk>1.94,'night must be established before the child enters');

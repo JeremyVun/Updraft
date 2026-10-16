@@ -16,11 +16,11 @@ export type MirrorEnding = { at: number; release: number };
 
 /**
  * Leaving the Mirror with its recording `position` seconds in (looping every `length`) and Home due in `homeIn`
- * seconds: the latest seam at least `mirrorSeamLead` before Home; failing that, the earliest seam still
- * `mirrorSeamLatest` before it; failing that, a `mirrorFallbackFade` fade at once.
+ * seconds: the latest seam at least `mirrorSeamLead` before Home, faded into over up to `mirrorFade`; failing that, a
+ * `mirrorFade` fade at once.
  */
 export function mirrorEnding(position: number, homeIn: number, length: number): MirrorEnding {
-  const { mirrorSeamLead, mirrorSeamSoonest, mirrorSeamLatest, mirrorSeamRelease, mirrorFallbackFade } = tuning.audio;
+  const { mirrorSeamLead, mirrorSeamSoonest, mirrorFade } = tuning.audio;
   const ahead: number[] = [];
   for (const seam of MIRROR_SEAMS) {
     for (let at = ((seam - position) % length + length) % length; at <= homeIn; at += length) {
@@ -28,8 +28,8 @@ export function mirrorEnding(position: number, homeIn: number, length: number): 
     }
   }
   ahead.sort((a, b) => a - b);
-  const at = ahead.filter(at => at <= homeIn - mirrorSeamLead).at(-1) ?? ahead.find(at => at <= homeIn - mirrorSeamLatest);
-  if (at !== undefined) return { at, release: Math.min(mirrorSeamRelease, at) };
-  const fade = Math.max(0, Math.min(mirrorFallbackFade, homeIn));
+  const at = ahead.filter(at => at <= homeIn - mirrorSeamLead).at(-1);
+  if (at !== undefined) return { at, release: Math.min(mirrorFade, at) };
+  const fade = Math.max(0, Math.min(mirrorFade, homeIn));
   return { at: fade, release: fade };
 }

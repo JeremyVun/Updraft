@@ -21,7 +21,7 @@ try {
     cases.push(...plain,{name:'boats',state:{music:'boats'},key:'boatsScore',seconds:BOATS_PHRASE_SECONDS,
       changes:BOATS_CHORDS.map((_,i)=>i*4.5),harmony:(at,score)=>BOATS_CHORDS[Math.floor(Math.max(0,at-score.epoch)%BOATS_PHRASE_SECONDS/4.5)]});
     for(const [file,key,music,table] of [['lines','linesScore','lines','LINES_SECTIONS'],['birches','birchesScore','birches','BIRCHES_SECTIONS'],
-      ['meadow','meadowScore','meadow','MEADOW_SECTIONS'],['sleeping','sleepingScore','wood','SLEEPING_SECTIONS'],['sea','seaScore','sea','SEA_SECTIONS']]) {
+      ['meadow','meadowScore','meadow','MEADOW_SECTIONS'],['sea','seaScore','sea','SEA_SECTIONS']]) {
       const module=await productionModule(`/src/audio/${file}-score.ts`);
       for(const [phase,pattern] of Object.entries(module[table])) {
         const chords=file==='sea'?pattern.chords.map(([at,index])=>({at,tones:module.SEA_CHORDS[index]})):pattern.chords;
@@ -68,9 +68,7 @@ try {
     for (let now=.1; now<10; now+=.1) tick(now,{music:'wood',sleepingScore:'climb',gust:26,charge:.8,gliderLift:now>9?1:0});
     check(events.length===0,'Sleeping climb wind has no chimes');
     tick(12,{music:'wood',sleepingScore:'climb'});
-    const climb=sound.sleepingScore.current, epoch=climb.epoch;
     tick(13,{music:'wood',sleepingScore:'summit',gust:20,charge:.8});
-    check(sound.sleepingScore.current===climb&&climb.epoch===epoch,'Sleeping carries the ongoing harmony and clock through the summit');
     check(events.length===0,'Sleeping summit wind has no chimes');
     events.length=0;tick(15,{music:'wood',forestWind:true,caringWind:true,gust:20,charge:.8,gliderLift:.8});
     check(events.length>0&&events.every(e=>e[5]===true&&e[1]<.4&&pitchIn(e[0],[38,45])),'Forest rescue keeps its quiet caring timbre and stable harmony');

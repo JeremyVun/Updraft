@@ -763,13 +763,18 @@ tree, the still island's tree again at two-thirds size, stands on the slope abov
 (`HOME_TREE`): in the approach it breaks the long slope right of the sun, and it is out of frame for the climb,
 the summit, the drawing and the pan to the moon.
 
-**The fledging.** Sitting in the last of the sun, the family passes low across the sun, reaches a wide circuit on a
+**The fledging.** She slows over the last few metres of the climb and reaches the top just as the family first flies
+into frame (`tuning.summit.swansIn`, `topPace`; the summit's staging and timing begin as early as before, while she is
+still walking), so she stops because of them. Jeremy (2026-10-15): "Ideally she should only stop walking once the
+adult swans come into frame - i.e. she only stops because the player has noticed the swans come into the frame."
+Sitting in the last of the sun, the family passes low across the sun, reaches a wide circuit on a
 tangent and wheels over the hilltop (`tuning.swanArrival`), calling. The cygnet watches and cries after them and is
-set down. It tries twice by itself and drops. Then the player's updraft: a column of `tuning.summit.liftToFly`
+set down. It tries twice by itself and drops, and Home's music, still the family's, falls back at its next phrase end into its own quiet opening, which plays for as long as it asks. Then the player's updraft: a column of `tuning.summit.liftToFly`
 gets it off the grass, it climbs only as fast as the player keeps winding and sinks when they stop, and six to
 eight turns of the cursor get it high enough (`liftTo`). The shown spiral keeps turning round it while it is up,
 fainter under the player's own, until the family answers. **It never times out: it needs the player.** From here to
-the closing line the ending is scripted to the music (`HOME_ENDING`). The
+the closing line the ending is scripted to the music (`HOME_ENDING`): at the answer the opening hands over at its next
+phrase to a fixed place in the recording, and the ending is timed from that (`docs/contracts/audio.md`, Homeward and Home). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and
 goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence.
@@ -789,8 +794,9 @@ pans its gaze to the house as she walks down; the door opens from inside as she 
 the chimney smokes only after nightfall, because somebody inside lights the fire. The family washing (blue and red
 adults, the yellow jumper) hangs behind the cottage's left corner (`tuning.homeWashing`). From the same place the
 view pans, like a tripod head, to the moon and the sea, the horizon on the lower third and the moon left of
-centre, with stars glinting in the water (`uStarlight`). The music's last cadence broadens and rings out, then
-only the wind, the sea, the crickets and the owl. "Thanks for bringing them home." fades in, holds and fades,
+centre, with stars glinting in the water (`uStarlight`). The music's last phrase enters during the pan, its last
+strong note comes as the view settles on the moon, and it rings out over the wind, the sea, the crickets and the owl;
+as it dies away, about eight seconds after the view settles, "Thanks for bringing them home." fades in, holds and fades,
 then Play again fades in at the same place and gently pulses; replay clears the completed save.
 
 Rulings:

@@ -19,7 +19,7 @@ try {
       if(scene==='birches')__game.story.current.skipAhead();
       else __game.story.current.restoreCheckpoint('morning',[]);
     },scene);
-    await page.waitForFunction(scene=>scene==='birches'?!!__game.sound.meadowScore:!!__game.sound.sleepingScore,scene);
+    await page.waitForFunction(scene=>scene==='birches'?!!__game.sound.meadowScore:!!__game.sound.sleepingMusic,scene);
     await page.evaluate(async scene=>{
       const g=__game;
       window.transitionScene={scene,phases:[],entry:null,departure:g.sound.ctx.currentTime};
@@ -30,7 +30,7 @@ try {
         if(stage==='incoming'&&!transitionScene.entry)transitionScene.entry={now,chapter:g.story.name,
           ready:g.story.current.arrivalReady,remaining:g.story.current.remainingSail?.(),
           score:scene==='birches'?!!g.sound.birchesScore:!!g.sound.seaMusic,
-          outgoingGone:scene==='birches'?!g.sound.meadowScore:!g.sound.sleepingScore};
+          outgoingGone:scene==='birches'?!g.sound.meadowScore:!g.sound.sleepingMusic};
       };
       if(scene==='birches'){
         const {FAR_SHORE}=await import('/src/story/meadow.ts');g.story.sail(FAR_SHORE.x,FAR_SHORE.z,.2);g.story.begin('toBirches');
