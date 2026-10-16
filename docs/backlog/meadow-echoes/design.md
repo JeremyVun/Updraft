@@ -290,6 +290,19 @@ Resolved (Claude's creative lead):
    with each gust. The camera frames them against the green hills, and they catch the low sun so they read.
    Creative latitude to make this the meadow's most beautiful moment.
 
+Jeremy's follow-up (2026-10-16, verbatim):
+
+> - ok if you're able to slow the pan and time it better, that would be good
+> - i think it's important that you be thinking about how the world is perceived from the perspective of a human looking through the camera. for the first flower challenge, they dont see three clumps of flowers at all. They see a dense field of flowers from the side. The opening of petals isn't visually distinct enough, i didn't even notice that was a thing. If that was the effect you were going for, why not have the flower shorter and "sleeping", and then they rise up and "bloom" and petals open more when you blow on them. Or something like that.
+> - the bluebells should go quiet as well i think.
+
+Resolved: item 3's turn is slowed and timed to her arrival on the brow. Item 4 is designed from the player camera:
+the player sees one dense bed of flowers from the side, not three clusters, so the flowers start short, bowed and
+closed ("sleeping"); where the wind passes over them they rise, lift their heads and open wide, so the sweep's track
+shows in the field and the awakened part of the bed spreads visibly until the whole bed is up. Progress is read from
+the bed as seen, never from hidden clusters. The harebells on the walk down from the pond go silent as well; they
+still sway in the wind.
+
 ## Verification and quality bar
 
 Play from the landing through the piano, both wind interactions, the family and departure with real pointer
