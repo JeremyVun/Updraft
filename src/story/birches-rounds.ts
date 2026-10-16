@@ -29,6 +29,8 @@ export interface RoomFrame {
   height: number;
   /** A longer lens (2 halves the field), eased in and out by the camera. */
   zoom?: number;
+  /** Portrait only: the same composition on every portrait screen, nearer on wider ones as it stands back on narrower ones. */
+  fill?: boolean;
 }
 /** Portrait has its own, because its field is half as wide: heaps side by side in landscape stand one behind another in it. */
 export interface Frames {
@@ -43,10 +45,12 @@ const lens = new THREE.Vector3();
 /** Writes `frames` for a screen of `aspect` into `shot`. */
 export function frameShot(frames: Frames, aspect: number, shot: Shot): Shot {
   const f = aspect < 1 ? frames.portrait : frames.landscape;
-  shot.target.copy(lifted(f.at, f.lift));
+  const back = aspect >= 1 ? 1 : f.fill ? PORTRAIT_ASPECT / aspect : Math.max(1, PORTRAIT_ASPECT / aspect);
+  const scale = f.fill ? back : 1;
+  shot.target.copy(lifted(f.at, f.lift * scale));
   shot.from = lens.set(f.from.x, 0, f.from.z).normalize();
-  shot.distance = f.distance * (aspect < 1 ? Math.max(1, PORTRAIT_ASPECT / aspect) : 1);
-  shot.height = f.height;
+  shot.distance = f.distance * back;
+  shot.height = f.height * scale;
   shot.zoom = f.zoom;
   return shot;
 }
@@ -149,7 +153,7 @@ export interface Round {
 /** The third stand is on the ride's west edge, the three heaps on an arc in front of her. */
 const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 11, -8)];
 /** In the gap between the third round's left heap and its middle one, a little toward her: where it sits up and waits for her. */
-const SHUFFLE_FROM = birchesGap(2, 10.91, -14.66);
+const SHUFFLE_FROM = birchesGap(2, 11.06, -13.81);
 
 export const ROUNDS: readonly Round[] = [
   {
@@ -191,10 +195,10 @@ export const ROUNDS: readonly Round[] = [
     cygnet: [lifted(birchesGap(2, 9.2, -7.4)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
     /**
      * From behind her, a little to her left, so she stands between the middle heap and the right one and the three are
-     * set out across the frame, low enough that they stand up as mounds. Portrait stands further back on a wider lens
-     * to hold all three across its width, looking over them into the gold, the heaps and her in its lower half.
+     * set out across the frame, low enough that they stand up as mounds. Portrait holds all three across its width on
+     * every portrait screen, on a wider lens looking down over her into the heaps, so they fill the middle of it.
      */
-    frames: { landscape: view(2, 17, 5.5), portrait: tall(2, 23, 4.5, 6, 0.7) },
+    frames: { landscape: view(2, 15, 5.5), portrait: { ...tall(2, 19, 8, 1.5, 0.7), fill: true } },
   },
 ];
 
@@ -232,7 +236,7 @@ const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
 const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
 const FAR_TREE = HOLLOW_FAR_TREE;
-const ROUND_3_LENS = lensOf(2, 17);
+const ROUND_3_LENS = lensOf(2, 15);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
 /** Where the swing's lens stands, three-quarters on to the seat, so the trunk's face toward it faces the lens. */
@@ -307,12 +311,12 @@ export const PATHS = {
   /** Down the broken birch on the side the lens sees, round it, and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [
     bark(STUMP, 3.9, STUMP_FRONT), bark(STUMP, 0.4, STUMP_FRONT),
-    g(-11.1, -1140.6), g(-10, -1144), g(-9.5, -1151), gap(2, 4, -9.5), gap(2, 8.3, -12.8), { ground: SHUFFLE_FROM },
+    g(-11.1, -1140.6), g(-10, -1144), g(-9.5, -1151), gap(2, 4, -9.5), gap(2, 7.8, -11.6), { ground: SHUFFLE_FROM },
   ],
   /** Between the left heap and the middle one, round behind the middle one and up the birch there. */
-  toFarTrunk: [gap(2, 12, -18.5), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  toFarTrunk: [gap(2, 10.96, -17.21), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
   /** From the right heap the same way round, between it and the middle one. */
-  toFarTrunkRight: [gap(2, 18.5, -15.6), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  toFarTrunkRight: [gap(2, 17.87, -14.14), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
   /** Down the far trunk, behind the right heap, to the birch beyond the slipped loop. */
   toTangle3: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),

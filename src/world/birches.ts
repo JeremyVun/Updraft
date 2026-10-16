@@ -80,12 +80,12 @@ export const BIRCH_PILES = [
   /**
    * Its third, on the hollow's west bank, set out side by side in front of her like cups on a table: on an arc round
    * where she stands (`ROUNDS[2].stand`, gap C 11 m in, x −8), the left one west-south-west of her, the middle one
-   * west-north-west, the right one north-north-west, 9.3 m off and the middle one a little nearer, 2 m apart at the rim
-   * so one portrait frame from behind her holds all three.
+   * west-north-west, the right one north-north-west, 7.8 m off and the middle one a little nearer. Smaller than the
+   * other rounds' and 1.5 m apart at the rim, so a portrait frame from behind her holds all three large enough to play.
    */
-  { ...birchesGap(2, 7.19, -16.48), r: 2.6, deep: 5, raked: true },
-  { ...birchesGap(2, 14.58, -16.04), r: 2.8, deep: 5.4, raked: true },
-  { ...birchesGap(2, 19.85, -10.85), r: 2.6, deep: 5, raked: true },
+  { ...birchesGap(2, 8.13, -15.25), r: 2.1, deep: 5, raked: true },
+  { ...birchesGap(2, 14.01, -14.76), r: 2.3, deep: 5.4, raked: true },
+  { ...birchesGap(2, 18.31, -10.72), r: 2.1, deep: 5, raked: true },
 ];
 
 /** The steepest a heap is laid, in depth a metre: a little under what the litter field lets stand (`litterRepose`). */
@@ -106,15 +106,15 @@ function pileDepth(pile: (typeof BIRCH_PILES)[number], from: number): number {
 const pileReach = (pile: (typeof BIRCH_PILES)[number]): number => pile.r + (pile.raked ? tuning.birches.heapRaked : 1.2);
 
 /** The birch behind round 3's middle heap, which the squirrel climbs to watch her leap. */
-export const HOLLOW_FAR_TREE = birchesGap(2, 15.96, -19.15);
+export const HOLLOW_FAR_TREE = birchesGap(2, 15.18, -17.41);
 /** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
 const BANKS = [
   { ...birchesGap(1, 13.8, 10.1), scale: 15, variant: 2 },
   { ...birchesGap(1, 15.5, -4.1), scale: 16, variant: 0 },
   /** Behind each of the third round's heaps from where she stands; the middle one's is the birch the squirrel watches the leap from. */
-  { ...birchesGap(2, 5.88, -19.4), scale: 14.5, variant: 1 },
+  { ...birchesGap(2, 7.13, -17.76), scale: 14.5, variant: 1 },
   { ...HOLLOW_FAR_TREE, scale: 16.4, variant: 2 },
-  { ...birchesGap(2, 22.9, -11.83), scale: 13.3, variant: 0 },
+  { ...birchesGap(2, 20.84, -11.67), scale: 13.3, variant: 0 },
   /** STAGING (birches-uplift-concept): standing birches at both ends of the fallen one, so there is no way round. */
   { ...birchesAt(-12.4, -1118.6), scale: 15.5, variant: 0 },
   { ...birchesAt(14.2, -1123.4), scale: 14.5, variant: 3 },
@@ -138,7 +138,7 @@ export const ROUND_VIEWS_TALL = [
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
-  { at: birchesGap(2, 11.37, -13.03), from: { x: 0.819, z: 0.574 } },
+  { at: birchesGap(2, 12.6, -12.17), from: { x: 0.766, z: 0.643 } },
 ] as const;
 /** How much wider a round's view is kept clear from what it looks at back toward the lens, narrowing to it: round 3's heaps stand across its view. */
 const VIEW_FAN = [0, 0, 8];
