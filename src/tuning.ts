@@ -382,25 +382,28 @@ export const tuning = {
     inviteAfter: 5, arrivalRest: 3, seedRest: 20, listenFor: 5.5, familyAfter: 2,
     departureWalk: 16,
     /**
-     * The play's camera: over the flower bed (`Bed`), then round to the seed heads against the far slope (`Seed`,
-     * rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold` metres), then the
-     * listening rise (plain names), each blended in as she walks.
+     * The play's camera: looking down on the flower bed from close behind her (`Bed`, aimed `cameraBedAim` of the
+     * way from her to it, and waiting there for her first `cameraSetOff` metres on), then round to the seed heads
+     * against the far slope (`Seed`, rising `cameraSeedRise` with the down and keeping its column in frame to
+     * `cameraSeedHold` metres), then the listening rise (plain names), each blended in as she walks. Coming to a
+     * stand the walk's view gives way to it over her last `approach` metres, followed at `cameraArrivePace`.
      */
-    cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .35, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
+    cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .25, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
+    cameraSetOff: 8,
     cameraSeedSide: 2.5, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedSide: -1, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 1.5, cameraSeedHold: 4,
+    cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5, cameraArrivePace: 0.35,
+    cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65,
     /**
      * She watches the released down go (`seedRest` seconds from its release until she walks on): `watchFrom` seconds
-     * after the release the lens starts to lift its gaze after the cloud, taking `watchShare` of the way to it over
-     * `watchRise` seconds while drawing back `watchBack` metres (`watchPortraitBack` on a tall screen, which has the
-     * height already) and up to `watchClearance` over the grass, never so far that she leaves the middle
+     * after the release the lens starts to lift its gaze after the cloud, taking `watchShare` of the way up to it and
+     * `watchTurn` of the way round over `watchRise` seconds while drawing back `watchBack` metres
+     * (`watchPortraitBack` on a tall screen, which has the height already), never so far that she leaves the middle
      * `watchFrame` of the frame or the cygnet `watchBirdFrame` (their framing margin opens to `watchMargin`
      * meanwhile); it comes back to her over `watchReturn` seconds as she walks on.
      */
-    watchFrom: 1, watchRise: 8, watchShare: .85, watchBack: 10, watchPortraitBack: 3, watchClearance: 4.5,
-    watchFrame: .86, watchBirdFrame: .94, watchMargin: .93, watchReturn: 6,
-    cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
-    cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65,
+    watchFrom: 1, watchRise: 8, watchShare: .85, watchTurn: .35, watchBack: 10, watchPortraitBack: 3,
+    watchFrame: .84, watchBirdFrame: .88, watchMargin: .93, watchReturn: 6,
     musicDuck: 0.65,
     flowers: 290, seedHeads: 140, stemBend: .06, stemSaturation: .24,
     turf: .42, turfExtra: 8, listeningTurf: [2, -821, 11, 10],

@@ -616,7 +616,7 @@ export class MeadowChapter implements Chapter {
     if (pianoPace !== null) {
       this.pace = pianoPace;
     } else if (this.song.frame(this.shot, this.cast)) {
-      this.pace = tuning.meadowEchoes.cameraPace;
+      this.pace = this.song.beat === 'approach' ? tuning.meadowEchoes.cameraArrivePace : tuning.meadowEchoes.cameraPace;
     }
   }
 

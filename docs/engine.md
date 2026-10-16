@@ -194,7 +194,8 @@ like there wasn't an authored system in place". What intention means:
 - **An arrival can have its own view.** A crossing may name an `ArrivalView` (`crossingCamera.arrivals`): angle off
   astern, distance, height, look-ahead and optionally a committed side, eased in over sailed distance from the end of
   the route and ending where the room's first view stands, so landing is not followed by a swing round.
-- **Reveals ratchet.** Each piano answer steps the view back and up and it stays (`piano.restBack`, `restUp`).
+- **Reveals ratchet.** Each piano answer steps the view up and out and it stays; the finale's step ends on the walk's
+  view of her, so nothing comes down when she stands (`piano.steps`, `finaleEase`).
 - Deliberate single moves are allowed: the doorway's threshold path, the little-boats close-up while the child handles
   a toy, the birches' close-up for the circling snag, the Sleeping bedroom's glance to the window, the summit push-in.
 
@@ -226,7 +227,7 @@ How the rig does it:
   world-space approach; `composition: 'hold'` preserves staged motion; `exact` gives a continuous path with no
   clearance or fitting. Zero-time preparation cannot advance the camera.
 
-Knobs: `tuning.cinematography`, `crossingCamera`, `drownedCamera`, `storm.lighthouseCamera`, `piano.rest*`.
+Knobs: `tuning.cinematography`, `crossingCamera`, `drownedCamera`, `storm.lighthouseCamera`, `piano.steps`.
 
 To find indecision, `BASE=<preview> TRACE=1 node tools/playthrough.mjs <prefix>` records every camera step of a real
 journey, and `node tools/camera-intent-report.mjs <prefix>` lists by chapter and beat the stalls (the lens nearly

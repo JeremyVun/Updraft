@@ -10,7 +10,7 @@ globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo()
 const {PianoStop}=await import('../src/story/piano.ts');
 const {piano}=await import('../src/world/piano.ts');
 const {windBough}=await import('../src/world/wind-bough.ts');
-const {CameraRig,widthFit,verticalFov}=await import('../src/camera.ts');
+const {CameraRig,FROM}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
 // The actual approach hands camera ownership to the piano while the child is still on its slope.
@@ -30,45 +30,60 @@ for(const [w,h] of [[1280,800],[390,844]])for(const bearing of [-1.1,0,1.1]){
  }
 }
 console.log('Piano approach keeps the walking child visible from three directions in landscape and portrait.');
-for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;stage++){
- Object.assign(globalThis.window,{innerWidth:w,innerHeight:h});
- const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
- const shot={target:new THREE.Vector3(),distance:19,height:4};stop.frame(shot);rig.cut(shot);
- stop.responseAt=1;stop.heardTo=stage;if(stage===4){stop.roseFrom=1;stop.answered=true;}
- let worst=0;
- for(let f=0;f<600;f++){
-  stop.now=f/60;const pace=stop.frame(shot);rig.update(1/60,stop.now,shot,pace);
-  for(const at of [piano.seat.clone().add(new THREE.Vector3(0,1.2,0)),piano.keys,windBough.crown]){
-   const p=at.clone().project(rig.camera);worst=Math.max(worst,Math.abs(p.x),Math.abs(p.y));
-   assert(Math.abs(p.x)<.94&&Math.abs(p.y)<.94,'subjects clipped during reward');
-  }
- }
- console.log({viewport:[w,h],stage,worst});
-}
-for(const [w,h] of [[1280,800],[390,844]]){
+// Every frame the story puts the walk's own view of her into the shot before the piano frames it.
+const desk=new THREE.Vector3();piano.planeRest(desk,new THREE.Euler());
+const walkView=shot=>{
+ const c=piano.seat,{cameraLead,cameraBack}=tuning.meadowPlane,pw=Math.min(.25,cameraLead/Math.max(Math.hypot(desk.x-c.x,desk.z-c.z),1));
+ shot.target.set(c.x+(desk.x-c.x)*pw,Math.max(c.y,0)+3,c.z+(desk.z-c.z)*pw-3);
+ shot.from=undefined;shot.distance=cameraBack;shot.height=13;shot.fitWidth=false;
+ return shot;
+};
+const child=piano.seat.clone().add(new THREE.Vector3(0,1.2,0));
+const t=tuning.piano;
+for(const [w,h] of [[1600,900],[2048,1023],[390,844]]){
  Object.assign(globalThis.window,{innerWidth:w,innerHeight:h});
  const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
  const shot={target:new THREE.Vector3(),distance:19,height:4};
- // The finale stands where the playing view's narrow-screen widening had put it, and widens no further itself.
- const fit=widthFit(verticalFov(w/h),w/h);
- stop.heardTo=3;stop.responseAt=1;stop.now=10;stop.frame(shot);rig.cut(shot);
- const before={distance:shot.distance,height:shot.height,target:shot.target.clone()};
- stop.heardTo=4;stop.responseAt=stop.now;stop.answered=true;stop.frame(shot);
- assert.equal(shot.distance,before.distance,'Final answer pulls the camera inward');
- assert.equal(shot.height,before.height,'Final answer lowers the camera');
- assert(shot.target.distanceTo(before.target)<1e-6,'Final answer resets the gaze');
- stop.now+=tuning.piano.finaleWaveAfter;stop.roseFrom=stop.now;stop.frame(shot);
- assert(!shot.fitWidth&&Math.abs(shot.distance-before.distance*fit)<1e-6,'Final reveal restarts from the close playing view');
- assert(Math.abs(shot.height-before.height*fit)<1e-6,'Final reveal resets camera height');
- assert(shot.target.distanceTo(before.target)<1e-6,'Final reveal resets the gaze');
- const child=piano.seat.clone().add(new THREE.Vector3(0,1.2,0));
- const initialGap=rig.camera.position.distanceTo(child);
- let previous=shot.distance;
- for(let f=1;f<=tuning.piano.riseFor*60;f++){
-  stop.now=stop.roseFrom+f/60;
-  const pace=stop.frame(shot);rig.update(1/60,stop.now,shot,pace);
-  assert(shot.distance>=previous,'Final reveal reverses its widening');previous=shot.distance;
-  assert(rig.camera.position.distanceTo(child)>=initialGap-.2,'Final reveal visibly pulls toward the child');
+ stop.now=0;stop.frame(walkView(shot));rig.cut(shot);
+ // A prompt player: each answer traced as soon as it is asked for, the finale on its cue.
+ const answers=[3,15,27,39],greening=39+9.8,end=greening+t.finaleEase+3;
+ let worst=0,previous=null,inward=0,lower=0,ceiling=0,atAnswer=null;
+ for(let f=0;f<=end*60;f++){
+  stop.now=f/60;
+  const due=answers.filter(a=>a<=stop.now).length;
+  if(due>stop.heardTo){
+   if(due===4)atAnswer=(stop.frame(walkView(shot)),{distance:shot.distance,height:shot.height,target:shot.target.clone()});
+   stop.heardTo=due;stop.responseAt=stop.now;
+   if(due===4){
+    stop.frame(walkView(shot));
+    assert(Math.abs(shot.distance-atAnswer.distance)<1e-6&&Math.abs(shot.height-atAnswer.height)<1e-6&&shot.target.distanceTo(atAnswer.target)<1e-6,
+     'The last answer moves nothing at once');
+   }
+  }
+  if(stop.roseFrom===0&&stop.now>=greening){
+   const before=(stop.frame(walkView(shot)),{distance:shot.distance,height:shot.height,target:shot.target.clone()});
+   stop.roseFrom=stop.now;stop.answered=true;stop.frame(walkView(shot));
+   assert(Math.abs(shot.distance-before.distance)<1e-6&&Math.abs(shot.height-before.height)<1e-6&&shot.target.distanceTo(before.target)<1e-6,
+    'The finale carries on from where the last step had got to');
+  }
+  const pace=stop.frame(walkView(shot));rig.update(1/60,stop.now,shot,pace);
+  const eye=rig.camera.position,gap=eye.distanceTo(child);
+  previous={gap:Math.max(previous?.gap??0,gap),y:Math.max(previous?.y??-Infinity,eye.y)};
+  inward=Math.max(inward,previous.gap-gap);lower=Math.max(lower,previous.y-eye.y);
+  ceiling=Math.max(ceiling,eye.y-Math.max(heightAt(eye.x,eye.z),0));
+  for(const at of [child,piano.keys,windBough.crown]){
+   const p=at.clone().project(rig.camera);worst=Math.max(worst,Math.abs(p.x),Math.abs(p.y));
+   assert(p.z<1&&Math.abs(p.x)<.94&&Math.abs(p.y)<.94,`subjects clipped at ${stop.now.toFixed(2)} s in ${w}x${h}`);
+  }
  }
+ // The lens breathes a little about where it is put; more than that would be a step back in or down.
+ assert(inward<.4,`the duet camera comes ${inward.toFixed(2)} m back in toward her`);
+ assert(lower<.4,`the duet camera comes ${lower.toFixed(2)} m down`);
+ assert(ceiling<32,`the duet camera climbs to ${ceiling.toFixed(1)} m over the ground`);
+ const walk=walkView({target:new THREE.Vector3(),distance:0,height:0});
+ stop.frame(walkView(shot));
+ assert(shot.target.distanceTo(walk.target)<1e-6&&Math.abs(shot.distance-walk.distance)<1e-6&&Math.abs(shot.height-walk.height)<1e-6
+  &&Math.abs(Math.atan2(shot.from.x,shot.from.z)-Math.atan2(FROM.x,FROM.z))<1e-6,'the finale ends on the walk view, with nothing left to come down');
+ console.log({viewport:[w,h],worst:+worst.toFixed(3),ceiling:+ceiling.toFixed(1),inward:+inward.toFixed(2),lower:+lower.toFixed(2)});
 }
-console.log('The final piano response continues outward from the settled third response in landscape and portrait.');
+console.log('The duet widens with each answer and the finale to the walk view, never back in or down, under 32 m, in landscape and portrait.');

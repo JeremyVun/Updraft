@@ -50,9 +50,11 @@ branch, merged back into it for Jeremy on 5251.
 
 Brief: "Third playthrough" in [design.md](design.md). Two parallel worktrees off the prototype branch.
 
-- [ ] Cameras (`src/story/piano.ts`, `src/story/meadow-song.ts`, camera code in `src/story/meadow.ts`, the `piano`
+- [x] Cameras (`src/story/piano.ts`, `src/story/meadow-song.ts`, camera code in `src/story/meadow.ts`, the `piano`
   rise and `meadowEchoes` camera tuning): the duet steps up and out phrase by phrase, staying low; the first bed
-  seen from above; the seeds' release followed up and away in a held pan.
+  seen from above; the seeds' release followed up and away in a held pan. Branch `meadow-fix-camera`; also the
+  family held back until she stops to listen, the bed invitation kept to sleepers in the lens and the released
+  down's drift (`world/meadow-echoes.ts`). Evidence in [verification.md](verification.md).
 - [ ] Music (`src/audio/meadow-cuts.ts`, `meadow-cuts-measured.ts`, `tools/meadow-music-cuts.mjs`,
   `src/audio/meadow-music.ts`, the `meadowMusic` getter in `src/story/meadow.ts`, the `meadowMusic` tuning): answers
   that ring out with their room's decay; one warm bed unbroken from the duet to the boat, dipping gently for the
