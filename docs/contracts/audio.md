@@ -271,9 +271,9 @@ given), levels each to the room reference by measured loudness, and writes what 
   in the meadow waits behind the veil for its first part. Music mute and hidden pages behave as for the other
   recordings. Decoded sizes: walk 10 MiB, duet 31 MiB, warm bed 55 MiB, ending 17 MiB.
 
-The flowers' breath voice (`audio/meadow-breath.ts`) and the harebells use the F minor pentatonic (F, A♭, B♭, C, E♭)
-of the recordings. The flower prototype's breath voice is synthesised in Web Audio from harmonics and filtered air at
-`tuning.meadowEchoes.voice`, under the warm bed; the grey approach flower stays silent. `MeadowSong` smoothly shares the existing
+The flower bed, the seed heads and the harebells make no notes (Jeremy, 2026-10-16: "None of the flower challenges
+should make that bell sound anymore. It no loner fits with the meadow music"; "the bluebells should go quiet as well");
+they answer with sight and the ordinary sound of the wind. `MeadowSong` smoothly shares the existing
 `pianoMix` gate while the child and wind exchange seeds, then releases it; the warm bed ignores that duck. The final
 listening rest gives the distant family call space before the crest.
 

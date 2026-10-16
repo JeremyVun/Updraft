@@ -13,10 +13,10 @@ node tools/still-grass-check.mjs` compares blade positions, heights, tuft covera
 ground normals at all three detail levels. `BROKEN_BASE` optionally records the regressed build too. Captures and
 metrics go to `OUT` (default `/tmp/updraft-still-grass`); inspect the stills as well as the numeric comparison.
 
-The Meadow musical play has `meadow-seeds-check` (persistent gesture effort and recovery),
-`meadow-echoes-state-check` (input ownership, checkpoint recovery, flower strokes and seed lift), and
-`meadow-breath-check` (procedural voice envelope and headroom). `BASE=<dev> node tools/meadow-echoes-check.mjs`
-plays the flower phrase and seed lift with real gestures; `FROM=meadow FULL=1` includes the entire chapter, and
+The Meadow musical play has `meadow-seeds-check` (woken flowers and lifted down kept, prompt finish, recovery) and
+`meadow-echoes-state-check` (input ownership, checkpoint recovery, sweeps waking the bed, the seeds taking only the
+updraft, down that moves continuously and never sinks). `BASE=<dev> node tools/meadow-echoes-check.mjs`
+wakes the flower bed and lifts the seeds with real gestures; `FROM=meadow FULL=1` includes the entire chapter, and
 `W=390 H=844 TOUCH=1` exercises portrait touch. It writes captures and a state report under `OUT` in `/tmp`.
 `TRACE=1 AUDIT=1` also captures every camera step and intervening walk frames. Run
 `node tools/meadow-camera-audit.mjs <OUT>/audit-camera.jsonl` to check child framing through the handoffs and

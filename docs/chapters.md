@@ -316,11 +316,16 @@ sounds and chimes are hushed during the duet. A completed piano checkpoint resum
 
 In the Meadow rework ([design](backlog/meadow-echoes/design.md)), the piano stands on a nearby rounded knoll
 beyond the preserved shore bank. Its camera opens across the rolling hollow as colour returns. The child then
-sets the cygnet down beside a low bed of flowers: broad wind strokes open three irregular clusters and answer in
-procedural breath notes. They walk together to seed heads farther through the fold; upward strokes or circles
-lift a cloud that disperses above them. A final listening pause introduces the real swan call before the child
-gathers the cygnet and approaches the pond crest. Ambient wind never completes either play moment.
-`world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`, `audio/meadow-breath.ts`;
+sets the cygnet down beside a low bed of flowers asleep in the grass: short, bowed and closed into buds. Where an
+ordinary sweep passes over them on screen they rise, lift their heads and open wide, so each sweep leaves its
+track in the bed and the woken part spreads; about two passes wake a flower. Once three quarters of the bed is up
+the last sleepers rise with it and petals lift off the whole bed, and that is the end of it. They walk together to
+seed heads farther through the fold, framed against the far slope. Sweeps only stir the heads; circling winds an
+updraft (the spiral invitation shows it) whose column draws the down off them, round and up. Lifted down never
+sinks back: unwound it hangs over the heads, and once it is all up the column carries it out over the top to drift
+away over the island. A final listening pause introduces the real swan call before the child gathers the cygnet
+and approaches the pond crest. Neither play makes a note; ambient wind and idle time complete neither.
+`world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`;
 `?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
 walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.
 
@@ -347,10 +352,9 @@ for it. It takes it in its bill and swims back to her waiting hands, and the fea
 it as she puts it away. Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
 ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`). Beside the walk down from the pond stands a
-row of harebells taller than she is (`world/harebells.ts`). A stroke across a clump rings it, in the meadow's scale from
-low to high along the walk; she or the plane brushing through one rings it softly, and both of them look round at a bell
-rung near them. One sweep down the whole row is sung back the other way. Like the pond, they are grey and silent until the lullaby
-reaches them. It is there to be found; nothing waits on it.
+row of harebells taller than she is (`world/harebells.ts`). They make no sound: a stroke across a clump swings its bells,
+and so does she or the plane brushing through one, and both of them look round at a bell swung near them. Like the pond,
+they are grey until the lullaby reaches them. It is there to be found; nothing waits on it.
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { screenBrush } from '../creatures/motion';
-import type { AudioOut } from '../creatures/voices';
 import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
@@ -8,22 +7,13 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { WAY } from './fields';
 import { heightAt } from './island';
 
-/**
- * The bells, low to high along the walk: the meadow's own F minor pentatonic, so a sweep either way is a run in the
- * key of its recordings. When one sweep rings all of them in order the row answers by itself, back the other way.
- */
-const NOTES = [77, 80, 82, 84, 87];
 /** Where along the walk down from the pond the row stands (metres along the way), and how far to its left. */
 const ALONG = [8, 12, 16, 20, 24];
 const ASIDE = [3.1, 2.7, 3.4, 2.8, 3.2];
 const STEMS = 5;
-/** How long a whole run may take to count as one phrase, and how soon after it the row answers. */
-const PHRASE_WITHIN = 3;
-const ANSWER_AFTER = 0.7;
-const ANSWER_GAP = 0.42;
-/** A bell rung again too soon only swings; it does not sound twice over itself. */
+/** A clump swung again this soon is already swinging. */
 const REST = 0.3;
-/** How awake the meadow has to be where a clump stands before it rings: asleep with the island until the lullaby. */
+/** How awake the meadow has to be where a clump stands before it comes up: asleep with the island until the lullaby. */
 const AWAKE = 0.75;
 /** How long a clump takes to come up once it has. */
 const GROW_FOR = 2.5;
@@ -125,18 +115,15 @@ interface Stem {
 interface Clump {
   x: number;
   z: number;
-  note: number;
   stems: Stem[];
-  rangAt: number;
-  /** Rung by the player (not brushed by the child), for telling whether a sweep went down the whole row. */
-  sweptAt: number;
-  /** The child or the plane is in among it: it rang as they came in, and does not again until they have left it. */
+  swungAt: number;
+  /** The child or the plane is in among it: it swung as they came in, and does not again until they have left it. */
   brushed: boolean;
   /** 0 not there yet, 1 grown: like the animals, they come up out of the grass when the colour reaches them. */
   grown: number;
 }
 
-/** A row of harebells, grown far too tall, beside the walk from the pond. The wind rings them. */
+/** A row of harebells, grown far too tall, beside the walk from the pond. They swing silently in the wind. */
 export class Harebells {
   readonly group = new THREE.Group();
   private readonly clumps: Clump[] = [];
@@ -151,12 +138,8 @@ export class Harebells {
   private readonly tip = new THREE.Vector3();
   private readonly one = new THREE.Vector3(1, 1, 1);
   private readonly size = new THREE.Vector3();
-  private answerAt = -1;
-  private answered = 0;
-  /** Which way the row sings back: the other way from the sweep. */
-  private answerDown = false;
   private now = 0;
-  /** The last bell to ring, for whoever wants to look at it, and when. */
+  /** The last bell swung, for whoever wants to look at it, and when. */
   readonly heard = new THREE.Vector3();
   heardAt = -Infinity;
 
@@ -183,7 +166,7 @@ export class Harebells {
           phase: rand() * 10,
         });
       }
-      this.clumps.push({ x, z, note: NOTES[i], stems, rangAt: -Infinity, sweptAt: -Infinity, brushed: false, grown: 0 });
+      this.clumps.push({ x, z, stems, swungAt: -Infinity, brushed: false, grown: 0 });
     });
     const count = ALONG.length * STEMS;
     this.stems = new THREE.InstancedMesh(new THREE.TubeGeometry(STEM_PATH, 24, 0.011, 5), material('#4f6a3a', '#6f8a4a', 0, 1, 0.25), count);
@@ -197,15 +180,9 @@ export class Harebells {
   }
 
   update(dt: number, time: number, camera: THREE.Camera, wind: WindField, input: PointerInput,
-    out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[], life: (x: number, z: number) => number, active: boolean): void {
+    brushers: readonly (THREE.Vector3 | null)[], life: (x: number, z: number) => number, active: boolean): void {
     this.now = time;
-    if (active) this.listen(camera, input, out, brushers);
-    if (this.answerAt > 0 && time > this.answerAt) {
-      const i = this.clumps.length - 1 - this.answered;
-      const order = this.answerDown ? i : this.answered;
-      this.ring(this.clumps[order], out, 0.75, camera);
-      this.answerAt = ++this.answered < this.clumps.length ? time + ANSWER_GAP : -1;
-    }
+    if (active) this.listen(camera, input, brushers);
     let n = 0;
     for (const c of this.clumps) {
       c.grown = Math.min(1, Math.max(0, c.grown + dt * (life(c.x, c.z) >= AWAKE ? 1 / GROW_FOR : -1)));
@@ -238,8 +215,8 @@ export class Harebells {
     this.bells.instanceMatrix.needsUpdate = true;
   }
 
-  /** A stroke crossing a clump on screen rings it; so does the child walking through it, or the plane coming down in it. */
-  private listen(camera: THREE.Camera, input: PointerInput, out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[]): void {
+  /** A stroke crossing a clump on screen swings it; so does the child walking through it, or the plane coming down in it. */
+  private listen(camera: THREE.Camera, input: PointerInput, brushers: readonly (THREE.Vector3 | null)[]): void {
     const stroke = input.present && !input.muted && input.gust > tuning.pointer.minGust;
     for (const c of this.clumps) {
       if (c.grown < 1) continue;
@@ -247,43 +224,21 @@ export class Harebells {
       const brushed = brushers.some((b) => !!b && b.y < ground + 2.6 && Math.hypot(b.x - c.x, b.z - c.z) < BRUSHED);
       const entered = brushed && !c.brushed;
       c.brushed = brushed;
-      if (this.now - c.rangAt < REST) continue;
+      if (this.now - c.swungAt < REST) continue;
       this.at.set(c.x, ground + 1, c.z);
-      if (stroke && screenBrush(camera, this.at, input.prevNdc, input.ndc, BRUSH) > 0.02) {
-        c.sweptAt = this.now;
-        this.ring(c, out, Math.min(1, 0.55 + input.gust * 0.04), camera);
-        this.phrase();
-      } else if (entered) {
-        this.ring(c, out, 0.4, camera);
-      }
+      if (stroke && screenBrush(camera, this.at, input.prevNdc, input.ndc, BRUSH) > 0.02) this.swing(c, Math.min(1, 0.55 + input.gust * 0.04));
+      else if (entered) this.swing(c, 0.4);
     }
   }
 
-  /** All of them, one after another along the row, inside one breath: the row sings it back the other way. */
-  private phrase(): void {
-    if (this.answerAt > 0) return;
-    const times = this.clumps.map((c) => c.sweptAt);
-    if (times.some((t) => this.now - t > PHRASE_WITHIN)) return;
-    const up = times.every((t, i) => i === 0 || t >= times[i - 1]);
-    const down = times.every((t, i) => i === 0 || t <= times[i - 1]);
-    if (!up && !down) return;
-    for (const c of this.clumps) c.sweptAt = -Infinity;
-    this.answerDown = up;
-    this.answered = 0;
-    this.answerAt = this.now + ANSWER_AFTER;
-  }
-
-  private ring(c: Clump, out: AudioOut | null, level: number, camera: THREE.Camera): void {
-    c.rangAt = this.now;
+  private swing(c: Clump, level: number): void {
+    c.swungAt = this.now;
     for (const s of c.stems) {
       s.swingSpeed.x += (Math.random() - 0.5) * 6 * level;
       s.swingSpeed.y += (Math.random() - 0.3) * 6 * level;
     }
     this.heard.set(c.x, heightAt(c.x, c.z) + 1.2, c.z);
     this.heardAt = this.now;
-    if (!out) return;
-    const at = this.at.set(c.x, heightAt(c.x, c.z) + 1, c.z).project(camera);
-    chime(out, c.note, level, THREE.MathUtils.clamp(at.x, -0.8, 0.8));
   }
 }
 
@@ -292,37 +247,6 @@ function spring(v: THREE.Vector2, speed: THREE.Vector2, tx: number, ty: number, 
   speed.y += ((ty - v.y) * stiffness - speed.y * damping) * dt;
   v.x += speed.x * dt;
   v.y += speed.y * dt;
-}
-
-/** A small glassy bell: a clear fundamental, a high inharmonic shimmer, and a long soft tail into the reverb. */
-function chime(out: AudioOut, midi: number, level: number, pan: number): void {
-  const { ctx } = out;
-  const when = ctx.currentTime + 0.01;
-  const f = 440 * 2 ** ((midi - 69) / 12);
-  const panner = ctx.createStereoPanner();
-  panner.pan.value = pan;
-  const wet = ctx.createGain();
-  wet.gain.value = 0.45;
-  panner.connect(out.bus);
-  panner.connect(wet).connect(out.reverb);
-  const partials: [number, number, number][] = [[1, 1, 2.6], [2.76, 0.16, 0.9], [5.4, 0.05, 0.4]];
-  let left = partials.length;
-  for (const [ratio, amp, decay] of partials) {
-    const o = ctx.createOscillator();
-    o.frequency.value = f * ratio;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, when);
-    g.gain.linearRampToValueAtTime(level * amp * 0.07, when + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, when + decay);
-    o.connect(g).connect(panner);
-    o.onended = () => {
-      o.disconnect();
-      g.disconnect();
-      if (--left === 0) { panner.disconnect(); wet.disconnect(); }
-    };
-    o.start(when);
-    o.stop(when + decay + 0.05);
-  }
 }
 
 export const harebells = new Harebells();
