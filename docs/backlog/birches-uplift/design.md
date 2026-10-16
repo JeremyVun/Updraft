@@ -324,6 +324,13 @@ frame and sent the boat round. Legs now advance only on reaching or passing the 
 leaves only once she is 25 m from it and no part of it (hull ends to 6 m up, a 1.35 margin) has been in frame for 3 s
 (`tuning.birches.boatLeaves`).
 
+> music starts 1 second too early still, and the camera zooms out slightly a bit too much (it shows the sides of the
+> birches island and makes it look smaller on the approach in.
+
+Red Door enters 3 s into the swing. The reveal's lens stands 20 m off the boat (from 24) on a longer lens
+(`IslandReveal.zoom` 1.3, eased in and out with the reveal), so the island fills the frame on the way in rather than
+showing small end to end; by the landing the zoom has eased back to 1 for the room's first view.
+
 What follows from it (2026-10-16):
 - **Red Door enters with the reveal.** On the meadow sail its entrance coincides with the lens beginning its swing
   round to the port side to reveal the island, not after it.
@@ -383,12 +390,12 @@ What follows from it (2026-10-16):
   (`arrivalIn`, at the boat's speed now) reaches 15 s, and the stairs song waits 10 s after Red Door was last heard:
   with no input Red Door fades 8.2–13.1 s after the push-off and the song begins at 23.2 s, 6.5 s before the landing.
   A `toStairs` start never begins Red Door. Numbers and checks: build_plan.md phase 2 and the audio contract.
-- **On the meadow sail Red Door enters with the reveal.** The birches' `IslandReveal` carries `music: 2`
-  (`tuning.crossingCamera.arrivals.birches.reveal`): the crossing is ready for the arrival music 2 s after the lens
+- **On the meadow sail Red Door enters with the reveal.** The birches' `IslandReveal` carries `music: 3`
+  (`tuning.crossingCamera.arrivals.birches.reveal`): the crossing is ready for the arrival music 3 s after the lens
   begins its swing round to port (`revealing` above 0), and the meadow's music is asked to leave early enough that its
   longest phrase wait, fade and quiet (10.5 s at the boat's speed) are over by then. With no input from
   `?chapter=toBirches`: the meadow fades 5.4–8.4 s into the sail, sea and wind until the reveal begins at 17.9 s, Red
-  Door from 19.9 s on its 1.63 s fade-in, the lens visibly turning from about 19.5 s and settled at 27.8 s, landing
+  Door from 20.9 s on its 1.63 s fade-in, the lens visibly turning from about 19.5 s and settled at 27.8 s, landing
   at 38.8 s.
 - **Going round on the island** each pass plays to the end of the file, rests 0.3 s
   (`tuning.audio.recordedMusicLoop.birches`) and comes in again from its top on the same 1.63 s fade-in. The last
@@ -536,7 +543,7 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   boat, gold crowns lit through from behind with the low sun over them and its path on the water, the beach and the
   scarf running up from the sand into the trees, the boat at a third. Portrait stands further round (0.35 rad), so
   the island rises behind the boat in the narrow frame. The child turns to look at it, and the lens gives it 0.3 of
-  its gaze. Red Door comes in 2 s into the swing and rises with it ("Music" below). Over the last 29 m the lens rises and draws back into the birches' first view from the south (0.075 rad,
+  its gaze. Red Door comes in 3 s into the swing and rises with it ("Music" below). Over the last 29 m the lens rises and draws back into the birches' first view from the south (0.075 rad,
   28 m, the child's eye-line 6 m ahead), so the bow grounds into the room's own shot: before, the lens swung 45° round
   the boat in the five seconds after landing. Chosen by looking: front light is impossible from the approach, and the
   side view keeps the backlit gold against a bright sky while reading the island as a place. Still not right: in the

@@ -65,6 +65,8 @@ export interface IslandReveal {
   distance: number;
   height: number;
   sight: THREE.Vector3;
+  /** A longer lens while the island is revealed, so it fills the frame instead of reading small end to end. */
+  zoom?: number;
   /** The destination's music enters this many seconds after the lens begins its swing, rather than as the shore nears. */
   music?: number;
 }
@@ -971,6 +973,7 @@ export class CrossingChapter implements Chapter {
       this.shot.target.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead);
       this.shot.distance = distance;
       this.shot.height = height;
+      this.shot.zoom = isle?.zoom ? THREE.MathUtils.lerp(1, isle.zoom, reveal) : undefined;
       this.pace = 0.4;
       if (isle && lens && reveal > 0) {
         this.revealAttention.point.copy(isle.sight);

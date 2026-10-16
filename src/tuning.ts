@@ -1861,8 +1861,8 @@ export const tuning = {
        * bow runs in, the lens rises into the room's first view from the south. Red Door comes in 2 s into the swing.
        */
       birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
-        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 24, height: 4,
-          music: 2 } },
+        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 20, height: 4, zoom: 1.3,
+          music: 3 } },
     },
   },
 
