@@ -222,6 +222,8 @@ export class Scarf {
     this.time += span;
     this.tmp.subVectors(anchor, this.lastAnchor).divideScalar(span);
     if (this.tmp.length() > MAX_CARRY) this.tmp.copy(this.carried);
+    /** The knot's rise and fall in each step carries the whole scarf with it, so the stride never cracks it like a whip. */
+    const moveY = this.tmp.y;
     this.tmp.lerpVectors(this.carried, this.tmp, 1 - Math.exp(-span * 8));
     /**
      * Starting and stopping swing the ends back and forward, and a squat or a hop bobs them, but only a share of what
@@ -233,7 +235,6 @@ export class Scarf {
     this.carried.copy(this.tmp);
     this.lastAnchor.copy(anchor);
     const moveX = this.carried.x;
-    const moveY = this.carried.y;
     const moveZ = this.carried.z;
 
     /**

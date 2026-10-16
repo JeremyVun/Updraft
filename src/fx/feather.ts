@@ -189,6 +189,7 @@ export class Feather {
       return;
     }
     (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value = this.fade;
+    this.encouragement *= Math.exp(-dt * 0.75);
     const carrier=this.heldBy??this.catchingBy;
     if (carrier) {
       carrier.billTip(this.scratch);
@@ -230,14 +231,13 @@ export class Feather {
       v.z += (dz / away) * pull * dt;
     }
     /** Never lost: down on the grass too long and a breath of its own picks it up again. */
-    this.encouragement *= Math.exp(-dt * 0.75);
     let pullX = 0, pullZ = 0;
     if (this.follow && this.routeStart) {
       const rx = this.goal.x - this.routeStart.x, rz = this.goal.z - this.routeStart.z;
       const length = Math.hypot(rx, rz) || 1, ax = rx / length, az = rz / length;
       const side = THREE.MathUtils.clamp(-az * v.x + ax * v.z, -0.7, 0.7);
       const remaining = (this.goal.x - p.x) * ax + (this.goal.z - p.z) * az;
-      const forward = THREE.MathUtils.clamp(remaining * 1.2, 0, 0.6 + this.encouragement * t.featherEncouragement);
+      const forward = THREE.MathUtils.clamp(remaining * 1.2, 0, t.featherPace + this.encouragement * t.featherEncouragement);
       const blend = 1 - Math.exp(-dt * 5);
       v.x = ax * forward - az * side;
       v.z = az * forward + ax * side;

@@ -672,4 +672,88 @@ export class Foley {
     if (now === undefined) return;
     this.puff({ at: now + 0.005, len: 0.22, level: 0.03 * (1 - 0.7 * far), pan, type: 'bandpass', from: 760, to: 520, q: 1.6, attack: 0.06, wet: 0.3 + 0.4 * far });
   }
+
+  /** A webbed foot pressing into snow: a muffled give and a few fine grains of crust; deeper, duller and fewer. */
+  snowStep(depth: number, weight: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined || now - this.lastStep < 0.045) return;
+    this.lastStep = now;
+    const at = now + 0.005, v = (0.6 + Math.random() * 0.4) * weight * tuning.sleeping.climbFoley * 10 ** (tuning.audio.cygnetStepDb / 20);
+    this.puff({ at, len: 0.1 + 0.05 * depth, level: 0.06 * v, pan, type: 'lowpass', from: 650 - 250 * depth, to: 220, attack: 0.012 });
+    for (let i = 0, t = at + 0.004, n = 4 - Math.round(2 * depth); i < n; i++, t += 0.008 + Math.random() * 0.012) {
+      this.puff({ at: t, len: 0.014 + Math.random() * 0.01, level: 0.03 * v * (1 - 0.5 * depth), pan, type: 'bandpass', from: 1900 + Math.random() * 1500, q: 1.4, attack: 0.002 });
+    }
+  }
+
+  /** Floundering chest-deep in powder: snow shoved aside, wings beating into it, crust breaking round it. */
+  wade(depth: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined) return;
+    const level = tuning.sleeping.climbFoley * (0.6 + 0.4 * depth);
+    this.puff({ at: now + 0.01, len: 0.5, level: 0.12 * level, pan, type: 'bandpass', from: 950, to: 420, q: 0.6, attack: 0.05, wet: 0.05 });
+    for (let i = 0, t = now + 0.02; i < 6; i++, t += 0.07 + Math.random() * 0.07) {
+      this.puff({ at: t, len: 0.09, level: 0.1 * level * (1 - i / 9), pan: pan + (i % 2 ? 0.05 : -0.05), type: 'lowpass', from: 1100, to: 380, attack: 0.015 });
+      this.puff({ at: t + 0.01, len: 0.016, level: 0.03 * level, pan, type: 'bandpass', from: 2000 + Math.random() * 1600, q: 1.4, attack: 0.002 });
+    }
+  }
+
+  /** Snow shaken out of the down: a short sift of powder falling away round it. */
+  snowShed(pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined) return;
+    const level = tuning.sleeping.climbFoley;
+    this.puff({ at: now + 0.06, len: 0.45, level: 0.02 * level, pan, type: 'bandpass', from: 3600, to: 2200, q: 0.6, attack: 0.08, wet: 0.08 });
+    for (let i = 0; i < 8; i++) {
+      this.puff({ at: now + 0.08 + i * 0.05 + Math.random() * 0.03, len: 0.02, level: 0.012 * level, pan: pan + (Math.random() - 0.5) * 0.2,
+        type: 'highpass', from: 3500 + Math.random() * 1500, attack: 0.003 });
+    }
+  }
+
+  /**
+   * One downstroke with one wing: the good wing's air and, a beat late, the bandaged one's small stiff flick and the
+   * dressing rubbing, so the beats come uneven.
+   */
+  bandagedFlap(effort: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined || now - this.lastFlap < 0.05) return;
+    this.lastFlap = now;
+    const at = now + 0.005 + Math.random() * 0.02, level = effort * tuning.sleeping.climbFoley;
+    this.puff({ at, len: 0.1, level: 0.04 * level, pan: pan + 0.08, type: 'lowpass', from: 850 + 450 * effort, to: 360, attack: 0.02, wet: 0.12 });
+    this.puff({ at: at + 0.045 + Math.random() * 0.02, len: 0.045, level: 0.012 * level, pan: pan - 0.08, type: 'lowpass', from: 700, to: 400, attack: 0.01 });
+    this.puff({ at: at + 0.05, len: 0.05, level: 0.008 * level, pan: pan - 0.08, type: 'bandpass', from: 1500 + Math.random() * 300, q: 2, attack: 0.012 });
+  }
+
+  /** The bandaged bird's flurry: strong strokes and weak ones in turn, never a clean rhythm. */
+  bandagedFlutter(effort: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined) return;
+    const level = effort * tuning.sleeping.climbFoley;
+    for (let i = 0, t = now + 0.01; i < 5; i++, t += 0.05 + Math.random() * 0.06) {
+      const weak = i % 2 === 1;
+      this.puff({ at: t, len: weak ? 0.05 : 0.08, level: 0.04 * level * (weak ? 0.35 : 1) * (1 - i / 9), pan: pan + (weak ? -0.08 : 0.08),
+        type: 'lowpass', from: weak ? 800 : 1300, to: 460, attack: 0.012 });
+      if (weak) this.puff({ at: t + 0.01, len: 0.04, level: 0.005 * level, pan: pan - 0.08, type: 'bandpass', from: 1600, q: 2, attack: 0.01 });
+    }
+  }
+
+  /**
+   * Scrambling at frozen turf with one good wing: lopsided strokes, claws scratching for a grip, frost crumbling off
+   * the lip. Quieter than the wood's fright: this one it chose.
+   */
+  bandagedScramble(pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined) return;
+    const level = tuning.sleeping.climbFoley;
+    for (let i = 0, t = now + 0.01; i < 7; i++, t += 0.085 + Math.random() * 0.06) {
+      const weak = i % 2 === 1, k = level * (1 - i / 11);
+      this.puff({ at: t, len: weak ? 0.07 : 0.13, level: 0.13 * k * (weak ? 0.35 : 1), pan: pan + (weak ? -0.07 : 0.07), type: 'bandpass',
+        from: 2900 + Math.random() * 600, to: 1400, q: 0.55, attack: 0.018 });
+      this.puff({ at: t + 0.018, len: 0.1, level: 0.07 * k * (weak ? 0.35 : 1), pan, type: 'lowpass', from: 1400, to: 450, attack: 0.025 });
+      this.puff({ at: t + 0.03, len: 0.009, level: 0.035 * k, pan, type: 'bandpass', from: 3200 + Math.random() * 1400, q: 3, attack: 0.001 });
+    }
+    for (let i = 0; i < 5; i++) {
+      this.puff({ at: now + 0.35 + Math.random() * 0.45, len: 0.018, level: 0.012 * level, pan: pan + (Math.random() - 0.5) * 0.2,
+        type: 'highpass', from: 3800 + Math.random() * 1500, attack: 0.002 });
+    }
+  }
 }

@@ -3,18 +3,10 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 const viewport = { width: Number(process.env.W ?? 1600), height: Number(process.env.H ?? 900) };
 const prefix = process.env.OUT ?? `/tmp/updraft-wind-${viewport.width}`;
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (e) {
-    if (e.code !== 'EEXIST') throw e;
-    let holder = 0; try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    if (holder) { try { process.kill(holder, 0); } catch { fs.rmSync(lock, { recursive: true, force: true }); continue; } }
-    await new Promise(r => setTimeout(r, 400));
-  }
-}
+const release = await holdGpu();
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const report = { viewport, states: [], errors: [] };
@@ -113,5 +105,5 @@ try {
 } finally {
   await browser.close();
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
-  if (Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true });
+  release();
 }

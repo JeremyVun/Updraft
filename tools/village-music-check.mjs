@@ -4,10 +4,10 @@
 // ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud, fading over
 // `stairsSongCloudFade` in the white and never starting again; `village_approach.ogg` starts from its top at the
 // village's handoff at full level, ends faded at its seam just before the bass, never restarts; then no music through
-// the village and the storm, the
-// shared pad silent; then `belfry.ogg` from the fourth ring, coming in slowly and playing once into the storm to its end
-// fade; the wood's drone at `woodDroneDb`. Also the seams on the decoded samples, the starts and downloads, late joins
-// after music mute, restores and the rescue's quiet. Vite on 5230, or BASE.
+// the village and the storm, the shared pad silent; then `belfry.ogg` from the fourth ring, coming in slowly and playing
+// once into the storm, handing over sample-aligned to `belfry_ending.ogg` and its faded ritardando; the wood's drone at
+// `woodDroneDb`. Also the seams on the decoded samples, the starts and downloads, late joins after music mute, restores
+// and the rescue's quiet. Vite on 5230, or BASE.
 import { audioPage } from './lib/audio-render.mjs';
 
 const { browser, page } = await audioPage();
@@ -24,7 +24,8 @@ try {
     const native = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (when = 0, offset = 0, duration) {
       const length = this.buffer?.duration ?? 0;
-      const track = Math.abs(length - 192.87) < .05 ? 'village' : Math.abs(length - 143.92) < .05 ? 'belfry' : Math.abs(length - 238.89) < .05 ? 'birches' : Math.abs(length - 224.08) < .05 ? 'stairs' : null;
+      const track = Math.abs(length - 192.87) < .05 ? 'village' : Math.abs(length - 143.92) < .05 ? 'belfry'
+        : Math.abs(length - 9.03) < .05 ? 'belfryEnding' : Math.abs(length - 238.89) < .05 ? 'birches' : Math.abs(length - 224.08) < .05 ? 'stairs' : null;
       if (track) (starts.get(this.context) ?? starts.set(this.context, []).get(this.context)).push({ track, when, offset, node: this });
       return native.call(this, when, offset, duration);
     };
@@ -135,7 +136,7 @@ try {
       };
       let heldInRest = null, raw = null;
       const round = await render(tail + rest + 3, () => birches(true), { setup, watch: (t, sound) => {
-        if (t === tail + 1) { heldInRest = !sound.birchesScore.source && !!sound.birchesScore.buffer; raw = sound.birchesScore.buffer; }
+        if (t > tail && t < tail + rest && heldInRest === null) { heldInRest = !sound.birchesScore.source && !!sound.birchesScore.buffer; raw = sound.birchesScore.buffer; }
       } });
       const next = round.starts.filter(s => s.track === 'birches').at(-1);
       check(heldInRest && round.starts.length === 2 && next.offset === 0 && next.when >= tail + rest - .05 && next.when <= tail + rest + STEP + .05
@@ -147,7 +148,7 @@ try {
       check(windows.every(([a, b]) => Math.abs(gain(a, b) - expected(a, b)) < .05),
         `the next pass comes in from silence over ${tau} s, as on arrival (${windows.map(([a, b]) => gain(a, b).toFixed(2)).join(', ')} of full)`);
       let released = null;
-      const sailed = await render(tail + rest + 3, t => birches(t < tail + 1), { setup, watch: (t, sound) => {
+      const sailed = await render(tail + rest + 3, t => birches(t <= tail), { setup, watch: (t, sound) => {
         if (t === tail + 2) released = sound.birchesScore?.buffer === null;
       } });
       check(sailed.starts.length === 1 && released && power(sailed.buffer, tail + .05, tail + rest + 3) === 0,
@@ -268,13 +269,17 @@ try {
     check(quietAt === 4 && quiet.starts.length === 1 && power(quiet.buffer, 4 + musicFade + .02, 12) === 0,
       `a rescue under it fades it over ${musicFade} s, and it never comes back`);
 
-    // The belfry's goodbye. Its seams on the decoded samples: from just before an attack, to just before the next.
+    // The belfry's goodbye. Its seams on the decoded samples: from just before an attack; the ending taking over just
+    // before the next, the same passage sample for sample until its ritardando, and faded to silence.
     const bell = tuning.audio.recordedMusicOnce.belfry, bellGain = 10 ** (tuning.audio.recordedMusicDb.belfry / 20);
+    const { at: handover, from: endingFrom, crossfade } = bell.ending;
+    let endingRaw;
     {
       const ctx = new OfflineAudioContext(2, RATE, RATE);
       const score = new RecordedScore(ctx, ctx.destination, 'belfry');
       await score.ready;
       const raw = score.buffer;
+      endingRaw = score.ending;
       score.stop(0);
       // Both attacks are low notes under a sustained texture: read them below 250 Hz.
       const low = async (from, to) => {
@@ -285,9 +290,25 @@ try {
         return db(power(await c.startRendering(), .5, .5 + to - from));
       };
       const [beforeStart, afterStart] = [await low(bell.from - .07, bell.from), await low(bell.from + .04, bell.from + .11)];
-      const [beforeEnd, afterEnd] = [await low(bell.end - .07, bell.end), await low(bell.end + .06, bell.end + .13)];
+      const [beforeHandover, afterHandover] = [await low(handover - .03, handover + crossfade), await low(handover + .05, handover + .12)];
       check(afterStart > beforeStart + 6, `it begins ${bell.from} s in, just before an attack (${(afterStart - beforeStart).toFixed(1)} dB up below 250 Hz)`);
-      check(afterEnd > beforeEnd + 4, `it ends at ${bell.end} s, just before the next (${(afterEnd - beforeEnd).toFixed(1)} dB up below 250 Hz)`);
+      check(afterHandover > beforeHandover + 6,
+        `the ending takes over at ${handover} s, crossfading over ${crossfade * 1000} ms just before the next (${(afterHandover - beforeHandover).toFixed(1)} dB up below 250 Hz)`);
+      const R = raw.sampleRate, a = raw.getChannelData(0), e = endingRaw.getChannelData(0), shift = Math.round(endingFrom * R), W = Math.round(.25 * R);
+      const correlation = lag => {
+        let ae = 0, aa = 0, ee = 0;
+        for (let i = Math.round(handover * R) - W; i < Math.round(handover * R) + W; i++) {
+          const x = a[i], y = e[i - shift + lag];
+          ae += x * y; aa += x * x; ee += y * y;
+        }
+        return ae / Math.sqrt(aa * ee);
+      };
+      const lags = Array.from({ length: 41 }, (_, i) => i - 20), best = lags.reduce((m, lag) => correlation(lag) > correlation(m) ? lag : m, 0);
+      check(best === 0 && correlation(0) > .999,
+        `across the handover the ending is the same passage, sample-aligned (best lag ${best}, correlation ${correlation(0).toFixed(5)})`);
+      const tail = power(endingRaw, endingRaw.duration - .02, endingRaw.duration) / power(endingRaw, 0, endingRaw.duration);
+      check(Math.abs(endingFrom + endingRaw.duration - bell.end) < .002 && db(tail) < -50,
+        `the ending carries the time line on to ${bell.end} s and is faded to silence there (${db(tail).toFixed(0)} dB)`);
     }
     check(musicForStart('storm') === 'belfry' && musicForStart({ chapter: 'drowned', point: 'storm' }) === 'belfry'
       && musicForStart('belfry') === null && nextMusicForChapter('drowned') === 'belfry' && musicForStart('wood') === null,
@@ -296,22 +317,33 @@ try {
     const RING = 6, LENGTH = bell.end - bell.from;
     const goodbye = t => ({ ...village(t < 3 ? 'refuge' : t < 10 ? 'home' : t < 16 ? 'farewell' : 'storm'),
       bellsRung: t >= RING, hush: t < 16 ? .3 : .85 });
-    let bellSource = null, bellRaw = null, bellSame = true, bellPad = 0;
+    let bellRaw = null, bellPad = 0;
+    const bellSources = [];
     const rung = await render(RING + LENGTH + 4, goodbye, { watch: (t, sound) => {
-      if (sound.belfryScore?.source) { bellSource ??= sound.belfryScore.source; bellRaw ??= bellSource.buffer; bellSame &&= sound.belfryScore.source === bellSource; }
+      const source = sound.belfryScore?.source;
+      if (source && bellSources.at(-1)?.source !== source) bellSources.push({ source, t });
+      bellRaw ??= source?.buffer;
       bellPad = Math.max(bellPad, sound.padGain.gain.value);
     } });
-    const b = rung.starts.filter(s => s.track === 'belfry');
+    const b = rung.starts.filter(s => s.track === 'belfry'), e = rung.starts.filter(s => s.track === 'belfryEnding');
     check(b.length === 1 && Math.abs(b[0].when - RING) < .01 && Math.abs(b[0].offset - bell.from) < .01 && !b[0].node.loop,
       `the fourth ring starts belfry.ogg once, ${bell.from} s in (${JSON.stringify(b.map(s => [s.when, s.offset]))})`);
+    const handoverAt = b[0].when + handover - b[0].offset;
+    check(e.length === 1 && Math.abs(e[0].when - handoverAt) < 1e-9 && Math.abs(e[0].offset - (handover - endingFrom)) < 1e-9,
+      `its ending is scheduled once on the audio clock, ${(handover - bell.from).toFixed(2)} s after it, from ${(handover - endingFrom).toFixed(2)} s in (${JSON.stringify(e.map(s => [+s.when.toFixed(4), +s.offset.toFixed(4)]))})`);
     {
-      const at = b[0].when, ratio = (from, to) => Math.sqrt(power(rung.buffer, at + from, at + to) / power(bellRaw, bell.from + from, bell.from + to)) / bellGain;
+      const at = b[0].when, ratio = (from, to, raw = bellRaw, rawFrom = bell.from) => Math.sqrt(power(rung.buffer, at + from, at + to) / power(raw, rawFrom + from, rawFrom + to)) / bellGain;
       const half = ratio(bell.enterOver / 2 - .2, bell.enterOver / 2 + .2), full = ratio(bell.enterOver + 1, 30);
       check(ratio(.2, .6) < .15 && Math.abs(half - .5) < .08 && Math.abs(full - 1) < .02,
         `it comes in slowly over ${bell.enterOver} s (${ratio(.2, .6).toFixed(2)}, ${half.toFixed(2)} halfway, ${full.toFixed(3)} after, at ${tuning.audio.recordedMusicDb.belfry} dB)`);
-      check(bellSame, 'boarding, the look back and the storm never cut, seek or restart it');
-      check(ratio(LENGTH - .3, LENGTH - .02) < .2 && power(rung.buffer, at + LENGTH + .01, RING + LENGTH + 4) === 0,
-        `it fades over its last ${bell.fadeOut} s to silence at ${bell.end} s, and nothing follows`);
+      check(bellSources.length === 2 && bellSources[0].t === RING && bellSources[1].t > handoverAt,
+        'boarding, the look back and the storm never cut, seek or restart it; only its ending takes over');
+      const H = handover - bell.from, across = ratio(H - .01, H + crossfade + .01), after = ratio(H + .1, LENGTH - 3, endingRaw, bell.from - endingFrom);
+      check(Math.abs(across - 1) < .03 && Math.abs(after - 1) < .02,
+        `no dip across the handover (${across.toFixed(3)} of belfry.ogg's level) and the ending at the same level after it (${after.toFixed(3)})`);
+      const fade = ratio(LENGTH - 2, LENGTH - .02, endingRaw, bell.from - endingFrom);
+      check(Math.abs(fade - 1) < .02 && power(rung.buffer, at + LENGTH + .01, RING + LENGTH + 4) === 0,
+        `it slows and fades as the ending does (${fade.toFixed(3)}) to silence at ${bell.end} s, and nothing follows`);
     }
     check(bellPad < 1e-6, 'the shared pad stays silent under it');
     let blended = false, kept = null, keptSame = true;
@@ -322,6 +354,7 @@ try {
     } });
     check(blended && keptSame, 'the wood\'s request near the forest beach never cuts it either');
     const saved = await render(2, () => ({ ...village('farewell'), bellsRung: true }));
+    saved.starts = saved.starts.filter(s => s.track === 'belfry');
     check(saved.starts.length === 1 && saved.starts[0].when < 1e-6 && Math.abs(saved.starts[0].offset - bell.from) < .01,
       `a storm save starts it on load, with the same slow entrance (${JSON.stringify(saved.starts.map(s => [s.track, s.when, s.offset]))})`);
     const waiting = await render(2, () => village('refuge'));

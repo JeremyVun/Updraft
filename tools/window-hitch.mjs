@@ -7,7 +7,7 @@
 //   env: BASE (default http://127.0.0.1:5230/), W/H viewport (1600x900), DSF (device scale, 1), QUERY (appended),
 //        WARMUP (ms after ready, 1500),
 //        AFTER (frames after the move's own frame counted as its gaps, default 5), OUT (JSON path)
-// Takes the shared browser lock. Other GPU users inflate every number: check `ps` first.
+// Has the GPU alone among the browser tools. Other GPU users inflate every number: check `ps` first.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
@@ -19,7 +19,7 @@ const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 90
 const after = Number(process.env.AFTER ?? 5);
 const chapter = fixture === 'boats' ? 'boats' : 'meadow';
 
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 const errors = [];
 try {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: Number(process.env.DSF ?? 1) });

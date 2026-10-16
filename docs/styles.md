@@ -32,7 +32,9 @@ feel over detail. How each room plays is in `docs/chapters.md`.
 - **Rocks**: rounded, mossy on top, a few clusters near the shore and on the hills.
 - **Footprints**: the child's round-toed boots and the cygnet's three-toed webbed feet leave small soft dents in
   bare sand, a little darker and cooler inside, their walls modelled by the sun; they crumble softer as they age,
-  fade within the minute and are wiped wherever the swash runs over them. Never on grass or snow.
+  fade within the minute and are wiped wherever the swash runs over them. Never on grass or snow, except the cygnet's
+  prints in the sleeping island's drift: soft blue-shadowed impressions in what is left, taken with the layer under
+  them and gone with the thaw.
 - **Dream echoes**: a small thing from the room before lies washed up on the next arrival beach, half in the sand on
   a damp patch above the tide line: a pegged pillowcase, an oversized yellow rubber duck with an orange bill tipped
   on its side, a run of piano keys a little larger than the piano's, the swing's seat with gold leaves. Static, off the walk, never at home.

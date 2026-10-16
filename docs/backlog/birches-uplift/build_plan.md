@@ -305,7 +305,24 @@ builds in its own worktree branched from `birches-uplift` and is merged back by 
 music checks), so the music work sits on the merged code.
 
 - **8a. Merge main, then the music.** `/Users/jeremy/projects/updraft-birches`, port 5241. Red Door's entrance on the
-  meadow sail coincides with the reveal's swing to port; the loop's pause at least 3 s shorter.
+  meadow sail coincides with the reveal's swing to port; the loop's pause at least 3 s shorter. **Done ☑
+  (2026-10-16).** Merged `main` (`ff25f0b6`): `RecordedScore` keeps main's scheduled sources and belfry ending and gains
+  the rest between passes; track lists, levels, prefetch and checks carry both the stairs song and Sleeping's
+  recordings. The birches' `IslandReveal` carries `music`: the crossing is ready the frame the reveal begins, and
+  the meadow is asked to leave its longest phrase wait, fade and quiet (10.5 s) before it; `birchesArrivalLater` is
+  gone. Measured in the real game with no input from `?chapter=toBirches` (crossing clock; scratch probe of the
+  camera and the arrival handoff): the reveal begins at 17.9 s, the lens visibly turning from about 19.5 s and
+  settled at 27.8 s, landing at 38.8 s. Before, the meadow faded 21.0–24.2 s and Red Door started at 31.1 s, 13.2 s
+  after the reveal began and 3.3 s after it settled; now the meadow fades 5.4–8.4 s and Red Door starts at 17.9 s,
+  the reveal's own first frame. The loop's rest is 0.3 s (from 3.5): on the render (`music-transition-audit`
+  `birches-seam`, which now also reports the audible gap: 50 ms windows within 30 dB of the piece's average as
+  played) the last audible sound falls 2.7 s before the file's end and the next pass is audible 0.17 s in, so the
+  pause heard is 3.25 s, from 6.37 s. Checks: typecheck, build, `npm run check`; `check:audio` fails only in `audio`,
+  `meadow-score`, `opening-score` and `piano-audio` as on the base, and `birches-foley` intermittently (its random
+  audition peaks at −29.5 to −30.x dBFS against a −30 limit; the merge and this music work touch none of it).
+  `birches-score` passes again: its restore stubs gained the boat's `beach` and the child's `stowPlane`, and the
+  shared recorded-score check accepts a recording that rests between passes. `crossing-camera`, `journey-pacing`,
+  `journey-reveal` and `transition-scenes-browser` pass.
 - **8b. Heaps.** `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps2`, port 5242. Heaps
   yield only to updrafts; none can be taken before the squirrel is in (reproduce Jeremy's case first).
 - **8c. The first knot.** `/Users/jeremy/projects/updraft-birches-knot`, branch `birches-uplift-knot`, port 5243.

@@ -1,48 +1,13 @@
 // Fallen stars: real mouse/touch sweeps and circles, companion walks, checkpoint reload and far-side boarding.
 // LAST_STAR_ONLY=1 restores three returned lights and plays the added fourth through departure.
 // CONTINUOUS=1 keeps all four ascents in one camera session without checkpoint reloads.
-// SOFTWARE=1 uses SwiftShader without taking the shared GPU lock.
-// Usage: node tools/sky-mirror-check.mjs [prefix]; TOUCH=1 for 390x844. Shared GPU lock; captures in /tmp.
+// SOFTWARE=1 uses SwiftShader without taking a GPU slot.
+// Usage: node tools/sky-mirror-check.mjs [prefix]; TOUCH=1 for 390x844. Shares the GPU with other captures; captures in /tmp.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 
-const LOCK = '/tmp/updraft-chromium.lock';
-function alive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try {
-        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
-      } catch {}
-      let stale = holder ? !alive(holder) : false;
-      try {
-        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
-      } catch {}
-      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-function releaseLock() {
-  try {
-    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
-  } catch {}
-}
-process.on('exit', releaseLock);
 process.on('SIGINT', () => process.exit(130));
 process.on('SIGTERM', () => process.exit(143));
 
@@ -51,7 +16,7 @@ const touch = process.env.TOUCH === '1',
   width = touch ? 390 : 1600,
   height = touch ? 844 : 900;
 const software=process.env.SOFTWARE==='1',lastOnly=process.env.LAST_STAR_ONLY==='1';
-if(!software)await acquireLock();
+const release=software?()=>{}:await holdGpu();
 const browser = await chromium.launch({
   channel: 'chromium',
   headless: true,
@@ -189,5 +154,5 @@ try {
 } finally {
   if(errors.length)console.error(errors.join('\n'));
   console.log('state',await page.evaluate(()=>window.__game?({beat:__game.story.current.beat,mask:__game.skyMirror.completedMask,bubbles:__game.skyMirror.bubbles.map(b=>({p:b.position.toArray(),star:b.star})),charge:__game.input.charge}):null).catch(()=>null));
-  await browser.close();releaseLock();
+  await browser.close();release();
 }
