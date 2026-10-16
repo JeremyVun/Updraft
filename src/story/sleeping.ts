@@ -215,7 +215,7 @@ export class SleepingChapter implements Chapter {
   get sleepingMusic(): SleepingGate {
     if (this.cast.sleeping.ribbon.released || ['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'glide';
     // The music lets go with the bandage, so the bird faces the ribbon in silence.
-    if (['hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat) || this.beat === 'unbinding' && this.unboundAt >= 0) return 'ribbon';
+    if (['hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat) || this.beat === 'unbinding' && (this.unboundAt >= 0 || this.bandageCaught && (1 - this.unroll) * T.selfUnwrapFor <= tuning.audio.ribbonLead)) return 'ribbon';
     if (this.beat === 'unbinding') return 'summit';
     if (this.mistDone) return 'catch';
     if (this.beat === 'mist') return 'mist';

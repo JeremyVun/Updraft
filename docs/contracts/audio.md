@@ -375,8 +375,8 @@ Claude holds creative ownership of these timings (2026-10-15). Three unchanged r
 suspension, exit fades and permanent silence apply; `hush` does not, and the generic pad is silent throughout. They
 follow `SleepingChapter.sleepingMusic`, the furthest gate reached: `bedtime`, `asleep`, `feather` (the pillow feather
 freed), `mist` (the fog closes over the bird), `catch` (it takes the feather in its bill), `summit` (it reaches the top
-and unwinds its bandage: `unbinding`), `ribbon` (the bandage comes free, 1.3 s before the bird turns to face the
-ribbon, and on through `hilltop`, the leap and the tug) and `glide` (the ribbon released as the curtains begin to part, a moment before the bird leaves the top). `sleepingScore` remains the story phase the handoffs and
+and unwinds its bandage: `unbinding`), `ribbon` (`ribbonLead`, 1 s, before the bandage comes free, about 2.3 s before
+the bird turns to face the ribbon, and on through `hilltop`, the leap and the tug) and `glide` (the ribbon released as the curtains begin to part, a moment before the bird leaves the top). `sleepingScore` remains the story phase the handoffs and
 gestures read.
 
 - **The lullaby.** `sleeping.ogg` ("A Tune for the Sleeping Meadow", 143.6 s, A minor) enters through the wood's
@@ -410,9 +410,12 @@ gestures read.
 
   > ok i think there just needs to be a bit of silence as a musical palate cleanse at the ribbon sequence, so it focuses on the cygnet all alone at the top before it jumps. understand what i mean?
 
-  The unwinding keeps its music; as the bandage comes free (`ribbon`) the climb part sounding ends at its next seam at
-  least `mirrorSeamSoonest` (0.3 s) ahead if one comes within `ribbonSeamWithin` (1.5 s), fading over up to
-  `mirrorSeamRelease` (1.2 s) into it, or else fades over `ribbonFade` (1.5 s), and no part of the climb's recording
+  And, verbatim: "it needs to fade to silence over like 3 seconds when the bandage comes free, so shift the fade out
+  start back by like 1 second".
+
+  The unwinding keeps its music; `ribbonLead` (1 s) before the bandage comes free (`ribbon`) the climb part sounding
+  ends at its next seam at least `mirrorSeamSoonest` (0.3 s) ahead if one comes within `ribbonSeamWithin` (1.5 s),
+  fading over up to `mirrorSeamRelease` (1.2 s) into it, or else fades over `ribbonFade` (3 s), and no part of the climb's recording
   begins after it: a part waiting, or a summit part not yet begun, never plays. The music lets go as the bandage falls
   away, so the bird faces the ribbon in silence before it leaps; wind and foley alone carry the turn, the circles, the
   leap and the tug until the curtains.
@@ -458,9 +461,9 @@ call at 95.5, the feather offered at 106.5 and freed at 109.4, the background si
 through the rebuilt climb: the fog closes at +68.5 with no seam within 6 s, so the climb theme fades out by +71.5; the
 commitment at the catch, +81.5; the summit part at +97.4 as the commitment ends (top +95.2), unbroken. From
 `?chapter=ribbon` (`sleeping-music-browser-check.mjs ribbon`, prompt circles 2 s after the turn), measured from the
-release: the top at −20.0, the summit part from −19.0, rising in; the bandage free at −8.0, where it fades out by −6.5
-(124.63 s in); the turn at −6.7; the leap at −3.6, 2.9 s into the silence, the tug at −1.6, and the morning at the
-release, 6.5 s of silence before it. Then the 16.46 s seam at +5.5, the 23.62 s seam at +12.6, the landing (`waking`)
+release: the top at −20.0, the summit part from −19.0, rising in; the `ribbon` gate at −8.9, a second before the bandage
+comes free, where it fades out by −5.9 (125.09 s in); the turn at −6.6; the leap at −3.6, 2.3 s into the silence, the
+tug at −1.6, and the morning at the release, 5.9 s of silence before it. Then the 16.46 s seam at +5.5, the 23.62 s seam at +12.6, the landing (`waking`)
 at +12.7, her eyes open at +14.9 and she sits up from +16.3; boarding at +54.2 fades the morning out by +58.2, and the
 sea's recording begins 6.3 s into the passage, 2.3 s after the morning stops, the gates open. From `?chapter=sleeping` she sleeps 49.2 s in: the lullaby ends at its 52.76 s seam
 and the frost waits 3.2 s. `sleeping-music-check.mjs` prints the same timeline offline for main's former climb, the

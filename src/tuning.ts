@@ -99,10 +99,10 @@ export const tuning = {
     fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
     /**
      * The summit part, starting on its own, begins `summitDelay` after the bird reaches the top and rises over
-     * `summitFadeIn`. As the bandage comes free the climb part sounding ends at its next seam within
+     * `summitFadeIn`. `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
      * `ribbonSeamWithin`, or fades over `ribbonFade`, and the music rests until the curtains.
      */
-    summitDelay: 1, summitFadeIn: 1.5, ribbonSeamWithin: 1.5, ribbonFade: 1.5,
+    summitDelay: 1, summitFadeIn: 1.5, ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
     /** Seconds Sleeping's morning takes to fade as the boat leaves for the sea. */
     sleepingDepartureFade: 4,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */

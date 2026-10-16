@@ -250,7 +250,7 @@ try {
     const parts = w.clips.filter(c => c.track === 'brave' && c.end > c.when), morning = w.clips.find(c => c.track === 'morning');
     const released = when(w, 'released', true);
     console.log('\n?chapter=ribbon (from Begin)');
-    for (const [label, e] of [['gate summit', when(w, 'gate', 'summit')], ['unbinding', when(w, 'beat', 'unbinding')], ['gate ribbon (bandage free)', when(w, 'gate', 'ribbon')], ['hilltop (turn)', when(w, 'beat', 'hilltop')],
+    for (const [label, e] of [['gate summit', when(w, 'gate', 'summit')], ['unbinding', when(w, 'beat', 'unbinding')], ['gate ribbon (bandage nearly free)', when(w, 'gate', 'ribbon')], ['hilltop (turn)', when(w, 'beat', 'hilltop')],
       ['reachRibbon (leap)', when(w, 'beat', 'reachRibbon')], ['pullRibbon', when(w, 'beat', 'pullRibbon')], ['ribbon released', released], ['gate glide', when(w, 'gate', 'glide')],
       ['glide', when(w, 'beat', 'glide')], ['waking', when(w, 'beat', 'waking')], ['eyes open', when(w, 'eyes', true)], ['sits up', when(w, 'sitsUp', true)], ['lap', when(w, 'beat', 'lap')]]) {
       if (e) console.log('  ' + row(label, e) + `   (${(e.ctx - released.ctx >= 0 ? '+' : '')}${(e.ctx - released.ctx).toFixed(2)} s from the release)`);
@@ -263,7 +263,7 @@ try {
     const unbound = when(w, 'gate', 'ribbon'), leap = when(w, 'beat', 'reachRibbon'), summit = when(w, 'gate', 'summit');
     const end = ribbonHolds(w, parts, quiet), part = parts[0];
     const seamed = Math.abs(part.offset + part.end - part.when - 126.67) < .02;
-    console.log(`  summit part begins +${(part.when - summit.ctx).toFixed(2)} s after the top, ends ${seamed ? 'at its 126.67 s seam' : 'in a fade'} +${(part.end - unbound.ctx).toFixed(2)} s after the bandage is freed (${(part.offset + part.end - part.when).toFixed(2)} s in the recording);`
+    console.log(`  summit part begins +${(part.when - summit.ctx).toFixed(2)} s after the top, ends ${seamed ? 'at its 126.67 s seam' : 'in a fade'} +${(part.end - unbound.ctx).toFixed(2)} s after the ribbon gate (${(part.offset + part.end - part.when).toFixed(2)} s in the recording);`
       + ` silence ${(leap.ctx - end).toFixed(2)} s before the leap, ${(released.ctx - end).toFixed(2)} s before the curtains`);
     departureHolds(w);
     console.log(`  requests: ${requests.join(', ')}`);
