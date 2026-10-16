@@ -327,7 +327,9 @@ least 80% of eight or more finish early the cap is proven and Auto judges every 
 under 25 ms show it has lifted. A timer that fires late counts as not early. A single hitch, time behind Begin or in
 a hidden tab never changes quality; Begin and visibility changes reset its timing. Pacing reports the longest display
 callback interval since the last presentation, floored at 16.7 ms, so deliberately skipped callbacks on 120/144 Hz
-displays don't look like overload.
+displays don't look like overload. Another process drawing on the same GPU (a capture, another tab running the game)
+makes frames late for real, so Auto steps down then. Judge its level, or any frame timing, on an otherwise idle
+machine; `perf.mjs` waits until it has the GPU to itself.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
 for every level at boot (about 44 MiB for the tables' four attachments, and 33 MiB for what moves each frame), so quality changes

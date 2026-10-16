@@ -328,5 +328,7 @@ music checks), so the music work sits on the merged code.
 - **8c. The first knot.** `/Users/jeremy/projects/updraft-birches-knot`, branch `birches-uplift-knot`, port 5243.
   She stops closer to tangle 1 and faces it.
 - **8d. Performance.** `/Users/jeremy/projects/updraft-birches-perf`, branch `birches-uplift-perf`, port 5244. Why
-  the quality governor steps down to medium on the birches; fix the cause without changing the look.
+  the quality governor steps down to medium on the birches; fix the cause without changing the look. Done
+  (2026-10-17): measured, no change to the room or the governor. Alone on the GPU the whole walk holds Ultra at 60 fps;
+  the step-down came from captures sharing the GPU (design.md, Performance).
 - **8e. The swing.** Waits on Jeremy's answer to the proposal.

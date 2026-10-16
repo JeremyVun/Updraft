@@ -308,7 +308,17 @@ What follows from it (2026-10-16):
   head looking back.
 - **The swing:** proposal pending Jeremy's answer (below, once given).
 - **Performance:** find why the quality governor steps down to medium on the birches, and fix the cause without
-  changing the look.
+  changing the look. Measured on this Mac (M4 Pro, 1920 × 1080 at DPR 2, where Auto's ladder is Ultra at 1.08×
+  with 2× MSAA, then Medium at 1×, then Low): with nothing else on the GPU, the whole walk with real gestures (13,000
+  frames, landing to aboard) holds Ultra at a steady 60 fps, no interval over 17 ms. A frame costs about 7–8 ms
+  run back to back (meadow 7–10, drowned 5.5–7.6), so Ultra has about twice the headroom it needs; of that, about
+  4.5 ms is script, nearly half of it the scarf (its cloth, its rows and their normals, and 680 KB of vertices
+  uploaded every frame). The step-down comes from sharing the GPU: one other headless browser running the game
+  beside it, as an agent's capture does, takes the birches to Medium within 2 s and to Low within 4 s; the meadow
+  also steps down under the same load, and the drowned village, which is lighter, holds Ultra. Readback maps
+  that take under 1 ms alone then wait up to 40 ms behind the busy GPU process. Auto returns to Ultra about 14 s
+  after the other load stops. So nothing in the room needs cutting, and the governor reacts to frames that really
+  are late. Judge Auto's level only with no capture running.
 
 ## Mechanisms
 
