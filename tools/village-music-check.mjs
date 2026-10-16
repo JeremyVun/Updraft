@@ -136,7 +136,7 @@ try {
       };
       let heldInRest = null, raw = null;
       const round = await render(tail + rest + 3, () => birches(true), { setup, watch: (t, sound) => {
-        if (t === tail + 1) { heldInRest = !sound.birchesScore.source && !!sound.birchesScore.buffer; raw = sound.birchesScore.buffer; }
+        if (t > tail && t < tail + rest && heldInRest === null) { heldInRest = !sound.birchesScore.source && !!sound.birchesScore.buffer; raw = sound.birchesScore.buffer; }
       } });
       const next = round.starts.filter(s => s.track === 'birches').at(-1);
       check(heldInRest && round.starts.length === 2 && next.offset === 0 && next.when >= tail + rest - .05 && next.when <= tail + rest + STEP + .05
@@ -148,7 +148,7 @@ try {
       check(windows.every(([a, b]) => Math.abs(gain(a, b) - expected(a, b)) < .05),
         `the next pass comes in from silence over ${tau} s, as on arrival (${windows.map(([a, b]) => gain(a, b).toFixed(2)).join(', ')} of full)`);
       let released = null;
-      const sailed = await render(tail + rest + 3, t => birches(t < tail + 1), { setup, watch: (t, sound) => {
+      const sailed = await render(tail + rest + 3, t => birches(t <= tail), { setup, watch: (t, sound) => {
         if (t === tail + 2) released = sound.birchesScore?.buffer === null;
       } });
       check(sailed.starts.length === 1 && released && power(sailed.buffer, tail + .05, tail + rest + 3) === 0,

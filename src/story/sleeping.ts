@@ -7,7 +7,7 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { SLEEP_CREST_STOP, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, SLEEP_STEP_STOP, SLEEP_TRICKLE } from '../world/sleeping-layout';
 import { MIST_AT, SNOW_AT, WINDOW_SEEN } from '../world/sleeping-trail';
-import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
+import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_APPROACH, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { CLAMBER } from '../creatures/cygnet';
 import { FEATHER_LENGTH } from '../fx/feather';
@@ -398,7 +398,31 @@ export class SleepingChapter implements Chapter {
       sleeping.feather.keepNear = TO_HILL;
       k.pace = 0.6;
       this.looks = 2; this.dusk = 1.9; this.beat = 'climb';
+      if (point === 'ribbon') this.atTheTop();
     }
+  }
+
+  /**
+   * QA only (`?chapter=ribbon`): the climb done and the bird a step from the top with the feather in its bill, so it
+   * walks into the summit as in play and the summit's music starts there.
+   */
+  private atTheTop(): void {
+    const { sleeping, cygnet: k, boat } = this.cast;
+    // No save placed the boat, so it goes round to the far shore here, as it does while they walk to the bed.
+    boat.beach(SLEEP_BERTH.x, SLEEP_BERTH.z, -1.76);
+    boat.grounded = true;
+    this.snowDone = this.stepDone = this.mistDone = true;
+    this.trickle = 2; this.glances = 3; this.reached = 1;
+    sleeping.trail.snow = sleeping.trail.mist = 1;
+    sleeping.trail.windowLost = 0;
+    sleeping.frost = T.frostWorst;
+    this.routeIndex = SLEEP_ROUTE.length - 1;
+    k.release(SLEEP_APPROACH); k.seating.snap(); k.stay = false;
+    k.wing.recovery = 1; k.hopeBeats = 0;
+    const f = sleeping.feather;
+    f.routeStart = SLEEP_APPROACH;
+    f.goal.copy(SLEEP_LEDGE).setY(SLEEP_LEDGE.y + 1.4);
+    f.heldBy = k;
   }
 
   /** The one thing the player is asked for by name, and only at the top of the hill. */

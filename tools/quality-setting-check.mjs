@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-quality-setting';
 async function choose(page, mode) {

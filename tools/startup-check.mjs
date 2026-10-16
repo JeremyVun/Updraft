@@ -1,50 +1,14 @@
 // Real-time Begin and tab-resume regression: RAF may predate a performance.now() clock reset.
 // Usage: node tools/startup-check.mjs [output-prefix]; BASE defaults to localhost:5230.
 import { chromium } from 'playwright-core';
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 
-const LOCK = '/tmp/updraft-chromium.lock';
-function alive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try {
-        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
-      } catch {}
-      let stale = holder ? !alive(holder) : false;
-      try {
-        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
-      } catch {}
-      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-function releaseLock() {
-  try {
-    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
-  } catch {}
-}
-process.on('exit', releaseLock);
 process.on('SIGINT', () => process.exit(130));
 process.on('SIGTERM', () => process.exit(143));
 
 const prefix = process.argv[2] ?? '/tmp/updraft-startup';
-await acquireLock();
+await holdGpu();
 const browser = await chromium.launch({
   channel: 'chromium',
   headless: true,
@@ -100,5 +64,4 @@ try {
   }
 } finally {
   await browser.close();
-  releaseLock();
 }

@@ -104,6 +104,7 @@ export function musicForStart(choice: string | { chapter: string; point?: string
   if (['drowned', 'village'].includes(chapter) && (typeof choice !== 'object' || !choice?.point)) return 'villageApproach';
   if (chapter === 'storm' || chapter === 'drowned' && typeof choice === 'object' && choice?.point === 'storm') return 'belfry';
   // Sleeping starts at bedtime with its lullaby; the feather's save resumes the climb; its morning is silent until the sea.
+  if (chapter === 'ribbon') return 'cygnetBrave';
   if (chapter === 'sleeping') {
     const point = typeof choice === 'object' ? choice?.point : undefined;
     return point === 'feather' ? 'cygnetBrave' : point === 'morning' ? null : 'sleeping';

@@ -243,9 +243,10 @@ export class Journey {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
       this.begin('wood');
       (this.chapter as WoodChapter).skipToShape();
-    } else if (choice === 'sleeping') {
+    } else if (choice === 'sleeping' || choice === 'ribbon') {
       this.land(SLEEP_LANDING.x, SLEEP_LANDING.y, SLEEP_LANDING.x - 5, SLEEP_LANDING.y);
       this.begin('sleeping');
+      if (choice === 'ribbon') this.chapter.restoreCheckpoint?.('ribbon', []);
     } else if (choice === 'sea' || choice === 'dolphins') {
       this.sail(SLEEP_BERTH.x - 5, SLEEP_BERTH.z - 2, -1.76);
       this.begin('toMirror');

@@ -127,7 +127,7 @@ export const tuning = {
     /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
     recordedMusicFadeIn: { birches: 1.8 } as Partial<Record<string, number>>,
     /** Looped recordings that end, rest this many seconds and come in again from the top as on arrival, instead of going straight round. */
-    recordedMusicLoop: { birches: { rest: 3.5 } } as Partial<Record<string, { rest: number }>>,
+    recordedMusicLoop: { birches: { rest: 0.3 } } as Partial<Record<string, { rest: number }>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
@@ -167,7 +167,6 @@ export const tuning = {
     stillPhraseExperiment: true,
     stillFallTones: false,
     linesArrivalEarlier: 10,
-    birchesArrivalLater: 3,
     stillPhraseDb: -6,
     stillPhraseFade: .12,
     stillPhraseSpacing: 4.5,
@@ -1841,10 +1840,11 @@ export const tuning = {
       /**
        * The birches come out of their mist ahead and to starboard and are watched from the port side, low over the
        * water: the whole island beside the boat with the low sun over it, or in portrait standing behind it. As the
-       * bow runs in, the lens rises into the room's first view from the south.
+       * bow runs in, the lens rises into the room's first view from the south. Red Door comes in as the swing begins.
        */
       birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
-        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 24, height: 4 } },
+        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 24, height: 4,
+          music: true } },
     },
   },
 
