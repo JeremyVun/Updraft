@@ -3349,9 +3349,9 @@ export const tuning = {
      */
     mistShiverAt: 0.4,
     mistShiverFor: 1.6,
-    mistCallAt: 1.6,
-    mistGlimpseAt: 2.6,
-    mistLookFor: 1.4,
+    mistCallAt: 1.5,
+    mistGlimpseAt: 2.4,
+    mistLookFor: 1.3,
     /**
      * How far its body comes round toward the lamp while it looks, as a share of the way; then, once it has turned back
      * uphill, the seconds before the lens starts round after it and the seconds the lens takes to come round behind it.
@@ -3359,7 +3359,7 @@ export const tuning = {
     mistGlimpseTurn: 0.35,
     mistTurnAfter: 0.2,
     mistTurnFor: 3.2,
-    mistInviteAt: 6.0,
+    mistInviteAt: 5.0,
     mistGlimpseThins: 0.75,
     /** How much thicker the saddle's bank stands while the window is lost in it, so less of the crest shows through. */
     mistBankCloses: 1.7,
