@@ -323,9 +323,10 @@ Resolved (supersedes item 1 of the second playthrough):
 2. **First flowers seen from above.** The camera looks down onto the bed more steeply, so the player sees across
    its surface and every sweep's track, not along it from the side. Jeremy, watching the first attempt (2026-10-17,
    verbatim): "I'm noticing that the meadow flowers agent is zooming out slightly bit too much and and putting the
-   camera slightly too high. It still needs to feel intimate with that first flower puzzle". So the steeper look comes
-   from tilting down at a close distance, not from pulling back or climbing: the camera stays near her and the bed,
-   only a little higher than before, and intimate.
+   camera slightly too high. It still needs to feel intimate with that first flower puzzle". And, correcting
+   Claude's reading of that (verbatim): "hang on, i didn't say they can't pull back or climb, just not as much as it
+   has been doing". So the camera may still pull back and climb for the steeper look, just less than the first
+   attempt did, so the shot stays intimate.
 3. **The seeds' moment is held.** When the down is released, the camera lifts its gaze and follows the cloud as it
    rises and drifts away over the island, a slow cinematic pan up held long enough to watch it go, before coming back
    to her as she walks on. The release, the rise and the drift away are each given time.
