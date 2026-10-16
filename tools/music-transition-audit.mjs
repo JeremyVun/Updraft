@@ -31,7 +31,7 @@ try {
       backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
       const score=()=>sound.openingScore??sound.summitScore??sound.mirrorScore??sound.villageScore??sound.linesScore??sound.boatsScore
-        ??sound.meadowScore??sound.birchesScore??sound.stairsScore??sound.sleepingScore??sound.seaMusic;
+        ??sound.meadowScore??sound.birchesScore??sound.stairsScore??sound.sleepingMusic??sound.seaMusic;
       const update=tick=>{
         const t=tick/8,landed=t>=landing;
         // The sea's recording keeps the passage clock: it starts its crossing after the morning, and leaves in its close.
@@ -48,7 +48,7 @@ try {
           check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
       update(0);await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.seaMusic?.ready;await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;await sound.villageScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.seaMusic?.ready;await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;await sound.villageScore?.ready;await sound.sleepingMusic?.lullaby?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       const fade=phases.find(p=>p.stage==='fade'),gap=phases.find(p=>p.stage==='gap'),entry=phases.find(p=>p.stage==='incoming');
       let gapPeak=0;
@@ -90,7 +90,6 @@ try {
       ['lines','linesScore','/src/audio/lines-score.ts','LINES_SECTIONS'],
       ['meadow','meadowScore','/src/audio/meadow-score.ts','MEADOW_SECTIONS'],
       ['birches','birchesScore','/src/audio/birches-score.ts','BIRCHES_SECTIONS'],
-      ['wood','sleepingScore','/src/audio/sleeping-score.ts','SLEEPING_SECTIONS'],
     ];
     const rows=[];
     for(const [music,field,url,key] of tables){const table=(await import(url))[key];rows.push({music,field,phases:Object.keys(table)});}

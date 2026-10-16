@@ -34,6 +34,7 @@ ${ATMO_GLSL}
 uniform vec3 uColor;
 uniform float uLightFloor;
 uniform float uHalo;
+uniform vec2 uNearFade;
 in float vAlpha;
 in float vEdge;
 in vec3 vWorld;
@@ -47,8 +48,10 @@ void main() {
     col = mix(vec3(0.035, 0.075, 0.09) * (1.0 - 0.5 * uHalo), col * (1.0 + 0.2 * uHalo), core);
     soft *= mix(mix(0.85, 1.0, uHalo), 1.0, core);
   }
-  float fog = 1.0 - exp(-length(vWorld - cameraPosition) * uFogDensity);
-  gl_FragColor = vec4(col, vAlpha * soft * (1.0 - fog));
+  float range = length(vWorld - cameraPosition);
+  float fog = 1.0 - exp(-range * uFogDensity);
+  float near = uNearFade.y > 0.0 ? smoothstep(uNearFade.x, uNearFade.y, range) : 1.0;
+  gl_FragColor = vec4(col, vAlpha * soft * (1.0 - fog) * near);
 }`;
 
 /** Camera-facing tapered ribbons rebuilt on the CPU each frame. */
@@ -76,7 +79,7 @@ export class RibbonBatch {
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 }, uLightFloor: { value: lightFloor },
-        uHalo: { value: 0 } },
+        uHalo: { value: 0 }, uNearFade: { value: new THREE.Vector2() } },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -90,6 +93,11 @@ export class RibbonBatch {
   /** How strongly a lit ribbon's dark edge is widened into a halo, 0 to 1. */
   set halo(amount: number) {
     (this.mesh.material as THREE.ShaderMaterial).uniforms.uHalo.value = amount;
+  }
+
+  /** Ribbons closer to the camera than `from` metres vanish, fading in by `to`; null draws them at any range. */
+  set nearFade(range: readonly [number, number] | null) {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uNearFade.value.set(range?.[0] ?? 0, range?.[1] ?? 0);
   }
 
   /** Returns whether anything is drawn. */

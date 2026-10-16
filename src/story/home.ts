@@ -8,7 +8,7 @@ import { heightAt } from '../world/island';
 import { MOON, sunDirection } from '../world/palette';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
-import type { Deck } from '../traveller/traveller';
+import { WALK, type Deck } from '../traveller/traveller';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { HOME_ENDING } from './home-ending';
@@ -43,8 +43,6 @@ const JOIN_AT = 8;
 /** How fast the family flies off with it, and how it climbs as it goes: slow enough that the small one can hold on. */
 const LEAVE_SPEED = 11;
 const LEAVE_CLIMB = 1;
-/** Seconds the child watches them go before walking on: long enough for the V to grow small. */
-const WATCHES_FOR = 15;
 /** How slowly they walk on afterwards, as a share of their usual pace. */
 const STROLL = 0.7;
 /** How far on from the summit the ground falls away and the cottage is there: where they stop and see it. */
@@ -65,7 +63,6 @@ const OPENING: number[][] = [
 ];
 /** The drawing emerges with the last fold, fully readable as the sheet becomes flat. */
 const DRAWS_FROM = 0.58;
-const GAZE_FOR = tuning.homeReveal.recogniseFor;
 const FOLD_RATE = 0.38;
 /** Which side of the sheet, in the paper's own coordinates, is the one nearest the camera over their shoulder. */
 const NEAR = 1;
@@ -137,6 +134,8 @@ const SEA_LOOK = 100;
 const JETTY_DECK: Deck = { x0: HOME_JETTY.x, z0: HOME_JETTY.shoreZ, x1: HOME_JETTY.x, z1: HOME_JETTY.endZ, halfWidth: HOME_JETTY.halfWidth, height: HOME_JETTY.deck };
 /** The top of the last hill, where the small one is put down. The cottage is still hidden behind the brow from here. */
 const SUMMIT = new THREE.Vector2(LAST_HILL.x, LAST_HILL.z);
+/** How near the top they stop. */
+const SUMMIT_NEAR = 0.8;
 /** On over the brow toward the cottage: the ground falls away and the valley opens, and this is where they stop and see it. */
 const TO_COTTAGE = new THREE.Vector2(COTTAGE.x - SUMMIT.x, COTTAGE.z - SUMMIT.y).normalize();
 const BROW = SUMMIT.clone().addScaledVector(TO_COTTAGE, BROW_AT);
@@ -190,9 +189,21 @@ export class HomeChapter implements Chapter {
   private duskTarget = tuning.homeLight.daylight;
   private now = 0;
   private endingAt: number | null = null;
+  /** Negative while the success waits on the music's return: the clock is set by when that lands. */
   get homeEndingTime(): number | undefined {
-    return this.endingAt === null ? undefined : Math.max(0, this.now - this.endingAt);
+    return this.endingAt === null ? undefined : this.now - this.endingAt;
   }
+  get homeAsk(): boolean {
+    return this.beat === 'tries' || this.beat === 'flying';
+  }
+  /** Seconds until the cygnet is set down, from when they sit on the summit until the updraft succeeds. */
+  get homeSetDownIn(): number | undefined {
+    if (this.beat === 'summit') return Math.max(0, tuning.summit.setDownAt - this.t);
+    return this.beat === 'setDown' || this.homeAsk ? 0 : undefined;
+  }
+  /** When the music's return would land if the updraft succeeded now (`Soundscape.homeReturnIn`). */
+  private musicReturnIn: number | undefined;
+  hearHome(returnIn: number | undefined): void { this.musicReturnIn = returnIn; }
   private readonly hand = new THREE.Vector3();
   private readonly paperFacing = new THREE.Quaternion();
   private readonly tmp = new THREE.Vector3();
@@ -386,10 +397,23 @@ export class HomeChapter implements Chapter {
     /** Up the hill it rides on their back, where it can be seen and can see. */
     if (this.cast.cygnet.seat === 'cradle') this.cast.carry.stow();
     c.walkTo(SUMMIT.x, SUMMIT.y, false, () => {
+      c.stroll = 1;
       c.faceToward(SUMMIT.x + TOWARD_SUNSET.x, SUMMIT.y + TOWARD_SUNSET.y, 1);
       c.sitDown();
-      this.to('summit');
-    }, 0.8);
+      if (this.beat === 'climb') this.to('summit');
+    }, SUMMIT_NEAR);
+  }
+
+  /**
+   * Near the top she slows, and the summit begins while she is still walking, as early as it would if she had kept her
+   * pace: she reaches the top just as the family flies into frame.
+   */
+  private nearTop(): void {
+    const c = this.cast.child, { swansIn, topPace } = tuning.summit;
+    const left = Math.hypot(SUMMIT.x - c.position.x, SUMMIT.y - c.position.z) - SUMMIT_NEAR;
+    const beatFrom = WALK * topPace * swansIn;
+    if (left < beatFrom / (1 - topPace)) c.stroll = topPace;
+    if (left < beatFrom) this.to('summit');
   }
 
   update(dt: number, time: number): void {
@@ -397,6 +421,7 @@ export class HomeChapter implements Chapter {
     const { child: c, plane: p } = this.cast;
     if (this.beat === 'ashore' || this.beat === 'climb') {
       c.lookAt = this.sky.set(c.position.x + TOWARD_SUNSET.x * 60, c.position.y + 22, c.position.z + TOWARD_SUNSET.y * 60);
+      if (this.beat === 'climb') this.nearTop();
     } else {
       this.updateEnding(dt);
     }
@@ -519,7 +544,7 @@ export class HomeChapter implements Chapter {
      * finds it does not need them: it lets go of the wind and flies.
      */
     if (this.beat === 'answered') {
-      if (this.t > FLEDGES_AFTER) {
+      if (this.now - this.endingAt! > FLEDGES_AFTER) {
         cygnet.fledge(c.position, HANGS_ON);
         this.to('fledge');
       }
@@ -557,12 +582,15 @@ export class HomeChapter implements Chapter {
   /**
    * It is up, and this time something answers. The family comes down out of the night and wheels low over the
    * hill around it — the one moment in the journey where the thing that was asked for is given, in full, on
-   * screen. The music comes back here and nowhere earlier.
+   * screen. The music answers at its next phrase, and the ending is timed from that.
    */
   private answered(): void {
-    const { child: c, flock } = this.cast;
+    const { child: c, flock, cygnet } = this.cast;
     this.to('answered');
-    this.endingAt = this.now;
+    // The ending is timed from the music's return, at the ask's next phrase, so it holds itself up until then.
+    const { homeJumpAt } = tuning.audio;
+    this.endingAt = this.now + (this.musicReturnIn ?? homeJumpAt) - homeJumpAt;
+    cygnet.needs(tuning.summit.liftToFly, { ...tuning.summit, sink: tuning.summit.answeredSink });
     /**
      * Wheeling a little way off to the north rather than straight overhead: a column of swans turning in the
      * sky is only legible side on, and directly above the child it is a tower nobody can see the top of.
@@ -623,7 +651,7 @@ export class HomeChapter implements Chapter {
       c.cheer();
     }
     c.lookAt = cygnet.visible ? cygnet.position : flock.head;
-    const away = this.leftAt > 0 && (this.now - this.leftAt > WATCHES_FOR || !cygnet.visible);
+    const away = this.leftAt > 0 && (this.now - this.leftAt > tuning.homeReveal.watchFlockFor || !cygnet.visible);
     /** They turn for home and walk a few paces down off the very top before they stop and sit. */
     if (away && !this.wentOn && !c.busy) {
       this.wentOn = true;
@@ -769,7 +797,7 @@ export class HomeChapter implements Chapter {
         const reveal = tuning.homeReveal;
         c.lookAt = drawing.point(0, 0.3, this.watching).lerp(cottage.position,
           THREE.MathUtils.smootherstep(recognised, reveal.lookUpFrom, reveal.lookUpUntil));
-        if (recognised > GAZE_FOR) this.to('fold');
+        if (recognised > tuning.homeReveal.recogniseFor) this.to('fold');
       }
     } else if (this.beat === 'fold') {
       /** Folded back the way it came open, because it has one more thing to be before they let it go. */
@@ -796,7 +824,8 @@ export class HomeChapter implements Chapter {
         /** Somebody inside has lit the fire; the child heads home through the settling dusk. */
         cottage.smoking = true;
         c.standUp();
-        c.walkTo(cottage.doorstep.x, cottage.doorstep.z, true, () => this.to('inside'), 0.5);
+        c.runPace = tuning.homeReveal.runHomePace;
+        c.walkTo(cottage.doorstep.x, cottage.doorstep.z, true, () => { c.runPace = 1; this.to('inside'); }, 0.5);
       }
     } else if (this.beat === 'home') {
       c.lookAt = cottage.position;
@@ -1137,9 +1166,9 @@ export class HomeChapter implements Chapter {
       /** Stay where we said goodbye; only our gaze leaves the cottage for the moon and stars. */
       this.frameFarewell();
       s.target.copy(this.aim);
-      // It arrives as the music fades, on the score's own clock; a completed save opens on its end.
+      // It settles on the moon as the music's last phrase begins, on the ending's clock; a completed save opens on its end.
       const turnFrom = this.insideAt + TURN_FROM;
-      const turnTo = Math.max(turnFrom + 10, (this.endingAt ?? -Infinity) + HOME_ENDING.fadeFrom);
+      const turnTo = Math.max(turnFrom + 10, (this.endingAt ?? -Infinity) + HOME_ENDING.moonAt);
       const turn = this.insideAt < 0 ? 1 : glide(this.now, turnFrom, turnTo);
       if (turn > 0) {
         /** Out over the open sea north-east of the island, which is the one way from here that holds both. */
