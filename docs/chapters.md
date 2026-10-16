@@ -420,17 +420,22 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   round any heap in her way to her stand, kneels and peers, and turns to each heap the wind bursts. The right heap
   shivers every 2.5–4 s with a rustle; its tail tip is out half the time in round 1, a third in round 2 and a fifth in
   round 3; now and then it peeks. Wrong heaps never tell.
-- **Finding.** The air over its heap is measured as the trees feel it when they shed, and each rise of it counts: in
-  round 1 any gust over the heap; after that one deliberate swipe across it or two careless ones near it. A gust that
-  only shaves it makes it peek. Wrong heaps simply burst into gold. Found, it bursts out in a spray of leaves, sits up
-  and scolds her, bounds off and glances back once; she gets up and cheers, and the cygnet chases a few steps.
+- **Heaps yield only to updrafts** (Jeremy, 2026-10-16). Every heap, the squirrel's and the free-play ones, stands
+  against swipes: its top flutters and its loose leaves lift, and none of it goes. About two loops of circles over a
+  heap take it in a whirl. A round's heaps stand against updrafts too until the squirrel is in.
+- **Finding.** It is found when an updraft over its heap has taken enough leaves off its back that it shows, about two
+  loops of circles; behind a trunk, by the updraft over it. A swipe over its heap only makes it peek, and a swipe or
+  circles over another heap make it answer with its tail. A wrong heap bursts into gold under an updraft in round 2;
+  in round 3 only its top whirls up and it stands, so there is always a heap left to leap into. Found, it bursts out
+  in a spray of leaves, sits up and scolds her, bounds off and glances back once; she gets up and cheers, and the
+  cygnet chases a few steps.
 - **Where it hides follows the leaves as they are now.** The wind never puts a heap back, so on reaching a round it
   reads the live floor once (`AutumnBirches.depthAt`, one batched readback): a heap still `buryDepth` deep, else the
   deepest drift the round's lens shows, else round the bark of a heap's bank tree. Turned out before she arrives, it
   hides again. The round never breaks and never waits for leaves that are gone.
-- **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 10 s without
-  wind on the right heap it goes to that heap's rim and peers in (the in-story hint); after 18 s the drawn sweep
-  crosses it. Neither supplies wind.
+- **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 7 s without
+  an updraft on the right heap, swiping or not, it goes to that heap's rim and peers in (the in-story hint); after 12 s
+  the drawn updraft turns over it. Neither supplies wind.
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
@@ -487,8 +492,9 @@ failed, and no timer finds it. The child looks at the heaps and the squirrel, ne
 cygnet and the squirrel stay whole and readable in every round frame, portrait and landscape.
 
 Knobs: `tuning.birches` (`squirrel` the game, `strokeReach`, the heaps' `heap*`, `bury*` and `burst*`, `scarf`),
-`tuning.squirrel` (the creature: scale and pace). Checks: `tools/squirrel-rounds-check.mjs` (real strokes: `right`,
-`wrong`, `random`, `stall`, `flat`, `leap`, `bare`, `resume`, `frames`; dev server), `squirrel-check.mjs` (poses,
+`tuning.squirrel` (the creature: scale and pace). Checks: `tools/squirrel-rounds-check.mjs` (real strokes and circles:
+`right`, `updraft`, `wrong`, `answer`, `apart`, `random`, `shuffle`, `plans`, `stall`, `early`, `flat`, `free`,
+`leap`, `bare`, `resume`, `frames`; dev server), `squirrel-check.mjs` (poses,
 close stills, the room at round distance, motion contact and clips), `scarf-check.mjs` (`PHYSICS=1`, `NATURAL=1`),
 `scarf-geometry-check.mjs`, `scarf-exact-check.mjs`, `birches-drift-check.mjs`, `birches-foley-check.mjs`. On the QA
 stage, `play('squirrel:<action>')` (`story/squirrel-yard.ts`). Design record and Jeremy's brief:

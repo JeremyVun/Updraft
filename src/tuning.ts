@@ -1440,6 +1440,16 @@ export const tuning = {
     looseLift: 1.6,
     /** How hard an updraft throws the litter under it outward, per unit of lift it falls by over 2 m. */
     litterLiftThrow: 9,
+    /**
+     * Heaps stand against every gust and yield only to an updraft wound over them: within `heapGuardReach` m of a
+     * heap's rim the leaves go only once the lift there passes `heapLiftFrom`, in full flood at `heapLiftFull` and
+     * `heapLiftTakes` as readily as a full gust takes the open floor. Lift builds with time spent circling, about
+     * 0.6 after a loop and 1.3 after two at a child's pace.
+     */
+    heapGuardReach: 0.6,
+    heapLiftFrom: 1.0,
+    heapLiftFull: 1.7,
+    heapLiftTakes: 2.4,
     /** How fast leaves heaped steeper than they will stand run off sideways, and the slope they will stand at. */
     litterSlump: 3.0,
     litterRepose: 0.95,
@@ -1497,11 +1507,11 @@ export const tuning = {
       buryDepth: 0.35, leapDepth: 0.35,
       /**
        * Finding: the air over its heap (`driftReach` round a drift, `trunkReach` round a trunk) as the trees feel it
-       * when they shed, each rise of it counted: `findWork` by round flushes it from behind a trunk, `nearlyWork` in
-       * one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap
-       * makes 0.3 to 0.6, one along its rim about 0.15.
+       * when they shed. Each rise of the updraft there (`liftWork`) is counted, and `findWork` by round flushes it from
+       * behind a trunk; each rise of any air, `nearlyWork` in one gust, makes it peek. Counts are forgotten at
+       * `findForget` a second.
        */
-      driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
+      driftReach: 1.6, trunkReach: 2.6, findWork: [0.35, 0.35, 0.35], nearlyWork: 0.05, findForget: 0.03,
       /**
        * In the leaves it is found once they are thinner than `uncovered` m over where its paws are set (its back is
        * about 0.22 m above them at 3.6 times life, and red shows through the last few centimetres), read every
@@ -1510,10 +1520,10 @@ export const tuning = {
        */
       uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
-       * Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn updraft
+       * Seconds without updraft on the right heap before the cygnet goes to stand at it, and before the drawn updraft
        * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
        */
-      hintAfter: 10, inviteAfter: 18, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
+      hintAfter: 7, inviteAfter: 12, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
       /**
@@ -1551,8 +1561,11 @@ export const tuning = {
       lensEase: 1.6,
       /** How far short of its hide a dash ends, so it goes in with one pounce (the creature bounds closer from further than about 0.9 m). */
       pounceFrom: 0.8,
-      /** How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest. */
-      splash: 1, meetSplash: 1.3,
+      /**
+       * How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest; and how hard
+       * an updraft over a heap it is not in throws up that heap's top in the shuffle's round, where those heaps stand.
+       */
+      splash: 1, meetSplash: 1.3, emptySplash: 1.1,
       /**
        * The shuffle, at a round with no counting. It runs on ahead `shuffleRunOn` times its pace and sits up waiting.
        * Once she has stood watching `shuffleLook` s and the lens has slowed below `framedBelow` m/s (or `shuffleLookMost`

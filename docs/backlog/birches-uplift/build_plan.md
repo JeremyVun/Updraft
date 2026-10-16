@@ -325,6 +325,14 @@ music checks), so the music work sits on the merged code.
   `journey-reveal` and `transition-scenes-browser` pass.
 - **8b. Heaps.** `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps2`, port 5242. Heaps
   yield only to updrafts; none can be taken before the squirrel is in (reproduce Jeremy's case first).
+  **Done (2026-10-17).** Every heap stands against swipes and goes to about two loops of circles (litter `heaped`,
+  `heapLiftFrom` 1.0, `heapLiftFull` 1.7, `heapLiftTakes` 2.4); round 3's empty heaps stand until the leap; the hint
+  and drawn updraft at 7 and 12 s without an updraft. Strokes and circles from the boat, the landing, the meeting and
+  before rounds 2 and 3 (waiting, resting, burrowing) leave every heap as it was; no path but the boat (fixed in
+  `b3348d9a`) reproduced. Circles find it in 2–4 loops (2.5–3.5 s), sloppy screen circles in 2–3; `squirrel-rounds-check`
+  every case, `birches-drift-check`, `birches-score-check`, typecheck, build and `npm run check` pass;
+  `birches-foley-check`'s audition peaks at −28.6 dBFS against its −30 ceiling, an audio-only check this branch does
+  not touch (after the main merge).
 - **8c. The first knot.** `/Users/jeremy/projects/updraft-birches-knot`, branch `birches-uplift-knot`, port 5243.
   She stops closer to tangle 1 and faces it; after tangle 2 the squirrel climbs down the broken birch rather than
   dropping to its foot. Done ☑: she stands 6.6 m from the knot (10 before), facing it; the squirrel keeps its
