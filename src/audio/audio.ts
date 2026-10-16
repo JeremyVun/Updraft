@@ -1160,8 +1160,10 @@ export class Soundscape {
 
     const activeScore = this.stillDepartureScore ?? this.cloudsScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.mirrorScore ?? this.villageScore ?? this.belfryScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.seaMusic;
     const mirrorAt = this.mirrorScore?.position(now);
-    const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now,
-      !!s.arrivalMusic && activeScore instanceof RecordedScore && activeScore.holdsHandoff,
+    // The meadow's warm bed, playing out to its close as they sail, holds the next room's music like a once-played recording.
+    const meadowCloses = activeScore ? undefined : meadowMusic.closesAt;
+    const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) ?? meadowCloses : now,
+      !!s.arrivalMusic && (activeScore instanceof RecordedScore && activeScore.holdsHandoff || meadowCloses !== undefined),
       mirrorAt === undefined ? undefined : { position: mirrorAt, length: this.mirrorScore!.duration }), bg = arrival.background;
     // Leaving the Mirror: it fades itself into its chosen phrase seam while Home's start is held to the crossing.
     if (arrival.changed && arrival.stage === 'wait' && arrival.release !== undefined) this.mirrorScore?.finishAt(arrival.handoffAt, arrival.release);

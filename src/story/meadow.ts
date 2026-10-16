@@ -168,9 +168,8 @@ export class MeadowChapter implements Chapter {
   trodden: THREE.Vector3 | null = null;
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
-  /** The duet has been heard to its end; a checkpoint past the feather plays the ending afresh. */
+  /** The duet has been heard to its end. */
   private duetDone = false;
-  private endingDue = false;
   readonly song = new MeadowSong();
   private nextCall = 0;
   private nextBugle = 0;
@@ -270,7 +269,7 @@ export class MeadowChapter implements Chapter {
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
     this.piano.restoreDone();
     this.song.restore(point === 'pond' ? 2 : point.startsWith('echoes-') ? Number(point.slice(7)) : 0, point === 'pond');
-    this.crestDone = this.endingDue = point === 'pond';
+    this.crestDone = point === 'pond';
     this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
     if (this.crestDone) this.cast.flock.clear();
   }
@@ -293,17 +292,17 @@ export class MeadowChapter implements Chapter {
     return 'return';
   }
   /**
-   * The meadow's recordings: the walk until she sits, the duet, the warm bed from its end through the flowers and
-   * seeds, fading for the listening rest, silence for the family's departure, then the ending from the feather.
+   * The meadow's recordings: the walk until she sits, the duet, then one warm bed from its end to the boat, a little
+   * lower from the listening rest until the family has flown out of sight, playing out to its close as they push off.
    */
   get meadowMusic(): MeadowMusicPart {
     const at = this.piano.at;
     if (at === 'ahead' || at === 'walking' || at === 'looking') return 'walk';
     if (at !== 'done' && !this.duetDone) return 'duet';
-    if (this.featherFrom >= 0 || this.endingDue) return 'ending';
-    if (this.crestDone || this.beat === 'crest' || this.beat === 'down' || this.beat === 'pond' || this.song.beat === 'done') return 'quiet';
-    if (this.song.beat === 'listen' || this.song.beat === 'gather') return 'listen';
-    return 'after';
+    if (this.beat === 'push' || this.beat === 'aboard') return 'onward';
+    const calling = this.crestDone ? this.beat === 'crest' || this.beat === 'down' || this.beat === 'pond' && this.cast.flock.active
+      : this.song.beat === 'listen' || this.song.beat === 'gather' || this.song.beat === 'done';
+    return calling ? 'swans' : this.crestDone ? 'boat' : 'after';
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged || this.song.active; }

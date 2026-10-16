@@ -300,7 +300,8 @@ player's reply: a straight line low over the grass in front of her, drawn bold i
 land, always from its ringed low-keys end on the left to the high keys on the right, tilted gently with the rise or
 fall of her answer's melody (`tuning.piano.guide*`). A broad stroke near it in its direction counts and effort is
 kept across strokes; followed far enough, it plays her recorded answer whole, at its own tempo, while her hands and
-the dipping keys follow its onsets. Stroke speed changes nothing. With no answer begun `callAgainAfter` (25 s) after a
+the dipping keys follow its onsets, and its last notes ring on in the room under the bough's next call. Stroke speed
+changes nothing. With no answer begun `callAgainAfter` (25 s) after a
 call, the bough says it once more, `callAgainDb` softer; after that only the guide invites, and nothing times out.
 Each answer sends music out from the piano: note traces curl into the field planting colour, and a broad front with
 loose eddies wakes the ground to
@@ -355,9 +356,11 @@ watching them go. Then one white feather comes down out of the sky over the wate
 (`MeadowChapter.dropFeather`, the room's own `Feather`), and it lets itself drift, watching it. A sweep toward the
 cygnet carries it there, and the invitation shows which way after a few seconds; left alone, the cygnet paddles over
 for it. It takes it in its bill and swims back to her waiting hands, and the feather goes down into the satchel with
-it as she puts it away. Walking on,
+it as she puts it away. The warm music that came in after the duet plays on through all of this, a little lower
+while the family calls and flies, and up again for the feather (sound in [audio](contracts/audio.md)). Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
-ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`). Beside the walk down from the pond stands a
+ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`). As she pushes off, the music goes on
+to its own close and ends on the water before Birches' music comes in. Beside the walk down from the pond stands a
 row of harebells taller than she is (`world/harebells.ts`). They make no sound: a stroke across a clump swings its bells,
 and so does she or the plane brushing through one, and both of them look round at a bell swung near them. Like the pond,
 they are grey until the lullaby reaches them. It is there to be found; nothing waits on it.
@@ -375,9 +378,11 @@ Rulings:
 - Walls: field boundaries are painted as dry-stone lines, and every one that crosses the route has a gateway
   exactly where the path goes (`GATE`, `WIDE_GATE` in `fields.ts`); see the standing rule in `docs/journey.md`.
 
-Knobs: `tuning.piano`, `tuning.crest`, `tuning.meadowPlane`, `tuning.rainbow`, `tuning.world.meadowVeilFrom`/`To`.
+Knobs: `tuning.piano`, `tuning.crest`, `tuning.meadowPlane`, `tuning.rainbow`, `tuning.meadowMusic`,
+`tuning.world.meadowVeilFrom`/`To`.
 Checks: `tools/piano-check.mjs`, `piano-logic-check.mjs`, `piano-frame-check.mjs`, `piano-growth-check.mjs`,
-`meadow-route-check.mjs`, `meadow-plane-check.mjs`, `pond-view-check.mjs`.
+`meadow-route-check.mjs`, `meadow-plane-check.mjs`, `pond-view-check.mjs`, `meadow-duet-check.mjs`; renders
+`meadow-duet-render.mjs` (the duet) and `meadow-bed-render.mjs` (the warm bed from the duet to Birches).
 
 ## The birches
 

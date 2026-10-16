@@ -53,10 +53,11 @@ Brief: "Third playthrough" in [design.md](design.md). Two parallel worktrees off
 - [ ] Cameras (`src/story/piano.ts`, `src/story/meadow-song.ts`, camera code in `src/story/meadow.ts`, the `piano`
   rise and `meadowEchoes` camera tuning): the duet steps up and out phrase by phrase, staying low; the first bed
   seen from above; the seeds' release followed up and away in a held pan.
-- [ ] Music (`src/audio/meadow-cuts.ts`, `meadow-cuts-measured.ts`, `tools/meadow-music-cuts.mjs`,
+- [x] Music (`src/audio/meadow-cuts.ts`, `meadow-cuts-measured.ts`, `tools/meadow-music-cuts.mjs`,
   `src/audio/meadow-music.ts`, the `meadowMusic` getter in `src/story/meadow.ts`, the `meadowMusic` tuning): answers
   that ring out with their room's decay; one warm bed unbroken from the duet to the boat, dipping gently for the
-  swans, playing to its own close at the crossing; no feather music.
+  swans, playing to its own close at the crossing; no feather music. Done on `meadow-fix-music`; awaiting Jeremy's
+  listen (`verification.md`, "Music: answers that ring out, one warm bed").
 
 ## Wind instrument foundation
 
