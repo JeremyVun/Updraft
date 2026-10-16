@@ -1,47 +1,10 @@
 // Complete the little-boats room with real mouse or touch strokes: sails, a push across the bath toward the stream,
 // and circles over the plug. Captures under /tmp.
 // Usage: node tools/little-boats-check.mjs [prefix]; TOUCH=1 uses a 390x844 touch viewport.
-// Inherits the shared browser lock and GPU launch from play.mjs.
-// BASE overrides the dev server. Uses the shared /tmp/updraft-chromium.lock.
+// BASE overrides the dev server. Shares the GPU with other captures.
 import { chromium } from 'playwright-core';
-import fs from 'node:fs';
+import { holdGpu } from './lib/browser.mjs';
 
-const LOCK = '/tmp/updraft-chromium.lock';
-function alive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try {
-        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
-      } catch {}
-      let stale = holder ? !alive(holder) : false;
-      try {
-        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
-      } catch {}
-      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-function releaseLock() {
-  try {
-    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
-  } catch {}
-}
-process.on('exit', releaseLock);
 process.on('SIGINT', () => process.exit(130));
 process.on('SIGTERM', () => process.exit(143));
 
@@ -49,7 +12,7 @@ const prefix = process.argv[2] ?? '/tmp/updraft-little-boats';
 const touch = process.env.TOUCH === '1',
   width = touch ? 390 : 1600,
   height = touch ? 844 : 900;
-await acquireLock();
+const release = await holdGpu();
 const browser = await chromium.launch({
   channel: 'chromium',
   headless: true,
@@ -189,5 +152,5 @@ try {
   console.log(JSON.stringify(await page.evaluate(() => ({ chapter: __game.story.name, stats: __stats })), null, 2));
 } finally {
   await browser.close();
-  releaseLock();
+  release();
 }

@@ -3,21 +3,12 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 const portrait = process.argv.includes('portrait');
 const mode = portrait ? 'portrait' : 'desktop';
 const prefix = `/tmp/updraft-orb-${mode}`;
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1600, height: 900 };
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    if (holder) { try { process.kill(holder, 0); } catch { fs.rmSync(lock, { recursive: true, force: true }); continue; } }
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-}
+const release = await holdGpu();
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const report = { mode, sweeps: [], errors: [] };
@@ -135,5 +126,5 @@ try {
   await browser.close();
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
   fs.rmSync(videoDir, { recursive: true, force: true });
-  try { if (Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true }); } catch {}
+  release();
 }

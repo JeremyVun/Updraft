@@ -55,7 +55,7 @@ async function load(context,profile) {
 const round=n=>Math.round(n);
 const results=[];
 for(let run=0;run<runs;run++) {
- const {browser,close}=await openBrowser();
+ const {browser,close}=await openBrowser({ exclusive: true });
  try {
   const context=await browser.newContext({viewport:{width:1440,height:900}});
   if(process.env.WARM)await load(context,false);

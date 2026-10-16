@@ -2,21 +2,9 @@
 // node tools/landing-check.mjs; BASE overrides the dev server, captures go to /tmp.
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-import fs from 'node:fs';
+import { holdGpu } from './lib/browser.mjs';
 
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    let alive = true;
-    if (holder) { try { process.kill(holder, 0); } catch { alive = false; } }
-    if (holder && !alive) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(resolve => setTimeout(resolve, 400));
-  }
-}
+const release = await holdGpu();
 let browser;
 const report = [], errors = [];
 try {
@@ -92,5 +80,5 @@ try {
   console.log('Landing continuity, rendered boat visibility and departure placement passed.');
 } finally {
   await browser?.close();
-  fs.rmSync(lock, { recursive: true, force: true });
+  release();
 }

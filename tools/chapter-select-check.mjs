@@ -16,7 +16,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const out = process.env.OUT ?? '/tmp/updraft-chapter-select';
 const key = 'updraft.progress.v1';
 const title = base + '?shot&start=1&progress=1';
-const { browser, close } = await openBrowser({ allowAutoplay: false });
+const { browser, close } = await openBrowser({ allowAutoplay: false, exclusive: true });
 const errors = [];
 const report = {};
 try {

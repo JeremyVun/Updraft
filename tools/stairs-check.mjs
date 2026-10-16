@@ -5,29 +5,8 @@
 // NOSHOTS=1 skips the stills (a timed run); each beat is logged with wall and game seconds.
 // Exits 1 if a beat is never reached or the page reports an error.
 import { chromium } from 'playwright-core';
-import fs from 'node:fs';
+import { holdGpu } from './lib/browser.mjs';
 
-const LOCK = '/tmp/updraft-chromium.lock';
-const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try { holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0; } catch {}
-      if (holder && !alive(holder)) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-const releaseLock = () => {
-  try { if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true }); } catch {}
-};
-process.on('exit', releaseLock);
 process.on('SIGINT', () => process.exit(130));
 
 const prefix = process.argv[2] ?? '/tmp/updraft-stairs';
@@ -35,7 +14,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const width = Number(process.env.W ?? 1600);
 const height = Number(process.env.H ?? 900);
 
-await acquireLock();
+await holdGpu();
 const browser = await chromium.launch({
   channel: 'chromium',
   headless: true,

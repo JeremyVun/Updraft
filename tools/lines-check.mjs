@@ -2,31 +2,16 @@
 // node tools/lines-check.mjs [play|idle|portrait|resume|portrait-resume|door|portrait-door-resume|door-legacy]
 // Door modes stage the completed curtains; play/portrait exercise real gestures, including sweeps across the shore's
 // pinwheel that wind the boat in; idle proves waiting cannot solve the first sheet or bring the boat in.
-// BASE selects the dev server; captures/report go to /tmp/updraft-lines-<mode>-*. Runs under the play.mjs lock.
+// BASE selects the dev server; captures/report go to /tmp/updraft-lines-<mode>-*. Shares the GPU with other captures.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { openRotary } from './lib/rotary-gesture.mjs';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
+import { holdGpu } from './lib/browser.mjs';
 const mode = process.argv[2] ?? 'play';
 const prefix = `/tmp/updraft-lines-${mode}`;
-const lock = '/tmp/updraft-chromium.lock';
-// Same mutual exclusion as play.mjs: wait for the GPU capture resource, without launching a second browser.
-for (;;) {
-  try {
-    fs.mkdirSync(lock);
-    fs.writeFileSync(`${lock}/pid`, String(process.pid));
-    break;
-  } catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    let alive = true;
-    if (holder) { try { process.kill(holder, 0); } catch { alive = false; } }
-    if (holder && !alive) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(resolve => setTimeout(resolve, 400));
-  }
-}
+const release = await holdGpu();
 const portrait = mode.includes('portrait');
 const resume = mode.includes('resume');
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1440, height: 900 };
@@ -284,5 +269,5 @@ try {
 } finally {
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
   await browser.close();
-  fs.rmSync(lock, { recursive: true, force: true });
+  release();
 }

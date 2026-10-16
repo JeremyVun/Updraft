@@ -133,7 +133,7 @@ const busy = () => {
   const own=new Set([process.pid]);for(let grew=true;grew;){grew=false;for(const r of rows)if(!own.has(r.pid)&&own.has(r.ppid)){own.add(r.pid);grew=true;}}
   return rows.filter(r=>r.cpu>=15).sort((a,b)=>b.cpu-a.cpu).slice(0,8).map(r=>({cpu:r.cpu,command:r.command,...own.has(r.pid)&&{own:true}}));
 };
-// Holding the browser lock keeps other browser checks out; QUIET waits for anything else (ffmpeg, simulators, VMs).
+// Holding the GPU alone keeps other browser checks out; QUIET waits for anything else (ffmpeg, simulators, VMs).
 const QUIET_S=Number(process.env.QUIET??0), SYSTEM=/^(secd|WindowServer|kernel_task|ctkd|launchd|logd|mds.*|coreaudiod|runningboardd|trustd|syspolicyd|.*intelligenceplatformd|\(proactiveeventtr\))$/;
 // GPU_QUIET=1 waits only for other GPU users (another Chrome's GPU process, a simulator, ffmpeg) over 15% CPU:
 // CPU-only background load (build watchers, servers) no longer holds every chapter for the whole QUIET window.
@@ -897,7 +897,7 @@ window.__audit = {
 };
 `;
 
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 async function open(base,chapter,setup) {
   const [entry,fixture]=chapter.split(':');
   const page=await browser.newPage({viewport:{width:1376,height:1032},deviceScaleFactor:2});

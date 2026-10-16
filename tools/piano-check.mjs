@@ -5,19 +5,11 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {reviewCapture} from './lib/review-capture.mjs';
+import {holdGpu} from './lib/browser.mjs';
 const viewport = { width: Number(process.env.W ?? 1440), height: Number(process.env.H ?? 900) };
 const portrait = viewport.width < viewport.height;
 const prefix = process.env.PREFIX ?? `/tmp/updraft-piano-new-${portrait ? 'portrait' : 'desktop'}`;
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (e) {
-    if (e.code !== 'EEXIST') throw e;
-    let owner=0; try { owner=Number(fs.readFileSync(`${lock}/pid`,'utf8')); } catch {}
-    if (owner) { try {process.kill(owner,0);} catch {fs.rmSync(lock,{recursive:true,force:true});continue;} }
-    await new Promise(r=>setTimeout(r,500));
-  }
-}
+const release = await holdGpu();
 let browser,stopReview;
 const report={viewport,states:[],errors:[]};
 try {
@@ -124,6 +116,6 @@ try {
   fs.writeFileSync(`${prefix}-report.json`,JSON.stringify(report,null,2));
   try{await stopReview?.();}finally{
     await browser?.close();
-    if(Number(fs.readFileSync(`${lock}/pid`,'utf8'))===process.pid)fs.rmSync(lock,{recursive:true,force:true});
+    release();
   }
 }

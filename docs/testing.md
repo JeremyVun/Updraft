@@ -2,8 +2,10 @@
 
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
 `http://127.0.0.1:5230/` and take `BASE` for another server (use `npm run build:qa` then `npm run preview:qa`, or a worktree with its own
-server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU checks
-share one capture lock (`tools/lib/browser.mjs`), including `play.mjs`, so captures cannot distort timing checks.
+server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). Browser
+captures share the GPU (`tools/lib/browser.mjs`, up to `GPU_SLOTS`, default 4, at once), since fixed steps make them
+independent of speed; tools that time real frames (`perf`, profiles, `start-check` and similar) take it alone and wait
+for running captures, so no capture distorts them.
 Chrome for Testing uses Metal on macOS and the browser's default backend elsewhere; `ANGLE` explicitly selects a
 comparison backend. No GPU blocklist override is used. Evidence goes under
 `/tmp`. Node mechanics checks load TypeScript through `tools/lib/typescript.mjs` and need no browser.
