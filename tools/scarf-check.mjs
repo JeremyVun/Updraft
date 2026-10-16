@@ -1,4 +1,4 @@
-// Real pointer strokes, idle gates, checkpoint restoration, and the one-time swing.
+// Real pointer strokes, idle gates, checkpoint restoration, and the one-time swing over the fallen birch.
 // Run against Vite: BASE=http://127.0.0.1:5232/ node tools/scarf-check.mjs
 // NATURAL=1 follows the walk (blowing the squirrel's heap at each round); CAPTURE=1 captures the four tangles; W/H and OUT control screenshots.
 // PHYSICS=1 also checks the first length's fall, settling, stretch, terrain contact and frame-rate independence.
@@ -202,45 +202,66 @@ try {
     if(g.birches.scarf.completed!==3||g.boat.scarfSail!==0)throw Error('New partial scarf save skipped the bow');
     g.birches.scarf.restore(4);
   });
-  // Restore by the swing, then test that sustained input can continue past the old fixed timeout.
+  // The fallen birch past the swing tree: she stops at it, gets on, waits for a stalled player, is pumped over and lands beyond.
   await page.evaluate(async () => {
     const { birchesAt } = await import('/src/world/birches-layout.ts');
     const g=__game,c=g.story.current,at=birchesAt(3,-1107);
-    g.child.stop();g.child.place(at.x,at.z,0);g.glider.hold(g.child);
-    c.swings=0;c.swingOffered=false;c.resumeWalk();c.update(0,c.now);g.rig.cut(c.shot);
+    g.child.stop();g.child.place(at.x,at.z,Math.PI);g.glider.hold(g.child);
+    c.swings=0;c.crossing.reset();c.squirrel.restore(Math.max(2,c.squirrel.rounds),c.cue());c.resumeWalk();c.update(0,c.now);g.rig.cut(c.shot);
   });
-  await page.waitForFunction(() => __game.story.current.beat === 'swingOffer');
-  await page.waitForTimeout(1400);
-  await page.screenshot({path:`${prefix}-swing-offer.png`});
-  const seat = await page.evaluate(() => {
-    const g=__game,p=g.child.position.clone();g.birches.swing.seat(p);p.project(g.rig.camera);
-    return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};
+  await page.waitForFunction(() => __game.story.current.beat === 'toSwing', null, { timeout: 60000 });
+  await page.waitForFunction(() => __game.story.current.swingStep === 'looking', null, { timeout: 60000 });
+  await page.screenshot({path:`${prefix}-swing-blocked.png`});
+  await page.waitForFunction(() => __game.story.current.crossing.phase === 'riding', null, { timeout: 60000 });
+  await page.waitForTimeout(9000);
+  await page.screenshot({path:`${prefix}-swing-waiting.png`});
+  assert.ok(await page.evaluate(() => __game.story.current.crossing.phase === 'riding' && !!__game.story.current.windInvitation),
+    'A stalled player leaves her waiting on the swing under the drawn push');
+  const seat = () => page.evaluate(() => {
+    const g=__game,s=g.birches.swing,V=g.child.position.constructor,p=s.seat(new V()),v=s.velocity(new V());
+    const at=p.clone().project(g.rig.camera),to=p.clone().addScaledVector(v.lengthSq()>1e-6?v.normalize():v.set(0,0,-1),1).project(g.rig.camera);
+    return {x:(at.x+1)*innerWidth/2,y:(1-at.y)*innerHeight/2,dx:(to.x-at.x)*innerWidth/2,dy:(at.y-to.y)*innerHeight/2,speed:s.speed,phase:g.story.current.crossing.phase};
   });
-  await page.mouse.move(seat.x-65,seat.y);await page.mouse.down();
-  for(let i=1;i<=16;i++){await page.mouse.move(seat.x-65+i*8,seat.y);await page.waitForTimeout(24);}
-  await page.mouse.up();
-  await page.waitForFunction(() => __game.story.current.beat === 'swinging');
-  await page.waitForTimeout(1000);
-  await page.screenshot({path:`${prefix}-swing-riding.png`});
-  await page.evaluate(() => {
-    const g=__game,c=g.story.current;
-    c.beatStart=c.now-60; c.lastSwingInput=c.now; g.input.present=true;g.input.gust=3;
-    c.update(1/60,c.now+1/60);
-    if(c.beat!=='swinging'||c.leavingSwing)throw Error('Fixed timeout still ends ride');
-    g.input.present=false;g.input.gust=0;g.input.charge=0;
+  let strokes=0,way=0;
+  for (const began=Date.now();;) {
+    const q=await seat();
+    if (q.phase!=='riding') break;
+    assert.ok(Date.now()-began<120000, `Never let go after ${strokes} pumps`);
+    if (Math.abs(q.speed)<.12||Math.sign(q.speed)===way){await page.waitForTimeout(30);continue;}
+    way=Math.sign(q.speed);
+    const d=Math.hypot(q.dx,q.dy)||1,ux=q.dx/d,uy=q.dy/d,len=innerWidthOf(page)*.11;
+    await page.mouse.move(q.x-ux*len,q.y-uy*len);
+    for(let i=1;i<=10;i++){await page.mouse.move(q.x-ux*len+ux*len*.2*i,q.y-uy*len+uy*len*.2*i);await page.waitForTimeout(15);}
+    await page.mouse.move(q.x+uy*len*2,q.y-ux*len*2,{steps:4});
+    strokes++;
+  }
+  await page.waitForFunction(() => __game.story.current.beat !== 'swinging', null, { timeout: 30000 });
+  const over = await page.evaluate(async () => {
+    const w = await import('/src/world/birches.ts'), g=__game,c=g.story.current,p=g.child.position;
+    return {swings:c.swings,beyond:w.southOfFallen(p.x,p.z),checkpoint:c.checkpoint};
   });
-  await page.waitForFunction(() => __game.story.current.beat === 'walk', null, { timeout: 20000 });
-  assert.equal(await page.evaluate(() => __game.story.current.swings), 1);
+  assert.equal(over.swings, 1);
+  assert.ok(over.beyond < -1, `She lands beyond the fallen birch: ${JSON.stringify(over)}`);
+  console.log(`Pumped over the fallen birch in ${strokes} strokes.`);
+  // Once over, nothing takes her back to it; and a save past it resumes beyond it.
   await page.evaluate(async () => {
     const { birchesAt } = await import('/src/world/birches-layout.ts');
-    const g=__game,c=g.story.current,at=birchesAt(3,-1116),clearing=birchesAt(2.6,-1118);
-    g.child.stop();g.child.place(at.x,at.z,0);c.play='hold';c.holdUntil=c.now+20;
+    const g=__game,c=g.story.current,at=birchesAt(3,-1126),clearing=birchesAt(2.6,-1118);
+    g.child.stop();g.child.place(at.x,at.z,Math.PI);c.play='hold';c.holdUntil=c.now+20;
     g.wind.addSplat({ax:clearing.x,az:clearing.z,bx:clearing.x,bz:clearing.z,vx:20,vz:0,radius:5,energy:1,lift:0,swirl:0});
   });
   await page.waitForTimeout(1000);
   assert.notEqual(await page.evaluate(() => __game.story.current.beat), 'toSwing');
   assert.notEqual(await page.evaluate(() => __game.story.current.beat), 'swinging');
-  console.log('Checkpoints, red sail, controlled swing exit, and one-time swing passed.');
+  const resumed = await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const w = await import('/src/world/birches.ts'), g=__game,c=g.story.current,at=birchesAt(2.6,-1116);
+    g.child.place(at.x,at.z,Math.PI);
+    c.restoreCheckpoint('squirrel3-scarf4-swing',[5,1,.62,4,3]);
+    return w.southOfFallen(g.child.position.x,g.child.position.z);
+  });
+  assert.ok(resumed < -1, `A save past the swing resumes beyond the fallen birch: ${resumed}`);
+  console.log('Checkpoints, red sail, the swing over the fallen birch, and one-time swing passed.');
   // The independent bird must be gathered before the scarf's departure reward can continue.
   await page.evaluate(async () => {
     const { birchesAt } = await import('/src/world/birches-layout.ts');

@@ -2,7 +2,8 @@ import { birchesPoint, type CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
-import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK, BIRCH_PILES } from '../world/birches';
+import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK, BIRCH_PILES, FALLEN_SOUTH, alongFallen, fallenBole, fallenRadius, fallenTop, southOfFallen } from '../world/birches';
+import { SWING_SOUNDS, SwingCrossing, type SwingEvent } from '../world/crossings/swing-crossing';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { tuning } from '../tuning';
@@ -23,17 +24,33 @@ const BOARDING = 20;
 const LAST_LEG_PATIENCE = 45;
 /** Once the boat is drawn up past here, the scarf's free end is tied to its mast. */
 const MAST_FROM = birchesZ(-1175);
-type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'counting' | 'toRound' | 'round' | 'leap'
+type Beat = 'ashore' | 'wonder' | 'walk' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'counting' | 'toRound' | 'round' | 'leap'
   | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
-/** The walk's stops in the order it meets them: the squirrel's rounds between the scarf's tangles. */
-const STOPS = [{ round: 0 }, { tangle: 0 }, { round: 1 }, { tangle: 1 }, { round: 2 }, { tangle: 2 }, { tangle: 3 }] as const;
+/** The walk's stops in the order it meets them: the squirrel's rounds between the scarf's tangles, and the swing over the fallen birch. */
+const STOPS = [{ round: 0 }, { tangle: 0 }, { round: 1 }, { swing: true }, { tangle: 1 }, { round: 2 }, { tangle: 2 }, { tangle: 3 }] as const;
 type Stop = (typeof STOPS)[number];
 /** Further past a round's heaps than walking can take her without stopping there: she was put past it. */
 const PUT_PAST = 10;
 /** Beats where the player is playing, and the wind is theirs. */
-const PLAYING: readonly Beat[] = ['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'counting', 'toRound', 'round', 'unravelling'];
+const PLAYING: readonly Beat[] = ['walk', 'toSwing', 'swinging', 'toScarf', 'scarf', 'counting', 'toRound', 'round', 'unravelling'];
 const AT_TANGLE: readonly Beat[] = ['toScarf', 'scarf', 'counting', 'unravelling'];
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
+/** The cygnet's own way over the fallen birch once she is across: up onto it, a look at her, and down the far side. */
+type BirdOver = 'none' | 'watching' | 'toBole' | 'up' | 'down' | 'over';
+/** Where along the bole the cygnet goes over it, between the limbs it is propped on, beside where she went over. */
+const BIRD_OVER = [0.8, 0.9] as const;
+/** How near the top of the bole, level, it flutters up from: well clear of the bole's face, so it never walks into it. */
+const BIRD_FLUTTER_FROM = 2.6;
+/** On the ground beside the bole `t` along it, `off` metres off its south face (negative: off its north face). */
+function besideBole(t: number, off: number, out: THREE.Vector3): THREE.Vector3 {
+  const b = fallenBole(t), r = Math.sign(off) * (fallenRadius(t) + Math.abs(off));
+  const x = b.x + FALLEN_SOUTH.x * r, z = b.z + FALLEN_SOUTH.y * r;
+  return out.set(x, Math.max(heightAt(x, z), 0), z);
+}
+/** How far her walk keeps off the bole on whichever side of it she is, and the plane's play with her. */
+const KEEP_OFF = 1.2;
+/** How far beyond the bole a lens past it stands. */
+const LENS_OFF_BOLE = 3;
 
 /**
  * The autumn birches. Deep autumn, the afternoon already going: an island of gold trees between the meadow and
@@ -65,6 +82,25 @@ export class BirchesChapter implements Chapter {
   private lensSpeed = 0;
   private lensAt = 0;
   private readonly lensWas = new THREE.Vector3();
+  /** She has been over the fallen birch on the swing (or was put past it): 1 or 0, as saved. */
+  private swings = 0;
+  readonly crossing: SwingCrossing;
+  /** Where she is in going to the swing: up to the bole, looking along it, and over to the seat. */
+  private swingStep: 'toStop' | 'looking' | 'toBoard' = 'toStop';
+  private stepAt = 0;
+  /** When she let go of the swing, for the lens following her over. */
+  private leftSwingAt = -1;
+  private landedCheer = false;
+  private birdOver: BirdOver = 'none';
+  private birdAt = 0;
+  private camera: THREE.PerspectiveCamera | null = null;
+  private readonly edge = { back: new THREE.Vector2(), at: 0 };
+  private readonly birdWatch = new THREE.Vector3();
+  /** Near enough the bole to flutter up onto it, on top, and down the far side. */
+  private readonly birdOff = new THREE.Vector3();
+  private readonly birdTop = new THREE.Vector3();
+  private readonly birdDown = new THREE.Vector3();
+  private readonly boleAhead = new THREE.Vector3();
   /** The first beat, ashore, starts on the first frame the island is played. */
   private beatStart = -1;
   private holdUntil = 0;
@@ -72,13 +108,7 @@ export class BirchesChapter implements Chapter {
   private cheered = false;
   private lastLegAt = 0;
   private readonly arrival = new PlaneArrival();
-  private swings = 0;
-  private swingOffered = false;
   private puttingDown = false;
-  private lastSwingInput = 0;
-  private leavingSwing = false;
-  private swingPushed = false;
-  private readonly mountFrom = new THREE.Vector3();
   private readonly scarfMast = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
@@ -86,7 +116,7 @@ export class BirchesChapter implements Chapter {
   private readonly stern = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
-  private readonly from = new THREE.Vector3(0.72, 0, 0.69).normalize();
+  private readonly swingFrom = new THREE.Vector3();
   private readonly scarfFrom = new THREE.Vector3(0.08, 0, 1).normalize();
   /**
    * The first tangle's own bearings, west of the others, so the loop and the squirrel on its branch stand clear of the
@@ -98,6 +128,7 @@ export class BirchesChapter implements Chapter {
   private readonly secondFromTall = new THREE.Vector3(0.3, 0, 1).normalize();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly scarfTarget = new THREE.Vector2();
+  private readonly sideAt = new THREE.Vector2();
   private readonly crest = new THREE.Vector3(BIRCHES_CLEARING.x, 10, BIRCHES_CLEARING.y);
   private readonly leafPlay: BirchLeafPlay;
   /** The red squirrel's hide-and-seek, which the walk stops for as it stops for the tangles. */
@@ -118,6 +149,9 @@ export class BirchesChapter implements Chapter {
   constructor(private readonly cast: Cast) {
     this.leafPlay = new BirchLeafPlay(cast);
     this.squirrel = new BirchesSquirrel(cast);
+    this.crossing = new SwingCrossing(cast.birches.swing, cast.birches.swingWay, cast);
+    this.crossing.onEvent = (kind, at, strength) => this.swingSound(kind, at, strength);
+    besideBole((BIRD_OVER[0] + BIRD_OVER[1]) / 2, 1.8, this.birdWatch);
     const { child, plane } = cast;
     plane.homeRadius = 28;
     /** It never flies over this island, whatever the player does with the air: everything here is on the ground. */
@@ -143,6 +177,15 @@ export class BirchesChapter implements Chapter {
   /** A stalled player's drawn updraft, turning over the heap the squirrel is in. */
   get coax(): Coax | null {
     return this.beat === 'round' ? this.squirrel.invitation : null;
+  }
+
+  /** On the swing, a stalled player's drawn push along its arc, as in the drowned village. */
+  get windInvitation(): THREE.Vector3 | null {
+    return this.beat === 'swinging' ? this.crossing.invitation : null;
+  }
+
+  get invitationHeading(): number | null {
+    return this.beat === 'swinging' && this.crossing.invitation ? this.crossing.heading : null;
   }
 
   /** The squirrel, kept sharp with her by the depth blur while it matters. */
@@ -174,7 +217,7 @@ export class BirchesChapter implements Chapter {
   }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
-    this.swings = Math.max(0, data[1]); this.dusk = data[2];
+    this.dusk = data[2];
     // Saves made before the scarf resume beyond the tangles they have already walked past.
     const saved = data.length > 3 ? Math.floor(data[3]) : point === 'leaves' ? 2 : 1;
     // Old three-knot saves already earned their sail. Earlier saves encounter the new loop on the way.
@@ -187,6 +230,17 @@ export class BirchesChapter implements Chapter {
     child.stop();
     child.counting = 0;
     child.stowPlane(false);
+    this.crossing.reset();
+    this.leftSwingAt = -1;
+    this.birdOver = 'none';
+    cygnet.stay = false;
+    cygnet.errand = null;
+    /** Over the fallen birch: ridden, or saved where it once was optional, past it. A resumed save past it starts beyond it. */
+    this.swings = data[1] > 0 || count >= 2 ? 1 : 0;
+    if (this.swings && southOfFallen(child.position.x, child.position.z) > -KEEP_OFF) {
+      const { onward } = this.cast.birches.swingWay;
+      child.place(onward.x, onward.z, Math.PI);
+    }
     if (cygnet.carried) {
       cygnet.release(this.tmp.set(child.position.x - Math.cos(child.yaw) * 1.2, 0, child.position.z + Math.sin(child.yaw) * 1.2));
       cygnet.seating.snap();
@@ -194,7 +248,7 @@ export class BirchesChapter implements Chapter {
     this.beat = 'walk'; this.play = 'hold';
     this.round = -1;
     /** Saves from before the squirrel played infer the rounds behind them: each comes before its tangle, the second before the swing. */
-    const passed = count >= 3 ? 3 : count >= 2 || this.swings > 0 || this.leg > CLEARING_LEG ? 2 : count >= 1 ? 1 : 0;
+    const passed = count >= 3 ? 3 : count >= 2 || this.swings > 0 ? 2 : count >= 1 ? 1 : 0;
     this.squirrel.release();
     this.squirrel.restore(THREE.MathUtils.clamp(data.length > 4 ? Math.floor(data[4]) : passed, 0, ROUNDS.length), this.cue());
   }
@@ -202,7 +256,7 @@ export class BirchesChapter implements Chapter {
   /** What the squirrel needs to know of the story this frame. */
   private cue(): SquirrelCue {
     const scarf = this.cast.birches.scarf;
-    const swinging = this.beat === 'swingOffer' || this.beat === 'toSwing' || this.beat === 'swinging';
+    const swinging = (this.beat === 'toSwing' || this.beat === 'swinging') && this.swings === 0;
     const c = this.cueNow;
     c.round = this.beat === 'toRound' || this.beat === 'round' ? this.round : -1;
     c.standing = (this.beat === 'toRound' || this.beat === 'round') && !this.cast.child.busy;
@@ -210,7 +264,7 @@ export class BirchesChapter implements Chapter {
     /** A tangle counts as soon as its loop starts to lift free, so the squirrel is away while it comes off. */
     const lifting = scarf.active >= 0 && scarf.snags[scarf.active].release > 0 && !scarf.snags[scarf.active].freed;
     c.tangles = scarf.completed + (lifting ? 1 : 0);
-    c.swingOver = ((this.swings > 0 || this.swingOffered) && !swinging) || scarf.active === 1 || scarf.completed >= 2;
+    c.swingOver = this.swings > 0 || scarf.active === 1 || scarf.completed >= 2;
     c.gathered = scarf.finished;
     c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
     c.atTangle = AT_TANGLE.includes(this.beat);
@@ -222,7 +276,7 @@ export class BirchesChapter implements Chapter {
   /** The next stop the walk owes, in route order: a round of the squirrel's or a tangle of the scarf's. */
   private nextStop(): Stop | null {
     const rounds = this.squirrel.rounds, tangles = this.cast.birches.scarf.completed;
-    return STOPS.find((stop) => ('round' in stop ? rounds <= stop.round : tangles <= stop.tangle)) ?? null;
+    return STOPS.find((stop) => ('round' in stop ? rounds <= stop.round : 'tangle' in stop ? tangles <= stop.tangle : this.swings === 0)) ?? null;
   }
 
   private to(beat: Beat): void {
@@ -239,6 +293,7 @@ export class BirchesChapter implements Chapter {
     if (this.beatStart < 0) this.beatStart = time;
     const { child: c, plane: p, boat, birches } = this.cast;
     p.guided = this.beat === 'walk';
+    p.playEdge = this.keepPlay();
     const scarf = birches.scarf;
     const mast = boat.position.z < MAST_FROM ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
@@ -283,12 +338,8 @@ export class BirchesChapter implements Chapter {
       case 'walk':
         this.updateWalk(time);
         break;
-      case 'swingOffer':
-        if (birches.swing.brushAge < .5) this.toSwing();
-        else if (this.t > tuning.birches.scarf.swingOfferSeconds) this.resumeWalk();
-        break;
       case 'toSwing':
-        if (!c.busy) this.mount();
+        this.goingToSwing();
         break;
       case 'swinging':
         this.updateSwing();
@@ -333,11 +384,12 @@ export class BirchesChapter implements Chapter {
         break;
     }
 
-    if (PLAYING.includes(this.beat) && this.round < 0 && this.beat !== 'counting') this.leafPlay.update(dt, time);
-    birches.swing.invited = (this.beat === 'swinging' && !this.swingPushed && !this.leavingSwing)
-      || (this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16)));
-    birches.swing.update(dt, this.cast.wind);
-    if (this.beat !== 'swinging') birches.shake(0);
+    this.birdOverBole();
+    if (PLAYING.includes(this.beat) && this.round < 0 && this.beat !== 'counting' && this.beat !== 'toSwing' && this.beat !== 'swinging'
+      && (this.birdOver === 'none' || this.birdOver === 'over')) this.leafPlay.update(dt, time);
+    if (this.camera && this.crossing.phase !== 'off') this.crossing.update(dt, this.camera);
+    else birches.swing.update(dt, this.cast.wind);
+    birches.shake(this.crossing.phase === 'riding' ? Math.min(1, Math.abs(birches.swing.angle) * 1.6) : 0);
     if (p.held) p.hold(c);
     this.frame();
     this.easeLens(dt);
@@ -348,6 +400,7 @@ export class BirchesChapter implements Chapter {
    * she is well up the ride, so it is never seen to go; past the crest that beach is behind them for good.
    */
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    this.camera = camera;
     const dt = this.now - this.lensAt;
     if (dt > 0) {
       const speed = camera.position.distanceTo(this.lensWas) / dt;
@@ -412,7 +465,8 @@ export class BirchesChapter implements Chapter {
     const stop = this.nextStop();
     const route = ROUTE[Math.min(this.leg, ROUTE.length - 1)];
     if (!stop) return route;
-    const at = 'round' in stop ? ROUNDS[stop.round].stand : { x: SCARF_SNAGS[stop.tangle].stopX, z: SCARF_SNAGS[stop.tangle].stopZ };
+    const at = 'round' in stop ? ROUNDS[stop.round].stand : 'tangle' in stop ? { x: SCARF_SNAGS[stop.tangle].stopX, z: SCARF_SNAGS[stop.tangle].stopZ }
+      : this.cast.birches.swingWay.stop;
     return route.y < at.z ? this.scarfTarget.set(at.x, at.z) : route;
   }
 
@@ -429,13 +483,13 @@ export class BirchesChapter implements Chapter {
         return;
       }
     }
-    if (this.swings === 0 && scarf.completed > 0 && this.squirrel.rounds >= 2 && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 13) {
-      if (this.cast.birches.swing.brushAge < .5) { this.toSwing(); return; }
-      if (!this.swingOffered && !c.acting) {
-        this.swingOffered = true; this.play = 'carry'; c.stop();
-        c.lookAt = this.cast.birches.swing.seat(this.seat);
-        c.walkTo(this.seat.x + 2.8, this.seat.z + 3.4, false, undefined, .5);
-        this.to('swingOffer'); return;
+    if (stop && 'swing' in stop && !c.acting) {
+      const { stop: at } = this.cast.birches.swingWay;
+      /** Beyond the bole without riding over it she was put there: the swing is behind her. */
+      if (southOfFallen(c.position.x, c.position.z) < -KEEP_OFF) this.swings = 1;
+      else if (c.position.distanceTo(at) < tuning.birches.scarf.arriveWithin || southOfFallen(c.position.x, c.position.z) < 4) {
+        this.toSwing();
+        return;
       }
     }
     if (snag && !c.acting && (c.position.distanceTo(snag.before) < tuning.birches.scarf.arriveWithin || c.position.z < snag.before.z)) {
@@ -460,7 +514,8 @@ export class BirchesChapter implements Chapter {
       }
       if (p.landed) this.fetch();
       else if (!c.moving && Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 8) {
-        c.walkTo(p.position.x, p.position.z, true, undefined, 5);
+        const to = this.ownSide(p.position.x, p.position.z);
+        c.walkTo(to.x, to.y, true, undefined, 5);
       }
     } else if (this.play === 'fetch') {
       c.lookAt = p.position;
@@ -471,59 +526,174 @@ export class BirchesChapter implements Chapter {
     }
   }
 
-  /** Over to the swing, which has been moving on its own since before they came over the rise. */
+  /**
+   * The fallen birch is across the ride: she goes up to it and stops, looks along it from its root plate to its
+   * crown, and turns to the swing hanging over it.
+   */
   private toSwing(): void {
-    const { child: c, birches } = this.cast;
-    this.play = 'carry'; c.stop();
+    const { child: c } = this.cast;
+    const { stop } = this.cast.birches.swingWay;
+    this.play = 'carry';
+    c.stop();
     this.to('toSwing');
-    const seat = birches.swing.seat(this.seat);
-    c.lookAt = this.tmp.copy(seat).setY(seat.y + 0.4);
-    c.walkTo(seat.x + 0.9, seat.z + 1.5, false, undefined, 0.5);
+    this.swingStep = 'toStop';
+    fallenTop(alongFallen(stop.x, stop.z), this.boleAhead);
+    c.lookAt = this.boleAhead;
+    c.walkTo(stop.x, stop.z, false, () => {
+      if (this.beat !== 'toSwing') return;
+      c.faceToward(this.boleAhead.x, this.boleAhead.z, 1);
+      this.swingStep = 'looking';
+      this.stepAt = this.now;
+    }, 0.4);
   }
 
+  private goingToSwing(): void {
+    const { child: c, cygnet: bird, birches } = this.cast;
+    if (this.swingStep !== 'looking') return;
+    const k = tuning.birches.swing, looked = (this.now - this.stepAt) / k.lookFor;
+    /** Her eyes go along it one way and the other, from in front of her toward the plate and then the crown. */
+    const at = alongFallen(this.boleAhead.x, this.boleAhead.z) - Math.sin(Math.min(1, looked) * Math.PI * 2) * 0.32;
+    c.lookAt = fallenTop(THREE.MathUtils.clamp(at, 0, 1), this.lookingFor);
+    bird.watch(this.lookingFor);
+    if (looked < 1 || c.acting) return;
+    this.swingStep = 'toBoard';
+    bird.watch(null);
+    const { board } = birches.swingWay;
+    c.lookAt = birches.swing.seat(this.seat);
+    c.walkTo(board.x, board.z, false, () => { if (this.beat === 'toSwing') this.mount(); }, 0.3);
+  }
+
+  /** She gets on; the cygnet goes to watch from beside the bole, and the plane goes on her bag till she is over. */
   private mount(): void {
-    const { child: c, birches } = this.cast;
+    const { child: c, cygnet: bird } = this.cast;
     this.to('swinging');
-    this.swings = 1;
-    c.faceToward(birches.swing.pivot.x, birches.swing.pivot.z + 20, 1);
+    this.leftSwingAt = -1;
+    this.landedCheer = false;
     c.lookAt = null;
-    birches.swing.rider = 1;
-    birches.swing.braking = false;
-    this.lastSwingInput = this.now + tuning.birches.scarf.swingMountSeconds;
-    this.leavingSwing = false;
-    this.swingPushed = false;
-    this.mountFrom.copy(c.position);
+    c.stowPlane(true);
+    this.crossing.begin();
+    if (bird.carried) bird.release(this.tmp.set(c.position.x + 1, 0, c.position.z + 0.8));
+    bird.stay = false;
+    bird.errand = this.birdWatch;
+    this.birdOver = 'watching';
   }
 
-  /** Keep pushing to keep playing; let the air settle to step off. One ride, with no automatic time limit. */
+  /** Pumped as the drowned village's swing is: she lets go at the top of a forward swing, over the bole, and lands beyond it. */
   private updateSwing(): void {
-    const { child: c, birches, input } = this.cast;
-    const swing = birches.swing;
-    const mounted = THREE.MathUtils.smootherstep(this.t / tuning.birches.scarf.swingMountSeconds, 0, 1);
-    swing.seat(this.seat);
-    this.tmp.lerpVectors(this.mountFrom, this.seat, mounted);
-    this.tmp.y += Math.sin(mounted * Math.PI) * 0.15;
-    c.ride(this.tmp, 0);
-    c.swing = mounted;
-    c.kick = THREE.MathUtils.clamp(swing.angle / 0.5, -1, 1);
-    const out = Math.abs(swing.angle);
-    birches.shake(Math.min(1, out * 1.6));
-    if (!this.leavingSwing && input.present && (input.gust > 1.4 || input.charge > 0.15) && this.t > tuning.birches.scarf.swingMountSeconds) {
-      this.lastSwingInput = this.now;
-      this.swingPushed = true;
-    }
-    const patience = this.swingPushed ? tuning.birches.scarf.quietToLeaveSwing : tuning.birches.scarf.firstPushWait;
-    if (this.now - this.lastSwingInput > patience) this.leavingSwing = true;
-    swing.braking = this.leavingSwing;
-    if (this.leavingSwing && out < 0.12 && Math.abs(swing.speed) < 0.3) {
-      swing.rider = 0;
-      swing.braking = false;
-      c.swing = 0;
-      c.kick = 0;
-      c.dismount();
+    const { child: c } = this.cast;
+    const phase = this.crossing.phase;
+    if (phase === 'flying' && this.leftSwingAt < 0) this.leftSwingAt = this.now;
+    if (phase === 'landed' && this.swings === 0) {
+      /** Over: the squirrel is off along the bole ahead of them, and the cygnet makes its own way across. */
+      this.swings = 1;
       this.leg = Math.max(this.leg, CLEARING_LEG + 1);
+      this.birdOver = 'toBole';
+      /** A plane left on the near side comes over after her and settles a step on, where she will pick it up. */
+      const { plane } = this.cast, { onward } = this.cast.birches.swingWay, next = SCARF_SNAGS[1];
+      if (!plane.held) {
+        const d = Math.hypot(next.stopX - onward.x, next.stopZ - onward.z) || 1, x = onward.x + (next.stopX - onward.x) / d * 2.5,
+          z = onward.z + (next.stopZ - onward.z) / d * 2.5;
+        plane.settleAt(this.tmp2.set(x, Math.max(heightAt(x, z), 0), z));
+      }
+      /** It goes over from where it watched, so it never walks along the bole's face to get there. */
+      const { cygnet: bird } = this.cast, t = THREE.MathUtils.clamp(alongFallen(bird.position.x, bird.position.z), ...BIRD_OVER);
+      besideBole(t, BIRD_FLUTTER_FROM - 1.2, this.birdOff);
+      fallenTop(t, this.birdTop);
+      besideBole(t, -0.9, this.birdDown);
+      this.birdAt = this.now;
+    }
+    if (phase === 'landed' && !this.landedCheer && !c.acting) {
+      this.landedCheer = true;
+      c.cheer();
+    }
+    if (phase === 'over') {
+      c.stowPlane(false);
       this.resumeWalk();
     }
+  }
+
+  /** Its own way over once she is across: up to the bole's foot, a flutter up onto it, a look at her, and down the far side. */
+  private birdOverBole(): void {
+    const { cygnet: bird, child: c } = this.cast;
+    const k = tuning.birches.swing, since = this.now - this.birdAt;
+    switch (this.birdOver) {
+      case 'watching':
+        bird.watch(this.cast.birches.swing.seat(this.seat));
+        if (!bird.errand) bird.stay = true;
+        break;
+      case 'toBole': {
+        bird.watch(c.position);
+        bird.stay = false;
+        const off = Math.hypot(bird.position.x - this.birdTop.x, bird.position.z - this.birdTop.z);
+        if (off > BIRD_FLUTTER_FROM) {
+          bird.errand = this.birdOff;
+          break;
+        }
+        if (since < k.flutterWait) break;
+        bird.errand = null;
+        bird.hopOnto(this.birdTop, Math.atan2(this.birdDown.x - this.birdTop.x, this.birdDown.z - this.birdTop.z), k.flutterFor + 0.12 * off, k.flutterArc);
+        this.birdOver = 'up';
+        this.birdAt = this.now;
+        break;
+      }
+      case 'up':
+        bird.watch(c.position);
+        if (since > k.flutterFor + 0.12 * BIRD_FLUTTER_FROM + k.onTopFor) {
+          bird.bound(this.birdDown, 'hop', k.hopDownFor, k.hopDownArc);
+          this.birdOver = 'down';
+          this.birdAt = this.now;
+        }
+        break;
+      case 'down':
+        if (since > k.hopDownFor + 0.3) {
+          bird.stay = false;
+          bird.watch(null);
+          this.birdOver = 'over';
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** The rope on the bough is the room's own creak; her coat as she lets go, and the leaves she lands in. */
+  private swingSound(kind: SwingEvent, at: THREE.Vector3, strength: number): void {
+    if (kind === 'creak') return;
+    if (kind === 'leap') {
+      this.cast.knock?.(SWING_SOUNDS.leap, at, 0.5 * strength);
+      return;
+    }
+    this.cast.leafSound?.('burst', at, tuning.birches.swing.landLeaves);
+    this.cast.birches.kick(at.x, at.z, 1.8, 1);
+  }
+
+  /**
+   * Beyond the fallen birch a lens that would stand over it among its broken stubs comes in front of it, on a lens only
+   * a little longer, so the nearer view still holds her whole.
+   */
+  private clearOfBole(s: Shot): void {
+    const from = s.from;
+    if (!from) return;
+    const toward = from.x * FALLEN_SOUTH.x + from.z * FALLEN_SOUTH.y;
+    if (toward <= 0) return;
+    const most = (-LENS_OFF_BOLE - southOfFallen(s.target.x, s.target.z)) / toward;
+    if (most <= 4 || s.distance <= most) return;
+    s.zoom = (s.zoom ?? 1) * Math.sqrt(s.distance / most);
+    s.distance = most;
+  }
+
+  /** A point on her own side of the fallen birch, a step off it: she never walks through it after anything. */
+  private ownSide(x: number, z: number): THREE.Vector2 {
+    const off = southOfFallen(x, z), want = this.swings ? Math.min(off, -KEEP_OFF) : Math.max(off, KEEP_OFF);
+    return this.sideAt.set(x + FALLEN_SOUTH.x * (want - off), z + FALLEN_SOUTH.y * (want - off));
+  }
+
+  /** The plane plays on her side of the fallen birch, and one that comes down on the other is lifted back over. */
+  private keepPlay(): { back: THREE.Vector2; at: number } {
+    const side = this.swings ? -1 : 1;
+    this.edge.back.set(FALLEN_SOUTH.x * side, FALLEN_SOUTH.y * side);
+    this.edge.at = KEEP_OFF - side * southOfFallen(0, 0);
+    return this.edge;
   }
 
   private toScarf(): void {
@@ -646,7 +816,8 @@ export class BirchesChapter implements Chapter {
   private fetch(): void {
     const { child: c, plane: p } = this.cast;
     this.play = 'fetch';
-    c.walkTo(p.position.x, p.position.z, true, () => {
+    const to = this.ownSide(p.position.x, p.position.z);
+    c.walkTo(to.x, to.y, true, () => {
       if (this.beat !== 'walk' || this.play !== 'fetch') return;
       if (Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) > 2.6 || !p.landed) {
         this.play = 'watch';
@@ -723,24 +894,28 @@ export class BirchesChapter implements Chapter {
       s.distance = this.beat === 'unravelling' ? 28 : scarf.active === 1 ? 17 : first ? 18 : 24;
       s.distance *= Math.max(1, 0.56 / (window.innerWidth / window.innerHeight));
       s.height = this.beat === 'unravelling' ? 7 : scarf.active === 1 ? 3.8 : first ? 3 : 5.5;
+      /** Portrait's tight frame has no room to come nearer, and its lens stands clear above the bole's middle. */
+      if (this.swings && window.innerWidth >= window.innerHeight) this.clearOfBole(s);
       this.focus.copy(at);
       this.pace = 0.5;
       return;
     }
-    if (this.beat === 'swingOffer' || this.beat === 'toSwing' || this.beat === 'swinging') {
-      /** Three-quarters on to the swing, low: the one shot in the room that is about a face and not a hillside. */
-      const seat = this.cast.birches.swing.seat(this.seat);
-      s.from = this.from;
-      s.target.set(seat.x, seat.y + 0.9, seat.z);
-      s.distance = 14;
-      s.height = 2.6;
-      if (this.beat === 'swingOffer') {
-        s.target.lerp(this.tmp.set(c.x, c.y + 1, c.z), .5);
-        s.distance = Math.max(17, 15 + Math.hypot(c.x - seat.x, c.z - seat.z) * .6) * Math.max(1, .56 / (window.innerWidth / window.innerHeight));
-        s.height = 4.2;
-      }
+    if (this.beat === 'swinging') {
+      /**
+       * Three-quarters on to the swing from the south-east, low and into the sun, the arc running up to the bole and
+       * over it; portrait looks nearer along the arc. As she flies the lens rises and looks on to where she lands.
+       */
+      const k = tuning.birches.swing, aspect = window.innerWidth / window.innerHeight, f = aspect < 1 ? k.lensTall : k.lens;
+      const pivot = this.cast.birches.swing.pivot;
+      const over = this.leftSwingAt < 0 ? 0 : THREE.MathUtils.smootherstep(this.now - this.leftSwingAt, 0, k.landedIn);
+      const x = pivot.x - 0.6, z = pivot.z - f.ahead - over * k.follow;
+      s.from = this.swingFrom.set(f.from[0], 0, f.from[1]).normalize();
+      s.target.set(x, Math.max(heightAt(x, z), 0) + f.lift - over, z);
+      s.distance = f.distance * (aspect < 1 ? Math.max(1, 0.5625 / aspect) : 1);
+      s.height = f.height + over * k.rise;
+      s.zoom = f.zoom === 1 ? undefined : f.zoom;
       this.pace = 0.4;
-      this.focus.copy(seat);
+      this.focus.copy(this.cast.birches.swing.seat(this.seat));
       return;
     }
     s.from = undefined;

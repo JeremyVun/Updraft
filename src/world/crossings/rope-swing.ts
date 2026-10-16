@@ -59,6 +59,8 @@ export interface SwingSpot {
 
 const SEAT_HALF = 0.36;
 
+export type SwingKnobs = typeof tuning.crossings.swing;
+
 /**
  * A rope swing hanging from a bough over open water: two old ropes and a plank. It swings in one plane. A stroke
  * across it on screen pumps it higher along its travel and never takes height away, so a player who keeps at it
@@ -100,10 +102,20 @@ export class RopeSwing {
   private readonly foot = new THREE.Vector2();
   private readonly ahead = new THREE.Vector2();
 
-  constructor(spot: SwingSpot) {
+  /** `look` replaces the old rope and plank with a swing of its own, hanging from the pivot with its seat `rope` below. */
+  constructor(spot: SwingSpot, look?: THREE.Object3D, readonly knobs: SwingKnobs = tuning.crossings.swing) {
     this.pivot.copy(spot.pivot);
     this.toward.copy(spot.toward).normalize();
     this.rope = spot.rope;
+    this.objects = [this.group];
+    this.group.position.copy(this.pivot);
+    this.group.rotation.order = 'YXZ';
+    if (look) this.group.add(look);
+    else this.group.add(this.ropeAndPlank());
+    this.pose();
+  }
+
+  private ropeAndPlank(): THREE.Mesh {
     const L = this.rope;
     const parts = [
       tagged(new THREE.BoxGeometry(SEAT_HALF * 2 + 0.16, 0.09, 0.34).translate(0, -L - 0.01, 0), PLANK, 0, 0),
@@ -118,13 +130,9 @@ export class RopeSwing {
     const material = new THREE.ShaderMaterial({ vertexShader: SWING_VERT, fragmentShader: SWING_FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(merged(parts), material);
     mesh.frustumCulled = false;
-    this.group.add(mesh);
-    this.group.position.copy(this.pivot);
-    this.group.rotation.order = 'YXZ';
-    this.objects = [this.group];
     this.group.layers.enable(REFLECTION_LAYER);
     mesh.layers.enable(REFLECTION_LAYER);
-    this.pose();
+    return mesh;
   }
 
   reset(): void {
@@ -157,7 +165,7 @@ export class RopeSwing {
   }
 
   get gravity(): number {
-    return 9.81 * tuning.crossings.swing.gravity;
+    return 9.81 * this.knobs.gravity;
   }
 
   /** How high this swing toward the far side will carry it, radians, if nothing more pushes it. */
@@ -182,7 +190,7 @@ export class RopeSwing {
    */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, wind: WindField, dt: number): number {
     if (input.muted || !input.present || dt <= 0) return 0;
-    const k = tuning.crossings.swing;
+    const k = this.knobs;
     const aspect = camera.aspect;
     this.from.set(input.prevNdc.x * aspect * 0.5, input.prevNdc.y * 0.5);
     this.to.set(input.ndc.x * aspect * 0.5, input.ndc.y * 0.5);
@@ -231,7 +239,7 @@ export class RopeSwing {
    * way it is going (from the top of a swing, the way it will fall).
    */
   private raise(by: number): void {
-    const k = tuning.crossings.swing;
+    const k = this.knobs;
     const L = this.rope, g = this.gravity;
     const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : this.angle > 0.02 ? -1 : this.angle < -0.02 ? 1 : this.way;
     const height = this.swingHeight;
@@ -245,7 +253,7 @@ export class RopeSwing {
   /** The world's own felt air only moves it empty; with her on it, only strokes pump it. */
   update(dt: number, wind: WindField): void {
     if (dt <= 0) return;
-    const k = tuning.crossings.swing;
+    const k = this.knobs;
     this.brushAge += dt;
     const arriving = this.asked * (1 - Math.exp(-dt / k.lag));
     this.asked -= arriving;

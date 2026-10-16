@@ -439,7 +439,7 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
-  bow's own birch, on the swing tree's trunk under the limb. **Counting:** before rounds 2 and 3 it dashes on ahead to hide as the
+  bow's own birch, on the swing tree's trunk under the limb (and on along the fallen birch's top once she is over). **Counting:** before rounds 2 and 3 it dashes on ahead to hide as the
   tangle's loop starts to lift. Freed before it has hidden, she watches it go, turns her back on where it went,
   three-quarters to the lens, covers her eyes with both mittens and counts, nodding on every number; then she looks
   round for it and sets off. The lens stays on her in the tangle's frame; the squirrel goes off small and far up the
@@ -467,9 +467,16 @@ for the rest of the voyage. Under the canopy a stroke's wind lands no further th
 (`pointerReach`; `docs/contracts/wind.md`), so strokes at the trees or circles round the wool never flatten the next
 round's heaps.
 
-**The swing** on the rise is optional and rideable once: brushing the empty seat invites the child on and pushes it;
-she rides while the player keeps gusting, and 4 s of quiet air (7 s if nobody pushes once she is on,
-`quietToLeaveSwing`, `firstPushWait`) brakes it and she steps off.
+**The swing over the fallen birch.** Just past the swing tree a birch has come down across the ride: its root plate
+torn up on the west, its dead crown in a tangle on the east, standing birches at both ends, the bole too high to climb
+and propped on the limbs it snapped under itself, so there is no way round, over or under it. The swing hangs from a
+limb over it and is the way on, ridden once. She walks up to the bole, looks along it, and gets on; the player pumps it
+with strokes along its arc exactly as in the drowned village (`SwingCrossing`, `tuning.crossings.swing` with
+`tuning.birches.swing.ride`), and at the top of a forward swing that will carry her she lets go, flies over the bole and
+lands on her feet in the leaves beyond with a laugh. If the player stops she waits on the swing, the drawn push along its
+arc offered after 5 s. The squirrel watches from the swing tree's trunk and runs on along the bole's top ahead of them;
+the cygnet flutters up onto the bole and hops down after her. Her walk, her fetching and the plane all keep to her side
+of it (`southOfFallen`, the plane's `playEdge`).
 
 **Music.** "The Red Door Opens" (`assets/music/red_door.ogg`) plays from the approach crossing through boarding and
 loops only while they are on the island or its approach. On the sail it plays out its pass, fading early if it would

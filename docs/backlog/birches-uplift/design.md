@@ -95,7 +95,7 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 | gap A, 16 m | −1065 to −1081 | open wood between the log and tangle 1, so round 1 and tangle 1 each have their own frame | new |
 | −1081 / −1088 | −1081 / −1088 | tangle 1, lift a loop off a fork | as now |
 | gap B, 16 m | −1101.5 to −1117.5 | **round 2**, on the rise's lower slope, two new heaps at the corridor's sides | new |
-| −1113 / −1118 | −1129 / −1134 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
+| −1113 / −1121 | −1129 / −1137 | heap 1 at the swing tree's foot (free play, as now); the fallen birch across the ride and the swing over it, the only way on | changed (8e) |
 | −1132 / −1139 | −1148 / −1155 | tangle 2, circle the coils up | as now |
 | −1149 | −1165 | heap 2, the deep one at the bottom of the hollow, just short of gap C | as now |
 | gap C, 24 m, in the hollow | −1170 to −1194 | **round 3**, the shuffle among three new heaps set out in front of her on the hollow's west bank; then **the leap** | new |
@@ -126,7 +126,12 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
    the rise, out of the swing's frame.
    Now there is a choice. Only the right heap twitches; the tail shows less often. A wrong heap bursts into gold
    harmlessly (it's fun on its own), and the cygnet may rummage one and come up with nothing but a leaf on its head.
-4. **The swing** (optional). The squirrel sits on the swing limb while she rides.
+4. **The swing over the fallen birch.** A birch has come down across the ride just past the swing tree, too high to
+   climb, with no way round. She stops at it, looks along it, and gets on the swing that hangs over it; the player
+   pumps it as in the drowned village, and at the top of a forward swing she lets go, flies over the bole and lands on
+   her feet in the leaves beyond with a laugh. The squirrel watches from the swing tree's trunk and runs on along the
+   bole ahead of them; the cygnet flutters up onto the bole and hops down after her ("As built: the swing over the
+   fallen birch").
 5. **Tangle 2.** The squirrel is up on the broken birch's top while the coils are circled off. On their way up they
    close in over it for a moment: it startles, jolting down with a squeak, and is uncovered again as they lift clear
    and slide off to the side, when it shakes itself and scolds the wool (Jeremy's idea, 2026-10-16).
@@ -357,7 +362,13 @@ What follows from it (2026-10-16):
   head looking back.
 - **After the second knot** the squirrel climbs down the broken birch and runs on to where it goes next, in
   continuous motion, never a jump cut.
-- **The swing:** proposal pending Jeremy's answer (below, once given).
+- **The swing goes over a fallen birch** (approved: "ok yea the fallen birch makes sense"). A birch lies across the
+  ride just past the swing tree, its dead crown a tangle of branches, too high to climb, no way round. The swing hangs
+  over it and is no longer optional: she sits on it, the player pumps it with strokes along the arc exactly as in the
+  drowned village (training for it), and at the top of a forward swing she lets go, flies over the trunk and lands on
+  her feet in the leaves beyond (not into a heap: round 3's leap is the room's big leaf moment). The cygnet flaps up
+  onto the trunk and hops down after her; the squirrel runs along the trunk ahead of them. If the player stops, she
+  waits on the swing, as in the drowned village: there is no more stopping the wind to get off.
 - **Performance:** find why the quality governor steps down to medium on the birches, and fix the cause without
   changing the look. Measured on this Mac (M4 Pro, 1920 × 1080 at DPR 2, where Auto's ladder is Ultra at 1.08×
   with 2× MSAA, then Medium at 1×, then Low): with nothing else on the GPU, the whole walk with real gestures (13,000
@@ -1047,10 +1058,70 @@ its gesture), landscape: 4:20 (259.9 s), from stepping ashore to the push-off.
 - Portrait tangle 3's squirrel is still about 11 px on the birch behind the loop.
 - The shuffle's middle heap is its most common end (half the time).
 
+### As built: the swing over the fallen birch (phase 8e)
+
+Jeremy's question in the second playtest ("it's not clear why the child gets on the swing ... have the swing be a way
+for the child to swing over a leaf pile or some kind of obstacle like a tree trunk blocking the way?") and his
+approval of the fallen birch. Built on `birches-uplift-swing` from the concept staging.
+
+**The fallen birch** (`world/birches.ts` `FALLEN_BIRCH`, `fallenBirch()`). A 15 m birch lies across the ride 5.3 m north
+of the rope's hang point: its root plate upright on the west, its bole east over the ride (middle 1.6 → 1.4 m up,
+radius 0.62 → 0.40, top about 1.8 m over the ride, her chin), its dead crown splayed north and east. Standing birches
+at both ends (`BANKS`) and nothing grown within 2.2 m of it or in the crown leave no way round. The limbs it snapped
+under itself (`FALLEN_PROPS`) are driven into the ground on both sides beneath it, with broken lengths among them, and
+leaves are banked along both sides (`litterSeed`), so the gap under it does not read as a way under. The bole carries
+the standing birches' bark laid on its side (`BOLE_FRAG`: the dashes run round the bole, damp and mossy underneath),
+flares into the plate and tapers into the crown; the plate is a ragged slab of earth with clods off its foot and 34
+torn roots round its rim and off its far face (`EARTH_FRAG`, rim-lit against the low sun). Helpers for everything that
+must keep to one side of it: `southOfFallen`, `alongFallen`, `fallenTop`, `FALLEN_SOUTH`.
+
+**The swing** is the drowned village's: `RopeSwing` (the birches' own seat and ropes as its `look`, rope 6.3 m from
+`SWING_LIMB` y 0.41, swinging north) driven by `SwingCrossing`, with `tuning.crossings.swing` and the birches'
+differences in `tuning.birches.swing.ride` (`most` 1.05 rad, a little more height than the drowned's 0.95, because the
+bole stands under the forward arc). One stroke along the arc across the ropes or seat is one pump; she lets go near
+the top of a forward swing once the leap reaches the landing and her feet clear the bole by `clear` (0.4 m;
+`SwingWay.over`, new, checked on the arc `Traveller.leap` flies). If the player stops she waits on the swing; the
+drawn push along the arc comes after 5 s, and after 90 s with no new height the world's own gusts pump it (both as in
+the drowned village). Measured (landscape, strokes once per half swing): 9–10 strokes, 22–28 s riding; a sloppy
+player's random strokes round the seat, 28 strokes in 37 s. Her feet cleared the bole's top by 0.9–1.0 m.
+
+**The beat** (`story/birches.ts`). The swing is a stop on the walk (`STOPS`), between round 2 and the second tangle,
+owed until she is over (`swings`). Within `arriveWithin` of the bole (or 4 m off it) she walks up to it, stops
+`stopShort` off it east of the seat, and looks along it one way and the other (`lookFor`, the cygnet looking with her),
+then turns, walks to the seat and gets on; the plane goes onto her bag till she is over. She lands on her feet at band
+(1.6, −1125.4), 4 m past the bole, the leaves kicked up round her with a burst of leaf sound (`landLeaves`), laughs
+(`cheer`), looks back at the empty swing, and walks on to (0.2, −1129.6); the walk resumes there (on to the second
+tangle). Heap 1 at the swing tree's foot stays free play.
+
+**The camera.** The approach is the walking lens (the swing in front of the bole, the plate left, the crown right).
+On the swing, `tuning.birches.swing.lens`: three-quarters on from the south-east, 20 m back, 4.8 m up, into the sun;
+portrait `lensTall`, nearer along the arc, 24 m back on a 1.2 lens. From the let-go the lens rises `rise` (6 m) and
+looks `follow` (5 m) further on over `landedIn` (1.8 s), one continuous move, so she lands whole in the middle of it
+with her feet above the bole. Past the bole the second tangle's landscape lens, which stood right over the bole among
+its stubs, stays 3 m beyond it on a slightly longer lens (`clearOfBole`); portrait's tight frame is unchanged, its lens
+standing clear above the bole's middle.
+
+**The squirrel** waits on the swing tree's trunk under the limb (`SWING_PERCH`) while she rides. As she lands it is
+off: down the trunk, up the bole's round side, along its top ahead of them and down the far side (`overBole`,
+`boleFoot`), on to the broken birch.
+
+**The cygnet** watches from beside the bole, east of the seat, while she swings. Once she is over it goes over where
+it stands (between the props, `BIRD_OVER`): from within 2.6 m of the top it flutters up onto the bole
+(`Cygnet.hopOnto`, a flapping scramble onto a perch), stands a moment looking at her, and hops down the far side,
+then follows. It never walks along the bole's face to get there (it turns too wide for a near target).
+
+**Keeping to her side.** Her walk after the plane is kept 1.2 m off the bole on whichever side she is (`ownSide`), and
+the plane's `playEdge` lies along the bole on that side, so one that comes down beyond it is lifted back over.
+
+**Saves.** `-swing` in the point name now means she is over the fallen birch. A save restored with the swing ridden
+or the second tangle freed counts as over, and one restored on the near side (saves made where the swing was
+optional, or at the clearing) starts her at the way on beyond it. A save before it walks her to it; a walk that finds
+her beyond the bole without having ridden counts it as passed, as a round she was put past.
+
 ### Saves
 
 Each finished round is a checkpoint. The birches payload gains `squirrelRounds`, and point names gain the round
-count: `squirrel<rounds>-scarf<tangles>`, with `-swing` once it is ridden. Saves made before this build infer the
+count: `squirrel<rounds>-scarf<tangles>`, with `-swing` once she is over the fallen birch on it. Saves made before this build infer the
 rounds already walked past from their tangle count, swing and leg (a round comes before its tangle; the second
 before the swing too), so a resumed player never repeats or skips a round's place on the walk.
 
@@ -1076,7 +1147,7 @@ follow the echo rules: scenery only, above the tide line and off the walk, and t
 - **No fourth wall.** The child looks at the heaps and the squirrel, never at the camera.
 - **The cygnet never flies here** (`mayFly = false`), and its play stays its own.
 - **The room's existing rulings stand** (chapters.md): the leaves don't behave like grass; the scarf reads as wool
-  and its draw-in is unhurried; the swing is optional and rideable once.
+  and its draw-in is unhurried; the swing is the way over the fallen birch, ridden once.
 - **The camera never jerks**; scenery gets glances, never a stop-the-world pan, and a dash to hide gets none.
 - **Legibility:** the child, the cygnet and the squirrel are whole and readable in every round's frame, in portrait
   and landscape.

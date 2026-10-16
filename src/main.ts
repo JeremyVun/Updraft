@@ -790,10 +790,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
   if (story.name === 'drowned') village.tub.brush(rig.camera, input, dt);
   if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
-  if (story.name === 'birches') {
-    birches.scarf.brush(rig.camera, input, wind, dt);
-    birches.swing.brush(rig.camera, input, wind);
-  }
+  if (story.name === 'birches') birches.scarf.brush(rig.camera, input, wind, dt);
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   if (story.name === 'meadow' && input.present && !input.muted) swanFeather.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   embers.updraft(input, story.current.updraftTarget ?? null);
