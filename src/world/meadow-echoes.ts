@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
+import { POND } from './heightfield';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import type { WindField, WindSample } from '../wind/field';
@@ -197,6 +198,8 @@ interface Plant {
   lean: THREE.Vector2;
   leanSpeed: THREE.Vector2;
   seen: boolean;
+  /** Inside the lens this frame, so the invitation never points at sleepers off the edge of a narrow screen. */
+  framed: boolean;
   color: THREE.Color;
   opened: boolean;
 }
@@ -248,9 +251,12 @@ export class MeadowEchoes {
   private readonly perHead: Uint16Array;
   private readonly gone: Uint16Array;
   private readonly column = new THREE.Vector3();
+  /** Which way the released down drifts, chosen as it goes from where it is watched. */
+  private readonly away = new THREE.Vector2(-0.46, -0.89);
   private readonly toward = new THREE.Vector3();
   private readonly mean = new THREE.Vector3();
   private readonly asleep = new THREE.Vector3();
+  private readonly lens = new THREE.Vector3();
   private updraft = 0;
   private effort = 0;
   private turning = 1;
@@ -337,7 +343,7 @@ export class MeadowEchoes {
   }
 
   private plant(x: number, y: number, z: number, seen: boolean, color: THREE.Color): Plant {
-    return { at: new THREE.Vector3(x, y, z), shown: 0, speed: 0, lean: new THREE.Vector2(), leanSpeed: new THREE.Vector2(), seen, color, opened: false };
+    return { at: new THREE.Vector3(x, y, z), shown: 0, speed: 0, lean: new THREE.Vector2(), leanSpeed: new THREE.Vector2(), seen, framed: false, color, opened: false };
   }
 
   get source(): THREE.Vector3 { return this.patches[Math.min(this.seeds.completed, 1)]; }
@@ -345,12 +351,14 @@ export class MeadowEchoes {
   /** Where the bed still sleeps: round its sleepiest flower, so the sweep shown passes over the sleepers. */
   get invitation(): THREE.Vector3 {
     if (this.seeds.completed !== 0) return this.patches[1];
+    const framed = this.flowers.some(f => f.seen && f.framed);
+    const offered = (f: Plant): boolean => f.seen && (f.framed || !framed);
     let least = 0;
-    this.flowers.forEach((f, i) => { if (f.seen && (!this.flowers[least].seen || this.seeds.wake[i] < this.seeds.wake[least])) least = i; });
+    this.flowers.forEach((f, i) => { if (offered(f) && (!offered(this.flowers[least]) || this.seeds.wake[i] < this.seeds.wake[least])) least = i; });
     const from = this.flowers[least].at, mean = this.asleep.set(0, 0, 0);
     let n = 0;
     this.flowers.forEach((f, i) => {
-      if (f.seen && this.seeds.wake[i] < .7 && f.at.distanceTo(from) < 3) { mean.add(f.at); n++; }
+      if (offered(f) && this.seeds.wake[i] < .7 && f.at.distanceTo(from) < 3) { mean.add(f.at); n++; }
     });
     return n ? mean.divideScalar(n) : mean.copy(from);
   }
@@ -384,9 +392,16 @@ export class MeadowEchoes {
     }
     this.material.uniforms.uTime.value = this.headMaterial.uniforms.uTime.value = time;
     this.effort = 0;
+    if (this.seeds.active && this.seeds.completed === 0) for (const f of this.flowers) {
+      const p = this.lens.copy(f.at).project(camera);
+      f.framed = p.z < 1 && Math.abs(p.x) < .9 && Math.abs(p.y) < .9;
+    }
     if (this.seeds.active && this.enabled) this.brush(dt, camera, input, wind);
     const finishing = this.seeds.finishing >= 0;
-    if (this.seeds.update(dt)) this.lastReceived = time;
+    if (this.seeds.update(dt)) {
+      this.lastReceived = time;
+      if (this.seeds.completed === 2) this.aimDrift(camera);
+    }
     if (!finishing && this.seeds.finishing >= 0) this.flourish();
     this.grow(dt);
     this.fly(dt, time);
@@ -501,6 +516,18 @@ export class MeadowEchoes {
     this.petals.instanceMatrix.needsUpdate = true;
   }
 
+  /**
+   * The released down drifts away from the lens over the land, turned `driftTurn` off the side the pond is on, so
+   * the gaze that follows it never goes looking toward the family.
+   */
+  private aimDrift(camera: THREE.Camera): void {
+    const ax = this.column.x - camera.position.x, az = this.column.z - camera.position.z, length = Math.hypot(ax, az);
+    if (length < 1e-3) return;
+    const toPond = new THREE.Vector2(POND.x - this.column.x, POND.z - this.column.z), centre = new THREE.Vector2();
+    const [left, right] = [T.driftTurn, -T.driftTurn].map(turn => new THREE.Vector2(ax / length, az / length).rotateAround(centre, turn));
+    this.away.copy(left.dot(toPond) < right.dot(toPond) ? left : right);
+  }
+
   /** Down rides the column the player winds: drawn in, round and up, spilling out over the top. */
   private fly(dt: number, time: number): void {
     const s = this.seeds, done = s.completed >= 2, released = s.completed === 1 ? s.progress : done ? 1 : 0;
@@ -508,7 +535,8 @@ export class MeadowEchoes {
     const after = done ? 1 - THREE.MathUtils.smoothstep(since, T.afterlift, T.afterlift + 4) : 0;
     const want = Math.max(this.effort, after);
     this.updraft += (want - this.updraft) * (1 - Math.exp(-dt * (want > this.updraft ? 1.8 : .4)));
-    const c = this.column, ground = c.y - 1.3, [driftX, driftZ] = T.drift, top = done ? T.releaseTop : T.columnTop;
+    const c = this.column, ground = c.y - 1.3, driftX = this.away.x * T.drift, driftZ = this.away.y * T.drift;
+    const top = done ? T.releaseTop : T.columnTop;
     let shown = 0, sx = 0, sy = 0, sz = 0, highest = 0;
     for (let i = 0; i < this.phase.length; i++) {
       if (this.phase[i] === 2) continue;
@@ -533,7 +561,7 @@ export class MeadowEchoes {
       const wx = Math.sin(time * .7 + r * 40) * .3, wz = Math.cos(time * .53 + r * 23) * .3;
       let fx: number, fy: number, fz: number;
       if (done) {
-        fx = driftX * (.6 + .7 * r) + wx; fz = driftZ * (.6 + .7 * r) + wz; fy = .15 + .3 * r;
+        fx = driftX * (.6 + .7 * r) + wx; fz = driftZ * (.6 + .7 * r) + wz; fy = T.driftRise * (.5 + r);
       } else {
         const hover = 2.2 + r * 3, settle = T.hoverHeight + r * 2.5;
         fx = uz * .45 * this.turning + ux * (hover - d) * .25 + wx; fz = -ux * .45 * this.turning + uz * (hover - d) * .25 + wz;

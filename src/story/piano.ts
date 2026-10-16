@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { FROM, verticalFov, widthFit, type Shot } from '../camera';
 import { tuning } from '../tuning';
-import { heightAt } from '../world/island';
-import { piano, PLACE } from '../world/piano';
+import { piano } from '../world/piano';
 import { windBough } from '../world/wind-bough';
 import { MEADOW_CALLS, MEADOW_FINALE, type MeadowAnswer } from '../audio/meadow-duet';
 import type { Cast } from './cast';
@@ -58,7 +57,7 @@ export class PianoStop {
   /** The cygnet's own turn at the keys: when it starts walking them, and when it is back in the arms. */
   private walkFrom = 0;
   private walkStep = 0;
-  /** When the island is told to wake all the way, at the latest, and when the camera began its one long rise. */
+  /** When the island is told to wake all the way, at the latest, and when the finale's widening began. */
   private wakeAt = 0;
   /** When the cygnet starts along the keys: on the finale's arrival, after her last answer has rung down. */
   private walkAt = 0;
@@ -73,9 +72,8 @@ export class PianoStop {
   private readonly side = new THREE.Vector3();
   private readonly hands = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly approachChild = new THREE.Vector3();
-  /** The finale's three views: the playing view it rises from, the whole island, and the walk's view it comes down to. */
+  /** The playing view the duet starts from and the walk's view its widening ends on. */
   private readonly rest = view();
-  private readonly high = view();
   private readonly onward = view();
   /** The paper plane gliding to the music desk as she comes to the piano, and back into her hand as she leaves. */
   private planeGlide: { to: 'desk' | 'hand'; start: number; length: number } | null = null;
@@ -192,24 +190,25 @@ export class PianoStop {
     return this.beat !== 'ahead' && this.beat !== 'done';
   }
 
-  /** A steady view over the keys into falling ground; one gentle widening follows the final phrase. */
+  /**
+   * A steady view over the keys into falling ground that steps back and up as the duet goes on: a little after each
+   * answer, and the rest of the way under the finale, ending on the walk's own view of her so nothing moves when she
+   * gets up.
+   */
   frame(shot: Shot): number | null {
     if (this.beat === 'ahead' || this.beat === 'done') return null;
     const t = tuning.piano;
-    if (this.roseFrom > 0) {
-      // The walk's own view of her, which the story has already put in the shot, is where the finale comes down to.
-      const from = shot.from ?? FROM;
-      this.onward.target.copy(shot.target);
-      this.onward.bearing = Math.atan2(from.x, from.z);
-      this.onward.distance = shot.distance;
-      this.onward.height = shot.height;
-    }
+    // The walk's view of her, which the story has already put in the shot, is where the duet's widening ends.
+    const from = shot.from ?? FROM;
+    this.onward.target.copy(shot.target);
+    this.onward.bearing = Math.atan2(from.x, from.z);
+    this.onward.distance = shot.distance;
+    this.onward.height = shot.height;
     /** It waits further out while they are still on their way to it and comes in as they sit: one move, not two. */
     const settled = this.beat === 'walking' || this.beat === 'looking' ? 0 : 1;
-    let bearing = piano.yaw + t.frameTurn;
+    const bearing = piano.yaw + t.frameTurn;
     let distance = t.frameBack + t.frameWide * (1 - settled);
-    let height = t.frameUp + t.frameHigh * (1 - settled);
-    let on = t.frameOn;
+    const height = t.frameUp + t.frameHigh * (1 - settled);
     this.mid.set(piano.keys.x, piano.keys.y + t.frameLook, piano.keys.z - t.frameOn);
     shot.fitWidth = true;
     shot.subjects = undefined;
@@ -221,51 +220,35 @@ export class PianoStop {
       distance += gap * t.approachBack;
       shot.subjects = this.approachFrame;
     }
-    if (this.heardTo > 0) {
-      // Each answer steps the view back and up to take in the colour it sent, and the view stays there: the
-      // field grows with the music, and the lens never pumps out and back to the keys between answers.
-      const step = Math.min(t.restBack.length, this.heardTo);
-      const ease = this.heardTo > t.restBack.length ? 1
-        : THREE.MathUtils.smoothstep((this.roseFrom || this.now) - this.responseAt, 0, t.restEase);
-      const rest = (list: readonly number[], base: number, n: number): number => n > 0 ? list[n - 1] : base;
-      on = THREE.MathUtils.lerp(rest(t.restOn, t.frameOn, step - 1), rest(t.restOn, t.frameOn, step), ease);
-      distance = THREE.MathUtils.lerp(rest(t.restBack, distance, step - 1), rest(t.restBack, distance, step), ease);
-      height = THREE.MathUtils.lerp(rest(t.restUp, height, step - 1), rest(t.restUp, height, step), ease);
-      this.mid.z -= on - t.frameOn;
-    }
-    if (this.roseFrom > 0) return this.finale(shot, bearing, distance, height);
     shot.target.copy(this.mid);
     shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.distance = distance;
     shot.height = height;
-    return this.responseAt >= 0 && this.now - this.responseAt < t.phraseRest ? 1.3 : t.framePace;
-  }
-
-  /**
-   * Under the bough's finale, one move: up and out until the whole island is seen turning green, a hold on it, and
-   * down to the walk's own view of her as she gets up. It is the playing view drawn back for a narrow screen at the
-   * start and the walk's view at the end, so nothing moves at either hand-over.
-   */
-  private finale(shot: Shot, bearing: number, distance: number, height: number): number {
-    const t = tuning.piano;
+    if (this.heardTo === 0) return t.framePace;
+    // The playing view as a narrow screen draws it back, so the first step leaves from where the lens already is.
     const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
     const fit = widthFit(verticalFov(aspect), aspect);
-    const far = this.answered ? 1 : t.riseQuiet;
     this.rest.target.copy(this.mid);
     this.rest.bearing = bearing;
     this.rest.distance = distance * fit;
     this.rest.height = height * fit;
-    const x = PLACE.x + t.riseLook[0] * far, z = PLACE.z + t.riseLook[1] * far;
-    this.high.target.set(x, Math.max(heightAt(x, z), 0), z);
-    this.high.bearing = t.riseTo;
-    // One view for any screen: a tall one already sees more of the island's length, and from steeper the pond goes black.
-    this.high.distance = t.riseBack * far;
-    this.high.height = t.riseUp * far;
-    const since = this.now - this.roseFrom, down = t.riseFor + t.riseHold;
-    if (since < down) this.between(this.rest, this.high, THREE.MathUtils.smootherstep(since, 0, t.riseFor), shot);
-    else this.between(this.high, this.onward, THREE.MathUtils.smootherstep(since, down, down + t.descendFor), shot);
+    this.between(this.rest, this.onward, this.widened(), shot);
     shot.fitWidth = false;
-    return t.risePace;
+    const easing = this.roseFrom > 0 || this.now - this.responseAt < t.stepAfter + t.stepEase + t.stepSettle;
+    return easing ? t.stepPace : t.framePace;
+  }
+
+  /**
+   * How far the view has come from the playing view toward the walk's: each answer eases it out to its own step
+   * and it stays there; the finale carries it on from wherever that ease has got to, so the hand-over never jumps.
+   */
+  private widened(): number {
+    const t = tuning.piano;
+    const n = Math.min(this.heardTo, t.steps.length);
+    const ease = THREE.MathUtils.smootherstep(this.now - this.responseAt, t.stepAfter, t.stepAfter + t.stepEase);
+    const step = THREE.MathUtils.lerp(n > 1 ? t.steps[n - 2] : 0, t.steps[n - 1], ease);
+    if (this.roseFrom <= 0) return step;
+    return step + (1 - step) * THREE.MathUtils.smootherstep(this.now - this.roseFrom, 0, t.finaleEase);
   }
 
   /** Part of the way from one view to another, by ratio of reach so a move from near to far runs evenly. */
@@ -468,10 +451,9 @@ export class PianoStop {
   }
 }
 
-/** From the greening to the camera coming back down to her, when she gets up. */
+/** From the greening to the camera arriving at the walk's view of her, before she gets up. */
 function finaleFor(): number {
-  const t = tuning.piano;
-  return t.riseFor + t.riseHold + t.descendFor;
+  return tuning.piano.finaleEase;
 }
 
 function shortest(angle: number): number {

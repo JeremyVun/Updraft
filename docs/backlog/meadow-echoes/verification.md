@@ -269,3 +269,55 @@ has no `song`, since 13 October), `meadow-score-browser-check.mjs` (expects the 
 
 Not established: nobody has listened to any of it. The seams into the close, the ring-outs and the dip are judged
 from measurements, envelopes and spectrograms only.
+
+## Third playthrough: cameras — 2026-10-17
+
+Branch `meadow-fix-camera` (items 1–3 of "Third playthrough" in [design.md](design.md), with Jeremy's steer that the
+first bed stay intimate). Player-camera stills and per-frame camera traces on the dev server at fixed 1/60 s steps:
+the duet's answers given through `piano.perform` as soon as each is asked for, the flower and seed play with real
+sweeps and circles. Nobody has watched any of it in motion.
+
+- **Duet.** Each answer eases the view `piano.steps` (0.14, 0.28, 0.41, 0.54) of the way from the playing view to the
+  walk's view of her, over 6 s from 0.6 s after the trace; the finale takes it the rest of the way over 18 s from the
+  greening and ends on the walk's own view, so nothing moves when she stands. Landscape, height over her and distance
+  back: seated 2 m / 12 m, then 2.5 / 14.5, 4 / 17.7, 5.7 / 21, 7 / 25, and 15.7 / 40.7 at the end of the finale. The
+  ceiling is that walk view: 26.3 m over the ground under the lens on the knoll's south slope (the old finale climbed
+  to 123 m). Portrait starts drawn back for its narrow field (36 m) and mostly rises: 2 m over her to 15.7. The guide
+  shrinks from 813 to 394 px across the four answers in landscape (1600 wide) and stays about 210 px in portrait (390
+  wide). The final front now crosses at 24 m/s, so the slopes facing her green between about 5 and 12 s into the
+  finale while the view opens. `piano-frame-check` now asserts the widening (never back in or down by more than the
+  lens's breathing, under 32 m over the ground, ending on the walk view) in both shapes; it fails on a step back in
+  (2.06 m) and on a walk view moved to 110 m (41.7 m). Strips: `/tmp/updraft-meadowcam-ta0x/duet-strip-landscape.jpg`,
+  `duet-strip-portrait.jpg`.
+- **Surprises.** The walk view from the knoll sees the pond's water from about 16 s into the finale, and portrait's
+  walk from the seeds glimpses it, so the family now comes in only once she stops on the far rise to listen, and
+  still only out of sight (`MeadowSong.listening`). Traced from the stool to the crest in both shapes: the family's
+  `shown` is 0 on every frame the pond was seen before the listening stop; the boat stayed out of frame and the kite
+  off. From the gathered walk toward the crest the leaving camera opens onto the pond with the family on it about
+  11 s before the crest in landscape (3 s in portrait); that camera is unchanged.
+- **First bed.** Landscape looks down from 11.4 m back and 8.6 m over her (before 12.2 / 6.7), the bed's whole surface
+  in frame; portrait from 16.2 / 10.2 (before 14.6 / 7.7), constrained by the bed's width in the narrow frame (92 %
+  of its flowers in the lens, before 87 %). The invitation now only points at sleepers inside the lens; the steeper
+  portrait had left it pointing off the screen edge, and broad scripted sweeps then stalled at 61 % awake. Leaving
+  either play the lens waits until she has walked 8 m (`cameraSetOff`), because the cygnet a step behind her slid out
+  of the bottom of the steep view as the lens carried her stride. Coming to a stand the walk's view gives way over
+  her last 16 m: the push in from the walk view to the bed peaks at 8 m/s, where it lunged at 14 m/s before.
+  Sheets: `bed-before-after-landscape.jpg`, `bed-before-after-portrait.jpg`.
+- **Seeds.** The released down drifts away from the lens, turned 1.3 rad off the pond's side (landscape: left over the
+  west hill; portrait: right into the blue), at 1.6 m/s, rising 0.2 m/s from a column top of 9 m, thinning from 12 s.
+  She watches for 20 s: from 1 s the lens lifts its gaze after the cloud (landscape −20° to −6°, portrait −21° to
+  +4°), turns a third of the way after it and draws back 10 m in landscape (3 m in portrait, keeping its height over
+  the slope), never letting her leave the middle 84 % of the frame or the cygnet 88 %; it comes back to her over 6 s
+  as she walks on. Worst character edge 0.89 (landscape) and 0.88 (portrait), peak camera acceleration 1.9 and 2.8
+  m/s². Portrait's wait on leaving reads as a 4 m outward swing of her distance as she walks off before the lens
+  follows. Strips: `seeds-strip-landscape.jpg`, `seeds-strip-portrait.jpg`.
+- Gates: typecheck, production build (existing chunk-size warning), `piano-frame-check`, real-input `piano-check` in
+  landscape and portrait touch, `meadow-echoes-check` FULL with TRACE in landscape and portrait touch, whose
+  `meadow-camera-audit` passes (character margin 5.3 % and 5.5 %, departure 17.3 m and 20.4 m), `ONLY=meadow
+  progress-check`, `pond-view-check`, `meadow-seeds-check`, `meadow-echoes-state-check`, `meadow-duet-check`,
+  `meadow-route-check`, `meadow-plane-check`. `pond-view-check` is sensitive to how many random numbers are drawn
+  before its seeded run: a scratch camera built per chapter (its uuid) failed one portrait case until it moved to
+  module scope.
+
+Not established: a human motion review of any of these moves, the landscape cloud's contrast against the low sun's
+glow (it reads at full size, faintly at strip size), and Jeremy's verdict on the ceiling and the steps' size.

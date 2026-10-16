@@ -310,26 +310,30 @@ finale, whose arpeggio's arrival sends colour across the whole island; it is the
 The cuts are one table, `audio/meadow-cuts.ts`; `node tools/meadow-music-cuts.mjs` makes the files and measures
 onsets, melody, tilts and the greening cue into `audio/meadow-cuts-measured.ts`, which `audio/meadow-duet.ts`
 turns into calls, answers, steps and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
-never takes colour back (`world/music-growth.ts`). After each answer the camera steps back and up over the field
-and stays there (`restBack`, `restUp`). On the finale's arrival the cygnet climbs out onto the keys and walks them,
-each footfall a soft recorded C, A♭ or E♭ of the finale's chord under the flute. The camera rises up and out with the
-wave until the whole island is seen turning green, holds there through the flute's last phrase and comes down to the
-walk's view of her as she gets up (`tuning.piano.rise*`, `descendFor`); the final front crosses at `finaleSpeed` so
-its far shores green while the camera is up, and the grey hold is released only once the front covers it. She walks
+never takes colour back (`world/music-growth.ts`). After each answer the camera eases a step up and out from her and
+stays there (`tuning.piano.steps`, each a share of the way from the playing view to the walk's view of her), and the
+finale is the last and largest step: on its arrival the cygnet climbs out onto the keys and walks them, each footfall
+a soft recorded C, A♭ or E♭ of the finale's chord under the flute, while the camera opens the rest of the way to the
+walk's view (about 16 m above her and 41 m back, 26 m over the ground below it) over `finaleEase` seconds, low
+enough that grass, flowers and hills keep their detail. The final front crosses at `finaleSpeed`, pouring down off
+her knoll across the slopes that face her, and the grey hold is released only once the front covers it. She walks
 round the piano's far end from the bough (`Piano.wayRound`), never through it. Competing wind
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
 In the Meadow rework ([design](backlog/meadow-echoes/design.md)), the piano stands on a nearby rounded knoll
 beyond the preserved shore bank. Its camera opens across the rolling hollow as colour returns. The child then
 sets the cygnet down beside a low bed of flowers asleep in the grass: short, bowed and closed into buds. Where an
-ordinary sweep passes over them on screen they rise, lift their heads and open wide, so each sweep leaves its
-track in the bed and the woken part spreads; about two passes wake a flower. Once three quarters of the bed is up
+ordinary sweep passes over them on screen they rise, lift their heads and open wide, and the camera looks down on the
+bed from close behind her so each sweep's track shows across it and the woken part spreads; about two passes wake a
+flower, and the invitation only points at sleepers inside the lens. Once three quarters of the bed is up
 the last sleepers rise with it and petals lift off the whole bed, and that is the end of it. They walk together to
 seed heads farther through the fold, framed against the far slope. Sweeps only stir the heads; circling winds an
 updraft (the spiral invitation shows it) whose column draws the down off them, round and up. Lifted down never
 sinks back: unwound it hangs over the heads, and once it is all up the column carries it out over the top to drift
-away over the island. A final listening pause introduces the real swan call before the child gathers the cygnet
-and approaches the pond crest. Neither play makes a note; ambient wind and idle time complete neither.
+away over the island, away from the lens and off the pond's side. She stands and watches it go: the lens lifts its
+gaze after the cloud and holds on it as it thins, keeping her and the cygnet at the foot of the frame, and comes back
+to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). A final listening pause introduces the real swan
+call before the child gathers the cygnet and approaches the pond crest. Neither play makes a note; ambient wind and idle time complete neither.
 `world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`;
 `?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
 walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.
@@ -338,9 +342,10 @@ The walk goes on over the west rise and through a pass along `WAY` (`world/field
 reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she
 comes and bolts from a gust, like any flock, and nothing waits on it. Over the brow the ground falls to **the pond** (`POND`) on the open
 north slope, with the cygnet's family resting on it, white on dark water. Like the sheep they sleep with the island: the pond is
-grey and empty until the lullaby's colour reaches the hollow, and then they dissolve in only while the lens cannot see
-the water, off screen or behind ground (`MeadowChapter.seesPond`, `SwanFlock.shown`), so the finale's view over the whole
-island finds the pond empty and they are simply there at the crest; their
+grey and empty until the lullaby's colour reaches the hollow; they dissolve in only once she has stopped on the far
+rise to listen, and only while the lens cannot see the water, off screen or behind ground (`MeadowChapter.seesPond`,
+`SwanFlock.shown`), so no view from the piano to the seeds finds anything on the pond and they are simply there at the
+crest; their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
 first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
 own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts
