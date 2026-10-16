@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 const report = [];
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';

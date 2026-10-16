@@ -1,6 +1,7 @@
 // Sleeping island: idle gates, real pillow sweeps, gentle circles, dawn and boarding.
 // Usage: node tools/sleeping-check.mjs [prefix]; TOUCH=1 for 390x844; ADVERSARIAL=1 tests wrong input and interrupted progress.
 // VIDEO=1 records the real canvas and game audio as WebM. W/H override dimensions; shared GPU lock; captures in /tmp.
+// AUDIO=1 logs the climb's wind, breeze, foley and whole-mix levels and the bird's heard sounds, with a table by beat.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
@@ -8,7 +9,7 @@ import { reviewCapture } from './lib/review-capture.mjs';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-sleeping';
 const touch=process.env.TOUCH==='1',width=Number(process.env.W??(touch?390:1600)),height=Number(process.env.H??(touch?844:900));
-const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',markers=[];
+const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',audioLog=process.env.AUDIO==='1',markers=[],offscreen=new Set();
 const {browser,close}=await openBrowser();
 console.log('Graphics acquired; starting sleeping chapter');
 let finishRecording,stopReview;
@@ -55,7 +56,11 @@ try {
         bird:k.position.toArray(),rootUp:k.nodes[0].matrixWorld.elements[5],act:k.mind.act,curtains:g.sleeping.curtains,opening:g.sleeping.curtainOpening,ribbonHeld:g.sleeping.ribbon.held,ribbonGap:k.billGrip?bill.distanceTo(k.billGrip):null,cold:g.sleeping.cold,frost:g.sleeping.frost,
         hearthFlame:g.sleeping.hearth.flame.value,hearthEmbers:g.sleeping.hearth.embers.value,clockRock:g.sleeping.clockBody.rotation.z,alarmAge:g.sleeping.alarmAge,headClearance,preenWeight:k.preenWeight,bandage:k.wing.manualUnroll,billGap:k.preenAt?bill.distanceTo(k.preenAt):null,
         featherHeld:!!g.sleeping.feather.heldBy,
-        snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z)});
+        // The nearest wind streak to the lens, so a band across the frame can be traced to what drew it.
+        nearLine:g.lines.lines.reduce((near,l)=>Math.min(near,...l.points.map(p=>p.distanceTo(g.rig.camera.position))),Infinity),
+        // The nearest streak drawn at half its opacity or more, once the climb's near fade has taken its share.
+        nearLineSeen:g.lines.lines.reduce((near,l)=>{const f=c.windLinesNearFade;for(const p of l.points){const d=p.distanceTo(g.rig.camera.position),u=f?Math.min(1,Math.max(0,(d-f[0])/(f[1]-f[0]))):1;if(u*u*(3-2*u)>=.5)near=Math.min(near,d);}return near;},Infinity),
+        snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z),audio:window.climbAudio?.()});
       last=now;requestAnimationFrame(sample);
     }sample();
   });
@@ -82,6 +87,26 @@ try {
     });
     finishRecording=()=>page.evaluate(()=>window.finishVideo());
   }
+  if(audioLog)await page.evaluate(async()=>{
+    const g=__game,sound=g.sound;
+    if(!sound.output)sound.start();
+    // The game's own module instance: after an edit Vite serves it with a timestamp, and a bare import gets a fresh copy.
+    const {NIGHT_WIND}=await import(performance.getEntriesByType('resource').findLast(r=>new URL(r.name).pathname==='/src/world/sleeping-wind.ts')?.name??'/src/world/sleeping-wind.ts');
+    const ctx=sound.output.ctx,foley=ctx.createGain();
+    // Everything that plays through the shared output (the bird's foley) passes this tap; the call goes to master.
+    foley.connect(sound.master);sound.graph.bus=foley;
+    const taps={wind:sound.gustPan,breeze:sound.breezeGain,foley,mix:sound.master},buffer=new Float32Array(2048);
+    const meters=Object.fromEntries(Object.entries(taps).map(([k,node])=>{const a=ctx.createAnalyser();a.fftSize=2048;node.connect(a);return[k,a];}));
+    const heard=[];const push=g.cygnet.heard.push;
+    g.cygnet.heard.push=function(...items){for(const h of items)heard.push({kind:h.kind,snow:g.sleeping.trail.snowDepthAt(g.cygnet.position.x,g.cygnet.position.z),hope:g.cygnet.hopeBeats,wing:g.cygnet.wing.state});return push.apply(this,items);};
+    const cue=sound.update.bind(sound);
+    sound.update=(dt,state)=>{for(const c of state.cues)if(c==='calling')heard.push({kind:'call'});return cue(dt,state);};
+    window.climbAudio=()=>{
+      const levels=Object.fromEntries(Object.entries(meters).map(([k,a])=>{a.getFloatTimeDomainData(buffer);let p=0;for(const v of buffer)p+=v*v;return[k,p/buffer.length];}));
+      return{...levels,gust:sound.gustGain.gain.value,whistle:sound.whistleGain.gain.value,rustle:sound.rustleGain.gain.value,night:sound.nightGain.gain.value,breezeGain:sound.breezeGain.gain.value,
+        rise:NIGHT_WIND.rise,lull:NIGHT_WIND.lull,answer:NIGHT_WIND.answer,heard:heard.splice(0)};
+    };
+  });
   const shot=async name=>{
     if(video){
       const time=await page.evaluate(()=>(performance.now()-window.recordStarted)/1000);
@@ -89,18 +114,20 @@ try {
     }else{await page.screenshot({path:prefix+'-'+name+'.png'});console.log(prefix+'-'+name+'.png');}
   };
   const beat=async name=>page.waitForFunction(name=>__game.story.current.beat===name,name,{timeout:100000});
-  const point=async kind=>page.evaluate(kind=>{const g=__game;const p=(kind!=='bird'?g.story.current.windInvitation:g.cygnet.position).clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2}},kind);
+  const point=async kind=>page.evaluate(kind=>{const g=__game;const p=(kind==='bird'||kind==='across-bird'?g.cygnet.position:g.story.current.windInvitation).clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2}},kind);
   const gesture=async(kind,scale=1)=>{
     const p=await point(kind),circle=kind==='bird',count=circle?100:28,rad=height*0.06;
     for(let i=0;i<=count;i++){
       const a=i/count*Math.PI*4;
-      const x=p.x+(circle?Math.cos(a)*rad:(i/count-0.5)*Math.min(170,width*0.4)*scale);
-      const y=p.y+(circle?Math.sin(a)*rad:Math.sin(i/count*Math.PI)*8);
-      assert(x>0&&x<width&&y>0&&y<height,'wind target is outside the viewport');
+      let x=p.x+(circle?Math.cos(a)*rad:(i/count-0.5)*Math.min(170,width*0.4)*scale);
+      let y=p.y+(circle?Math.sin(a)*rad:Math.sin(i/count*Math.PI)*8);
+      // A target just past the edge of a narrow screen is still reached by a swipe along that edge.
+      if(!(x>0&&x<width&&y>0&&y<height))offscreen.add(kind+':'+await page.evaluate(()=>__game.story.current.beat));
+      x=Math.max(4,Math.min(width-4,x));y=Math.max(4,Math.min(height-4,y));
       if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});
       else await page.mouse.move(x,y);
       await page.waitForTimeout(circle?25:22);
-      if(circle && i%5===0 && await page.evaluate(()=>__game.story.current.beat!=='hilltop'))break;
+      if(circle && i%5===0 && await page.evaluate(()=>!__game.story.current.invitesFlight))break;
     }
     if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
@@ -157,11 +184,33 @@ try {
   }
   await beat('climb');await page.waitForTimeout(2500);await shot('climb');
   // Deliberately broad, imperfect sweeps across the actual feather; the path should assist them.
-  const seen=new Set();
-  for(let j=0;j<140&&await page.evaluate(()=>['climb','snow','mist','catchFeather'].includes(__game.story.current.beat));j++){
+  const seen=new Set(),stepLoops=[];
+  for(let j=0;j<200&&await page.evaluate(()=>['climb','snow','step','mist','catchFeather','crest'].includes(__game.story.current.beat));j++){
     const current=await page.evaluate(()=>__game.story.current.beat);
+    const weather=await page.evaluate(()=>{const c=__game.story.current;return c.beat==='mist'&&c.t>2.6&&c.t<4?'fog-white':c.beat==='crest'&&c.t>2.5?'crest-snow':c.beat==='climb'&&c.routeIndex===12?'shoulder-snow':null;});
+    if(weather&&!seen.has(weather)){seen.add(weather);await shot(weather);}
     if(current==='catchFeather'){await page.waitForTimeout(300);continue;}
+    if(current==='step'){
+      if(!await page.evaluate(()=>__game.story.current.invitesFlight)){await page.waitForTimeout(300);continue;}
+      if(!seen.has(current)){
+        seen.add(current);await shot('step-tried');
+        if(adversarial){
+          // Strokes across the bird are the wrong verb here: they must never get it over.
+          for(let i=0;i<3;i++)await gesture('across-bird');
+          assert.equal(await page.evaluate(()=>__game.story.current.stage),'ready','strokes got the bird up the step');
+          console.log('Adversarial step: strokes across the bird left it at the bank');
+        }
+        markers.push({name:'step-circles',time:await page.evaluate(()=>__game.story.current.now)});
+      }
+      await gesture('bird');
+      if(await page.evaluate(()=>__game.story.current.stage==='over')){
+        stepLoops.push(await page.evaluate(()=>__game.story.current.now));
+        await page.waitForTimeout(1500);await shot('step-over');
+      }
+      continue;
+    }
     if(['snow','mist'].includes(current)){
+      if(!await page.evaluate(()=>!!__game.story.current.windInvitation)){await page.waitForTimeout(300);continue;}
       if(!seen.has(current)){
         seen.add(current);await page.waitForTimeout(200);
         const onArrival=await page.evaluate(()=>__game.story.current.encounterStroke);
@@ -170,6 +219,8 @@ try {
         assert(Math.abs(await page.evaluate(()=>__game.story.current.encounterStroke)-onArrival)<.005,'idle cannot keep clearing the obstacle');
         if(adversarial){
           await noShortcut('encounter');await gesture('encounter',.18);
+          // A short sweep at the drift takes its whole layer once the stroke has ended.
+          await page.waitForTimeout(700);
           const earned=await page.evaluate(()=>__game.story.current.encounterStroke);
           await page.waitForTimeout(1800);
           assert(Math.abs(await page.evaluate(()=>__game.story.current.encounterStroke)-earned)<.005,'interrupted progress did not hold');
@@ -179,17 +230,28 @@ try {
       await gesture('encounter');
       if(await page.evaluate(current=>__game.story.current.beat!==current,current)){await page.waitForTimeout(1800);await shot(current+'-open');}
     } else {
-      if(await page.evaluate(()=>[3,7].includes(__game.story.current.routeIndex))){await page.waitForTimeout(350);continue;}
+      if(await page.evaluate(async()=>{const l=await import('/src/world/sleeping-layout.ts');return [l.SLEEP_DRIFT_STOP,l.SLEEP_FOG_STOP].includes(__game.story.current.routeIndex);})){await page.waitForTimeout(350);continue;}
       const p=await page.evaluate(()=>{const g=__game,p=g.sleeping.feather.position.clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};});
-      for(let i=0;i<=24;i++){if(i%4===0&&await page.evaluate(()=>__game.story.current.beat!=='climb'))break;const x=Math.max(8,Math.min(width-8,p.x+(i/24-.5)*width*.42)),y=Math.max(8,Math.min(height-8,p.y+22-Math.sin(i/24*Math.PI)*50));
+      for(let i=0;i<=24;i++){if(i%4===0&&await page.evaluate(()=>!['climb','crest'].includes(__game.story.current.beat)))break;const x=Math.max(8,Math.min(width-8,p.x+(i/24-.5)*width*.42)),y=Math.max(8,Math.min(height-8,p.y+22-Math.sin(i/24*Math.PI)*50));
         if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});else await page.mouse.move(x,y);await page.waitForTimeout(25);}
       if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     }
     await page.waitForTimeout(500);
   }
-  assert(seen.has('snow')&&seen.has('mist'),'both winter encounters were played');
+  assert(seen.has('snow')&&seen.has('step')&&seen.has('mist'),'every climb stop was played');
   }
-  await beat('hilltop');await page.waitForTimeout(7000);await shot('hilltop');
+  await beat('hilltop');
+  const climbBeats=await page.evaluate(()=>{const m=window.sleepMotion,out=[];for(const s of m)if(out.at(-1)?.beat!==s.beat)out.push({beat:s.beat,at:s.at});const base=window.recordStarted??out[0].at;return out.map(s=>({beat:s.beat,at:+((s.at-base)/1000).toFixed(1)}));});
+  if(offscreen.size)console.log('Wind targets drawn past the screen edge:',[...offscreen].join(', '));
+  console.log('Climb beats (s, on the recording if there is one):',climbBeats.map(b=>`${b.beat} ${b.at}`).join(', '));
+  fs.writeFileSync(prefix+'-beats.json',JSON.stringify({climbBeats,markers},null,2));
+  await page.waitForTimeout(7000);await shot('hilltop');
+  if(process.env.STOP==='hilltop'){
+    if(video){await page.evaluate(()=>window.finishVideo());console.log(prefix+'.webm');finishRecording=null;}
+    fs.writeFileSync(prefix+'-motion.json',JSON.stringify(await page.evaluate(()=>window.sleepMotion)));
+    process.exitCode=0;
+    throw Object.assign(Error('stopped at the hilltop'),{stopped:true});
+  }
   const at=await page.evaluate(async()=>{const g=__game; const {WINDOW}=await import('/src/world/sleeping.ts'); const w=WINDOW.clone().project(g.rig.camera); return {time:g.story.current.now,dusk:g.story.current.dusk,wing:g.cygnet.wing.state,curtains:g.sleeping.curtains,window:w.toArray()};});
   assert(at.dusk>1.8 && at.wing==='free' && at.curtains===0,'the healed wing waits at the closed summit window');
   assert(Math.abs(at.window[0])<0.8 && Math.abs(at.window[1])<0.8 && at.window[2]<1,'summit window must be visible beside the bird');
@@ -240,11 +302,23 @@ try {
   assert(departure.every(p=>Math.abs(p[0])<0.9&&Math.abs(p[1])<0.9&&p[2]<1),
     'the child stays in frame throughout the departure: '+JSON.stringify(departure));
   await page.waitForFunction(()=>__game.story.name==='toMirror',null,{timeout:60000});
-  const result=await page.evaluate(()=>({chapter:__game.story.name,carried:__game.cygnet.carried,riding:__game.child.riding,coat:__game.child.rig.coat.scale.toArray(),dawn:__game.sleeping.dawn,curtains:__game.sleeping.curtains}));
+  const result=await page.evaluate(()=>({chapter:__game.story.name,carried:__game.cygnet.carried,riding:__game.child.riding,lie:__game.child.look.lie,dawn:__game.sleeping.dawn,curtains:__game.sleeping.curtains}));
   assert(result.carried&&result.riding&&result.dawn===1&&result.curtains===1);
-  assert.deepEqual(result.coat,[1,1,1]);assert.deepEqual(errors,[]);
+  assert(result.lie<1e-5,'the sleeping pose must not leak into walking');assert.deepEqual(errors,[]);
   if(video){await page.evaluate(()=>window.finishVideo());console.log(prefix+'.webm');}
   const motion=await page.evaluate(()=>window.sleepMotion);
+  if(audioLog){
+    const db=p=>p>0?(10*Math.log10(p)).toFixed(1):'-inf',rows=[];
+    for(const m of motion){if(!m.audio)continue;let r=rows.at(-1);if(r?.beat!==m.beat)rows.push(r={beat:m.beat,from:m.at,n:0,wind:0,breeze:0,foley:0,mix:0,mixMost:0,rise:0,lull:0,answer:0,heard:{}});
+      r.n++;r.to=m.at;for(const k of['wind','breeze','foley','mix'])r[k]+=m.audio[k];r.mixMost=Math.max(r.mixMost,m.audio.mix);
+      r.rise=Math.max(r.rise,m.audio.rise);r.lull=Math.max(r.lull,m.audio.lull);r.answer=Math.max(r.answer,m.audio.answer);
+      for(const h of m.audio.heard){const key=h.kind+(h.snow>.02?'·snow':h.wing==='wrapped'&&h.hope>0?'·hope':'');r.heard[key]=(r.heard[key]??0)+1;}}
+    const base=await page.evaluate(()=>window.recordStarted??null)??motion.find(m=>m.audio)?.at;
+    console.log('Climb audio by beat (dBFS, mean over the beat; mix also its loudest frame; rise, lull and answer at most)');
+    console.log(['beat','at s','wind','breeze','foley','mix','mix loudest','rise','lull','answer','heard'].join('\t'));
+    for(const r of rows)console.log([r.beat,((r.from-base)/1000).toFixed(1),db(r.wind/r.n),db(r.breeze/r.n),db(r.foley/r.n),db(r.mix/r.n),db(r.mixMost),r.rise.toFixed(2),r.lull.toFixed(2),r.answer.toFixed(2),Object.entries(r.heard).map(([k,v])=>k+' '+v).join(', ')].join('\t'));
+    fs.writeFileSync(prefix+'-audio.json',JSON.stringify(rows,null,2));
+  }
   fs.writeFileSync(prefix+'-motion.json',JSON.stringify(motion));
   const ribbonHold=motion.filter(m=>m.beat==='pullRibbon');
   assert(ribbonHold.some(m=>m.opening>.2 && m.ribbonHeld),'the bird must remain attached through the visible opening');
@@ -263,6 +337,8 @@ try {
   fs.writeFileSync(prefix+'-motion.json',JSON.stringify(motion));
   fs.writeFileSync(prefix+'.json',JSON.stringify({touch,adversarial,liftSeconds,heightParity,result,markers,errors},null,2));
   console.log(JSON.stringify({touch,liftSeconds,heightParity,result,errors}));
+} catch (e) {
+  if(!e.stopped)throw e;
 } finally {
   try {await stopReview?.();await finishRecording?.();} finally {await close();}
 }

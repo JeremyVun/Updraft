@@ -354,6 +354,30 @@ function woodHeight(x: number, z: number): number {
  */
 export const SLEEP_HOLLOW = { x: -175, z: -1912, rx: 16, rz: 14, h: 0 };
 export const SLEEP_HILL = { x: -180, z: -1940, rx: 22, rz: 18, h: 13 };
+/**
+ * What the ridge gives the climb, east to west: a weathered outcrop low on the east flank, with a notch between it
+ * and the fall to the shore; a frost-heaved bank where the way comes up onto the shoulder, a rounded knoll on the
+ * crest; the saddle beyond it where the fog pools; and the narrow last rise to the window, its back steepened.
+ */
+export const SLEEP_OUTCROP = { x: -154.6, z: -1926.2, r: 1.3, h: 2.2 };
+export const SLEEP_NOTCH = { x: -149.2, z: -1927.2, half: 2, fade: 3.5, r: 0.85, h: 0.9, sill: { x: -150.7, z: -1922.6, r: 2.1, h: 0.8 } };
+export const SLEEP_SHOULDER = { x: -164.4, z: -1936.8, east: 6, west: 2.4, rz: 3, h: 1.5 };
+export const SLEEP_SADDLE = { x: -168.6, z: -1938.3, rx: 2.6, rz: 4.5, h: 1.25 };
+export const SLEEP_STEP = { x: -155.3, z: -1932.5, ux: -0.86, uz: -0.51, h: 1.3, half: 2.6, back: 6 };
+export const SLEEP_CREST = { x: -171.6, reach: 4.4, narrow: 0.5 };
+
+function sleepingCrest(x: number, z: number): number {
+  const o = SLEEP_OUTCROP, n = SLEEP_NOTCH, s = SLEEP_SHOULDER, a = SLEEP_SADDLE, b = SLEEP_STEP;
+  let h = o.h * Math.exp(-((x - o.x) ** 2 + (z - o.z) ** 2) / (2 * o.r * o.r)) * (1 + 0.3 * gnoise(x * 0.8, z * 0.8));
+  h += n.h * Math.exp(-0.5 * ((x - n.x) / n.r) ** 2) * (1 - smoothstep(n.half, n.half + n.fade, Math.abs(z - n.z)));
+  h += n.sill.h * Math.exp(-((x - n.sill.x) ** 2 + (z - n.sill.z) ** 2) / (2 * n.sill.r * n.sill.r));
+  h += s.h * Math.exp(-0.5 * (((x - s.x) / (x > s.x ? s.east : s.west)) ** 2 + ((z - s.z) / s.rz) ** 2));
+  h -= a.h * Math.exp(-0.5 * (((x - a.x) / a.rx) ** 2 + ((z - a.z) / a.rz) ** 2));
+  const along = (x - b.x) * b.ux + (z - b.z) * b.uz, across = (z - b.z) * b.ux - (x - b.x) * b.uz;
+  const lip = along - 0.3 * Math.sin(across * 0.9 + 0.6) - 0.05 * across * across;
+  const heave = smoothstep(-0.3, 0.3, lip) * Math.exp(-(Math.max(0, lip) ** 2) / (2 * b.back * b.back));
+  return h + b.h * heave * (1 - smoothstep(b.half, b.half + 3, Math.abs(across)));
+}
 
 function sleepingHeight(x: number, z: number): number {
   const c = ISLES.sleeping;
@@ -370,8 +394,10 @@ function sleepingHeight(x: number, z: number): number {
   // A rounded ridge with a steep south face and a long grassy back. Walking never changes its height.
   const dx=x-SLEEP_HILL.x;
   const dz=z-(SLEEP_HILL.z+dx*dx*.012);
-  const depth=dz>0?4.8:SLEEP_HILL.rz;
+  const back=SLEEP_HILL.rz*(1-SLEEP_CREST.narrow*(1-smoothstep(0,SLEEP_CREST.reach,Math.abs(x-SLEEP_CREST.x))));
+  const depth=dz>0?4.8:back;
   h+=land*land*SLEEP_HILL.h*Math.exp(-.7*((dx/SLEEP_HILL.rx)**2+(dz/depth)**2));
+  h+=land*sleepingCrest(x,z);
   h += (6.3 + (x + 176.5) * 0.018 - (z + 1911) * 0.025 - h) * terrace;
   return h - smoothstep(0, 36, d) * 8;
 }
@@ -688,6 +714,22 @@ float hf_wood(vec2 p) {
   h += land * land * (max(0.0, 1.0 - rr * rr) * 22.0 + (gfbm(p * 0.03, 3, 42.0) * 0.5 + 0.5) * 5.0);
   return h - smoothstep(0.0, 60.0, d) * 7.0;
 }
+float hf_sleepingCrest(vec2 p) {
+  vec2 o = p - vec2(${glsl(SLEEP_OUTCROP.x)}, ${glsl(SLEEP_OUTCROP.z)});
+  float h = ${glsl(SLEEP_OUTCROP.h)} * exp(-dot(o, o) / ${glsl(2 * SLEEP_OUTCROP.r * SLEEP_OUTCROP.r)}) * (1.0 + 0.3 * gnoise(p * 0.8));
+  h += ${glsl(SLEEP_NOTCH.h)} * exp(-0.5 * sq((p.x - (${glsl(SLEEP_NOTCH.x)})) / ${glsl(SLEEP_NOTCH.r)}))
+    * (1.0 - smoothstep(${glsl(SLEEP_NOTCH.half)}, ${glsl(SLEEP_NOTCH.half + SLEEP_NOTCH.fade)}, abs(p.y - (${glsl(SLEEP_NOTCH.z)}))));
+  vec2 sill = p - vec2(${glsl(SLEEP_NOTCH.sill.x)}, ${glsl(SLEEP_NOTCH.sill.z)});
+  h += ${glsl(SLEEP_NOTCH.sill.h)} * exp(-dot(sill, sill) / ${glsl(2 * SLEEP_NOTCH.sill.r * SLEEP_NOTCH.sill.r)});
+  float sx = (p.x - (${glsl(SLEEP_SHOULDER.x)})) / (p.x > ${glsl(SLEEP_SHOULDER.x)} ? ${glsl(SLEEP_SHOULDER.east)} : ${glsl(SLEEP_SHOULDER.west)});
+  h += ${glsl(SLEEP_SHOULDER.h)} * exp(-0.5 * (sx * sx + sq((p.y - (${glsl(SLEEP_SHOULDER.z)})) / ${glsl(SLEEP_SHOULDER.rz)})));
+  h -= ${glsl(SLEEP_SADDLE.h)} * exp(-0.5 * (sq((p.x - (${glsl(SLEEP_SADDLE.x)})) / ${glsl(SLEEP_SADDLE.rx)}) + sq((p.y - (${glsl(SLEEP_SADDLE.z)})) / ${glsl(SLEEP_SADDLE.rz)})));
+  vec2 b = p - vec2(${glsl(SLEEP_STEP.x)}, ${glsl(SLEEP_STEP.z)});
+  float along = b.x * ${glsl(SLEEP_STEP.ux)} + b.y * ${glsl(SLEEP_STEP.uz)}, across = b.y * ${glsl(SLEEP_STEP.ux)} - b.x * ${glsl(SLEEP_STEP.uz)};
+  float lip = along - 0.3 * sin(across * 0.9 + 0.6) - 0.05 * across * across;
+  float heave = smoothstep(-0.3, 0.3, lip) * exp(-sq(max(0.0, lip)) / ${glsl(2 * SLEEP_STEP.back * SLEEP_STEP.back)});
+  return h + ${glsl(SLEEP_STEP.h)} * heave * (1.0 - smoothstep(${glsl(SLEEP_STEP.half)}, ${glsl(SLEEP_STEP.half + 3)}, abs(across)));
+}
 float hf_sleeping(vec2 p) {
   vec2 c = vec2(${ISLES.sleeping.x}.0, ${ISLES.sleeping.z}.0);
   vec2 r = vec2(${ISLES.sleeping.rx}.0, ${ISLES.sleeping.rz}.0);
@@ -698,8 +740,10 @@ float hf_sleeping(vec2 p) {
   h += land * land * (max(0.0, 1.0 - rr * rr) * 4.5 + (gfbm(p * 0.03, 3, 82.0) * 0.5 + 0.5) * 2.6);
   float dx=p.x - (${glsl(SLEEP_HILL.x)});
   float dz=p.y-(${glsl(SLEEP_HILL.z)}+dx*dx*.012);
-  float depth=dz>0.0?4.8:${glsl(SLEEP_HILL.rz)};
+  float back=${glsl(SLEEP_HILL.rz)}*(1.0-${glsl(SLEEP_CREST.narrow)}*(1.0-smoothstep(0.0,${glsl(SLEEP_CREST.reach)},abs(p.x-(${glsl(SLEEP_CREST.x)})))));
+  float depth=dz>0.0?4.8:back;
   h+=land*land*${glsl(SLEEP_HILL.h)}*exp(-.7*(sq(dx/${glsl(SLEEP_HILL.rx)})+sq(dz/depth)));
+  h+=land*hf_sleepingCrest(p);
   float terrace = 1.0 - smoothstep(6.0, 13.0, length(p - vec2(-176.5, -1911.0)));
   h = mix(h, 6.3 + (p.x + 176.5) * 0.018 - (p.y + 1911.0) * 0.025, terrace);
   return h - smoothstep(0.0, 36.0, d) * 8.0;

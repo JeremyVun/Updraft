@@ -177,14 +177,14 @@ On the meadow sail after it was lengthened along the meadow's coast (2026-10-16)
 > I meant the birches island music should start 2-3 seconds later than it currently does, and it should fade in a bit
 > more.
 
-The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red Door's arrival entrance comes 3 s
-later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s time constant instead of 0.65 s
-(`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds.
+The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red Door fades in on a 1.8 s time
+constant (`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds; where it enters is
+"Music" below.
 
 > when the music loops on the birches island, it needs to have a better fade in.
 
-Going round on the island, each pass plays to its natural end, rests 3.5 s (`tuning.audio.recordedMusicLoop.birches`)
-and begins again from its top with the same entrance (audio contract, Birches).
+Going round on the island, each pass plays to its natural end, rests (`tuning.audio.recordedMusicLoop.birches`) and
+begins again from its top with the same entrance ("Music" below).
 
 > It's jumping animation also needs a look at, when it's "jumping" it looks like it's slow motion gliding through the
 > air. It doesn't have the expected jump velocity if that makes sense, and so it's animation looks really strange as a
@@ -351,6 +351,17 @@ What follows from it (2026-10-16):
   (`arrivalIn`, at the boat's speed now) reaches 15 s, and the stairs song waits 10 s after Red Door was last heard:
   with no input Red Door fades 8.2–13.1 s after the push-off and the song begins at 23.2 s, 6.5 s before the landing.
   A `toStairs` start never begins Red Door. Numbers and checks: build_plan.md phase 2 and the audio contract.
+- **On the meadow sail Red Door enters with the reveal.** The birches' `IslandReveal` carries `music`
+  (`tuning.crossingCamera.arrivals.birches.reveal`): the crossing is ready for the arrival music the frame the lens
+  begins its swing round to port (`revealing` above 0), and the meadow's music is asked to leave early enough that its
+  longest phrase wait, fade and quiet (10.5 s at the boat's speed) are over by then. With no input from
+  `?chapter=toBirches`: the meadow fades 5.4–8.4 s into the sail, sea and wind until the reveal begins at 17.9 s, Red
+  Door from that frame on its 1.8 s fade-in, the lens visibly turning from about 19.5 s and settled at 27.8 s, landing
+  at 38.8 s.
+- **Going round on the island** each pass plays to the end of the file, rests 0.3 s
+  (`tuning.audio.recordedMusicLoop.birches`) and comes in again from its top on the same 1.8 s fade-in. The last
+  chord dies away over the file's final 2.7 s (below 30 dB under the piece's average as played) and the next pass is
+  audible 0.17 s in, so the pause heard is 3.25 s (`music-transition-audit.mjs`, `birches-seam`).
 
 ### The island moves and grows
 
@@ -493,8 +504,7 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   boat, gold crowns lit through from behind with the low sun over them and its path on the water, the beach and the
   scarf running up from the sand into the trees, the boat at a third. Portrait stands further round (0.35 rad), so
   the island rises behind the boat in the narrow frame. The child turns to look at it, and the lens gives it 0.3 of
-  its gaze. Red Door comes in about a second after the view settles, and its fade-in carries the hold through the
-  run-in. Over the last 29 m the lens rises and draws back into the birches' first view from the south (0.075 rad,
+  its gaze. Red Door comes in as the swing begins and rises with it ("Music" below). Over the last 29 m the lens rises and draws back into the birches' first view from the south (0.075 rad,
   28 m, the child's eye-line 6 m ahead), so the bow grounds into the room's own shot: before, the lens swung 45° round
   the boat in the five seconds after landing. Chosen by looking: front light is impossible from the approach, and the
   side view keeps the backlit gold against a bright sky while reading the island as a place. Still not right: in the

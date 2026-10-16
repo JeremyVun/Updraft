@@ -1,50 +1,15 @@
 // Cross-chapter terrain regression: actual GPU draw, shader errors, height parity and reviewable screenshots.
-// Usage: node tools/terrain-check.mjs [prefix]. Uses the shared GPU lock; captures go to /tmp.
+// Usage: node tools/terrain-check.mjs [prefix]. Shares the GPU with other captures; captures go to /tmp.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 
-const LOCK = '/tmp/updraft-chromium.lock';
-function alive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try {
-        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
-      } catch {}
-      let stale = holder ? !alive(holder) : false;
-      try {
-        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
-      } catch {}
-      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-function releaseLock() {
-  try {
-    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
-  } catch {}
-}
-process.on('exit', releaseLock);
 process.on('SIGINT', () => process.exit(130));
 process.on('SIGTERM', () => process.exit(143));
 
 const prefix = process.argv[2] ?? '/tmp/updraft-terrain';
-await acquireLock();
+await holdGpu();
 const browser = await chromium.launch({
   channel: 'chromium',
   headless: true,

@@ -7,6 +7,7 @@ import type { WindSample } from '../wind/field';
 export class LooseDown {
   readonly mesh: THREE.InstancedMesh;
   private age = 10;
+  private size = 1;
   private readonly fade = { value: 0 };
   private readonly card = new THREE.Object3D();
   private readonly particles = Array.from({ length: 11 }, () => ({ p: new THREE.Vector3(), v: new THREE.Vector3() }));
@@ -40,14 +41,17 @@ export class LooseDown {
     this.mesh.visible = false;
   }
 
-  burst(at: THREE.Vector3, heading: number): void {
+  /** `count` feathers, `size` times a startle's, flung out at `speed` times its speed, the rest of the air doing the carrying. */
+  burst(at: THREE.Vector3, heading: number, count = this.particles.length, speed = 1, size = 1): void {
     this.age = 0;
+    this.size = size;
     this.fade.value = 1;
     this.mesh.visible = true;
+    this.mesh.count = Math.min(count, this.particles.length);
     this.particles.forEach((p, i) => {
       const angle = i * 2.4;
       p.p.copy(at).add(new THREE.Vector3(Math.cos(angle) * 0.24, 0.12 + i * 0.018, Math.sin(angle) * 0.24));
-      p.v.set(Math.cos(angle) * 1.1 + Math.sin(heading) * 1.3, 0.6 + (i % 4) * 0.22, Math.sin(angle) * 1.1 + Math.cos(heading) * 1.3);
+      p.v.set((Math.cos(angle) * 1.1 + Math.sin(heading) * 1.3) * speed, 0.6 + (i % 4) * 0.22, (Math.sin(angle) * 1.1 + Math.cos(heading) * 1.3) * speed);
     });
     this.update(0, { x: 0, z: 0, energy: 0, lift: 0 });
   }
@@ -65,7 +69,7 @@ export class LooseDown {
       p.p.y = Math.max(p.p.y, heightAt(p.p.x, p.p.z) + 0.035);
       this.card.position.copy(p.p);
       this.card.rotation.set(this.age * (1.3 + i * 0.08) + i, i * 2.4, Math.sin(this.age * 3 + i) * 0.8);
-      this.card.scale.setScalar(0.65 + (i % 4) * 0.15);
+      this.card.scale.setScalar((0.65 + (i % 4) * 0.15) * this.size);
       this.card.updateMatrix(); this.mesh.setMatrixAt(i, this.card.matrix);
     });
     this.mesh.instanceMatrix.needsUpdate = true;

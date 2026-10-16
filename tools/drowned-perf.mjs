@@ -7,7 +7,7 @@ if (!out) throw new Error('Usage: node tools/drowned-perf.mjs <output-directory>
 fs.mkdirSync(out, { recursive: true });
 const chapter = process.env.CHAPTER ?? 'belfry';
 const seconds = Number(process.env.SECONDS ?? 8);
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 const errors = [], results = [];
 try {
   const page = await browser.newPage({ viewport: { width: Number(process.env.W ?? 1600), height: Number(process.env.H ?? 900) },

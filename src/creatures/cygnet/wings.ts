@@ -21,6 +21,8 @@ export interface WingPose {
   raise: [number, number];
   /** A shiver or a shake running through both, radians. */
   shake: number;
+  /** The guarded wing held half out and rigid while the other works, 0..1. */
+  stiff: number;
 }
 
 /**
@@ -59,12 +61,14 @@ export function poseWings(n: THREE.Object3D[], w: WingPose): void {
     const shut = 1 - open;
     const bones = side > 0 ? [WING_L, FORE_L, HAND_L] : [WING_R, FORE_R, HAND_R];
     const raise = (side > 0 ? w.raise[0] : w.raise[1]) * (1 - guard);
+    const rigid = w.stiff * Math.min(1, guard * 1.5);
     for (let i = 0; i < 3; i++) {
       let twist = lerp(FOLD[i][0], SPREAD[i][0], open);
       let lift = lerp(FOLD[i][1], SPREAD[i][1], open);
       let sweep = lerp(FOLD[i][2], SPREAD[i][2], open);
       /** The arm leads the stroke and the hand comes through after it, which is the whole shape of a wingbeat. */
-      lift += (i === 0 ? w.beat * 0.86 : i === 1 ? w.beat * 0.34 + w.lag * 0.5 : w.lag * 0.82) * open;
+      lift += (i === 0 ? w.beat * 0.86 : i === 1 ? w.beat * 0.34 + w.lag * 0.5 : w.lag * 0.82) * open * (1 - rigid);
+      lift += rigid * (i === 0 ? 0.45 : -0.1);
       /** The hand swings forward over the top of the stroke and trails at the bottom. */
       sweep -= (i === 0 ? w.beat * 0.06 : w.lag * 0.22) * open;
       twist += w.twist * (0.6 + i * 0.5) + (i === 2 ? w.lag * 0.3 : 0) * open;

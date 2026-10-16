@@ -2542,3 +2542,74 @@ Jeremy's approval after the final review, verbatim:
 Merge `proto-drowned-integrate` at `79c8c621` into local main at `97f7e4d4`, retaining the approved analytic
 mist and main's newer sea, boarding, stair-sail and character-lighting changes. Validate the combined code;
 no remote push or deployment is requested. Evidence and outcome: [final-review.md](final-review.md).
+
+### The belfry goodbye — 2026-10-15 (designed; build in `build_plan.md`)
+
+Jeremy's words, verbatim:
+
+> ok best i think i can do is belfry.ogg, starting from 8 seconds 54 seconds - and fades in slowly after the last bell plays
+
+> I'm wondering.. in the bellfry, should the child kneel down and say goodbye to the cat and kittens first and then we start the music from that? thoughts? It'd be a bit of animation work
+
+> yea. And the ending of that cut up piece is a bit harsh as well.. I'm wondering if you can do a progressive slow down a little bit for those last 2-3 or so seconds if you know what i mean, so it feels more like it's coming to an ending note.
+
+As built (2026-10-15): she kneels on arrival (`nest`, 7 s; the ginger kitten comes and mews up at her), stands and
+looks out (`sea`), the player rings four times (`ring`), and 3.8 s after the fourth answer (`answerFor`) `goDown`
+sends her to the arch and down the ivy and starts the boat in. `belfry.ogg` (7.97–54.05 s, 5 s fade-in) starts on the
+fourth ring (`SoundState.bellsRung`). The cat and the ginger kitten come to the sill as she climbs down; aboard, the
+cat's slow blink at 5.6 s, and the storm 10.6 s after boarding. There is no goodbye between the last ring and leaving.
+
+The beat: after the fourth ring, before she goes down, a short scripted goodbye in the belfry, and the music fades in
+on it instead of on the ring. She turns from the arch, crosses to the cat and kittens and kneels; she reaches out and
+the mother cat comes to her and pushes its head into her mitten, the ginger kitten at her side. Then she stands and
+goes to the ivy; everything after (the climb down, boarding, the slow blink from the sill as the last look back, the
+storm) stays. The player does nothing in it.
+
+Rulings:
+- The goodbye is the mother cat nuzzling her mitten (Jeremy, 2026-10-15, chose it over the kittens coming to her and
+  over kneeling and looking only). It must differ from the arrival, where a kitten comes to her; the frightened cat
+  of the chimney coming to her hand closes the room's story.
+- The music fades in as she kneels (Jeremy: "and then we start the music from that"), no longer on the fourth ring.
+- The boat still starts in when she goes down (`goDown`), after the goodbye (Claude's call): its approach stays on
+  screen in the `bring` view instead of happening while the lens is inside the belfry. Everything from `goDown` on
+  shifts later by the goodbye's length, so the music's overlap into the storm should shrink rather than grow (about
+  5 s now); measure it after the build.
+- The cygnet peeks out of the satchel at the cat as she kneels (Jeremy, 2026-10-15, chose it over staying tucked
+  in): it has been wary of the cat since it came aboard, and now looks at it without shrinking. Its existing satchel
+  looking, not a new act.
+- Framing (Jeremy, 2026-10-15, chose it over the arrival's `nest` view and staying on the `ring` view): a new low
+  view just above the west sill, outside the arch. While she turns from the arch and walks to the cat the lens glides
+  in from the `ring` view; as she stands and goes to the ivy it eases back out to `bring`. The move obeys the camera
+  rules: no jerk, no in-and-out, no swing, the lens never enters the belfry.
+- Length (Jeremy, 2026-10-15, chose it over about 6 s and about 15 s): about 10 s from the fourth ring's answer to her
+  turning to the ivy (today `answerFor` gives 3.8 s). Kneel, mitten out, the cat comes and rubs its cheek along the
+  mitten with a slow blink, then she stands.
+
+Storyboard (2026-10-15, staged at runtime in the after-ring state; stills and contact sheets in
+`/tmp/updraft-belfry-goodbye/belfry-goodbye-{landscape,portrait}.jpg`, staging scripts `/tmp/updraft-gb-scripts-5bfG/`).
+Positions relative to the tower centre (x east, z south, height above the belfry floor):
+- She walks from the stand (−1.35, −1.75) toward the cat, then kneels at (−1.32, −1.05), yaw 0 (facing south to the
+  cat), lean 0.2, her lens-side (right) mitten out. Kneeling, she is clear of the straw (1.18 m from the nest centre
+  against its 0.75 m radius) and of the bell (hood top about 1.85 m, 1.3 m off the bell's axis; rim 0.97 m out,
+  1.98 m up).
+- The mother cat comes from its curl spot (−1.30, −0.05) to about (−1.35, −0.42), turned about 30° toward the lens
+  (yaw about −2.6), its head under the mitten at about 0.55 m from her chest; at 0.42 m it disappears under her.
+- The ginger kitten (`FOUND`) sits at her right hip, about (−1.71, −1.51), facing its mother. The other two keep
+  clear of the mother.
+- Low view: eye (−6.81, 0.50, −0.38) → target (−1.32, 1.20, −0.78), 32° vertical field of view, landscape; portrait
+  eye (−7.79, 0.50, −0.18) → (−1.32, 2.00, −0.78), 50°. Heights over the belfry floor; the eye is about 0.38 m above
+  the sill and about 10° north of the `nest` view's bearing, about 8 m nearer than the `ring` view. The cat measures
+  about 120–160 px tall in both aspects.
+- What read: her profile under the hood (the lens is below her face), the cat looking up at the offered mitten
+  against the sky, the kitten beside her, the cygnet's head out of the satchel. What did not: the nuzzle reads as a
+  lifted chin (the cat's face pushed up under the mitten, eyes not visible); an ivy twig at the sill crosses the grey
+  kitten and the mother's tail in portrait; a blurred strip of sill along the bottom; the turn from the arch, staged
+  through the lens side, put her face to the camera (fourth wall), so she must turn the other way.
+
+What the build needs (found staging it): a cat approach that lands its head under her hand and then nuzzles (today
+`nuzzle(hand)` only aims a still cat's head, eyes 0.9 shut); a nuzzle that turns the cheek along the mitten toward
+the lens with a slow blink while held; a `goodbye` step that owns her `lookAt`, `lean`, `kneeling` and `reachFor`
+every frame (the `ring`/`sea` steps, the drowned story's lean and `Carry.answer` rewrite them), keeps the fog, the
+lantern glow and the boat's after-ring state, and replaces `answerFor` as the trigger of `goDown`; the kitten coming
+to her side; a turn away from the lens; the low view with its portrait twin and the glides in and out; and the music
+trigger moved from the fourth ring to the kneel.

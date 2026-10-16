@@ -2,8 +2,10 @@
 
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
 `http://127.0.0.1:5230/` and take `BASE` for another server (use `npm run build:qa` then `npm run preview:qa`, or a worktree with its own
-server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU checks
-share one capture lock (`tools/lib/browser.mjs`), including `play.mjs`, so captures cannot distort timing checks.
+server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). Browser
+captures share the GPU (`tools/lib/browser.mjs`, up to `GPU_SLOTS`, default 4, at once), since fixed steps make them
+independent of speed; tools that time real frames (`perf`, profiles, `start-check` and similar) take it alone and wait
+for running captures, so no capture distorts them.
 Chrome for Testing uses Metal on macOS and the browser's default backend elsewhere; `ANGLE` explicitly selects a
 comparison backend. No GPU blocklist override is used. Evidence goes under
 `/tmp`. Node mechanics checks load TypeScript through `tools/lib/typescript.mjs` and need no browser.
@@ -237,7 +239,7 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `flock-audio-check`, `marine-audio-check`, `whale-voice-check` (production calls, clipping and speaker-band body;
   `MUTATE=thin` must fail), `birches-foley-check`.
 - Scores: `opening-score-check`, `lines-score-check`, `boats-score-check`, `meadow-score-check`,
-  `birches-score-check`, `mirror-score-check`, `clouds-music-check`, `village-music-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
+  `birches-score-check`, `mirror-score-check`, `clouds-music-check`, `village-music-check`, `dream-score-check`, `sleeping-score-check` (the former synthesised score, kept for studies, and the chapter's phases), `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
   The Lines, Boats, Birches and Home gates decode the supplied recordings and check looping, story continuity, mute/hidden-page
   suspension, late-decode cancellation and buffer release; Home also checks the ending fade and checkpoint offset.
 - `sea-music-check` decodes `sea.ogg` and checks its cut points, the silent hold at the break, phrase A at rest
@@ -250,9 +252,17 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `stairsSongRest` before the stairs song (faded or by itself), and the stairs song looping under the cloud and fading
   in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
   level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
-  rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at both seams, started
-  on the fourth ring with its slow entrance, played through the storm's start to its end fade, never restarted, started
-  on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
+  rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at its start seam and
+  its handover to `belfry_ending.ogg` (just before an attack, sample-aligned, no dip, faded to silence at its end),
+  started on the fourth ring with its slow entrance, played through the storm's start into the ending's ritardando and
+  fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
+  `sleeping-music-check` decodes `sleeping.ogg` and `cygnet_brave.ogg` and checks the lullaby's end, every seam and the
+  climb's part boundaries on the samples; the frost's bounded wait and the lullaby's early end at a seam; the parts at
+  their gates, never overlapping, the climb theme alone cut at its seam by the fog, queued, passed over and joined
+  unbroken; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
+  each player's timeline (main's measured climb, the rebuilt climb, a slow player, `?chapter=sleeping`).
+  `sleeping-music-browser-check [climb sleeping feather morning]` measures the same in the real game with a real
+  AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue).
   `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
   the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
@@ -281,8 +291,9 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `transition-scenes-browser-check`, `opening-score-browser-check`, `homeward-audio-browser-check`,
   `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`, `village-music-browser-check`
   (`drowned` and `cloud` with no input: the village's recording against the tub becoming pushable and its invitation;
-  `belfry` rings the bell four times and times the goodbye against boarding and the storm; `storm` starts it on load;
-  `sail` times the birches' end, the quiet and the stairs song from the push-off to the white),
+  `belfry` rings the bell four times and times the goodbye against boarding and the storm, checking the ending starts
+  on the audio clock where the recording hands over; `storm` starts it on load; `sail` times the birches' end, the
+  quiet and the stairs song from the push-off to the white),
   `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
   only the starting/next recording fetched, and an audible decoded source in each chapter).
   `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature

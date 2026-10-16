@@ -54,6 +54,11 @@ export class WindLines {
 
   constructor(private readonly wind: WindField) {}
 
+  /** A room whose lens sits low among the streaks fades the ones that pass right by it. */
+  set nearFade(range: readonly [number, number] | null) {
+    this.batch.nearFade = range;
+  }
+
   private vec(p: THREE.Vector3): THREE.Vector3 {
     return (this.vectors.pop() ?? new THREE.Vector3()).copy(p);
   }

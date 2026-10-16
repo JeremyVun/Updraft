@@ -318,7 +318,8 @@ shades as ordinary sea behind the cottage; only that colour override is gated.
 ## The sleeping island
 
 `src/world/sleeping.ts` (`SleepingIsland`). Its ground is in `heightfield.ts` (`ISLES.sleeping`, `SLEEP_HOLLOW`,
-`SLEEP_HILL`: one continuous rounded ridge, steeper to the south), its frosted grass in `grass.ts`
+`SLEEP_HILL`: one continuous rounded ridge, steeper to the south, with the climb's switchback, the step's bank and
+the narrow crest; `sleepingHeight` and its GLSL twin `hf_sleeping` match exactly), its frosted grass in `grass.ts`
 (`sleepFloorAt`), and everything it colours the world with in `atmosphere.ts`. The chapter drives it entirely
 through the values below; the room owns how they look.
 
@@ -326,7 +327,11 @@ through the values below; the room owns how they look.
 `PILLOW`, `HILLTOP`, `SLEEP_ROUTE` (the shared grassy ascent) and `SLEEP_APPROACH`, `SLEEP_LEDGE` (the launch
 footing), `CURTAIN_KNOT` and `CURTAIN_END` (beyond the lip), `LAMP`, `WINDOW` with `WINDOW_INTO`, and `bedside`.
 `sleeping-layout.ts` owns walking targets only; the heightfield never imports it, so no corridor is carved for
-the script. `sleeping-trail.ts` owns the sparse buried rocks, snow, seed heads and guiding wisps.
+the script. `sleeping-trail.ts` owns the climb's encounters (drift and fog targets, the stroke brush) and the guiding
+wisps, which skim over the snow rather than through it. `sleeping-dressing.ts` owns the hillside at the bird's scale
+(outcrop and bank rocks, the bank's turf lip following the heightfield's, tussocks, trods, the trickle, the hawthorn
+and its rabbit) and keeps it out of the lens's bed clearance, the glide line, the morning lane and every look-back
+sightline. `sleeping-weather.ts` owns the snowfall.
 
 **Driven values**, all 0..1 and eased inside the module (`tuning.sleeping.ease`) so a chapter setting one never
 pops. Defaults in brackets.
@@ -367,14 +372,24 @@ independently of the dawn. Near-camera extinction eases in over `fogNear`–`fog
   `routeStart` to `goal`; strokes build `encouragement` forward and cannot send it back downhill.
 - `fogTopAt(x, z)` is the fog's top surface height, ignoring carved lanes.
 
+**The climb.** The drift (`sleeping-drift.ts`) is written twice, `SleepingDrift.depthAt` for walking, brushing and
+checks and `DRIFT_GLSL` for drawing; change them together, so footing, prints and the stroke brush test the surface
+that is drawn. Its strokes lower it in `snowLayers`; the swept channel keeps a thin pressed skin and both banks. Prints
+come from the bird's footfalls, which `main.ts` feeds in. Over the drift the feather hangs `featherOverDrift` above the
+snow under it, so the drift's lens keeps it in frame.
+`SleepingChapter.climbExposure` (0 at the bed's edge to 1 at the crest's foot, from route progress, never a clock)
+drives the night's extra wind, the bird's braced lean, the driving snow and the night wind's sound (`NIGHT_WIND`).
+While the fog has the window, `WINDOW_SEEN` fades its glow and halo and `uSleepLost` whitens everything within about
+3 m of it; `hollowMist()` is the single fog colour for ground and sky, so the fog never shows a horizon edge. The
+player's gust trails and lift streaks fade near the camera on the climb only (`windLinesNearFade`, `lineNearFade`).
+
 **Contact.** Reclining interpolates supported hips; `blanketEdge()` gives the crease the mittens take and
 `blanketPull` lifts it as they draw it up. The scarf collides with the posed body and mattress. At the summit
 `Cygnet.billGrip`/`billGripWeight` solve contact at the posed bill tip, `flightPose` keeps wings and feet airborne
 through the reach, and the bird's grass depth offset fades to zero so the ribbon can occlude the bill.
 `pullRibbon` advances only while contact holds; pulling the full `ribbonPull` sets `ribbon.released`, and only then
 may `curtains` open (`SleepingIsland` keeps them shut while it is tied). `sleeping-ribbon.ts` draws the knot and
-tail. The snow's wind sculpting (`SNOW_SCULPT`) reshapes only depths over 0.2, and `snowDepthAt` repeats it, so
-footing and brushing test the surface that is drawn. Winter grass uses a finer tile near the camera on this island
+tail. Winter grass uses a finer tile near the camera on this island
 only (`swardDetailFrom`/`To`).
 
 ## Adding something that lives in the world

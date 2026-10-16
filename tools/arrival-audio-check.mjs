@@ -22,7 +22,7 @@ try {
       const chime=sound.chime.bind(sound);
       sound.chime=(...a)=>{notes.push({now:ctx.currentTime,midi:a[0]});chime(...a);};
       let incoming, epoch, reverb, gatesApart=0;
-      const score=()=>sound.seaMusic??sound.summitScore??sound.mirrorScore??sound.villageScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingScore;
+      const score=()=>sound.seaMusic??sound.summitScore??sound.mirrorScore??sound.villageScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingMusic;
       const update=tick=>{
         const now=tick/8, landed=now>=28;
         sound.update(.125,{...source(target),...(landed?ARRIVAL_MUSIC[target]:{}),...(target==='sea'?{seaMusicTime:now-12.5,seaPhrase:-1}:{}),

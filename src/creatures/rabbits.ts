@@ -31,6 +31,7 @@ const VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 uniform float uNudge;
+uniform float uSize;
 in float aPart;
 in vec2 aMat;
 in vec4 iPos;
@@ -39,11 +40,13 @@ in vec4 iHead;
 in vec4 iEars;
 in vec4 iLimb;
 in vec4 iLook;
+in vec4 iRest;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec2 vMat;
 out vec3 vFur;
 out float vRest;
+out float vSnow;
 
 const vec3 NECK = vec3(0.0, 0.6, 0.26);
 const vec3 REAR = vec3(0.0, 0.08, -0.36);
@@ -60,12 +63,19 @@ void main() {
   int part = int(aPart + 0.5);
   vec3 p = position;
   vec3 n = normal;
+  // Asleep in its form: settled down into it, fluffed against the cold, the flanks rising and falling, and the fur
+  // of its back trembling with the cold.
+  if (part == ${BODY}) {
+    float flank = smoothstep(0.12, 0.42, position.y);
+    p.xz *= 1.0 + (iRest.y * 0.08 + iRest.x * 0.04 + iRest.z * 0.012) * flank;
+    p.y += (iRest.y * 0.025 + iRest.z * 0.006) * flank;
+  }
   float side = (part == ${EAR_L} || part == ${HIND_L} || part == ${FRONT_L}) ? 1.0 : -1.0;
 
   if (part == ${EYE}) p.y = 0.76 + (p.y - 0.76) * (1.0 - 0.9 * iHead.w);
   if (part == ${NOSE} || (part == ${HEAD} && p.z > 0.45)) p.y += iHead.z * 0.018 * smoothstep(0.45, 0.62, p.z);
   if (part == ${EAR_L} || part == ${EAR_R}) {
-    float back = part == ${EAR_L} ? iEars.x : iEars.y;
+    float back = (part == ${EAR_L} ? iEars.x : iEars.y) + iRest.z * 0.05;
     float spread = part == ${EAR_L} ? iEars.z : iEars.w;
     turn(p, n, vec3(0.085 * side, 0.9, 0.33), vec3(-back, 0.0, -side * spread));
   }
@@ -84,12 +94,13 @@ void main() {
   p.xz *= inversesqrt(squash) * (1.0 + 0.06 * iBody.w);
   n = normalize(vec3(n.x * sqrt(squash), n.y / squash, n.z * sqrt(squash)));
 
-  vec3 world = rotY(p * ${SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * uSize, iPos.w) + iPos.xyz - vec3(0.0, iRest.x * 0.15 * uSize, 0.0);
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
   vFur = iLook.rgb;
   vRest = position.y;
+  vSnow = onHead ? 0.0 : iLimb.w;
   gl_Position = projectionMatrix * nudgedView(world, uNudge * smoothstep(0.04, 0.5, position.y));
 }`;
 
@@ -105,6 +116,7 @@ in vec3 vNormal;
 in vec2 vMat;
 in vec3 vFur;
 in float vRest;
+in float vSnow;
 void main() {
   vec3 N = normalize(vNormal);
   int mat = int(vMat.x + 0.5);
@@ -124,6 +136,7 @@ void main() {
     alb = uCream * 1.08;
     thin = 0.35;
   }
+  if (vSnow > 0.0 && mat <= ${EAR}) alb = mix(alb, vec3(0.86, 0.9, 0.95), vSnow * smoothstep(0.3, 0.75, N.y) * smoothstep(0.25, 0.42, vRest) * (0.7 + 0.3 * fur));
   float ao = mix(0.5, 1.0, smoothstep(0.0, 0.42, vRest));
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, 0.0);
   if (mat == ${EYE_MAT}) col += uSunColor * catchlight(N, vWorld) * 0.9;
@@ -194,7 +207,7 @@ function rabbitGeometry(): THREE.BufferGeometry {
   );
 }
 
-type Activity = 'sit' | 'graze' | 'groom' | 'look' | 'travel' | 'crouch';
+type Activity = 'sit' | 'graze' | 'groom' | 'look' | 'travel' | 'crouch' | 'curl';
 
 interface Hop {
   t: number;
@@ -252,6 +265,14 @@ interface Rabbit {
   /** Still underground, waiting for life to reach the warren. */
   asleep: boolean;
   wakeDelay: number;
+  /** Snow settled on its back while it lay curled, shaken off when it gets up. */
+  snow: number;
+  /** How far it is settled down asleep in its form, its breath, and the tremble of the cold through it. */
+  rest: number;
+  breath: number;
+  tremble: number;
+  /** What it does next on waking in its form, before its ordinary day begins. */
+  plan: ('groom' | 'lope')[];
 }
 
 const FURS = ['#8f603d', '#a87850', '#7c5c46', '#9c5f37', '#6e4c35', '#b08a62'];
@@ -267,14 +288,16 @@ export class Rabbits {
   constructor(
     private readonly habitat: Habitat,
     capacity = 16,
+    size = SIZE,
   ) {
-    this.instances = new Instances(rabbitGeometry(), capacity, ['iPos', 'iBody', 'iHead', 'iEars', 'iLimb', 'iLook']);
+    this.instances = new Instances(rabbitGeometry(), capacity, ['iPos', 'iBody', 'iHead', 'iEars', 'iLimb', 'iLook', 'iRest']);
     const material = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: {
         ...atmo.uniforms,
         uNudge: { value: 2.4 },
+        uSize: { value: size },
         uCream: { value: new THREE.Color('#ecdfc8') },
         uPink: { value: new THREE.Color('#f3a7a2') },
         uEye: { value: new THREE.Color('#130b09') },
@@ -332,10 +355,28 @@ export class Rabbits {
       groomEar: 0,
       asleep: true,
       wakeDelay: range(rand, 0.3, 3.5),
+      snow: 0,
+      rest: 0,
+      breath: 0,
+      tremble: 0,
+      plan: [],
     };
     r.squash.value = 1;
     this.list.push(r);
     return true;
+  }
+
+  /**
+   * A rabbit lying out the night curled in its form at (x, z), facing `yaw`, snow on its back. It stays down whatever
+   * passes, until life reaches it: then it sits up, washes its face and lopes off into its ordinary day.
+   */
+  addSleeper(x: number, z: number, yaw: number, seed: number): void {
+    if (!this.add(x, z, seed)) return;
+    const r = this.list[this.list.length - 1];
+    Object.assign(r, { x, z, homeX: x, homeZ: z, y: this.habitat.ground(x, z), yaw, asleep: false, activity: 'curl', snow: 0.55, rest: 1 });
+    r.sitUp = 0;
+    r.crouch = 1;
+    r.earL.value = r.earR.value = 1.5;
   }
 
   /** A meadow point `min`..`max` from (x, z), preferring short grass so the rabbit stays in view. */
@@ -372,6 +413,14 @@ export class Rabbits {
         if (s.life(r.x, r.z) < 0.75 || (r.wakeDelay -= dt) > 0) continue;
         this.emerge(r);
       }
+      if (r.activity === 'curl') {
+        if (s.life(r.x, r.z) >= 0.75 && (r.wakeDelay -= dt) <= 0) this.rouse(r);
+        else {
+          this.pose(r, dt, time, 0);
+          this.write(r, drawn++);
+          continue;
+        }
+      }
       s.wind.sample(r.x, r.z, sample);
       const speed = Math.hypot(sample.x, sample.z);
       const toUpdraft = up.strength > 0.02 ? Math.hypot(up.x - r.x, up.z - r.z) : Infinity;
@@ -401,6 +450,18 @@ export class Rabbits {
     const a = r.rand() * Math.PI * 2;
     r.lookX = r.x + Math.sin(a) * 10;
     r.lookZ = r.z + Math.cos(a) * 10;
+  }
+
+  /** Up out of the form with a shake that throws the snow off its back, and a long look round first. */
+  private rouse(r: Rabbit): void {
+    r.activity = 'look';
+    r.timer = range(r.rand, 1.6, 2.4);
+    r.squash.velocity = 4;
+    r.earL.velocity = r.earR.velocity = -9;
+    r.lookX = r.x + Math.sin(r.yaw) * 10;
+    r.lookZ = r.z + Math.cos(r.yaw) * 10;
+    r.gazeUp = false;
+    r.plan = ['groom', 'lope'];
   }
 
   private react(r: Rabbit, threat: number, speed: number, wx: number, wz: number, curious: boolean, s: Stimuli): void {
@@ -447,6 +508,20 @@ export class Rabbits {
 
   private choose(r: Rabbit): void {
     const rand = r.rand;
+    const next = r.plan.shift();
+    if (next === 'groom') {
+      r.activity = 'groom';
+      r.timer = range(rand, 2.6, 3.4);
+      r.groomEar = rand() < 0.5 ? -1 : 1;
+      return;
+    }
+    if (next === 'lope') {
+      const spot = this.findSpot(rand, r.x, r.z, 9, 15, 16);
+      if (spot) {
+        this.startTravel(r, spot[0], spot[1]);
+        return;
+      }
+    }
     const fromHome = Math.hypot(r.x - r.homeX, r.z - r.homeZ);
     if (fromHome > 14 || rand() < 0.34) {
       const flowers = this.habitat.flowers.filter((f) => Math.hypot(f.x - r.homeX, f.z - r.homeZ) < 16);
@@ -601,6 +676,11 @@ export class Rabbits {
       headPitch = 0.3;
       ear = 1.35;
       spread = 0.22;
+    } else if (act === 'curl') {
+      crouch = 1;
+      headPitch = 0.42;
+      ear = 1.5;
+      spread = 0.05;
     }
     if (airborne) {
       pitch = -0.4 + t * 0.75;
@@ -619,11 +699,18 @@ export class Rabbits {
     r.crouch = ease(r.crouch, crouch, crouch > r.crouch ? 14 : 3, dt);
     r.front = ease(r.front, front, 9, dt);
     r.hind = ease(r.hind, hind, 22, dt);
+    const curled = act === 'curl';
+    r.rest = ease(r.rest, curled ? 1 : 0, 3, dt);
+    r.breath = r.rest * Math.sin(time * 2.9 + r.seed * 11);
+    /** A soft, steady tremble that swells and eases over a few seconds and never starts or stops at once. */
+    const swell = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * 0.6 + r.seed * 7)) ** 2;
+    r.tremble = r.rest * swell * (Math.sin(time * 71 + r.seed * 5) * 0.6 + Math.sin(time * 89 + r.seed * 9) * 0.4);
     if (!hop || hop.prep <= 0) r.squash.step(airborne ? 1.1 : 1, 260, 14, dt);
     r.pitch.step(pitch, 160, 16, dt);
+    if (!curled) r.snow = ease(r.snow, 0, 2.5, dt);
 
     r.nextFidget -= dt;
-    if (r.nextFidget <= 0 && !hop) {
+    if (r.nextFidget <= 0 && !hop && !curled) {
       r.nextFidget = range(rand, 0.6, 2.8);
       const roll = rand();
       if (roll < 0.4) (rand() < 0.5 ? r.earL : r.earR).velocity += (rand() < 0.5 ? -1 : 1) * range(rand, 5, 9);
@@ -632,7 +719,7 @@ export class Rabbits {
     }
     let headYaw = r.headYawGoal;
     if (act === 'look') headYaw = THREE.MathUtils.clamp(wrapAngle(Math.atan2(r.lookX - r.x, r.lookZ - r.z) - r.yaw), -1.1, 1.1);
-    if (hop || act === 'crouch') headYaw = 0;
+    if (hop || act === 'crouch' || curled) headYaw = 0;
     r.headYaw = ease(r.headYaw, headYaw, act === 'look' ? 4 : 6, dt);
     r.headPitch = ease(r.headPitch, headPitch + r.crouch * 0.1, 8, dt);
 
@@ -641,7 +728,7 @@ export class Rabbits {
       r.nextBlink = range(rand, 1.5, 5);
       r.blink = 1;
     }
-    r.blink = Math.max(0, r.blink - dt * 8);
+    r.blink = curled ? 1 : Math.max(0, r.blink - dt * 8);
     const nibbling = act === 'graze' && Math.sin(time * 0.9 + r.seed * 20) > -0.3;
     r.chew = nibbling ? Math.sin(time * 19 + r.seed * 7) * 0.5 + 0.5 : ease(r.chew, 0, 10, dt);
 
@@ -662,8 +749,9 @@ export class Rabbits {
     inst.set(1, i, r.squash.value, r.pitch.value, r.sitUp, r.crouch);
     inst.set(2, i, r.headYaw, r.headPitch, r.chew, r.blink);
     inst.set(3, i, r.earL.value, r.earR.value, r.spreadL, r.spreadR);
-    inst.set(4, i, r.hind, r.front, r.tail.value, 0);
+    inst.set(4, i, r.hind, r.front, r.tail.value, r.snow);
     inst.set(5, i, r.fur.r, r.fur.g, r.fur.b, r.seed);
+    inst.set(6, i, r.rest, r.breath, r.tremble, 0);
   }
 
   /** Live positions for spatial queries; the inspection snapshot below remains detached. */

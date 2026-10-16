@@ -139,7 +139,7 @@ try {
               const state = sceneState(name, Math.max(0, time), baseState, refineSleeping ? 'refined' : 'original');
               if (stem === 'context' && time >= 0) contextEvents(name, tick - lead * 8, sound, null, state, refineSleeping ? 'refined' : 'original');
               sound.update(0.125, state);
-              if (stem === 'current') for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
+              if (stem === 'current') for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain']) {
                 sound[name].gain.cancelScheduledValues(ctx.currentTime); sound[name].gain.value = 0;
               }
             }

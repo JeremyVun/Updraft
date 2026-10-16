@@ -46,7 +46,7 @@ window.__load = {
 };`;
 
 const rows = [], changes = [], failedAt = {};
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
   const page = await context.newPage();
