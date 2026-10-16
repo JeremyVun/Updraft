@@ -194,7 +194,7 @@ export class SkyMirrorChapter implements Chapter {
     } else if(this.beat==='reveal') {
       c.lookAt=this.watched.set(MIRROR_BERTH.x,4,MIRROR_BERTH.z); k.watch(this.watched);
       if(this.elapsed>T.constellationReveal)this.gather();
-    } else if(this.beat==='walk' && !p.held && !c.acting) {
+    } else if(this.beat==='walk' && (!p.held || this.arrival.active) && !c.acting) {
       // The player can play with the paper on the way; it settles close to the next fallen light.
       c.lookAt=p.position;
       const toStop=Math.hypot(c.position.x-this.stand.x,c.position.z-this.stand.z);

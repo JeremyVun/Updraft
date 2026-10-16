@@ -359,6 +359,12 @@ export const tuning = {
     pickupAhead: 1.4,
     returnMargin: 12, returnSpeed: 5,
   },
+  planeCatch: {
+    approachDistance: 4, approachHeight: 1.7, speed: 8, turnRate: 4,
+    minApproachSeconds: 1.2, groundClearance: 0.8, levelAt: 0.7, wristTurn: -0.9,
+    hand: [0.8, 0.55, 0.4],
+    reachAt: 0.55, catchSeconds: 0.75, recoverSeconds: 0.65,
+  },
   /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
   meadowEchoes: {

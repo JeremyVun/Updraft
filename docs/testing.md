@@ -161,11 +161,15 @@ edit.
 
 **Chapters and mechanics** (Node, real chapter code, no renderer)
 
-- `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
+- `plane-routing-check`, `plane-catch-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
   `little-boats-logic-check`, `kite-logic-check`, `scarf-geometry-check`, `sail-flutter-check`, `sea-logic-check`,
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
   `wing-care-check`, `flock-flight-check`, `dolphin-leap-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- `plane-catch-check` covers return flights at 30/60/120 Hz, eight bearings and three heights under sustained gusts,
+  exact mitten attachment and one completion. It also checks paper edges against the posed child mesh through eight
+  approaches; `QUICK=1` selects one case. `QUICK=1 NEGATIVE=1` loads the old arrival from `db31c945` and reproduces its
+  head intersection. Rendered approach, catch and boarding still need review.
 - `meadow-duet-check` covers the wind call before piano input, retained partial replies, four player answers,
   the delayed bough finale/colour cue and restoration at 30/60/120 Hz. The real-input `piano-check` also swipes
   during a call to confirm that it cannot count as a reply; its framing checks include the bough's crown.
