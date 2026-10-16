@@ -81,6 +81,8 @@ export class BirchesChapter implements Chapter {
   private readonly scarfMast = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly bow = new THREE.Vector3();
+  private readonly stern = new THREE.Vector3();
   private readonly tmp2 = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.72, 0, 0.69).normalize();
@@ -352,13 +354,15 @@ export class BirchesChapter implements Chapter {
     }
     if (this.boatMoved) return;
     const { boat, child } = this.cast;
-    const seen = [0, 5].some((up) => {
-      const p = this.tmp.copy(boat.position).setY(boat.position.y + up).project(camera);
-      return p.z < 1 && Math.abs(p.x) < 1.15 && Math.abs(p.y) < 1.15;
-    });
+    const k = tuning.birches.boatLeaves;
+    boat.hullEnds(this.bow, this.stern);
+    const seen = [this.bow, this.stern, boat.position].some((end) => [0, k.mast].some((up) => {
+      const p = this.tmp.copy(end).setY(end.y + up).project(camera);
+      return p.z < 1 && Math.abs(p.x) < k.margin && Math.abs(p.y) < k.margin;
+    }));
     if (seen) this.boatSeenAt = this.now;
-    const up = Math.hypot(child.position.x - BIRCHES_LANDING.x, child.position.z - BIRCHES_LANDING.y);
-    if ((up > 15 && this.now - this.boatSeenAt > 1) || child.position.z < BIRCHES_CLEARING.y) this.moveBoat();
+    const away = Math.hypot(child.position.x - boat.position.x, child.position.z - boat.position.z);
+    if ((away > k.away && this.now - this.boatSeenAt > k.unseen) || child.position.z < BIRCHES_CLEARING.y) this.moveBoat();
   }
 
   private moveBoat(): void {
@@ -435,8 +439,9 @@ export class BirchesChapter implements Chapter {
       this.toScarf();
       return;
     }
-    const t = this.target();
-    if (Math.hypot(c.position.x - t.x, c.position.z - t.y) < 14 && this.leg < ROUTE.length - 1) this.leg++;
+    const way = ROUTE[this.leg];
+    // A stop short of the waypoint is not the waypoint: only reaching or passing it moves the walk on.
+    if (this.leg < ROUTE.length - 1 && (Math.hypot(c.position.x - way.x, c.position.z - way.y) < 14 || c.position.z < way.y)) this.leg++;
     const last = this.leg === ROUTE.length - 1 && scarf.finished;
     if (last && this.lastLegAt === 0) this.lastLegAt = time;
     const childNear = Math.hypot(c.position.x - boat.position.x, c.position.z - boat.position.z) < BOARDING;

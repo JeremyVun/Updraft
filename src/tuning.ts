@@ -125,7 +125,7 @@ export const tuning = {
       sleeping: -12.7, cygnetBrave: -14 },
     recordedMusicFade: .65,
     /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
-    recordedMusicFadeIn: { birches: 1.8 } as Partial<Record<string, number>>,
+    recordedMusicFadeIn: { birches: 1.63 } as Partial<Record<string, number>>,
     /** Looped recordings that end, rest this many seconds and come in again from the top as on arrival, instead of going straight round. */
     recordedMusicLoop: { birches: { rest: 0.3 } } as Partial<Record<string, { rest: number }>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
@@ -1483,6 +1483,11 @@ export const tuning = {
     holdEase: 0.5,
     /** Stepping off the bow under the sail in the first shot, she is seen through all but this much of it. */
     landingGivesWay: 0.06,
+    /**
+     * The boat goes round to the far berth once she is `away` metres from it and no part of it, hull to `mast` metres
+     * up, has been within `margin` of the frame for `unseen` seconds: a lens tilting up the ride must not catch it go.
+     */
+    boatLeaves: { away: 25, mast: 6, margin: 1.35, unseen: 3 },
     /** Something burrowing under the leaves heaves them into a hump this far across (m, from its middle) and this high. */
     burrowReach: 1.3,
     burrowRise: 0.75,
@@ -1853,11 +1858,11 @@ export const tuning = {
       /**
        * The birches come out of their mist ahead and to starboard and are watched from the port side, low over the
        * water: the whole island beside the boat with the low sun over it, or in portrait standing behind it. As the
-       * bow runs in, the lens rises into the room's first view from the south. Red Door comes in as the swing begins.
+       * bow runs in, the lens rises into the room's first view from the south. Red Door comes in 2 s into the swing.
        */
       birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
         reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 24, height: 4,
-          music: true } },
+          music: 2 } },
     },
   },
 

@@ -65,8 +65,8 @@ export interface IslandReveal {
   distance: number;
   height: number;
   sight: THREE.Vector3;
-  /** The destination's music enters as the lens begins its swing, rather than as the shore nears. */
-  music?: boolean;
+  /** The destination's music enters this many seconds after the lens begins its swing, rather than as the shore nears. */
+  music?: number;
 }
 
 /** How near a waypoint counts as rounded. */
@@ -169,6 +169,7 @@ export class CrossingChapter implements Chapter {
   private readonly destinationMusic?: ArrivalMusic;
   private readonly departureMusic?: ArrivalMusic;
   private arrivalHeard = false;
+  private revealedAt: number | null = null;
   readonly season: number;
   private readonly route: THREE.Vector2[];
   private readonly departureChannel?: CrossingOpts['departureChannel'];
@@ -465,7 +466,8 @@ export class CrossingChapter implements Chapter {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
-    if (this.musicReveal) return this.cast.boat.grounded || this.revealing(this.framed) > 0;
+    const reveal = this.musicReveal;
+    if (reveal) return this.cast.boat.grounded || (this.revealedAt !== null && this.time >= this.revealedAt + reveal.music!);
     return this.cast.boat.grounded || this.remainingSail()<=this.entrance(Math.max(4.5,this.cast.boat.speed));
   }
 
@@ -488,7 +490,7 @@ export class CrossingChapter implements Chapter {
 
   private get musicReveal(): IslandReveal | undefined {
     const reveal = this.arrivalView?.reveal;
-    return reveal?.music ? reveal : undefined;
+    return reveal?.music !== undefined ? reveal : undefined;
   }
 
   /** Remaining sailing distance, not straight-line proximity across an intervening island. */
@@ -598,6 +600,7 @@ export class CrossingChapter implements Chapter {
     this.blowTitleGust();
     this.steer();
     this.followProgress(dt);
+    if (this.revealedAt === null && this.musicReveal && this.revealing(this.framed) > 0) this.revealedAt = this.time;
     this.prepareArrivalMusic();
     const { child, boat, plane, sealife } = this.cast;
     const back = this.lookBack;
