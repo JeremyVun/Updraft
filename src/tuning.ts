@@ -3185,6 +3185,8 @@ export const tuning = {
     featherLean: 2.6,
     /** How high off the grass it likes to hang: below this the air holds it up, above it it sinks like a feather. */
     featherHangs: 1.2,
+    /** At the drift it hangs this far over the snow under it, low enough that the lens on the drift keeps it in frame. */
+    featherOverDrift: .45,
     /** Seconds it will lie on the grass before a breath of its own picks it up again, and how high it may hang. */
     featherRests: 2.5,
     featherCeiling: 3.4,

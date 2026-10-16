@@ -183,7 +183,9 @@ export class SleepingTrail {
         const t=j/(w.points.length-1),along=Math.min(len,0.3+phase*Math.min(3.5,len)+t*1.4);
         const curl=Math.sin(t*Math.PI*1.5+time*.4)*.15;
         const x=this.guideAt.x+dx/len*along-dz/len*curl,z=this.guideAt.z+dz/len*along+dx/len*curl;
-        w.points[j].set(x,THREE.MathUtils.lerp(this.guideAt.y,this.guideGoal.y,Math.min(1,along/len))+.5+Math.sin(t*Math.PI)*.18,z);
+        // Skimming over the drift rather than through it, where it would flicker in and out of the snow.
+        const over=heightAt(x,z)+this.snowDepthAt(x,z)+.3;
+        w.points[j].set(x,Math.max(over,THREE.MathUtils.lerp(this.guideAt.y,this.guideGoal.y,Math.min(1,along/len))+.5+Math.sin(t*Math.PI)*.18),z);
       }
     }
     this.traces.update(this.wisps);

@@ -559,7 +559,8 @@ export class SleepingChapter implements Chapter {
     if (['edge', 'climb', 'snow', 'step', 'mist'].includes(this.beat)) {
       sleeping.feather.follow = this.cast.cygnet.position;
     } else sleeping.feather.follow = null;
-    sleeping.feather.clearance=this.beat==='snow'?T.snowDepth*(1-sleeping.trail.snow):0;
+    const f=sleeping.feather.position;
+    sleeping.feather.clearance=this.beat==='snow'?Math.max(0,sleeping.trail.snowDepthAt(f.x,f.z)+T.featherOverDrift-T.featherHangs):0;
     sleeping.trail.interaction = this.windInvitation && (this.beat === 'snow' || this.beat === 'mist') ? this.beat : null;
     sleeping.trail.guideActive = ['edge','climb','snow','step','mist','crest'].includes(this.beat);
     sleeping.trail.guideAt.copy(this.cast.cygnet.position);

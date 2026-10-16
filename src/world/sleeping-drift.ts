@@ -152,7 +152,7 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${NOISE_GRAD_GLSL}
-uniform float uGust, uThaw, uSwept;
+uniform float uGust, uThaw, uSwept, uSpin;
 uniform vec3 uRight, uForward;
 uniform vec4 uBird;
 uniform vec4 uPrints[${PRINTS}];
@@ -232,7 +232,7 @@ void main() {
   float near = length(xz - uBird.xz);
   col *= 1.0 - .38 * (1.0 - sm(.07, .34, near)) * uBird.w * sm(-.05, .06, vWorld.y - uBird.y);
   // Spindrift: faint streaks of blown powder crossing the surface on the gusts.
-  float blown = sm(.62, .95, vnoise(vec2(p.x * .55 - uTime * (.9 + uGust * 2.5), p.y * 2.6 + grain.x * 1.5)));
+  float blown = sm(.62, .95, vnoise(vec2(p.x * .55 - uSpin, p.y * 2.6 + grain.x * 1.5)));
   col += hemiLight(vec3(0, 1, 0)) * blown * (.05 + .12 * uGust) * thin;
   // Crystals catch the light one at a time as the eye moves, gathered on the polished crust; never small enough to
   // shimmer. Each fades in and out across a broad turn of the view, so a moving lens never switches one on or off.
@@ -326,6 +326,8 @@ export class SleepingDrift {
   private readonly kick = { value: 0 };
   private readonly clock = { value: 0 };
   private readonly gust = { value: 0 };
+  /** How far the spindrift has blown, so a change in the gust changes its speed and never jumps it along. */
+  private readonly spin = { value: 0 };
   private readonly trenchOn = { value: 0 };
   private readonly trench = { value: new THREE.Vector4() };
   private readonly stroke = { value: new THREE.Vector2(RIGHT.x, RIGHT.z) };
@@ -352,7 +354,7 @@ export class SleepingDrift {
     geometry.computeVertexNormals();
     const state = { uSwept: this.swept, uThaw: this.thaw, uTrench: this.trench, uTrenchOn: this.trenchOn };
     const snow = new THREE.Mesh(geometry, new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, ...state, uGust: this.gust, uRight: { value: RIGHT }, uForward: { value: FORWARD }, uBird: this.bird, uPrints: this.prints },
+      uniforms: { ...atmo.uniforms, ...state, uGust: this.gust, uSpin: this.spin, uRight: { value: RIGHT }, uForward: { value: FORWARD }, uBird: this.bird, uPrints: this.prints },
       side: THREE.DoubleSide, vertexShader: VERT, fragmentShader: FRAG,
     }));
     snow.frustumCulled = false; this.objects.push(snow);
@@ -438,6 +440,7 @@ export class SleepingDrift {
   update(dt: number, time: number, snow: number, thaw: number, gust: number): void {
     this.clock.value = time;
     this.gust.value = gust;
+    this.spin.value += dt * (.9 + gust * 2.5);
     this.thaw.value = thaw;
     const blowing = Math.min(1, Math.max(0, snow - this.swept.value) * 9);
     this.blow.value += (blowing - this.blow.value) * (1 - Math.exp(-dt * 5));
