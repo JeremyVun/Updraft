@@ -7,7 +7,7 @@
 //           CYCLES times: the worst interval within AFTER frames of each switch, against the intervals elsewhere.
 //   env: BASE (default http://127.0.0.1:5230/), QUERY (appended; stairs defaults to ratio=1.5&msaa=2), W/H/DSF
 //        (1376x1032 at 2), HITCH (25), HOLD (4000), CYCLES (4), AFTER (150), OUT (JSON path)
-// Takes the shared browser lock. Other GPU users inflate every number: check `ps` first.
+// Has the GPU alone among the browser tools. Other GPU users inflate every number: check `ps` first.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
@@ -23,7 +23,7 @@ const CYCLES = Number(process.env.CYCLES ?? 4), AFTER = Number(process.env.AFTER
 const pct = (a, q) => { const s = [...a].sort((x, y) => x - y); return s.length ? +s[Math.floor(q * (s.length - 1))].toFixed(1) : null; };
 const spread = a => ({ frames: a.length, p50: pct(a, 0.5), p99: pct(a, 0.99), max: a.length ? +Math.max(...a).toFixed(1) : null, over: a.filter(d => d > HITCH).length });
 
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 try {
   const page = await browser.newPage({ viewport: { width: Number(process.env.W ?? 1376), height: Number(process.env.H ?? 1032) }, deviceScaleFactor: Number(process.env.DSF ?? 2) });
   const errors = [];

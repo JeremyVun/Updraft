@@ -7,7 +7,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Feather } from '../fx/feather';
 import { CurtainRibbon } from './sleeping-ribbon';
 import { SLEEP_PATH } from './sleeping-layout';
-import { SleepingTrail } from './sleeping-trail';
+import { SleepingTrail, WINDOW_SEEN } from './sleeping-trail';
+import { SleepingDressing } from './sleeping-dressing';
+import { sleepingGust } from './sleeping-wind';
 import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
@@ -377,12 +379,14 @@ void main() {
 const MORNING_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uOpen;
+uniform float uSeen;
 in vec2 vUv;
 in vec3 vWorld;
 void main() {
   vec3 col = mix(vec3(1.0, 0.73, 0.44), vec3(1.0, 0.91, 0.73), smoothstep(0.0, 0.85, vUv.y));
   float cloud = sin(vUv.y * 28.0 + sin(vUv.x * 5.0) * 0.9) * 0.025;
   col *= 0.9 + uOpen.x * 0.65 + cloud;
+  col = mix(col, fogOf(vWorld).rgb, 1.0 - uSeen);
   float arriving = journeyVeilAt(vWorld);
   if (arriving > 0.0) col = mix(col, skyRadiance(normalize(vWorld - cameraPosition)), arriving);
   gl_FragColor = vec4(col, 1.0);
@@ -674,6 +678,7 @@ export class SleepingIsland {
   private alarmAge = -1;
   readonly hearth = new SleepingHearth();
   readonly trail = new SleepingTrail();
+  readonly dressing: SleepingDressing;
   readonly sleepFace = PILLOW.clone();
   sleepMarks = 0;
   private readonly weather = new SleepingWeather();
@@ -717,7 +722,8 @@ export class SleepingIsland {
   ) {
     this.gpu = new GpuRunner(renderer);
     this.feather = new Feather(wind);
-    this.objects.push(this.ribbon.mesh, ...this.trail.objects, this.hearth.group);
+    this.dressing = new SleepingDressing(wind, input, BED, WINDOW);
+    this.objects.push(this.ribbon.mesh, ...this.trail.objects, ...this.dressing.objects, this.hearth.group);
     for (let i = 0; i < STAMPS; i++) {
       this.stamps.push(new THREE.Vector4());
       this.stampArgs.push(new THREE.Vector2());
@@ -853,7 +859,7 @@ export class SleepingIsland {
       new THREE.ShaderMaterial({
         vertexShader: SHAFT_VERT,
         fragmentShader: MORNING_FRAG,
-        uniforms: { ...atmo.uniforms, uOpen: { value: this.open } },
+        uniforms: { ...atmo.uniforms, uOpen: { value: this.open }, uSeen: WINDOW_SEEN },
         side: THREE.DoubleSide,
       }),
     );
@@ -959,7 +965,7 @@ export class SleepingIsland {
     fixInPlace(this.ribbon.mesh, still, clock, ...clock.children.filter((o) => o !== this.clockBody),
       ...this.clockBody.children.filter((o) => o !== this.clockHand), rug, blanket, morning, hintRay, curtains, this.shaft, feathers,
       ...this.weather.objects);
-    for (const o of this.trail.objects) fixTreeInPlace(o);
+    for (const o of [...this.trail.objects, ...this.dressing.objects]) fixTreeInPlace(o);
 
     for (const o of this.objects) o.visible = false;
   }
@@ -1100,6 +1106,7 @@ export class SleepingIsland {
     this.clockTime += dt * (1 - THREE.MathUtils.smoothstep(this.shownCold*(1-this.shown.dawn),0.3,0.65));
     this.clockHand.rotation.z=-Math.floor(this.clockTime)*Math.PI/30;
     this.trail.update(dt, time, this.shown.dawn, camera, this.shownCold);
+    this.dressing.update(dt, time, camera, sleepingGust(time, this.shownCold, this.shown.dawn));
     this.weather.update(time,this.shownCold,this.shown.sleeper,this.shown.dawn,this.sleepFace,camera,this.trail.mist,WINDOW,this.sleepMarks,this.trail.fogEnclosure);
     this.hanging(time);
     this.drift(dt);

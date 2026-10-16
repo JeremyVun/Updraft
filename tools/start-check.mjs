@@ -3,7 +3,7 @@
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const { browser, close } = await openBrowser({ allowAutoplay: false });
+const { browser, close } = await openBrowser({ allowAutoplay: false, exclusive: true });
 const report={checks:[],errors:[]};
 const base=process.env.BASE ?? 'http://127.0.0.1:5230/';
 const key='updraft.progress.v1';

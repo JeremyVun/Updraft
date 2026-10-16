@@ -219,7 +219,18 @@ export class ChildMotion {
   private readonly footPitch = [0, 0];
   private readonly footRoll = [0, 0];
   private readonly soles: THREE.Vector3[][] = [[], []];
-  private legDrop = 0;
+  /**
+   * How far the hips are let down so a planted boot stays in reach, and the deepest the last stride needed: held through
+   * the next, so a slope is walked on bent knees instead of a pump at every step.
+   */
+  private readonly legDrop = new Spring(3, 1);
+  private dropHeld = 0;
+  private dropAge = 0;
+  private dropGait = 0;
+  /** The fall of the ground along the heading, eased, and how far it is a climb (0..1) or a descent. */
+  private grade = 0;
+  uphill = 0;
+  private downhill = 0;
   private readonly accel = new THREE.Vector3();
   private readonly hipsGravity = new THREE.Vector3();
   private readonly chestGravity = new THREE.Vector3();
@@ -304,7 +315,18 @@ export class ChildMotion {
     const reach = stance * step * stride;
     const accel = (d.speed - this.lastSpeed) / dt;
     this.lastSpeed = d.speed;
-    const leanTarget = (0.06 * moving + 0.3 * running) * plant + THREE.MathUtils.clamp(accel * 0.03, -0.14, 0.18) * plant;
+    const root = this.rig.root;
+    const hx = Math.sin(root.rotation.y);
+    const hz = Math.cos(root.rotation.y);
+    const ahead = d.ground(root.position.x + hx * 0.6, root.position.z + hz * 0.6);
+    const behind = d.ground(root.position.x - hx * 0.6, root.position.z - hz * 0.6);
+    this.grade = damp(this.grade, ((ahead - behind) / 1.2) * moving, 3, dt);
+    const hill = tuning.childGround;
+    this.uphill = THREE.MathUtils.smoothstep(this.grade, hill.gentle, hill.steep) * plant;
+    this.downhill = THREE.MathUtils.smoothstep(-this.grade, hill.gentle, hill.steep) * plant;
+    /** Up a hill she leans into it; down one she sits back a little against it. */
+    const leanTarget = (0.06 * moving + 0.3 * running) * plant + THREE.MathUtils.clamp(accel * 0.03, -0.14, 0.18) * plant
+      + hill.climbLean * this.uphill - hill.descentLean * this.downhill;
     const paceLean = this.leanSpring.step(leanTarget, dt);
 
     this.nextShift -= dt;
@@ -318,10 +340,11 @@ export class ChildMotion {
     const rest = this.rig.rest;
     hips.position.copy(rest[BONE.hips]);
     /** Weight over the foot in stance: the hips ride side to side, turn with the stride and drop on the swinging side. */
-    const sway = Math.sin(phase) * stride;
+    /** Climbing, the big boots are set down heavily, the weight rolling over each one: a plod. */
+    const sway = Math.sin(phase) * stride * (1 + hill.plodSway * this.uphill);
     hips.position.x += -0.022 * sway * (1 - running * 0.6) + 0.035 * this.weight * plant;
     /** Walking, the body vaults over each planted foot; running, it drops into the stance and springs out of it. */
-    const bounce = stride * (moving * (1 - running) * (0.024 * Math.cos(2 * phase) - 0.01) + running * (0.1 * Math.abs(Math.sin(phase)) - 0.065));
+    const bounce = stride * (moving * (1 - running) * ((0.024 + hill.plodBounce * this.uphill) * Math.cos(2 * phase) - 0.01) + running * (0.1 * Math.abs(Math.sin(phase)) - 0.065));
     hips.position.y += bounce;
     hips.position.z += -0.05 * pose.bend;
     const hipYaw = 0.14 * sway * (1 - 0.3 * running);
@@ -442,12 +465,14 @@ export class ChildMotion {
         fz = THREE.MathUtils.lerp(reach, -reach, u);
         lift = 0;
         /** Heel strike, flat, and up onto the toe to push off. */
-        pitch = (-0.25 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.18)) + 0.55 * THREE.MathUtils.smoothstep(u, 0.7, 1)) * stride;
+        /** Up a slope the boot lands flatter and the heel peels early, so the trailing leg keeps its reach. */
+        pitch = (-0.25 * (1 - 0.6 * this.uphill) * (1 - THREE.MathUtils.smoothstep(u, 0, 0.18)) + 0.55 * THREE.MathUtils.smoothstep(u, 0.7, 1)
+          + tuning.childGround.heelPeel * this.uphill * THREE.MathUtils.smoothstep(u, 0.35, 1)) * stride;
       } else {
         const u = (cyc - stance) / (1 - stance);
         const e = u * u * (3 - 2 * u);
         fz = THREE.MathUtils.lerp(-reach, reach, e);
-        lift = (0.08 + 0.18 * running) * Math.pow(Math.sin(u * Math.PI), 0.8) * stride;
+        lift = (0.08 + 0.18 * running + tuning.childGround.kneeLift * this.uphill) * Math.pow(Math.sin(u * Math.PI), 0.8) * stride;
         pitch = (0.55 * (1 - THREE.MathUtils.smoothstep(u, 0, 0.35)) - 0.25 * THREE.MathUtils.smoothstep(u, 0.6, 1)) * stride;
       }
       const lateral = hipAt.x + s * (0.035 + 0.01 * this.weight * s);
@@ -520,9 +545,15 @@ export class ChildMotion {
     }
     // The weight comes down over a planted boot before its leg runs out of reach.
     const wantedDrop = Math.min(0.25, lower) * plant * (1 - pose.hang) * (1 - pose.climb);
-    const dropStep = tuning.childGround.follow * d.dt;
-    this.legDrop += THREE.MathUtils.clamp(wantedDrop - this.legDrop, -dropStep, dropStep);
-    hips.position.y -= this.legDrop;
+    this.dropAge += d.dt;
+    if (wantedDrop >= this.dropHeld || stride < 0.5 || plant < 0.9) {
+      this.dropHeld = wantedDrop;
+      this.dropAge = 0;
+      this.dropGait = d.gait;
+    } else if (this.dropAge > tuning.childGround.hold || d.gait - this.dropGait > Math.PI * 2.2) {
+      this.dropHeld = damp(this.dropHeld, wantedDrop, 4, d.dt);
+    }
+    hips.position.y -= this.legDrop.step(this.dropHeld, d.dt);
     for (const left of SIDES) {
       const side = left ? 0 : 1, s = left ? 1 : -1;
       const thigh = b[left ? BONE.thighL : BONE.thighR];

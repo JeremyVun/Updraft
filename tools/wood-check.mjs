@@ -5,26 +5,14 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { reviewCapture } from './lib/review-capture.mjs';
+import { holdGpu } from './lib/browser.mjs';
 const portrait = process.argv.includes('portrait');
 const resumeRescue = process.argv.includes('rescue');
 const mode = (portrait ? 'portrait' : 'desktop') + (resumeRescue ? '-rescue' : '');
 const prefix = process.env.PREFIX ?? `/tmp/updraft-wood-${mode}`;
 const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-wood-video-') : null;
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1440, height: 900 };
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    if (holder) {
-      try { process.kill(holder, 0); }
-      catch { fs.rmSync(lock, { recursive: true, force: true }); continue; }
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-}
+const release = await holdGpu();
 let browser;
 let video;
 let context;
@@ -145,7 +133,7 @@ try {
   });
   let lastBeat, strokes = 0, lastCoal = -1;
   const captured = new Set();
-  process.once('SIGTERM', () => { browser?.close().finally(() => { if (fs.existsSync(`${lock}/pid`) && Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true }); process.exit(143); }); });
+  process.once('SIGTERM', () => { browser?.close().finally(() => { release(); process.exit(143); }); });
   const end = Date.now() + 360000;
   while (Date.now() < end) {
     const s = await state();
@@ -214,5 +202,5 @@ try {
   } catch (error) { report.videoError = error.message; }
   await browser?.close();
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
-  if (fs.existsSync(`${lock}/pid`) && Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true });
+  release();
 }

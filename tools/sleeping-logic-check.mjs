@@ -17,7 +17,10 @@ const {Boat}=await import('../src/traveller/boat.ts');
 const {SleepingChapter}=await import('../src/story/sleeping.ts');
 const {SleepingTrail,SNOW_AT}=await import('../src/world/sleeping-trail.ts');
 const {SleepingHearth}=await import('../src/world/sleeping-hearth.ts');
-const {sleepPathAt,SLEEP_PATH,SLEEP_SNOW_STOP}=await import('../src/world/sleeping-layout.ts');
+const {sleepPathAt,SLEEP_PATH,SLEEP_DRIFT_STOP}=await import('../src/world/sleeping-layout.ts');
+const {SLEEP_STEP}=await import('../src/world/heightfield.ts');
+// The frost-heaved bank is the one place the way is too steep to walk: the bird is helped up it, not walked.
+const onBank=(x,z)=>Math.hypot(x-SLEEP_STEP.x,z-SLEEP_STEP.z)<1.4;
 const {heightAt}=await import('../src/world/island.ts');
 const {CurtainRibbon}=await import('../src/world/sleeping-ribbon.ts');
 const {CURTAIN_KNOT,CURTAIN_END}=await import('../src/world/sleeping.ts');
@@ -68,6 +71,7 @@ function fixture(fps=60) {
   }};
 }
 
+const climbs={};
 for (const fps of [30,60]) {
   const f=fixture(fps),{child,cygnet:k,plane,boat,sleeping}=f.cast;
   child.place(-139,-1916,Math.PI); k.bond=0.5; k.rideIn('cradle'); restoreWingCare(k,'sleeping');
@@ -95,10 +99,54 @@ for (const fps of [30,60]) {
   assert(!sleeping.feather.flying);assert(c.dusk>1.8);
   for(let i=0;i<fps;i++){c.brushDry(0.25);step();}
   assert.equal(c.beat,'feather','a modest screen stroke must release the feather');
-  const beats=[]; let minHeadClearance=Infinity,maxPreenGap=0; let preenSamples=0, worstHead=null;
-  for(let i=0;i<fps*180&&c.beat!=='hilltop';i++){
-    if(beats.at(-1)!==c.beat)beats.push(c.beat);
-    if(['snow','mist'].includes(c.beat) && c.t>7 && (c.t<7.5 || c.t>10)) c.brushDry(0.22);
+  const beats=[],starts={}; let minHeadClearance=Infinity,maxPreenGap=0; let preenSamples=0, worstHead=null;
+  // The player: strokes at the drift and the fog once each asks for them, circles at the step, a tailwind on the crest
+  // at 30 fps only, so the two runs compare the crest with and without it.
+  const player={beat:null,since:0,ready:-1,held:null,deepest:0,hopedLow:0,steppedAt:null};
+  const tailwind=fps===30;
+  for(let i=0;i<fps*240&&c.beat!=='hilltop';i++){
+    if(beats.at(-1)!==c.beat){beats.push(c.beat);starts[c.beat]??=f.time;}
+    if(player.beat!==c.beat)Object.assign(player,{beat:c.beat,since:0,ready:-1});
+    player.since+=1/fps;
+    Object.assign(f.air,{x:0,z:0,energy:0,lift:0});
+    if(c.beat==='snow'){
+      if(!c.windInvitation){
+        assert.equal(c.encounterStroke,0,'the drift counts strokes only once the bird has tried it');
+        player.deepest=Math.max(player.deepest,sleeping.trail.snowDepthAt(k.position.x,k.position.z));
+      } else {
+        if(player.ready<0)player.ready=player.since;
+        const into=player.since-player.ready;
+        // One sweep, a long pause that must hold what it took, then sweeps until the drift is down.
+        if(into>0.5&&into<0.95)c.brushDry(0.3);
+        if(into>1.6&&into<3.4){player.held??=sleeping.trail.snow;assert.equal(sleeping.trail.snow,player.held,'an earned layer must hold while the player pauses');}
+        if(into>3.6&&(into-3.6)%1.1<0.45)c.brushDry(0.3);
+      }
+    }
+    if(c.beat==='step'){
+      if(c.stage!=='ready'&&c.stage!=='over')assert(!c.invitesFlight,'the step asks for circles only after the try');
+      if(c.stage==='ready'){
+        if(player.ready<0)player.ready=player.since;
+        const into=player.since-player.ready;
+        // A gust under it and a shaky hand first, which only lift its hopes; then gentle circles, a loop in 1.6 s.
+        if(into>1&&into<3){Object.assign(f.air,{lift:1.0,energy:0.3});c.circling(Math.sin(into*40)*.6);}
+        if(into>=3){Object.assign(f.air,{lift:1.0,energy:0.3});c.circling((into-3)*Math.PI*2/1.6);}
+      }
+      if(c.stage==='over'&&player.steppedAt===null){
+        player.steppedAt=player.since-player.ready;
+        assert(player.steppedAt>3,`a gust and a shaky hand must not get it up the step: ${player.steppedAt}`);
+      }
+    }
+    if(c.beat==='mist'){
+      if(!c.windInvitation)assert.equal(c.encounterStroke,0,'the fog counts strokes only once the bird has turned uphill');
+      else {
+        if(player.ready<0)player.ready=player.since;
+        if(player.since-player.ready>0.6&&(player.since-player.ready)%1.1<0.5)c.brushDry(0.22);
+      }
+    }
+    if(c.beat==='crest'&&tailwind){
+      const a=SLEEP_PATH[c.routeIndex-1],b=SLEEP_PATH[c.routeIndex],l=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      Object.assign(f.air,{x:(b[0]-a[0])/l*6,z:(b[1]-a[1])/l*6,energy:0.5});
+    }
     step();
     if(c.beat==='edge' && c.departureIndex<2) {
       const axis=new THREE.Vector2(-.35,-.94).normalize(),side=new THREE.Vector2(-axis.y,axis.x);
@@ -106,13 +154,11 @@ for (const fps of [30,60]) {
       assert(Math.abs(d.dot(side))>1.05 || Math.abs(d.dot(axis))>1.95,'departure crossed the bed');
       assert(Math.abs(k.position.y-heightAt(k.position.x,k.position.z))<.08,'departure did not use the grass');
     }
-    if(['edge','climb','snow','mist'].includes(c.beat) && (c.beat!=='edge'||c.departureIndex>=2)) {
+    if(['edge','climb','snow','step','mist','crest'].includes(c.beat) && (c.beat!=='edge'||c.departureIndex>=2)) {
       const path=sleepPathAt(k.position.x,k.position.z);
       assert(path.distance<1.65,`bird left grass corridor: ${path.distance} at ${k.position.toArray()}`);
       const slope=Math.hypot(heightAt(k.position.x+.1,k.position.z)-heightAt(k.position.x-.1,k.position.z),heightAt(k.position.x,k.position.z+.1)-heightAt(k.position.x,k.position.z-.1))/.2;
-      assert(slope<0.65,`bird climbed cliff: slope ${slope}, at ${k.position.toArray()}, route ${c.routeIndex}`);
-      if(['snow','mist'].includes(c.beat)&&c.t<7) assert(c.encounterStroke===0,'idle must not solve encounter');
-      if(['snow','mist'].includes(c.beat)&&c.t>8&&c.t<10) assert(c.encounterStroke>.09&&c.encounterStroke<.13,'earned passage progress must hold during interrupted input');
+      if(!onBank(k.position.x,k.position.z))assert(slope<0.65,`bird climbed cliff: slope ${slope}, at ${k.position.toArray()}, route ${c.routeIndex}`);
     }
     if(c.beat==='unbinding' && k.preenWeight>.2) {
       const head=k.nodes[6].localToWorld(new THREE.Vector3(0,.08,.01));
@@ -121,10 +167,20 @@ for (const fps of [30,60]) {
       if(clearance<minHeadClearance){minHeadClearance=clearance;worstHead={t:c.t,weight:k.preenWeight,local:head.toArray()};}
       if(k.preenWeight>.98)maxPreenGap=Math.max(maxPreenGap,k.billTip(new THREE.Vector3()).distanceTo(k.preenAt));preenSamples++;
     }
-    if(c.beat==='climb' && c.snowDone) assert(sleeping.trail.snowDepthAt(k.position.x,k.position.z)<.13,`bird entered uncleared snow: ${sleeping.trail.snowDepthAt(k.position.x,k.position.z)} at ${k.position.toArray()} route ${c.routeIndex}`);
-    if(c.beat==='climb' && c.mistDone) assert.equal(sleeping.feather.heldBy,k,'feather must stay in the bill through the upper fog');
+    if(c.beat==='climb' && c.snowDone && !c.stepDone) assert(sleeping.trail.snowDepthAt(k.position.x,k.position.z)<.13,`bird entered uncleared snow: ${sleeping.trail.snowDepthAt(k.position.x,k.position.z)} at ${k.position.toArray()} route ${c.routeIndex}`);
+    if(['climb','crest'].includes(c.beat) && c.mistDone) assert.equal(sleeping.feather.heldBy,k,'feather must stay in the bill through the upper fog');
+    if(['climb','crest'].includes(c.beat) && c.stepDone) assert(k.wing.recovery===1&&k.wing.state==='wrapped','the bandage stays on and the wing eases once over the step');
+    if(c.beat==='step') assert(!k.flying&&k.wing.state==='wrapped','the step never lets it fly or unwraps it');
     assert(c.dusk>1.65,'morning arrived before the first flight');
   }
+  for(const b of ['snow','step','mist','crest'])assert(beats.includes(b),`the ${b} stop must be on the walking route`);
+  assert(player.deepest>.15&&player.deepest<.4,`the bird tries the drift chest deep: ${player.deepest}`);
+  assert(player.steppedAt!==null&&player.steppedAt<6.5,`a loop and a half of gentle circles must get it up the step: ${player.steppedAt}`);
+  assert(k.position.y>12.5,'the step leaves it on top');
+  assert(c.glances===3,`three looks back: ${c.glances}`);
+  const at=Object.entries(starts).map(([b,t])=>`${b} ${(t-starts.edge).toFixed(1)}s`).join(', ');
+  console.log(`Climb ${fps}fps${tailwind?' with a tailwind on the crest':''}: ${at}; crest ${((starts.unbinding??f.time)-starts.crest).toFixed(1)}s`);
+  climbs[fps]={total:starts.unbinding-starts.edge,crest:starts.unbinding-starts.crest};
   assert(preenSamples>fps*3,'the whole physical unwrapping must be observed');
   if(minHeadClearance<=1.1)console.log({worstHead});
   assert(minHeadClearance>1.1,`preening put the face inside the chest: ${minHeadClearance}`);
@@ -132,8 +188,7 @@ for (const fps of [30,60]) {
   assert.equal(k.preenAt,null,'the preen target must release before the bird asks for lift');
   assert.equal(k.preenWeight,0,'neck IK must completely release after unwrapping');
   console.log(`Preen ${fps}fps: body clearance ${minHeadClearance.toFixed(2)}, bill gap ${maxPreenGap.toFixed(3)}m`);
-  assert(beats.includes('snow')&&beats.includes('mist'),'both encounters must be on the walking route');
-  assert.equal(c.beat,'hilltop');assert.equal(k.wing.state,'free');assert.equal(sleeping.curtains,0);
+    assert.equal(c.beat,'hilltop');assert.equal(k.wing.state,'free');assert.equal(sleeping.curtains,0);
   for(let i=0;i<fps*80;i++)step();
   assert.equal(c.beat,'hilltop','waiting cannot complete the rescue');assert(!k.flying);
   Object.assign(f.air,{lift:1.1,energy:0.5});
@@ -184,7 +239,7 @@ for(let i=1;i<SLEEP_PATH.length;i++)for(let j=0;j<=20;j++)for(const side of [-0.
   const a=SLEEP_PATH[i-1],b=SLEEP_PATH[i],u=j/20,dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
   const x=a[0]+dx*u-dz/len*side,z=a[1]+dz*u+dx/len*side;
   const slope=Math.hypot(heightAt(x+.1,z)-heightAt(x-.1,z),heightAt(x,z+.1)-heightAt(x,z-.1))/.2;
-  assert(slope<0.65,`grass shelf slope ${slope} at ${x},${z}`);
+  if(!onBank(x,z))assert(slope<0.65,`grass shelf slope ${slope} at ${x},${z}`);
 }
 for(const [x,z] of [[4,0],[-4,0],[0,4],[0,-4]])
   assert(Math.abs(heightAt(BED.x+x,BED.z+z)-BED.y)<0.3,'the bedside terrace must stay open and gently sloped');
@@ -221,25 +276,65 @@ console.log(`Terrain and feather guidance pass; assisted ${activeWalk.toFixed(1)
   for(let i=0;i<30*220&&c.beat!=='unbinding';i++){
     const angle=Math.floor(i/90)*2.4;
     Object.assign(f.air,{x:Math.cos(angle)*24,z:Math.sin(angle)*24,lift:i%240<120?2:0,energy:1.5});
+    if(['snow','step','mist'].includes(c.beat))stops.add(c.beat);
     if(['snow','mist'].includes(c.beat)){
-      stops.add(c.beat);
-      if(c.t<6)assert.equal(c.encounterStroke,0,'ambient and violent wind must not solve a winter gate');
+      if(!c.windInvitation)assert.equal(c.encounterStroke,0,'ambient and violent wind must not solve a winter gate');
       else c.brushDry(.3);
     }
+    if(c.beat==='step')c.circling(i*.12);
     f.step(c);feather.update(1/30,f.time);
     const slope=Math.hypot(heightAt(k.position.x+.1,k.position.z)-heightAt(k.position.x-.1,k.position.z),heightAt(k.position.x,k.position.z+.1)-heightAt(k.position.x,k.position.z-.1))/.2;
-    worstSlope=Math.max(worstSlope,slope);
-    assert(slope<.65,'crosswinds steered the bird onto the cliff');
+    if(!onBank(k.position.x,k.position.z)){worstSlope=Math.max(worstSlope,slope);assert(slope<.65,'crosswinds steered the bird onto the cliff');}
     assert(sleepPathAt(k.position.x,k.position.z).distance<1.65,'crosswinds pulled the bird off its route');
-    assert(feather.position.distanceTo(k.position)<6,'crosswinds hid the guide far from the bird');
+    // Over the drift it hangs above the snow it is waiting on, so its height there is the drift's, not a stray.
+    assert(Math.hypot(feather.position.x-k.position.x,feather.position.z-k.position.z)<6,'crosswinds hid the guide far from the bird');
     assert(Number.isFinite(k.position.length()+feather.position.length()),'gust reversal produced an invalid position');
   }
   assert.equal(c.beat,'unbinding','hostile crosswinds stalled the ascent');
-  assert(stops.has('snow')&&stops.has('mist'),'hostile wind skipped an encounter');
+  assert(stops.has('snow')&&stops.has('step')&&stops.has('mist'),'hostile wind skipped a stop');
   console.log(`Reversing crosswinds passed; worst walking slope ${worstSlope.toFixed(3)}.`);
 }
 
-assert(Math.hypot(SNOW_AT.x-SLEEP_PATH[SLEEP_SNOW_STOP][0],SNOW_AT.z-SLEEP_PATH[SLEEP_SNOW_STOP][1])>3.25,'the bird must wait on turf before trying the drift');
+// ADVERSARIAL=1: at each stop the player waits until the invitation shows, then uses the wrong verb, then gives a
+// little of the right one and stops. Nothing may solve itself, nothing earned may be lost, and the crest needs nothing.
+if(process.env.ADVERSARIAL==='1'){
+  const f=fixture(30),c=new SleepingChapter(f.cast),k=f.cast.cygnet,feather=f.cast.sleeping.feather,trail=f.cast.sleeping.trail;
+  restoreWingCare(k,'sleeping');c.restoreCheckpoint('feather');
+  const run=(seconds,each=()=>{})=>{for(let i=0;i<seconds*30;i++){Object.assign(f.air,{x:0,z:0,energy:0,lift:0});each(i/30);f.step(c);feather.update(1/30,f.time);}};
+  const until=(beat,limit=120)=>{for(let i=0;i<limit*30&&c.beat!==beat;i++){Object.assign(f.air,{x:0,z:0,energy:0,lift:0});f.step(c);feather.update(1/30,f.time);}assert.equal(c.beat,beat,`never reached ${beat}`);};
+  const invited=()=>c.beat==='step'?!!c.coax:!!c.windInvitation;
+  for(const stop of ['snow','step','mist']){
+    until(stop);
+    let shown=-1;
+    run(40,t=>{if(shown<0&&invited())shown=t;});
+    assert.equal(c.beat,stop,`${stop}: waiting solved the stop`);
+    assert(shown>0,`${stop}: the invitation never showed`);
+    if(stop==='step')assert.equal(c.stage,'ready','waiting got it up the step');else assert.equal(c.encounterStroke,0,`${stop}: waiting gave progress`);
+    // The wrong verb: circles where strokes are wanted, strokes where circles are.
+    if(stop==='step')run(10,()=>{c.brushDry(.4);Object.assign(f.air,{energy:1,x:6});});
+    else run(10,()=>Object.assign(f.air,{lift:1.4}));
+    assert.equal(c.beat,stop,`${stop}: the wrong verb solved it`);
+    if(stop==='step'){assert.equal(c.stage,'ready','strokes at the step must not get it over');}
+    else {
+      assert.equal(c.encounterStroke,0,`${stop}: circles gave stroke progress`);
+      run(0.5,()=>c.brushDry(.3));run(1);
+      const earned=c.encounterStroke,shownLayer=trail.snow;
+      assert(earned>0,`${stop}: a short stroke gave nothing`);
+      run(12);
+      assert.equal(c.encounterStroke,earned,`${stop}: interrupted progress was lost`);
+      if(stop==='snow')assert(shownLayer>0&&trail.snow===shownLayer,'a short sweep takes a whole layer and keeps it');
+      console.log(`Adversarial ${stop}: invitation at ${shown.toFixed(1)}s, wrong verb harmless, ${stop==='snow'?`${(shownLayer*tuning.sleeping.snowLayers).toFixed(0)} layer kept`:`${earned.toFixed(2)} kept`}`);
+    }
+    if(stop==='step'){run(6,t=>{if(t>1)Object.assign(f.air,{lift:1});});console.log(`Adversarial step: coax after ${shown.toFixed(1)}s, strokes harmless`);}
+    else for(let i=0;i<30*30&&c.beat===stop;i++){c.brushDry(.3);f.step(c);feather.update(1/30,f.time);}
+    assert.notEqual(c.beat,stop,`${stop}: the right verb did not solve it`);
+  }
+  until('crest');const at=f.time;until('unbinding',60);
+  console.log(`Adversarial crest: no input, arrived in ${(f.time-at).toFixed(1)}s with the feather held: ${feather.heldBy===k}`);
+  assert.equal(feather.heldBy,k,'the bird reaches the summit with the feather in its bill');
+}
+
+assert(Math.hypot(SNOW_AT.x-SLEEP_PATH[SLEEP_DRIFT_STOP][0],SNOW_AT.z-SLEEP_PATH[SLEEP_DRIFT_STOP][1])>3.25,'the bird must wait on turf before trying the drift');
 
 // Spent fuel stays cold under later wind and after a restored morning checkpoint.
 {

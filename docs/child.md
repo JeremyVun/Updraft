@@ -117,7 +117,8 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - Stylised secondary motion on springs, never cloth simulation.
 - **The scarf** (`scarf.ts`, `tuning.scarf`): standing in still air the ends droop with only a lean behind; at a walk
   they trail back and down, lifting further at a run or in a gust; a player's gust takes them its own way. They must
-  not stick out or blow about with no wind. Knit is shading only.
+  not stick out or blow about with no wind. The knot's rise and fall in each step carries the whole scarf rather than
+  whipping it from the root. Knit is shading only.
 - **Seated on the ground** she holds the paper flat in her lap, or rests her mittens on her knees, and leans in a
   little (`lap`, `paperLap` in `traveller.ts`), never a doll with its arms out; the front hem drapes over her thighs
   (`LAP_DRAPE`). In the boat she sits on the thwart and the coat hangs. Sat on an edge her feet hang, and swing in
@@ -134,7 +135,9 @@ In `traveller.ts` unless noted.
 
 - **Walk, run, idle** with weight: a planted-foot walk with leg IK on the terrain (`motion.ts`), hips rising and
   falling, shoulders countering, a lagging arm swing, a steady head; the run pumps the elbows (`pump`). The sole's
-  outline fits the supporting slope and the hips lower smoothly when either leg would run out of reach. Roof decks
+  outline fits the supporting slope and the hips lower smoothly when either leg would run out of reach, holding the
+  deepest drop of the last stride so a slope is walked on bent knees, never pumped at every step. Up a hill she plods
+  in her big boots: leaning in, knees lifted, heels peeling early, arms working (`tuning.childGround`). Roof decks
   supply their physical surface to the feet separately from the navigation height; check posed boot vertices, since
   a correct character-root height can still leave both boots floating. Standing a
   while, a free hand holds a strap at the chest (`straps`) and glances go to the sides or up (`glanceYaw`,

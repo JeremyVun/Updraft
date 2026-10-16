@@ -47,6 +47,8 @@ export interface Drives {
   landing: number;
   /** Down on its breast, tail up, 0..1. */
   faceplant: number;
+  /** Clambering up a face: pitched by `pitch`, feet pedalling at it, the good wing working and the bandaged one stiff, 0..1. */
+  scramble: number;
   flop: number;
   doze: number;
   wriggle: number;
@@ -66,17 +68,21 @@ export interface Drives {
   actSide: number;
   /** The way a reaction is aimed, relative to the way its body faces. */
   actYaw: number;
+  /** How near the thing an act is aimed at lies, 1 at its own side (its own wing) to 0 a stride or more away. */
+  actNear: number;
   breath: number;
   blink: number;
   wingGuard: number;
   wingOpening: number;
+  /** Leaning into the weather it walks against, 0..1. */
+  braced: number;
   /** The wind on it in its own frame (x to its left, z ahead), units per second. */
   wind: { x: number; z: number };
   /**
    * Walking on planted feet: where each ankle has to be (left, then right) in the frame of its origin, and how the
    * body rides over them. `on` is whether any of this applies.
    */
-  gait: { on: boolean; feet: [{ x: number; y: number; z: number }, { x: number; y: number; z: number }]; sway: number; roll: number; twist: number; dip: number; pace: number };
+  gait: { on: boolean; feet: [{ x: number; y: number; z: number; lift: number }, { x: number; y: number; z: number; lift: number }]; sway: number; roll: number; twist: number; dip: number; pace: number; slope: number };
 }
 
 export interface Posed {
@@ -119,6 +125,7 @@ export class Poser {
     swim: 0,
     tow: 0,
     walk: 0,
+    scramble: 0,
   };
   /** One eased weight per thing it can be doing, so one act can fade out while the next fades in. */
   private readonly acts = new Map<Act, number>();
@@ -163,7 +170,8 @@ export class Poser {
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
     p.sleep = ease(p.sleep, d.doze, d.afloat || d.move === 'hop' ? 6 : 1.5, dt);
     /** Reaching out along the line of flight is what a flying bird's neck does — until it turns to look at somebody. */
-    p.reach = ease(p.reach, flying || dashing ? 1 - d.look * 0.8 : 0, 4, dt);
+    p.scramble = ease(p.scramble, d.scramble, 12, dt);
+    p.reach = ease(p.reach, flying || dashing ? 1 - d.look * 0.8 : d.scramble * 0.8, 4, dt);
     p.beg = ease(p.beg, Math.min(1, d.beg), 8, dt);
     p.climb = ease(p.climb, climbing ? 1 : 0, 7, dt);
     p.lifted = ease(p.lifted, lifting && !d.inHands ? 1 : 0, 9, dt);
@@ -192,7 +200,7 @@ export class Poser {
 
     /** A seat tips it back by itself; only the climb and a hop add anything of their own. */
     /** Hauling at something it cannot move, it sits back on its heels; pushing under a hand, it leans in. */
-    let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant - haul * 0.3 + push * 0.22;
+    let rootPitch = (flying ? d.pitch : d.pitch * p.scramble) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant - haul * 0.3 + push * 0.22;
     rootPitch -= p.tow * 0.16;
     let rootRoll = flying ? d.roll : d.roll * (1 - p.sit * 0.5);
     rootRoll += d.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
@@ -207,8 +215,8 @@ export class Poser {
     const wx = this.blownX;
     const wz = this.blownZ;
     rootRoll += Math.sin(t * 17) * 0.055 * shiver + back * 0.18 * Math.sign(d.actYaw || 1);
-    rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06) * wx * -1;
-    rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08) * wz;
+    rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06 - d.braced * 0.14) * wx * -1;
+    rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08 - d.braced * 0.22) * wz;
 
     const tuck = Math.max(p.sit, p.held);
     const stretch = act('stretch');
@@ -246,6 +254,11 @@ export class Poser {
       th = lerp(th, 0.55, dangle);
       sh = lerp(sh, -0.3, dangle);
       ft = lerp(ft, 0.5, dangle);
+      /** Clambering, the feet run at the face in front of it for a purchase they keep losing. */
+      const pedal = t * 17 + phase;
+      th = lerp(th, -0.45 + Math.sin(pedal) * 0.6, p.scramble);
+      sh = lerp(sh, -0.85 + Math.cos(pedal) * 0.55, p.scramble);
+      ft = lerp(ft, 0.35 + Math.sin(pedal - 0.7) * 0.45, p.scramble);
       const trail = clamp(d.glide + d.tucked + (d.falling || d.leaving || dashing ? 1 : 0), 0, 1);
       th = lerp(th, 1.45, trail);
       sh = lerp(sh, -0.15, trail);
@@ -287,8 +300,9 @@ export class Poser {
         th = lerp(th, ikTh, walk);
         sh = lerp(sh, ikSh, walk);
         /** Flat on the ground while it is down; toes trailing as it comes up, reaching as it goes down. */
-        const lifted = clamp((at.y - 0.002) / 0.05, 0, 1);
-        ft = lerp(ft, -(ikTh + ikSh) + lifted * 0.7, walk);
+        const lifted = clamp((at.lift - 0.002) / 0.05, 0, 1);
+        /** A planted foot lies along the ground under it, so on a hillside its toes do not run into the slope. */
+        ft = lerp(ft, -(ikTh + ikSh) + lifted * 0.7 - d.gait.slope * (1 - lifted), walk);
         splay = lerp(splay, Math.atan2(dx, -dy), walk);
       }
       n[thigh].rotation.set(th, 0, splay);
@@ -406,7 +420,8 @@ export class Poser {
     wantPitch = lerp(wantPitch, -0.55 + haul / Math.max(tug, 1e-3) * 0.7, tug);
     wantPitch = lerp(wantPitch, 0.5 - push / Math.max(nudge, 1e-3) * 1.1, nudge);
     wantYaw = lerp(wantYaw, clamp(d.actYaw, -2.3, 2.3), back);
-    wantPitch = lerp(wantPitch, -0.05, back);
+    /** Looking round at its own wing, it bows its head down to it rather than gazing out level past it. */
+    wantPitch = lerp(wantPitch, lerp(-0.05, 0.8, d.actNear), back);
     wantYaw = lerp(wantYaw, 1.5, p.sleep);
     wantPitch = lerp(wantPitch, 0.4, p.sleep);
     wantYaw *= 1 - d.call.env * 0.6;
@@ -452,6 +467,7 @@ export class Poser {
       tuck: p.stowed,
       raise: [d.actSide > 0 ? preenLift : 0, d.actSide < 0 ? preenLift : 0],
       shake: shaking + p.land * 1.5,
+      stiff: p.scramble,
     });
 
     const out = this.out;
@@ -460,7 +476,7 @@ export class Poser {
     out.rootRoll = rootRoll;
     const squeeze = Math.max(act('yawn') * 0.85, act('into-wind') * 0.6, act('brace') * 0.5, act('flinch'), act('nuzzle') * 0.7);
     out.blink = Math.max(d.blink, p.sleep, squeeze) - d.fear * 0.2 * (1 - p.sleep) * (1 - squeeze);
-    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7 + shiver * 0.9, 0, 1);
+    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7 + shiver * 0.9 + d.braced * 0.35, 0, 1);
     out.sleek = clamp(d.fear * 0.8 + p.reach * 0.5 + act('flinch') * 0.5, 0, 1);
     out.wingOpen = p.spread;
     return out;

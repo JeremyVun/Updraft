@@ -164,14 +164,14 @@ window.__wind = {
 `;
 
 // UNCAPPED=1 lifts vsync and the frame-rate limit, so the real loop runs as fast as the GPU completes frames and its
-// rAF interval measures throughput rather than landing on 16.7 ms multiples. Same shared lock as openBrowser.
+// rAF interval measures throughput rather than landing on 16.7 ms multiples. Holds the GPU alone, as openBrowser does here.
 async function openUncapped() {
-  const held = await openBrowser(); await held.browser.close();
+  const held = await openBrowser({ exclusive: true }); await held.browser.close();
   const browser = await chromium.launch({ channel: 'chromium', headless: true,
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--disable-gpu-vsync', '--disable-frame-rate-limit'] });
   return { browser, close: async () => { try { await browser.close(); } finally { await held.close().catch(() => {}); } } };
 }
-const { browser, close } = env.UNCAPPED === '1' ? await openUncapped() : await openBrowser();
+const { browser, close } = env.UNCAPPED === '1' ? await openUncapped() : await openBrowser({ exclusive: true });
 // CONTEND=<iterations> runs a second Chrome process that keeps the GPU busy with an uncapped loop of a fixed ALU-bound
 // pass, standing in for another app's GPU work (a simulator, another browser): the suspected slow state.
 let contender = null;
