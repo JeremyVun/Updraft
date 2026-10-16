@@ -88,17 +88,20 @@ export class Fireflies {
   }
 
   update(dt: number, night: number, around: THREE.Vector3, sheltered = false): void {
+    const target = sheltered ? 1 : 0;
+    this.shelter.value = this.presence <= 0.01 ? target
+      : THREE.MathUtils.lerp(this.shelter.value, target, 1 - Math.exp(-dt / tuning.wood.fireflyTransition));
     this.presence += (night - this.presence) * (1 - Math.exp(-dt * 2));
     this.mesh.visible = this.presence > 0.01;
     if (!this.mesh.visible) return;
     this.time += dt;
-    this.shelter.value = sheltered ? 1 : 0;
-    const count = sheltered ? tuning.wood.fireflyCount : OPEN_COUNT;
-    const range = sheltered ? tuning.wood.fireflyRange : RANGE;
-    (this.mesh.geometry as THREE.InstancedBufferGeometry).instanceCount = count;
+    const shelter = this.shelter.value;
+    const range = THREE.MathUtils.lerp(RANGE, tuning.wood.fireflyRange, shelter);
+    const windGain = THREE.MathUtils.lerp(0.7, 0.08, shelter);
     const a = this.attr.array as Float32Array;
     this.flies.forEach((f, i) => {
-      if (i >= count) return;
+      const population = THREE.MathUtils.lerp(i < OPEN_COUNT ? 1 : 0, i < tuning.wood.fireflyCount ? 1 : 0, shelter);
+      if (population < 1e-4) { a[i * 4 + 3] = 0; return; }
       const dx = f.p.x - around.x;
       const dz = f.p.z - around.z;
       if (f.p.lengthSq() === 0 || dx * dx + dz * dz > range * range) {
@@ -110,17 +113,17 @@ export class Fireflies {
       }
       const w = this.wind.sample(f.p.x, f.p.z, this.sample);
       const t = this.time * (0.4 + f.seed * 0.5) + f.seed * 50;
-      f.v.x += (Math.sin(t * 1.3) * 0.8 + w.x * (sheltered ? 0.08 : 0.7) - f.v.x) * dt * 1.5;
-      f.v.z += (Math.cos(t * 1.1) * 0.8 + w.z * (sheltered ? 0.08 : 0.7) - f.v.z) * dt * 1.5;
+      f.v.x += (Math.sin(t * 1.3) * 0.8 + w.x * windGain - f.v.x) * dt * 1.5;
+      f.v.z += (Math.cos(t * 1.1) * 0.8 + w.z * windGain - f.v.z) * dt * 1.5;
       f.v.y += (Math.sin(t * 0.9 + 2) * 0.35 + w.lift * 3 + w.energy * 1.5 - f.v.y) * dt * 1.5;
       f.p.addScaledVector(f.v, dt);
       const ground = surfaceHeight(f.p.x, f.p.z);
-      f.p.y = Math.min(Math.max(f.p.y, ground + 0.3), ground + (sheltered ? 3.2 : 9));
+      f.p.y = Math.min(Math.max(f.p.y, ground + 0.3), ground + THREE.MathUtils.lerp(9, 3.2, shelter));
       const blink = Math.max(0, Math.sin((this.time + f.phase) * (Math.PI * 2 / f.period))) ** 3;
       a[i * 4] = f.p.x;
       a[i * 4 + 1] = f.p.y;
       a[i * 4 + 2] = f.p.z;
-      a[i * 4 + 3] = blink * this.presence;
+      a[i * 4 + 3] = blink * this.presence * population;
     });
     this.attr.needsUpdate = true;
   }

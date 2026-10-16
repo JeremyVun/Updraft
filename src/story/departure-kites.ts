@@ -60,7 +60,8 @@ export class DepartureKites {
     this.markers.stairs.ahead = tow?.heading ?? null;
     for (const [name, kite] of Object.entries(this.markers)) {
       const enabled = name === story.name ? story.current.departureKite !== false
-        : name === this.crossing && (!this.markers[story.name] || story.current.departureKite === false);
+        : (name === 'mirror' && story.name === 'toMirror')
+          || name === this.crossing && (!this.markers[story.name] || story.current.departureKite === false);
       kite.update(dt, time, camera, enabled);
     }
   }

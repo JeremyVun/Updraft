@@ -1235,6 +1235,7 @@ export const tuning = {
     fireflyCount: 240,
     fireflyRange: 25,
     fireflyPresence: 0.85,
+    fireflyTransition: 2,
     /**
      * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
      * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
@@ -2213,6 +2214,8 @@ export const tuning = {
     nearShow: 5,
   },
   water: {
+    /** Outgoing land can still own visible shallows; let their shading recede without a cut. */
+    departureFade: 6,
     /** Seconds for wind ripples to build and to settle after a gust. */
     windAttack: 0.6,
     windRelease: 2.8,

@@ -928,7 +928,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0,
     story.name === 'wood' ? tuning.wood.shadeFollow : tuning.wood.shadeLift, dt);
   stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw,
-    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike);
+    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike, squall);
   /**
    * How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler.
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
@@ -1322,6 +1322,7 @@ function frameInner(now: number): void {
   // The shore behind the impossible door can recede during its departure, but never reappear later.
   const rooms = journeyReveal.update(visibleRooms(story.name, boat.position.z), dt);
   setJourneyRooms(rooms);
+  water.updateRooms(rooms, dt);
   drawJourneyRooms(rooms, roomObjects, drawRooms);
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);

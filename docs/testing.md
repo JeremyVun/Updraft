@@ -81,6 +81,10 @@ edit.
 
 **Engine, rendering and input**
 
+- `rendering-continuity-check`: outgoing water and sheltered firefly transitions at 10–120 Hz, and visual storm
+  cover independent of lightning triggers. `BASE=<QA preview> CASE=toSleeping AFTER=720 OUT=/tmp/<dir>
+  node tools/rendering-continuity-audit.mjs` captures handoff frames and twelve seconds afterward; use
+  `MODE=departure CASE=sleeping|wood|meadow` for boarding. Inspect the images as well as the per-frame state.
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
 - `sky-mirror-star-check`: renders the fallen star shader at constant brightness while the low camera crosses
