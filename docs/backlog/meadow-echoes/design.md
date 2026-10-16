@@ -303,6 +303,38 @@ shows in the field and the awakened part of the bed spreads visibly until the wh
 the bed as seen, never from hidden clusters. The harebells on the walk down from the pond go silent as well; they
 still sway in the wind.
 
+## Third playthrough — 2026-10-16
+
+Jeremy (verbatim):
+
+> - lol ok listen on the camera zoom. it's gone completely overboard and in the wrong direction. What i meant was that each time a phrase is played and completed, we zoom out a bit and up. It should never get to 120 meters... That's far too high and causes the camera to see the entire island with very poor render distance detail.
+> - For the flowers too, camera direction needs to be better. For first flowers, the camera still looks at them a little too side on. For the second flowers with the seeds, it never pans up in a cinematic way to see them float away. That beautiful moment is over way too quickly. What a waste. The scene just isn't captured well
+> - For the swans in the pond sequence encounter, I'm not convinced that the music should stop so soon and so abruptly. I need you to think carefully about this. I dont think we need the special handling with the feather music at all.
+> - For the piano puzzle music, each piano phrase ends very abruptly. Like the reverb of the ending note just suddenly cuts off. I need you to figure out how to make them sound more naturally ending that respects the ending reverb of each note.
+
+Resolved (supersedes item 1 of the second playthrough):
+
+1. **The duet camera steps back phrase by phrase.** Each time she completes an answer, the camera eases a little up
+   and out from her, so the view widens with the duet: four answers, four gentle steps, and the finale the last and
+   largest. It stays low enough that the grass, flowers and hills keep their detail (never a view of the whole island
+   from high above); the colour is seen pouring down off her knoll across the slopes that face her. Each step is one
+   smooth ease that settles before the next call, never an in-and-out. It ends on or near the walk camera's view of
+   her, so no descent is needed when she gets up. The surprises stay absent while they could be seen.
+2. **First flowers seen from above.** The camera looks down onto the bed more steeply, so the player sees across
+   its surface and every sweep's track, not along it from the side.
+3. **The seeds' moment is held.** When the down is released, the camera lifts its gaze and follows the cloud as it
+   rises and drifts away over the island, a slow cinematic pan up held long enough to watch it go, before coming back
+   to her as she walks on. The release, the rise and the drift away are each given time.
+4. **One warm bed from the duet to the boat.** The music no longer fades for the listening rest or falls silent
+   for the pond and the family's departure, and the feather has no music of its own. The warm bed plays on
+   unbroken through the listening, the walk to the pond, the swans, the departure, the feather, the shower and the
+   boat. It dips only gently (a few dB, over seconds) where the swans' calls need room, and rises again. At the
+   crossing it stops looping and plays on to the recording's own soft close, so the meadow ends on its own music.
+5. **Answers ring out.** Each piano answer ends with its last note's natural reverb decay, as a pianist lifting
+   off in that room would, never a tail cut short. Where the source take runs straight into its next phrase, the
+   tail is extended to match the room's measured decay rather than faded over a fraction of a second. The bough's
+   calls get the same treatment if any of them cuts off.
+
 ## Verification and quality bar
 
 Play from the landing through the piano, both wind interactions, the family and departure with real pointer

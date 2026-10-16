@@ -46,6 +46,18 @@ branch, merged back into it for Jeremy on 5251.
   notes from the play or the harebells, updraft seeds that rise smoothly and never sink back, seed framing
   against the hills.
 
+## Third playthrough corrections (2026-10-16)
+
+Brief: "Third playthrough" in [design.md](design.md). Two parallel worktrees off the prototype branch.
+
+- [ ] Cameras (`src/story/piano.ts`, `src/story/meadow-song.ts`, camera code in `src/story/meadow.ts`, the `piano`
+  rise and `meadowEchoes` camera tuning): the duet steps up and out phrase by phrase, staying low; the first bed
+  seen from above; the seeds' release followed up and away in a held pan.
+- [ ] Music (`src/audio/meadow-cuts.ts`, `meadow-cuts-measured.ts`, `tools/meadow-music-cuts.mjs`,
+  `src/audio/meadow-music.ts`, the `meadowMusic` getter in `src/story/meadow.ts`, the `meadowMusic` tuning): answers
+  that ring out with their room's decay; one warm bed unbroken from the duet to the boat, dipping gently for the
+  swans, playing to its own close at the crossing; no feather music.
+
 ## Wind instrument foundation
 
 - [x] Add the hollow wooden bough, reed and local breeze in the piano composition.
