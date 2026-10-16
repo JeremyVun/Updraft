@@ -1,5 +1,5 @@
 // Compare optimized work against full work in one frozen GPU frame, without motion/readback drift.
-// Uses play.mjs's shared Chrome lock. Usage: node tools/render-cost-check.mjs [chapter] [prefix]
+// Shares the GPU with other captures through play.mjs. Usage: node tools/render-cost-check.mjs [chapter] [prefix]
 import { spawnSync } from 'node:child_process';
 
 async function compare() {

@@ -3,19 +3,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    let alive = true;
-    if (holder) { try { process.kill(holder, 0); } catch { alive = false; } }
-    if (holder && !alive) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(resolve => setTimeout(resolve, 400));
-  }
-}
+import { holdGpu } from './lib/browser.mjs';
+const release = await holdGpu();
 let browser;
 const errors = [], report = [];
 try {
@@ -113,5 +102,5 @@ try {
   console.log('PASS: desktop/phone edges, corners, behind-camera direction, resize, fades, held/hidden/scripted/departing suppression, controls and pointer pass-through.');
 } finally {
   await browser?.close();
-  fs.rmSync(lock,{recursive:true,force:true});
+  release();
 }

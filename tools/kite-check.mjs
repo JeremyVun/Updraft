@@ -1,36 +1,18 @@
 // Departure fixtures in the game renderer, using each chapter's own boarding camera.
 // node tools/kite-check.mjs [prefix]; TOUCH=1 for 390x844, ONLY=island,wood to select rooms.
-// SOFTWARE=1 uses a separate software WebGL runner when the shared GPU runner is occupied.
+// SOFTWARE=1 renders with SwiftShader and takes no GPU slot.
 // Fixtures skip the preceding story; output includes framing/ground checks and screenshots in /tmp.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { holdGpu } from './lib/browser.mjs';
 
 const software = process.env.SOFTWARE === '1';
-const lock = software ? '/tmp/updraft-chromium-software.lock' : '/tmp/updraft-chromium.lock';
 let browser;
-function releaseLock() {
-  try {
-    if (Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true });
-  } catch {}
-}
-process.on('exit', releaseLock);
 process.on('SIGINT', async () => { await browser?.close(); process.exit(130); });
 process.on('SIGTERM', async () => { await browser?.close(); process.exit(143); });
 
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    let alive = true;
-    if (holder) { try { process.kill(holder, 0); } catch { alive = false; } }
-    if (holder && !alive) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(resolve => setTimeout(resolve, 400));
-  }
-}
-console.log(`${software ? 'Software' : 'GPU'} capture lock acquired`);
+const release = software ? () => {} : await holdGpu();
 const prefix = process.argv[2] ?? '/tmp/updraft-kites';
 const portrait = process.env.TOUCH === '1';
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1200, height: 800 };
@@ -148,5 +130,5 @@ try {
   assert.deepEqual(errors, []);
 } finally {
   await browser?.close();
-  releaseLock();
+  release();
 }

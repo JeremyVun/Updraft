@@ -6,7 +6,7 @@
 //   and grass-table stages alone, then the light bake with the sun stepped through a sunset arc (a fixed dusk
 //   never re-bakes it). Rounds alternate ABBA so both sides share the GPU state; every round's times are kept.
 //   env: BASE (default http://127.0.0.1:5230/), ROUNDS (4), COUNT (8 per stage per side), ARC (24 steps),
-//        OUT (JSON path). Takes the shared browser lock. Other GPU users inflate every number: check `ps` first.
+//        OUT (JSON path). Has the GPU alone among the browser tools. Other GPU users inflate every number: check `ps` first.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { openBrowser } from './lib/browser.mjs';
@@ -16,7 +16,7 @@ const variant = process.env.VARIANT ?? 'direct';
 assert(['direct', 'const'].includes(variant), `unknown VARIANT ${variant}`);
 const chapters = process.argv.slice(2).length ? process.argv.slice(2) : ['meadow', 'boats'];
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 const report = [];
 try {
   for (const chapter of chapters) {

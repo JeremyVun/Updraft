@@ -6,8 +6,9 @@
 // gives the audio clock's lead, which should stay near zero at 60 fps. In `cloud` the handoff is also derived from the
 // game clock (`clouds.ogg` from `clear`, its 208.3 s, the rest), which is what an ordinary player at any frame rate hears.
 // `belfry` (`?chapter=belfry`, about 2 minutes) rings the bell four times with strokes, then leaves the game alone, and
-// reports the fourth ring, when `belfry.ogg` starts and reaches full level, boarding, the storm and the piece's end;
-// `storm` (`?chapter=storm`, about a minute) checks a storm save starts it on load.
+// reports the fourth ring, when `belfry.ogg` starts and reaches full level, boarding, the storm, the handover to
+// `belfry_ending.ogg` (checked on the audio clock), its ritardando and fade, and the piece's end; `storm`
+// (`?chapter=storm`, about a minute) checks a storm save starts it on load.
 // Usage: node tools/village-music-browser-check.mjs [drowned cloud belfry storm]. Vite on 5230, or BASE.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
@@ -20,6 +21,8 @@ try {
   const page = await browser.newPage({ viewport: { width, height } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  const logged = [];
+  page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(message.text()); });
   const watch = () => page.evaluate(() => {
     const sound = __game.sound;
     window.villageWatch = { clock: 0, sources: [], events: [], padMax: 0, steps: [] };
@@ -28,10 +31,11 @@ try {
     const native = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (when = 0, offset = 0, duration) {
       const length = this.buffer?.duration ?? 0;
-      if (length > 30) {
-        const track = Math.abs(length - 192.87) < .05 ? 'villageApproach' : Math.abs(length - 143.92) < .05 ? 'belfry'
+      const ending = Math.abs(length - 9.03) < .05;
+      if (length > 30 || ending) {
+        const track = ending ? 'belfryEnding' : Math.abs(length - 192.87) < .05 ? 'villageApproach' : Math.abs(length - 143.92) < .05 ? 'belfry'
           : length > 240 ? 'clouds' : `music ${length.toFixed(1)} s`;
-        const entry = { track, offset: +offset.toFixed(3), when: +when.toFixed(2), ...at() };
+        const entry = { track, offset: +offset.toFixed(3), when: +when.toFixed(2), exact: { when, offset }, ...at() };
         w.sources.push(entry);
         this.addEventListener('ended', () => { entry.ended = at(); });
       }
@@ -130,23 +134,33 @@ try {
   const bell = () => page.evaluate(() => { const ch = __game.story.current.church; return { step: ch.step, rings: ch.rings, angle: ch.bell.angle }; });
   const goodbye = async (name, ready) => {
     await page.waitForFunction(() => {
-      const b = villageWatch.sources.find(s => s.track === 'belfry');
-      return b?.ended && villageWatch.events.some(e => e.name === 'storm') && __game.sound.ctx.currentTime > b.ended.ctx + 2;
+      const e = villageWatch.sources.find(s => s.track === 'belfryEnding');
+      return e?.ended && villageWatch.events.some(x => x.name === 'storm') && __game.sound.ctx.currentTime > e.ended.ctx + 2;
     }, null, { timeout: 300000, polling: 500 });
     const r = await page.evaluate(() => ({ sources: villageWatch.sources, events: villageWatch.events,
       once: __game.tuning.audio.recordedMusicOnce.belfry, playing: !!__game.sound.belfryScore }));
-    const b = r.sources.filter(s => s.track === 'belfry'), event = e => r.events.find(x => x.name === e)?.clock;
+    const b = r.sources.filter(s => s.track === 'belfry'), e = r.sources.filter(s => s.track === 'belfryEnding');
+    const event = name => r.events.find(x => x.name === name)?.clock;
     assert.equal(b.length, 1, `${name}: belfry.ogg starts once`);
     assert(Math.abs(b[0].offset - r.once.from) < .1, `${name}: from ${r.once.from} s (${b[0].offset})`);
-    const played = b[0].ended.ctx - b[0].ctx;
-    assert(Math.abs(played - (r.once.end - b[0].offset)) < .1, `${name}: it plays to its end fade (${played.toFixed(2)} s)`);
+    assert.equal(e.length, 1, `${name}: belfry_ending.ogg is scheduled once`);
+    const { at: handover, from: endingFrom, crossfade } = r.once.ending, lead = handover - b[0].exact.offset;
+    const due = b[0].exact.when + lead, late = e[0].exact.when - due;
+    assert(Math.abs(late) < 1e-6 && Math.abs(e[0].exact.offset - (handover - endingFrom)) < 1e-6,
+      `${name}: the ending starts on the audio clock ${lead.toFixed(4)} s after belfry.ogg, from ${handover - endingFrom} s in (${late} s off)`);
+    const handedOver = b[0].ended.ctx - b[0].ctx, played = e[0].ended.ctx - b[0].ctx;
+    assert(Math.abs(handedOver - lead - crossfade) < .05, `${name}: belfry.ogg stops once the crossfade is done (${handedOver.toFixed(2)} s)`);
+    assert(Math.abs(played - (r.once.end - b[0].offset)) < .1, `${name}: the ending plays to its end (${played.toFixed(2)} s)`);
     assert(!r.sources.some(s => s.track === 'villageApproach') && !r.playing, `${name}: nothing else plays: ${JSON.stringify(r.sources)}`);
     const from = ready(event);
     const at = x => x === undefined ? null : +(x - from).toFixed(1);
+    // belfry_ending.ogg slows from 51.05 s on the recording's time line and fades over its last 2.5 s.
+    const slowsFrom = 51.05, fade = 2.5;
     const report = { origin: name === 'belfry' ? 'the fourth ring' : 'load', fourthRing: at(event('ring4')), starts: at(b[0].clock),
       fullLevel: at(b[0].clock + r.once.enterOver), herDown: at(event('down')), boarding: at(event('board')), aboard: at(event('aboard')),
-      storm: at(event('storm')), endFadeFrom: at(b[0].ended.clock - r.once.fadeOut), ends: at(b[0].ended.clock),
-      audioClockLead: +((b[0].ended.ctx - b[0].ctx) - (b[0].ended.clock - b[0].clock)).toFixed(2) };
+      storm: at(event('storm')), handover: at(b[0].clock + lead), slowsFrom: at(b[0].clock + slowsFrom - b[0].exact.offset),
+      fadeFrom: at(e[0].ended.clock - fade), ends: at(e[0].ended.clock), endingScheduledOff: late,
+      audioClockLead: +((e[0].ended.ctx - b[0].ctx) - (e[0].ended.clock - b[0].clock)).toFixed(2) };
     console.log(JSON.stringify({ [name]: report }, null, 2));
     return report;
   };
@@ -181,5 +195,6 @@ try {
   };
   const run = { drowned, cloud, belfry, storm };
   for (const name of cases) await run[name]();
+  if (logged.length) console.log(JSON.stringify({ logged }, null, 2));
   assert.deepEqual(errors, []);
 } finally { await close(); }

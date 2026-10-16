@@ -4,19 +4,9 @@
 // PHYSICS=1 also checks the first length's fall, settling, stretch, terrain contact and frame-rate independence.
 // FROM/TO restrict tangle indices; TOUCH=1 exercises the wrapped trunk with real touch events (use W=390 H=844).
 import { chromium } from 'playwright-core';
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
-const lock = '/tmp/updraft-chromium.lock';
-const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (e) {
-    if (e.code !== 'EEXIST') throw e;
-    let pid = 0; try { pid = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    if (pid && !alive(pid)) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(r => setTimeout(r, 400));
-  }
-}
+import { holdGpu } from './lib/browser.mjs';
+const release = await holdGpu();
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
@@ -246,5 +236,5 @@ try {
   assert.deepEqual(errors, []);
 } finally {
   await browser.close();
-  try { if (Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, { recursive: true, force: true }); } catch {}
+  release();
 }

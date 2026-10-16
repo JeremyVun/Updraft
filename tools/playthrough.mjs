@@ -3,7 +3,7 @@
 // drowned village it brings the tub to the cat and back, fells the tree, turns the mill and pumps the swing.
 // Puzzle safety valves must not carry it on; the bell-summoned boat returns to the nave by itself.
 // Usage: node tools/playthrough.mjs [output-prefix]. BASE supports dev, preview or production.
-// Up to 60 minutes; uses the shared GPU lock. Screenshots and structured failure/progress evidence go to /tmp.
+// Up to 60 minutes; shares the GPU with other captures. Screenshots and structured failure/progress evidence go to /tmp.
 // REVIEW=1 records video and one-second frames. UNTIL=<chapter> ends a focused replay on entering that chapter.
 // SAVE_FILE=<checkpoint.json> continues through the normal Continue button after a repaired failure.
 // TRACE=1 writes every camera step (eye, gaze, subject and the rig's corrections) to <prefix>-camera.jsonl.

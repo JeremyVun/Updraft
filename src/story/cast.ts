@@ -10,6 +10,7 @@ import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
+import type { SleepingGate } from '../audio/sleeping-music';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { MeadowMusicPart } from '../audio/meadow-music';
 import type { BirchesScorePhase } from '../audio/birches-score';
@@ -148,6 +149,12 @@ export interface Chapter {
   readonly stillDepartureSoon?: boolean;
   readonly summitScore?: SummitScorePhase;
   readonly homeEndingTime?: number;
+  /** The cygnet is on the ground asking for the wind: Home plays its quiet opening until the updraft answers. */
+  readonly homeAsk?: boolean;
+  /** Seconds until the cygnet is set down on the summit, and 0 through the ask: Home moves into its opening then. */
+  readonly homeSetDownIn?: number;
+  /** Told each frame when Home's ending attack would land on a success now (`Soundscape.homeReturnIn`). */
+  hearHome?(returnIn: number | undefined): void;
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;
@@ -161,6 +168,10 @@ export interface Chapter {
   readonly whaleCalling?: number;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;
+  /** How far Sleeping's story has come, for its recordings. */
+  readonly sleepingMusic?: SleepingGate;
+  /** Told each frame how long Sleeping's lullaby has left (`Soundscape.lullabyLeft`), so its frost can wait for it. */
+  hearLullaby?(left: number): void;
   /** The background after Meadow's piano follows the flock, paddle and return to the child. */
   readonly meadowScore?: MeadowScorePhase;
   /** Where the meadow's recordings are, from the walk to the stool to the feather. */
@@ -194,6 +205,8 @@ export interface Chapter {
   readonly coax?: Coax | null;
   /** A gust the story blows by itself, drawn and heard as the player's wind is. */
   readonly gustFront?: GustFront | null;
+  /** Wind streaks nearer the camera than the first distance fade out, gone by the second; unset draws them all. */
+  readonly windLinesNearFade?: readonly [number, number] | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
   /** Sensitivity for deliberate circling; other chapters retain the normal wind response. */
@@ -218,6 +231,8 @@ export interface Chapter {
   steerLight?(at: THREE.Vector3, power: number): number;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
+  /** How far the player's cursor has wound round one way, in radians, for a beat that wants real circles. */
+  circling?(wound: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
   readonly silence?: boolean;
   /** True once the story is over and the credits may roll. */

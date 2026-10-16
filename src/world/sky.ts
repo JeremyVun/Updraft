@@ -29,6 +29,10 @@ void main() {
 #else
   vec3 col = skyRadiance(d);
 #endif
+  if (uHollow.w > 0.0) {
+    vec4 hollow = hollowSky(d);
+    col = mix(col, hollow.rgb, hollow.a);
+  }
   gl_FragColor = vec4(col, 1.0);
 }`;
 

@@ -13,17 +13,17 @@ try {
     const near = (a, b, within = 1e-6) => Math.abs(a - b) <= within;
     const length = 214.884;
     const audio = { ...tuning.audio };
-    Object.assign(tuning.audio, { homeStartAfter: 12.5, mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorSeamLatest: 1, mirrorFallbackFade: 3 });
+    Object.assign(tuning.audio, { homeStartAfter: 12.5, mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorFade: 3 });
     try {
       check(MIRROR_SEAMS.every((seam, i) => seam >= 0 && seam < length && (i === 0 || seam > MIRROR_SEAMS[i - 1])), 'Seams are ordered within the recording');
       const end = (position, homeIn = 12.5) => mirrorEnding(position, homeIn, length);
-      check(near(end(0).at, 7.22), 'From the top: the latest seam five seconds before Home');
+      check(near(end(0).at, 7.22) && near(end(0).release, 3), 'From the top: the latest seam five seconds before Home, faded into over three');
       check(near(end(60, 40).at, 31.34), 'A later Home lets the Mirror play on to a later seam');
       check(near(end(211).at, length - 211 + .32), 'Across the loop: the piece rings out to its end');
       check(near(end(205).at, 4.71), 'Before the loop: its last rest');
       check(near(end(100).at, .42) && near(end(100).release, .42), 'A seam just ahead still counts, its release shortened');
-      check(near(end(100.2).at, 10.52), 'Too close to schedule: the next seam, still a second before Home');
-      check(near(end(145).at, 9.71), 'No seam five seconds ahead: the earliest still a second before Home');
+      check(near(end(100.2).at, 3) && near(end(100.2).release, 3), 'Too close to schedule and the next too late: a three-second fade at once');
+      check(near(end(145).at, 3), 'No seam five seconds before Home: a three-second fade at once');
       const fallback = end(140);
       check(near(fallback.at, 3) && near(fallback.release, 3), 'No seam in time: a three-second fade at once');
       check(near(end(140, 2).at, 2), 'The fallback fade never runs past Home');
@@ -33,7 +33,7 @@ try {
       const leaving = t => ({ ...mirror, arrivalMusic: 'home', homewardTime: t });
       const t = new ArrivalTransition(); t.update(mirror, 10);
       const first = t.update(leaving(0), 20, 20, false, { position: 0, length });
-      check(first.stage === 'wait' && near(first.handoffAt, 27.22) && near(first.release, 1.2), 'Leaving holds the Mirror to its seam');
+      check(first.stage === 'wait' && near(first.handoffAt, 27.22) && near(first.release, 3), 'Leaving holds the Mirror to its seam');
       check(t.update(leaving(7.2), 27.2).stage === 'wait' && t.update(leaving(7.3), 27.3).stage === 'gap', 'Silence from the seam');
       check(t.update(leaving(12.49), 32.49).stage === 'gap' && t.update(leaving(12.5), 32.5).stage === 'incoming', 'Home on the crossing clock');
       const late = new ArrivalTransition(); late.update(mirror, 0);
@@ -101,7 +101,7 @@ try {
   await page.route(/\/home(?:-[\w-]+)?\.ogg/, route => ++requests === 1 ? route.abort('connectionreset') : route.continue());
   const retried = await page.evaluate(async () => {
     const { decodeMusic } = await import('/src/audio/music-loading.ts');
-    return (await decodeMusic(new OfflineAudioContext(2, 24000, 24000), 'home', new AbortController().signal)).duration;
+    return (await decodeMusic(new OfflineAudioContext(2, 24000, 24000), 'home', new AbortController().signal))[0].duration;
   });
   await page.unroute(/\/home(?:-[\w-]+)?\.ogg/);
   if (!(retried > 170 && requests === 2)) throw Error('A failed Home download is retried');

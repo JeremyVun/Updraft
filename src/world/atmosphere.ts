@@ -167,6 +167,8 @@ export const atmo = {
     uSleepMist: { value: new THREE.Vector4(0, 0, 0, 0) },
     uSleepMistPart: { value: 0 },
     uSleepMistAxis: { value: new THREE.Vector2(.4472136,-.8944272) },
+    /** How far the fog has taken the summit window from the climb, 0 to 1: the window and the sky go into its white. */
+    uSleepLost: { value: 0 },
     /** A patch of grass someone has pressed flat: centre (x, z), radius, and how flat, 0 to 1. */
     uTrodden: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** Green wave over the mainland: origin (x, z), radius (negative before it starts), softness. */
@@ -365,6 +367,7 @@ uniform vec4 uSleepHint;
 uniform vec4 uSleepMist;
 uniform float uSleepMistPart;
 uniform vec2 uSleepMistAxis;
+uniform float uSleepLost;
 uniform vec4 uTrodden;
 uniform vec4 uEmberLight;
 uniform vec4 uLifeWave;
@@ -519,6 +522,27 @@ float hollowDensity(vec3 p) {
   bankPos.x=abs(bankPos.x)-uSleepMistPart*2.1;
   float bank=(1.0-smoothstep(0.25,1.15,length(bankPos)+(wisps-.5)*.3))*uSleepMist.w;
   return uHollow.w * pool * under * (0.35 + wisps * 1.1) * carve * carve + bank * .8;
+}
+
+/**
+ * How much of the shoulder's local fog bank the eye ray goes through on its way out to dist. The bank is short
+ * enough to lie between all three of the ground fog's samples, so its chord is integrated explicitly.
+ */
+float sleepBankAlong(vec3 rd, float dist) {
+  vec3 delta=cameraPosition-uSleepMist.xyz;
+  vec2 forward=vec2(-uSleepMistAxis.y,uSleepMistAxis.x);
+  vec3 bankOrigin=vec3(dot(delta.xz,uSleepMistAxis),delta.y,dot(delta.xz,forward))/vec3(5.5,3.2,4.5);
+  vec3 bankRay=vec3(dot(rd.xz,uSleepMistAxis),rd.y,dot(rd.xz,forward))/vec3(5.5,3.2,4.5);
+  float closest=clamp(-dot(bankOrigin,bankRay)/max(dot(bankRay,bankRay),1e-5),0.0,dist);
+  vec3 bankSample=bankOrigin+bankRay*closest;
+  bankSample.x=abs(bankSample.x)-uSleepMistPart*2.1;
+  float radial=length(bankSample);
+  return (1.0-smoothstep(.25,1.15,radial))*uSleepMist.w*smoothstep(2.5,10.0,dist);
+}
+
+/** The light of the sleeping island's ground fog, before any bank or lane brightens it. */
+vec3 hollowMist() {
+  return uHollowTint * (uSkyAmbient * 0.9 + uSunColor * 0.24);
 }
 
 /** The grey of the still world for a living colour: its luminance, a touch warm, a touch dim. */
@@ -1040,6 +1064,24 @@ float journeyVeilAt(vec3 wpos) {
   return covered;
 }
 
+/**
+ * The ground fog over the sky, seen from inside it: at the horizon as white as the far sea it hides, thinning upward
+ * as the ray climbs out through its top. Lost in it, the sky goes into the same white as everything else.
+ */
+vec4 hollowSky(vec3 d) {
+  float here = hollowDensity(cameraPosition);
+  float rise = max(d.y, 0.0);
+  float through = min(max(uHollowTop.x + uHollowTop.y - cameraPosition.y, 0.0) / max(rise, 1e-3), uHollow.z * 2.0);
+  float dens = (here + 2.0 * hollowDensity(cameraPosition + d * through * 0.5) + hollowDensity(cameraPosition + d * through)) * 0.25;
+  float bank = sleepBankAlong(d, through);
+  float horizon = 1.0 - exp(-here * 0.25 * ${glsl(tuning.sleeping.fogHorizon)} * ${glsl(tuning.sleeping.fogExtinction)} - bank * 2.5);
+  float climb = 1.0 - exp(-through * dens * ${glsl(tuning.sleeping.fogExtinction)} - bank * 2.5);
+  float pooled = max(mix(horizon, climb, smoothstep(0.0, 0.2, rise)), uSleepLost * (1.0 - 0.3 * smoothstep(0.15, 0.9, rise)));
+  vec3 haze = skyColor(normalize(vec3(d.x, 0.015 + rise * 0.25, d.z))) * vec3(0.84, 0.87, 0.92);
+  vec3 mist = hollowMist() + vec3(.10, .12, .16) * bank;
+  return vec4(mix(haze, mist, mix(pooled / (pooled + 1.0), pooled, uSleepLost)), pooled);
+}
+
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */
 vec4 fogOf(vec3 wpos, float landscape) {
   vec3 rd = wpos - cameraPosition;
@@ -1087,20 +1129,13 @@ vec4 fogOf(vec3 wpos, float landscape) {
     vec3 mid = (cameraPosition + wpos) * 0.5;
     float dens = (hollowDensity(cameraPosition) + 2.0 * hollowDensity(mid) + hollowDensity(wpos)) * 0.25;
     float nearClear = smoothstep(${glsl(tuning.sleeping.fogNear)}, ${glsl(tuning.sleeping.fogFar)}, dist);
-    // A short local bank can lie between all three global fog samples. Integrate its ray chord explicitly.
-    vec3 delta=cameraPosition-uSleepMist.xyz;
-    vec2 forward=vec2(-uSleepMistAxis.y,uSleepMistAxis.x);
-    vec3 bankOrigin=vec3(dot(delta.xz,uSleepMistAxis),delta.y,dot(delta.xz,forward))/vec3(5.5,3.2,4.5);
-    vec3 bankRay=vec3(dot(rd.xz,uSleepMistAxis),rd.y,dot(rd.xz,forward))/vec3(5.5,3.2,4.5);
-    float closest=clamp(-dot(bankOrigin,bankRay)/max(dot(bankRay,bankRay),1e-5),0.0,dist);
-    vec3 bankSample=bankOrigin+bankRay*closest;
-    bankSample.x=abs(bankSample.x)-uSleepMistPart*2.1;
-    float radial=length(bankSample);
-    float bank=(1.0-smoothstep(.25,1.15,radial))*uSleepMist.w*smoothstep(2.5,10.0,dist);
+    float bank=sleepBankAlong(rd,dist);
     float pooled = 1.0 - exp(-dist * dens * ${glsl(tuning.sleeping.fogExtinction)} * nearClear - bank*2.5);
-    vec3 mistLight = uHollowTint * (uSkyAmbient * 0.9 + uSunColor * 0.24) + vec3(.10,.12,.16)*bank;
+    pooled = max(pooled, uSleepLost * (1.0 - smoothstep(1.8, 3.2, distance(wpos, uDawnSource.xyz))));
+    vec3 mistLight = hollowMist() + vec3(.10,.12,.16)*bank;
     mistLight += vec3(1.0, 0.8, 0.55) * laneAt(mid.xz) * uDawnSource.w * 0.15;
-    fogCol = mix(fogCol, mistLight, pooled / max(pooled + amt, 1e-4));
+    // Lost in it, the far sea and the sky meet in the same white, so no horizon shows through.
+    fogCol = mix(fogCol, mistLight, mix(pooled / max(pooled + amt, 1e-4), pooled, uSleepLost));
     amt = 1.0 - (1.0 - amt) * (1.0 - pooled);
   }
   // Land, its props, reflections and the sea all reach the same sky colour beyond this coast.

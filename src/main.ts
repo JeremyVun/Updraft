@@ -10,6 +10,7 @@ import { meadowFilesAhead, meadowFilesAt, meadowMusic } from './audio/meadow-mus
 import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
 import { BirchesFoley } from './audio/birches-foley';
+import { SleepingFoley } from './audio/sleeping-foley';
 import { CameraRig } from './camera';
 import { Creatures, type CreatureEnv } from './creatures/creatures';
 import { nearestCreature } from './creatures/nearby';
@@ -58,7 +59,7 @@ import { bakeNoiseTiles } from './world/noise-tiles';
 import { FogLookup } from './world/fog-lookup';
 import { CloudShadows } from './world/clouds';
 import { Grass } from './world/grass';
-import { sleepingGust } from './world/sleeping-wind';
+import { nightWindSound } from './world/sleeping-wind';
 import { HEARTH } from './world/sleeping-hearth';
 import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
@@ -406,6 +407,7 @@ rotaryWashing.onSound = (kind, at) => {
 };
 const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
+const sleepingFoley = new SleepingFoley(foley);
 const materialAt = new THREE.Vector3();
 const splashAt = new THREE.Vector3();
 birches.onLeafScuff = (x, z, strength) => {
@@ -557,7 +559,7 @@ function syncMusicLoading(): void {
     return;
   }
   if (!playing) return;
-  const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase);
+  const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase, story.current.sleepingMusic);
   if (track !== nextMusic) { prefetchMusic(track); nextMusic = track; }
 }
 controls.onMusicChange = on => { sound.setMusicMuted(!on); syncMusicLoading(); };
@@ -764,6 +766,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
+  story.current.circling?.(input.wound);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'lines') rotaryWashing.brush(rig.camera, input, wind);
   if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
@@ -834,6 +837,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cygnet.update(dt, time, child.position, cygnetAir);
   const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
   for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
+  if (story.name === 'sleeping') sleeping.trail.drift.wader(cygnet.position, cygnet.footfalls);
   if (skyMirror.active && !cygnet.carried) for (const f of cygnet.footfalls) skyMirror.step(f.x, f.z, time, tuning.skyMirror.birdStep);
   footprints.update(time);
   carry.after();
@@ -841,7 +845,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);
   foley.hearth(story.name==='sleeping' ? sleeping.hearth.flame.value : 0,1-THREE.MathUtils.smoothstep(rig.camera.position.distanceTo(HEARTH),10,35),screenPan(rig.camera,HEARTH));
   const heardPan = screenPan(rig.camera, cygnet.position);
+  const birdInSnow = story.name === 'sleeping' ? sleeping.trail.snowDepthAt(cygnet.position.x, cygnet.position.z) : 0;
   for (const h of cygnet.heard) {
+    if (story.name === 'sleeping' && sleepingFoley.heard(h, cygnet, birdInSnow, heardPan)) continue;
     if (h.kind === 'step') {
       const under: Surface = child.riding && cygnet.position.distanceToSquared(boat.position) < 9 ? 'wood' : heightAt(cygnet.position.x, cygnet.position.z) < 0.9 ? 'sand' : 'grass';
       foley.step(under, h.amount, heardPan);
@@ -990,6 +996,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   homePetals();
   petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
+  lines.nearFade = story.current.windLinesNearFade ?? null;
   lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const gustFront = story.current.gustFront;
   if (gustFront) lines.blowFront(dt, gustFront);
@@ -1032,13 +1039,14 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.stillDepartureSoon = story.current.stillDepartureSoon;
   journeyTitle.style.opacity = String(openingTitleOpacity(soundState.stillCrossingTime));
   soundState.forestWind = story.name === 'wood';
-  soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
   soundState.arrivalReady = story.current.arrivalReady;
   soundState.homewardTime = story.current.homewardTime;
   soundState.summitScore = story.current.summitScore;
   soundState.homeEndingTime = story.current.homeEndingTime;
+  soundState.homeAsk = story.current.homeAsk;
+  soundState.homeSetDownIn = story.current.homeSetDownIn;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
   soundState.drownedQuiet = story.current.drownedQuiet;
@@ -1048,6 +1056,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.seaPhrase = story.current.seaPhrase;
   soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
+  soundState.sleepingMusic = story.current.sleepingMusic;
   soundState.meadowScore = story.current.meadowScore;
   soundState.meadowMusic = story.current.meadowMusic;
   soundState.birchesScore = story.current.birchesScore;
@@ -1218,8 +1227,10 @@ function prepareFrame(dt: number): void {
   placeEmitter(soundState.cygnet!, cygnet.position, cygnet.visible);
   placeEmitter(soundState.flock!, flock.head, flock.active);
   soundState.cues = takeCues();
-  soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
+  soundState.winterGust = story.name === 'sleeping' ? nightWindSound(time, sleeping.cold, sleeping.dawn) : 0;
   sound.update(dt, soundState);
+  story.current.hearLullaby?.(sound.lullabyLeft);
+  story.current.hearHome?.(sound.homeReturnIn);
   syncMusicLoading();
   prepareWorldAudio(dt);
 }

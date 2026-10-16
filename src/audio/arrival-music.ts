@@ -121,7 +121,8 @@ export class ArrivalTransition {
         const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0 : tuning.audio.arrivalFadeOut;
         const quiet = arrivalQuiet(this.target);
         const fadeIn = this.target === 'sea' ? tuning.audio.seaArrivalFadeIn
-          : this.target === 'drowned' ? tuning.audio.villageArrivalFadeIn : tuning.audio.arrivalFadeIn;
+          : this.target === 'drowned' ? tuning.audio.villageArrivalFadeIn
+          : this.target === 'sleeping' ? tuning.audio.sleepingArrivalFadeIn : tuning.audio.arrivalFadeIn;
         // Retire sources on the first gap update, then give them the full rest even after a stalled frame.
         if ((previous === 'fade' || previous === 'wait') && now - this.began >= fadeOut) {
           this.began = now - fadeOut;

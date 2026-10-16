@@ -3,19 +3,8 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
-const lock = '/tmp/updraft-chromium.lock';
-for (;;) {
-  try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let holder = 0;
-    try { holder = Number(fs.readFileSync(`${lock}/pid`, 'utf8')); } catch {}
-    let alive = true;
-    if (holder) { try { process.kill(holder, 0); } catch { alive = false; } }
-    if (holder && !alive) fs.rmSync(lock, { recursive: true, force: true });
-    else await new Promise(resolve => setTimeout(resolve, 400));
-  }
-}
+import { holdGpu } from './lib/browser.mjs';
+const release = await holdGpu();
 
 let browser;
 const report = [], errors = [];
@@ -73,4 +62,4 @@ try {
   fs.writeFileSync('/tmp/updraft-boat-shores-report.json',JSON.stringify({report,errors},null,2));
   assert.deepEqual(errors,[]);
   assert(report.every(r=>r.cpu>=-0.015&&r.mesh>=-0.03),'hull must clear both sampled and rendered ground');
-} finally { await browser?.close();fs.rmSync(lock,{recursive:true,force:true}); }
+} finally { await browser?.close();release(); }

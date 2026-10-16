@@ -11,7 +11,7 @@ const out = process.env.OUT ?? '/tmp/updraft-start-over';
 const key = 'updraft.progress.v1';
 const title = base + '?shot&start=1&progress=1';
 const ASK = 'start over and lose your progress?';
-const { browser, close } = await openBrowser({ allowAutoplay: false });
+const { browser, close } = await openBrowser({ allowAutoplay: false, exclusive: true });
 const errors = [];
 const report = { checks: [] };
 const instrument = key => {

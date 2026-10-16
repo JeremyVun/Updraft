@@ -29,7 +29,7 @@ try {
       cygnet: { wing: { restore() {} } },
       // Journey.make('toHarbour') restores any unfound stars before departure; four stars, all found here.
       skyMirror: { progress: 3, stars: [{}, {}, {}, {}], restore() {} } };
-    const currentScore = sound => sound.linesScore ?? sound.boatsScore ?? sound.meadowScore ?? sound.birchesScore ?? sound.sleepingScore;
+    const currentScore = sound => sound.linesScore ?? sound.boatsScore ?? sound.meadowScore ?? sound.birchesScore;
     for (const [name, outgoing] of cases) {
       let seed = 98765;
       Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
@@ -65,9 +65,10 @@ try {
       const buffer = await rendering, encoded = encodeAudio(buffer);
       check(encoded.clipped === 0 && encoded.peakDbFS < -3, `${name}: rendered mix has at least 3 dB headroom`);
       const steps = gateTrace.filter((p, i) => i && Math.abs(p.gain - gateTrace[i - 1].gain) >= .09);
-      // The village's recording opens on its own 0.2 s of silence, so its gate opens at once out of the silent rest.
-      if (name === 'drowned') check(steps.length === 1 && steps[0].gain === 1 && gateTrace[gateTrace.indexOf(steps[0]) - 1].gain === 0,
-        'drowned: the arrival gate opens at once out of the silent rest');
+      // The village's recording opens on its own 0.2 s of silence and Sleeping's lullaby on near-silence, so their gates
+      // open at once out of the silent rest.
+      if (name === 'drowned' || name === 'toSleeping') check(steps.length === 1 && steps[0].gain === 1 && gateTrace[gateTrace.indexOf(steps[0]) - 1].gain === 0,
+        `${name}: the arrival gate opens at once out of the silent rest`);
       // Leaving the Mirror, its recording has faded to silence at its seam before the gate closes, and Home's recording
       // opens on 0.18 s of its own silence, so the gate closes and opens at once.
       else if (name === 'toHarbour') check(steps.length === 2 && steps[0].gain === 0 && steps[1].gain === 1,
@@ -76,9 +77,8 @@ try {
       renders.push({ name, peakDbFS: encoded.peakDbFS, rmsDbFS: encoded.rmsDbFS, clipped: encoded.clipped,
         ...(name === 'toBirches' ? { pcm: encoded.pcm } : {}) });
     }
-    // A held gain needs an explicit release anchor too: Sleeping formerly lost 83% at once.
+    // A held gain needs an explicit release anchor too: Sleeping's former score lost 83% at once.
     for (const [music, key, first, next] of [
-      ['wood','sleepingScore','shelter','climb'],
       ['boats','boatsScore',null,null],
     ]) {
       const { ctx, sound } = offlineSound(11);

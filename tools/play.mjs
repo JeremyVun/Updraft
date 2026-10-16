@@ -11,7 +11,7 @@
 //        TOUCH=1 emulates a coarse primary pointer; it does not emulate GPU performance.
 //        VIDEO=1 records <prefix>.webm of the whole session (headless screencast, lower quality than shots)
 // Prints stats (`window.__stats`) at the end and writes <prefix>-console.log on errors.
-// Shares the GPU lock with timing checks. ANGLE can override the platform's normal backend for comparisons.
+// Shares the GPU with other captures; timing checks wait for it to themselves. ANGLE can override the platform's normal backend for comparisons.
 import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 
