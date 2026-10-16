@@ -55,8 +55,9 @@ over the whole file but −19.3 LUFS over the 0–36.93 s it plays, and uses −
 −18.0 LUFS over the 47.06 s it plays and uses −11 dB; the open sea's recording measures −15.4 LUFS
 and uses −13.6 dB (its crossing −19.7, rescue phrases −19.1 and close −13.8 LUFS before trim); Lines measures −17 LUFS and uses −12 dB. Little Boats measures −16.7 LUFS
 and uses −12.3 dB. Sleeping's lullaby (`sleeping.ogg`) measures −16.3 LUFS over the 0–63.7 s it plays and uses −12.7 dB;
-its climb (`cygnet_brave.ogg`) measures −14.7 LUFS over its four parts whole (−15.3 with the climb theme stopped at
-65.69 s) and uses −14 dB. Still measures −23.3 LUFS across its
+its climb (`cygnet_brave.ogg`) measures −14.4 LUFS over its three parts whole (−15.3 with the climb theme stopped at
+65.69 s) and uses −14 dB; its morning (`sleeping_morning.ogg`) measures −13.7 LUFS over the 11 s to its end that it
+plays and uses −15 dB, level with the climb. Still measures −23.3 LUFS across its
 phrases and rests and starts at −6 dB (`stillPhraseDb`). These trims preserve the source dynamics and encoded bytes.
 Their dry route avoids adding reverb to an already mixed recording. `roomTrimDb`'s Home, Sky Mirror, Birches, drowned
 village and Sleeping entries and their old score levels are historical, unused by recorded playback. With the experiment disabled, the opening grows about
@@ -369,12 +370,13 @@ gesture chimes, keep their level.
 
 > Figure out the right implementation for the sleeping timings. I'm giving you creative ownership. I'll review at the end and provide feedback
 
-Claude holds creative ownership of these timings (2026-10-15). Two unchanged recordings play on the dry music route
+Claude holds creative ownership of these timings (2026-10-15). Three unchanged recordings play on the dry music route
 (`sleeping-music.ts`, `SleepingMusic`), each once, at their own dynamics: music mute (their clocks run on), hidden-page
 suspension, exit fades and permanent silence apply; `hush` does not, and the generic pad is silent throughout. They
 follow `SleepingChapter.sleepingMusic`, the furthest gate reached: `bedtime`, `asleep`, `feather` (the pillow feather
 freed), `mist` (the fog closes over the bird), `catch` (it takes the feather in its bill), `summit` (it reaches the top:
-`unbinding`, which comes before `hilltop`) and `glide`. `sleepingScore` remains the story phase the handoffs and
+`unbinding`, which comes before `hilltop`) and `glide` (the ribbon released as the curtains begin to part, a moment
+before the bird leaves the top). `sleepingScore` remains the story phase the handoffs and
 gestures read.
 
 - **The lullaby.** `sleeping.ogg` ("A Tune for the Sleeping Meadow", 143.6 s, A minor) enters through the wood's
@@ -393,39 +395,60 @@ gestures read.
   28.22, 33.58, 38.69, 41.36, 44.32, 52.76, 56.88, 63.7.
 - **Silence** from the lullaby's end through the frost, the tries, the unanswered call, the window and the feather on
   the quilt, until the player's stroke frees it; the wind, hearth, clock and foley carry on.
-- **The climb.** `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed", 174.2 s, C minor / A♭) in four parts back to
+- **The climb.** `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed", 174.2 s, C minor / A♭) in three parts back to
   back in the recording (`BRAVE_PARTS`), each from 30 ms before the attack after one of its clean rests: the climb
   theme 0–96.27 s as the feather is freed (its quiet opening carries the bird watching, hopping down and looking back);
-  the sparse commitment 96.27–112.11 at `catch`; the summit 112.11–153.18 at `summit`; the two-phrase coda 153.18–end at
-  `glide`, ringing out by 173.5 s. When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
+  the sparse commitment 96.27–112.11 at `catch`; the summit 112.11–153.18 at `summit`. The two-phrase coda after it is
+  unused. When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
   1.2 s) if one comes within `fogSeamWithin` (6 s), or else fades over `fogFade` (3 s), so the fog never carries the
-  full theme into the bird's call (the rebuilt climb's prompt fog closes about 67 s in, 13.5 s short of a seam); otherwise it ends at 96.27 s and never runs into the sparse section. `BRAVE_SEAMS`: .84, 4.08, 6.13, 8.18,
+  full theme into the bird's call (the rebuilt climb's prompt fog closes about 68.5 s in, 12 s short of a seam); otherwise it ends at 96.27 s and never runs into the sparse section. `BRAVE_SEAMS`: .84, 4.08, 6.13, 8.18,
   16.1, 24.02, 27.63, 49.96, 57.86, 65.69, 80.5, 92.67, 96.27, 104.18, 112.11, 126.67, 153.18, 157.15, 161.24 (there is
   none between 65.69 and 80.5, nor 80.5 and 92.67, where the theme is full).
+- **The morning.** Jeremy (2026-10-16), verbatim, of a piece for the curtains opening and the cygnet gliding down:
+
+  > ok i figured it out, use the colour returns to the meadow song, and start it on the second phrase at around 11 seconds. When you do that, the next phrase lines up perfectly with the child waking up out of bed.
+
+  `sleeping_morning.ogg` ("Colour Returns to the Meadow", 123.7 s, A minor) starts the moment the ribbon is released
+  (`glide`), from `MORNING_FROM`, 11 s: the last second of the rest before its second phrase (the 12.02 s seam), which
+  is what lands its third phrase (the 23.62 s seam) on the bird's landing and the child waking. It plays once to its end,
+  through the glide, the waking and the lap, until the departure hands off to the sea. It never waits: the climb part
+  still sounding gives way as it starts, ending at its next seam if one comes within `mirrorSeamRelease` (1.2 s), or
+  else fading over `curtainsFade` (1.5 s), and a part waiting to follow that one is passed over. A bird reaching the
+  curtains after the summit part has ended hears the rest, then the morning. `MORNING_SEAMS`, measured as the others:
+  1.75, 5.47, 12.02, 16.46, 23.62, 27.8, 31.81, 35.67, 38.26, 41.39, 50.93, 61.1, 69.02, 72.91, 75.81, 79.37, 89.25,
+  99.58, 109.68, 118.83.
 - **Queueing** (Jeremy's ruling: phrases never overlap and are never cut or faded early). A part reached while another
   sounds starts as that one ends, placed a second ahead; where it follows on in the recording the earlier part's end
   fade is dropped, so the recording runs on unbroken. A later gate reached before a waiting part begins plays instead
-  of it. Parts never replay. A slow player hears the piece's rests and then the wind until the next gate. After the
-  coda there is no music; the morning hands off to the sea as below, whatever is or is not still sounding.
+  of it. Parts never replay. A slow player hears the piece's rests and then the wind until the next gate. The curtains
+  are the one exception: the morning starts at its gate and the climb gives way to it (above). The morning hands off
+  to the sea as below, whatever is or is not still sounding.
 - **Restores.** The `feather` save resumes the climb (beat `climb`) with the climb theme from its top; the `morning`
-  save is silent until the sea and decodes neither recording. Any start or music switched on past a gate stays silent
-  until the next, except bedtime (the lullaby) and the freed feather (the climb theme).
+  save is silent until the sea and decodes none of the three. Any start or music switched on past a gate stays silent
+  until the next, except bedtime (the lullaby) and the freed feather (the climb theme); past the curtains, until the
+  sea. The QA start `?chapter=ribbon`, a step below the top with the feather caught, plays the summit part as the bird
+  reaches the top and the morning at the curtains.
 - **Cues.** Sleeping no longer raises `feather` or `lifted` (D major against A and C minor): the climb theme's entrance is
   the feather's sound and the summit part carries the flight. Landing adds no completion phrase.
 - **Loading.** The wood and the crossing from it prefetch the lullaby, decoded at the wood's handoff; bedtime prefetches
-  the climb, decoded from `asleep`; the sea prefetches from the freed feather. Each buffer is released when its last
-  part ends, or on exit.
+  the climb, decoded from `asleep`; the freed feather prefetches the morning, decoded from `catch`, so it is in hand well
+  before the curtains; the sea prefetches from the summit. Each buffer is released when its last part ends, or on
+  exit.
 
 Measured in the game with no input from `?chapter=toSleeping`, then prompt gestures
 (`sleeping-music-browser-check.mjs climb`, audio clock, seconds from the crossing's start; the game clock within 0.05 s):
 the arrival is asked for at 12.5, the lullaby plays 19.2–82.9, she lands at 29.6, goes to bed at 37.4, tucks in at 56.9
 and is asleep at 84.7; the frost at 86.8 (no wait: 3.9 s after the lullaby), the tries at 85.9, 89.1 and 92.3, the
-call at 95.5, the feather offered at 106.5 and freed at 109.4, the background silent between. From the feather: the
-climb theme to its 57.86 s seam (the fog at +52.0), the commitment at +57.9 (catch +55.3), the summit at +73.7 as the
-commitment ends (top +64.4), the coda at +114.8 as the summit ends (glide +86.0, so it comes in the lap), ending at
-+135.8, just before boarding (+136.7); the sea's recording 6.3 s into the passage. From `?chapter=sleeping` she sleeps
-49.2 s in: the lullaby ends at its 52.76 s seam and the frost waits 3.2 s. `sleeping-music-check.mjs` prints the same
-timeline offline for main's climb, the rebuilt climb and a slow player.
+call at 95.5, the feather offered at 106.5 and freed at 109.4, the background silent between. From the `feather` save
+through the rebuilt climb: the fog closes at +68.5 with no seam within 6 s, so the climb theme fades out by +71.5; the
+commitment at the catch, +81.5; the summit part at +97.4 as the commitment ends (top +95.2); the ribbon released at
++115.0, where the morning enters from 11 s and the summit part fades out by +116.5 (131.27 s in). The morning's 23.62 s
+seam sounds at +127.6, with the bird landing (`waking`, +127.7); boarding at +169.2 fades the morning by +172.2,
+and the sea's recording begins 6.3 s into the passage. From `?chapter=ribbon`, measured from the release: the 16.46 s
+seam at +5.4, the 23.62 s seam at +12.6, the landing (`waking`) at +12.7, her eyes open at +14.9, the 27.8 s seam at
++16.8 and she sits up from +16.3. From `?chapter=sleeping` she sleeps 49.2 s in: the lullaby ends at its 52.76 s seam
+and the frost waits 3.2 s. `sleeping-music-check.mjs` prints the same timeline offline for main's former climb, the
+rebuilt climb and a slow player.
 
 `sleeping-score.ts` (the former synthesised shelter, climb, summit and morning) remains for studies;
 `PianoStrings.note` optionally takes an audio-clock time and returns its sources so it can release them; its ten voice
@@ -625,11 +648,11 @@ before Begin. Begin unlocks audio and decodes while the chosen room prepares its
 both, showing "Preparing music" for waits over 150 ms. Sound-off and music-off skip preparation; switching either
 off cancels an in-progress start. A 20-second deadline bounds download/decode failures so ambience can still begin.
 During play, a single compressed prefetch slot warms Still's second recording on the island, Lines on the first crossing, Boats in Lines, Birches in Meadow,
-the stairs' `clouds.ogg` from Birches on (once the birches recording is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` with its ending in the village, Sleeping's lullaby in the wood and on the crossing from it, Sleeping's climb at bedtime and the open sea from the freed feather on (`nextMusicForChapter` takes Sleeping's gate), the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
+the stairs' `clouds.ogg` from Birches on (once the birches recording is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` with its ending in the village, Sleeping's lullaby in the wood and on the crossing from it, Sleeping's climb at bedtime, its morning from the freed feather and the open sea from the summit on (`nextMusicForChapter` takes Sleeping's gate), the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep to the coda's end. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
 retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
 (`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
@@ -855,8 +878,8 @@ sections. `node tools/village-music-check.mjs` covers the Birches play-out and s
 recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
 tools/village-music-browser-check.mjs [drowned cloud belfry storm]` measures them in the real game. `node
 tools/sleeping-music-check.mjs` checks Sleeping's cut points and seams on the decoded samples, the frost's wait, the
-climb's gates, queueing, skips and restores offline and prints each player's timeline; `node
-tools/sleeping-music-browser-check.mjs [climb sleeping feather morning]` measures them in the real game.
+climb's gates, queueing, skips, the morning at the curtains and restores offline and prints each player's timeline;
+`node tools/sleeping-music-browser-check.mjs [climb sleeping ribbon feather morning]` measures them in the real game.
 
 ## Open
 
@@ -865,12 +888,9 @@ tools/sleeping-music-browser-check.mjs [climb sleeping feather morning]` measure
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its slowed end falls in the storm) awaits his playtest.
-- Sleeping: Jeremy's review of the lullaby, the silence through the frost and the climb's parts. With the rebuilt
-  climb now in, re-measure the parts against the rebuilt climb (`sleeping-music-browser-check.mjs climb`, then the offline
-  table's timings), including whether the crest's rising wind masks the sparse commitment section. At main's prompt
-  pace the summit part (41 s) outlasts the summit-to-glide 21.6 s, so the coda comes in the lap rather than the glide;
-  and the climb theme has no seam between 65.69 and 80.5 s or 80.5 and 92.67 s, so a fog closing there leaves it
-  playing up to 14 s into the fog (the rebuilt climb's prompt fog at +67 s plays to 80.5).
+- Sleeping: Jeremy's review of the lullaby, the silence through the frost, the climb's parts and the morning in the
+  game, including whether the crest's rising wind masks the sparse commitment section, and whether the summit part's
+  1.5 s fade at the curtains sits right (a prompt player reaches them about 19 s into the 41 s part, with no seam near).
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

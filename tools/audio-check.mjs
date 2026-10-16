@@ -161,8 +161,8 @@ try {
     tuning.audio.homeEndingSounds = endingSounds;
     const morning = Object.assign(Object.create(SleepingChapter.prototype), {
       music: 'wood', hush: 0.5, now: 0, laneFrom: null, laneTo: null, seat: null,
-      cast: { child: { stop() {}, walkTo() {} }, cygnet: { watch() {} },
-        boat: { boardingPoint() { return { x: 0, z: 0 }; } }, sleeping: { trail: {}, ribbon: {}, hearth: { extinguish() {} }, lane() {} } },
+      cast: { child: { position: { x: 0, y: 0, z: 0 }, stop() {}, walkTo() {} }, cygnet: { watch() {} },
+        boat: { boardingPoint() { return { x: 0, z: 0 }; } }, sleeping: { trail: {}, ribbon: {}, dressing: {}, bedside: { x: 1e3, y: 0, z: 1e3 }, hearth: { extinguish() {} }, lane() {} } },
     });
     cues.takeCues(); morning.restoreCheckpoint('morning');
     check(morning.music === 'sea' && morning.hush === 0.1 && morning.cast.sleeping.dawn === 1, 'morning checkpoint restores its musical phase');

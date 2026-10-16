@@ -53,6 +53,9 @@ const LIE_AT = new THREE.Vector3(BED.x - BED_FACING.x * 1.0, BED.y + T.lieHigh, 
 const TURN_DOWN = new THREE.Vector2(BED.x + BESIDE.x * 1.35 + BED_FACING.x * 0.7, BED.z + BESIDE.y * 1.35 + BED_FACING.y * 0.7);
 /** Where they sit on the edge of it when they wake, before they put their boots on the frost. */
 const SIT_AT = new THREE.Vector3(BED.x + BESIDE.x * 0.65, BED.y + T.sitHigh, BED.z + BESIDE.y * 0.65);
+/** Round the foot of the bed and up its far side, inside the writing table: the way to the boat that does not cross the bed. */
+const ROUND_THE_BED = ([[1.7, -2.7], [-1.7, -2.7], [-2.1, 0.3]] as const).map(([across, along]) =>
+  new THREE.Vector2(BED.x + BESIDE.x * across + BED_FACING.x * along, BED.z + BESIDE.y * across + BED_FACING.y * along));
 /** The way up: everything in this room happens along the line from the bed to the top of the hill. */
 const UPHILL = new THREE.Vector2(HILLTOP.x - BED.x, HILLTOP.z - BED.z).normalize();
 const TO_HILL = Math.hypot(HILLTOP.x - BED.x, HILLTOP.z - BED.z);
@@ -208,9 +211,9 @@ export class SleepingChapter implements Chapter {
     if (['feather', 'edge'].includes(this.beat) || this.beat === 'asleep' && this.t >= T.winterBeginsAt) return 'cold';
     return 'shelter';
   }
-  /** The recordings follow the feather freed, the fog, its catch, the summit and the glide home. */
+  /** The recordings follow the feather freed, the fog, its catch, the summit and the curtains opening. */
   get sleepingMusic(): SleepingGate {
-    if (['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'glide';
+    if (this.cast.sleeping.ribbon.released || ['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'glide';
     if (['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat)) return 'summit';
     if (this.mistDone) return 'catch';
     if (this.beat === 'mist') return 'mist';
@@ -1496,12 +1499,20 @@ export class SleepingChapter implements Chapter {
     k.pace = 1;
     this.trodden = null;
     c.lookAt = null;
+    this.cast.sleeping.dressing.walker = c.position;
     const beside = boat.boardingPoint(this.seat);
-    c.walkTo(beside.x, beside.z, false, () => {
+    const toBoat = () => c.walkTo(beside.x, beside.z, false, () => {
       this.to('push');
       c.faceToward(boat.position.x, boat.position.z, 1);
       c.board(boat, () => this.to('aboard'));
     }, 0.8);
+    const b = this.cast.sleeping.bedside;
+    if (Math.hypot(c.position.x - b.x, c.position.z - b.z) >= 1.5) { toBoat(); return; }
+    const round = (i: number): void => {
+      if (i === ROUND_THE_BED.length) toBoat();
+      else c.walkTo(ROUND_THE_BED[i].x, ROUND_THE_BED[i].y, false, () => round(i + 1), 0.8);
+    };
+    round(0);
   }
 
   /** Where the walk is pointing, and where the bird is going, both eased, so no shot ever snaps round. */

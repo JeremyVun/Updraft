@@ -23,14 +23,24 @@ export const BRAVE_SEAMS: readonly number[] = [
   .84, 4.08, 6.13, 8.18, 16.1, 24.02, 27.63, 49.96, 57.86, 65.69, 80.5, 92.67, 96.27, 104.18, 112.11, 126.67, 153.18,
   157.15, 161.24,
 ];
+export const MORNING_SEAMS: readonly number[] = [
+  1.75, 5.47, 12.02, 16.46, 23.62, 27.8, 31.81, 35.67, 38.26, 41.39, 50.93, 61.1, 69.02, 72.91, 75.81, 79.37, 89.25,
+  99.58, 109.68, 118.83,
+];
 /**
- * `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed") in four parts, back to back in the recording, each from 30 ms
- * before the attack after one of its clean rests: the climb theme, the sparse commitment, the summit and the
- * two-phrase coda home, each with the gate that starts it.
+ * `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed") in three parts, back to back in the recording, each from 30 ms
+ * before the attack after one of its clean rests: the climb theme, the sparse commitment and the summit, each with the
+ * gate that starts it.
  */
 export const BRAVE_PARTS: readonly (readonly [from: number, to: number, gate: SleepingGate])[] = [
-  [0, 96.27, 'feather'], [96.27, 112.11, 'catch'], [112.11, 153.18, 'summit'], [153.18, Infinity, 'glide'],
+  [0, 96.27, 'feather'], [96.27, 112.11, 'catch'], [112.11, 153.18, 'summit'],
 ];
+/**
+ * `sleeping_morning.ogg` ("Colour Returns to the Meadow") plays from its second phrase as the curtains open, so the
+ * third comes in as the child wakes. Jeremy's "around 11 seconds" takes in the last second of the rest before the
+ * phrase's 12.02 s seam: that second is what lands the third phrase on the bird's landing.
+ */
+export const MORNING_FROM = 11;
 /** Each excerpt ends in a rest; this short fade only keeps the cut clean. */
 const END_FADE = .4;
 /** A part waiting on the one sounding is placed this long before that one ends, ahead of its fade. */
@@ -79,17 +89,24 @@ class Recording extends PhraseClips {
 }
 
 /**
- * Sleeping's two recordings, each on its own trim on the dry music route. The lullaby plays once from bedtime and the
+ * Sleeping's three recordings, each on its own trim on the dry music route. The lullaby plays once from bedtime and the
  * frost waits for it (`lullabyLeft`); falling asleep early in it ends it at its next seam. The climb's parts each begin
  * as their gate is reached and never overlap, are never cut or faded early but for the climb theme, which the fog ends
- * at its next seam, or over a slow fade when none is near: a part reached while another sounds starts as that one ends, the latest reached playing instead of
- * any passed over. A save or a late start plays nothing until the next gate, but for bedtime and the freed feather.
+ * at its next seam, or over a slow fade when none is near: a part reached while another sounds starts as that one ends,
+ * the latest reached playing instead of any passed over. The curtains opening start the morning at once, and the climb
+ * part still sounding gives way to it the way the fog takes the theme. A save or a late start plays nothing until the
+ * next gate, but for bedtime and the freed feather.
  */
 export class SleepingMusic {
   private readonly lullabyBus: GainNode;
   private readonly braveBus: GainNode;
+  private readonly morningBus: GainNode;
   private lullaby: Recording | null = null;
   private brave: Recording | null = null;
+  private morning: Recording | null = null;
+  /** Begun or passed over: the morning never starts again. */
+  private morningDone = false;
+  private morningEnds = Infinity;
   /** Begun, passed over or finished: the lullaby never starts again. */
   private lullabyDone = false;
   private lullabyClip: Clip | null = null;
@@ -108,6 +125,7 @@ export class SleepingMusic {
   constructor(private readonly ctx: BaseAudioContext, output: AudioNode) {
     this.lullabyBus = SleepingMusic.bus(ctx, output);
     this.braveBus = SleepingMusic.bus(ctx, output);
+    this.morningBus = SleepingMusic.bus(ctx, output);
   }
 
   private static bus(ctx: BaseAudioContext, output: AudioNode): GainNode {
@@ -118,11 +136,15 @@ export class SleepingMusic {
   }
 
   /** Starts decoding a recording that is still to play; resolves once it can. */
-  prepare(track: 'sleeping' | 'cygnetBrave'): Promise<void> {
+  prepare(track: 'sleeping' | 'cygnetBrave' | 'sleepingMorning'): Promise<void> {
     if (this.stopped) return Promise.resolve();
     if (track === 'sleeping') {
       if (!this.lullabyDone) this.lullaby ??= new Recording(this.ctx, this.lullabyBus, 'sleeping');
       return this.lullaby?.ready ?? Promise.resolve();
+    }
+    if (track === 'sleepingMorning') {
+      if (!this.morningDone) this.morning ??= new Recording(this.ctx, this.morningBus, 'sleepingMorning');
+      return this.morning?.ready ?? Promise.resolve();
     }
     if (this.placed < BRAVE_PARTS.length - 1) this.brave ??= new Recording(this.ctx, this.braveBus, 'cygnetBrave');
     return this.brave?.ready ?? Promise.resolve();
@@ -138,18 +160,23 @@ export class SleepingMusic {
     const now = this.ctx.currentTime, index = gate(reached);
     const lullabyLevel = level * 10 ** (tuning.audio.recordedMusicDb.sleeping / 20);
     const braveLevel = level * 10 ** (tuning.audio.recordedMusicDb.cygnetBrave / 20);
+    const morningLevel = level * 10 ** (tuning.audio.recordedMusicDb.sleepingMorning / 20);
     if (this.heard < 0) {
       this.lullabyBus.gain.setValueAtTime(lullabyLevel, now);
       this.braveBus.gain.setValueAtTime(braveLevel, now);
+      this.morningBus.gain.setValueAtTime(morningLevel, now);
       if (index > gate('bedtime')) this.lullabyDone = true;
       if (index > gate('feather')) this.placed = BRAVE_PARTS.filter(part => gate(part[2]) <= index).length - 1;
+      if (index >= gate('glide')) this.morningDone = true;
     } else {
       this.lullabyBus.gain.setTargetAtTime(lullabyLevel, now, .25);
       this.braveBus.gain.setTargetAtTime(braveLevel, now, .25);
+      this.morningBus.gain.setTargetAtTime(morningLevel, now, .25);
     }
     this.heard = Math.max(this.heard, index);
     this.bedtime(now);
     this.climb(now);
+    this.dawn(now);
   }
 
   private bedtime(now: number): void {
@@ -191,6 +218,7 @@ export class SleepingMusic {
     if (!brave?.decoded) return;
     if (this.queued && now >= this.queued.at) { this.sounding = this.queued; this.queued = null; }
     const sounding = this.sounding && now < this.sounding.end ? this.sounding : null;
+    if (this.heard >= gate('glide') && this.placed < BRAVE_PARTS.length) this.giveWay(brave, sounding, now);
     if (sounding?.part === 0 && !sounding.cut && this.heard >= gate('mist')) {
       const { mirrorSeamSoonest, mirrorSeamRelease, fogSeamWithin, fogFade } = tuning.audio;
       const position = now - sounding.at;
@@ -213,7 +241,7 @@ export class SleepingMusic {
       this.queued = null;
     }
     if (next < 0) {
-      if (!sounding && !this.queued && this.placed === BRAVE_PARTS.length - 1) {
+      if (!sounding && !this.queued && this.placed >= BRAVE_PARTS.length - 1) {
         brave.stop(0);
         this.brave = null;
       }
@@ -232,10 +260,53 @@ export class SleepingMusic {
     else this.sounding = placed;
   }
 
+  /**
+   * The curtains: the part waiting is passed over, and the one sounding ends at its next seam if one comes within
+   * `mirrorSeamRelease`, or else over `curtainsFade`. Nothing in the climb plays after.
+   */
+  private giveWay(brave: Recording, sounding: Placed | null, now: number): void {
+    if (this.queued) {
+      this.queued.clip.source.stop();
+      if (this.queued.held && sounding) brave.fadeAtEnd(sounding.clip, sounding.end);
+      this.queued = null;
+    }
+    this.placed = BRAVE_PARTS.length;
+    if (!sounding || sounding.cut) return;
+    const { mirrorSeamRelease, curtainsFade } = tuning.audio;
+    const position = now - sounding.at, length = sounding.end - sounding.at, from = BRAVE_PARTS[sounding.part][0];
+    const seam = BRAVE_SEAMS.map(seam => seam - from).find(seam => seam > position && seam < length - 1e-6) ?? length;
+    const near = seam - position <= mirrorSeamRelease;
+    // Its own end is near enough: it rings out there as it would have.
+    if (near && seam === length) return;
+    const at = near ? sounding.at + seam : now + curtainsFade;
+    brave.endAt(sounding.clip, at, near ? at - now : curtainsFade);
+    sounding.clip.finishing = true;
+    sounding.end = at;
+    sounding.cut = true;
+  }
+
+  /** Decoded from the catch; from the curtains it plays once to its end, and its decoded audio goes. */
+  private dawn(now: number): void {
+    if (this.heard >= gate('catch')) void this.prepare('sleepingMorning');
+    const morning = this.morning;
+    if (!morning?.decoded) return;
+    if (!this.morningDone && this.heard >= gate('glide')) {
+      const clip = morning.excerpt(MORNING_FROM, Infinity, now, .01);
+      if (!clip) return;
+      this.morningDone = true;
+      this.morningEnds = now + clip.source.buffer!.duration - MORNING_FROM;
+    }
+    if (this.morningDone && now >= this.morningEnds) {
+      morning.stop(0);
+      this.morning = null;
+    }
+  }
+
   stop(fade: number): void {
     if (this.stopped) return;
     this.stopped = true;
     this.lullaby?.stop(fade); this.lullaby = null;
     this.brave?.stop(fade); this.brave = null;
+    this.morning?.stop(fade); this.morning = null;
   }
 }

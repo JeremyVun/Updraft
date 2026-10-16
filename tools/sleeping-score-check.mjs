@@ -70,6 +70,16 @@ try {
       [['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'], 'summit'],
       [['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'], 'morning'],
     ]) for (const beat of beats) { story.beat = beat; check(phase.call(story) === expected, `${beat} selects ${expected}`); }
+    // The recordings' last gate is the ribbon released, as the curtains begin to open, ahead of the glide beat.
+    const gate = Object.getOwnPropertyDescriptor(SleepingChapter.prototype, 'sleepingMusic').get;
+    const ribbon = { released: false }, climber = { beat: 'pullRibbon', mistDone: true, cast: { sleeping: { ribbon } } };
+    check(gate.call(climber) === 'summit', 'The summit gate holds while the ribbon is pulled');
+    ribbon.released = true;
+    check(gate.call(climber) === 'glide', 'Releasing the ribbon opens the curtains gate');
+    for (const beat of ['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard']) {
+      climber.beat = beat;
+      check(gate.call(climber) === 'glide', `${beat} keeps the curtains gate`);
+    }
     // Exercise the real one-way landing transition. Its only former musical effect was restored.
     takeCues();
     const sleeping = { laneOpen: 0, dawn: 0, fog: 1, frost: 1, ribbon: { released: false }, cold: 1 };

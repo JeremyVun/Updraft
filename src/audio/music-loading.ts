@@ -12,14 +12,15 @@ import belfryUrl from '../../assets/music/belfry.ogg?url';
 import belfryEndingUrl from '../../assets/music/belfry_ending.ogg?url';
 import sleepingUrl from '../../assets/music/sleeping.ogg?url';
 import cygnetBraveUrl from '../../assets/music/cygnet_brave.ogg?url';
+import sleepingMorningUrl from '../../assets/music/sleeping_morning.ogg?url';
 import type { SleepingGate } from './sleeping-music';
 import type { StairsPhase } from './stairs-air';
 import { tuning } from '../tuning';
 
-export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'sleeping' | 'cygnetBrave' | 'lines' | 'boats' | 'still' | 'stillDeparture';
+export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'sleeping' | 'cygnetBrave' | 'sleepingMorning' | 'lines' | 'boats' | 'still' | 'stillDeparture';
 const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, clouds: cloudsUrl,
-  villageApproach: villageApproachUrl, belfry: belfryUrl, sleeping: sleepingUrl, cygnetBrave: cygnetBraveUrl, lines: linesUrl, boats: boatsUrl,
-  still: stillUrl, stillDeparture: stillDepartureUrl };
+  villageApproach: villageApproachUrl, belfry: belfryUrl, sleeping: sleepingUrl, cygnetBrave: cygnetBraveUrl,
+  sleepingMorning: sleepingMorningUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
 /** Derived endings (`recordedMusicOnce` `ending`), fetched and decoded with their recordings. */
 const endings: Partial<Record<MusicTrack, string>> = { belfry: belfryEndingUrl };
 type Download = { track: MusicTrack; controller: AbortController; bytes: Promise<ArrayBuffer[]> };
@@ -114,7 +115,7 @@ export function musicForStart(choice: string | { chapter: string; point?: string
 
 /**
  * In the stairs, `stairs` says where: once they are up in the white, `clouds.ogg` is in hand and the village is next.
- * In Sleeping, `sleeping` does: the climb's recording until she is asleep, then the sea's.
+ * In Sleeping, `sleeping` does: the climb's recording until she is asleep, the morning's until the summit, then the sea's.
  */
 export function nextMusicForChapter(chapter: string, stairs?: StairsPhase, sleeping?: SleepingGate): MusicTrack | null {
   if (chapter === 'island') return tuning.audio.stillPhraseExperiment ? 'stillDeparture' : null;
@@ -125,7 +126,10 @@ export function nextMusicForChapter(chapter: string, stairs?: StairsPhase, sleep
   if (['birches', 'toStairs', 'stairs'].includes(chapter)) return 'clouds';
   if (chapter === 'drowned') return 'belfry';
   if (chapter === 'wood' || chapter === 'toSleeping') return 'sleeping';
-  if (chapter === 'sleeping') return sleeping === 'bedtime' || sleeping === 'asleep' ? 'cygnetBrave' : 'sea';
+  if (chapter === 'sleeping') {
+    if (sleeping === 'bedtime' || sleeping === 'asleep') return 'cygnetBrave';
+    return sleeping === 'summit' || sleeping === 'glide' ? 'sea' : 'sleepingMorning';
+  }
   if (chapter === 'toMirror') return 'mirror';
   if (chapter === 'mirror') return 'home';
   return null;

@@ -92,14 +92,17 @@ export const tuning = {
      * once. Other recordings fade into a seam over up to `mirrorSeamRelease`.
      */
     mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorFade: 3,
-    /** Sleeping's fog takes the climb theme at its next seam within `fogSeamWithin`, or fades it over `fogFade`. */
-    fogSeamWithin: 6, fogFade: 3,
+    /**
+     * Sleeping's fog takes the climb theme at its next seam within `fogSeamWithin`, or fades it over `fogFade`. The
+     * curtains take whatever climb part still sounds at a seam within `mirrorSeamRelease`, or over `curtainsFade`.
+     */
+    fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
     recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3,
-      sleeping: -12.7, cygnetBrave: -14 },
+      sleeping: -12.7, cygnetBrave: -14, sleepingMorning: -15 },
     recordedMusicFade: .65,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
