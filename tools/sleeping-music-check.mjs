@@ -6,7 +6,7 @@
 import { audioPage } from './lib/audio-render.mjs';
 
 // Seconds after the feather is freed that each gate is reached. Main's climb is measured in the game with prompt gestures
-// (`sleeping-music-browser-check.mjs climb`); the rebuilt climb (`sleeping-climb`) from its playtests; the slow player
+// (`sleeping-music-browser-check.mjs climb`); the rebuilt climb from its playtests; the slow player
 // takes every stop 2.5 times as long, and a long while over the pillow. `asleep` is seconds after the lullaby's top
 // (65.5 measured from the wood's handoff, 49 from `?chapter=sleeping`); `summit` is the bird reaching the top (`unbinding`).
 const MAIN = { mist: 52, catch: 55.3, summit: 64.4, glide: 86 };

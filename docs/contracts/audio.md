@@ -91,6 +91,13 @@ gate.
   `grassRustleDb` (−9 dB). These apply in every room and ease off as a stroke strengthens (`playerWindEase`: about −1 dB at half strength,
   −6 dB at full); their filter sweeps are scaled by `playerWindFilterRange`. The trim leaves the weather floor,
   ambient breeze, sea and rain unchanged.
+- Sleeping's night wind has its own noise voice, filter and slow pan (`nightGain`, `nightWhistleGain`, `nightPan`),
+  never shared with the player's gust, so the player's wind stays audible over it: the night wind gives way under a
+  stroke (by `nightWindUnder`, fully at `nightWindUnderAt` of a full gust) and the player's wind sits `nightPlayerDb`
+  louder on the night hill. Its level is `nightWindSound` (`sleeping-wind.ts`, through `winterGust`): gust fronts and
+  a capped roar (`nightWindMost`) grow with `climbExposure`, lull by `fogLull` while the fog has the window, swell
+  once to answer the bird's call into the fog, and settle by `summitLull` at the summit, never louder than the
+  summit's moment.
 - `hush` attenuates only the background score, never the player's feedback.
 
 Authored cues keep their own sound: `restored` (the shared completion phrase), `breeze`, `kindled`, `comfort` (the
@@ -724,6 +731,9 @@ pan and bounded scheduling; finished nodes disconnect.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional
   snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room, and
   once it has been quiet for two seconds it stops until the fire is heard again.
+- Sleeping climb (`sleeping-foley.ts`): snow under the bird and round its chest in the drift, the wade's struggle,
+  and the bandaged wing's flutter whenever it scrambles or, at the step, beats in hope (following `flap` and `hope`);
+  snow steps take `cygnetStepDb` like other steps. Everything else sounds as it does elsewhere.
 - Dolphins and whales: sounds fire from the same events as the visible splash, spray, breaths, fluke drainage and
   dive (`WhaleWake`, the shared `SeaLife` callback), with soft attacks and level trims (`dolphin*`, `whale*`). Pod
   emergence and re-entry have separate budgets. Muted or hidden events are dropped.
@@ -855,8 +865,8 @@ tools/sleeping-music-browser-check.mjs [climb sleeping feather morning]` measure
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its slowed end falls in the storm) awaits his playtest.
-- Sleeping: Jeremy's review of the lullaby, the silence through the frost and the climb's parts. Once `sleeping-climb`
-  merges, re-measure the parts against the rebuilt climb (`sleeping-music-browser-check.mjs climb`, then the offline
+- Sleeping: Jeremy's review of the lullaby, the silence through the frost and the climb's parts. With the rebuilt
+  climb now in, re-measure the parts against the rebuilt climb (`sleeping-music-browser-check.mjs climb`, then the offline
   table's timings), including whether the crest's rising wind masks the sparse commitment section. At main's prompt
   pace the summit part (41 s) outlasts the summit-to-glide 21.6 s, so the coda comes in the lap rather than the glide;
   and the climb theme has no seam between 65.69 and 80.5 s or 80.5 and 92.67 s, so a fog closing there leaves it

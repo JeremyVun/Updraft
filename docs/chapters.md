@@ -593,10 +593,31 @@ its summit window until they land (`tuning.world.sleepingMist`).
 3. **The feather.** A loose feather lies across the quilt over her, rising and falling as she breathes; a stroke
    across it frees it. Broad strokes send it ahead along the route, faster than it goes by itself, never back
    downhill, and it stays near the bird. Short wind wisps hint the way up a natural hillside.
-4. **Snow and mist.** A snow-choked notch between rock and drop: the bird tries the powder and backs out; broad
-   sweeps carry it away into a grassy channel between rounded banks. Then a bank of mist over the shoulder: the
-   bird looks back and shivers until the player parts it. Progress persists. In the upper fog the bird takes the
-   feather into its bill, and lets it go at the summit.
+4. **The climb: hesitation, loneliness, commitment.** The small bandaged bird, alone for the first time, climbs into
+   the cold so the night grows bigger and it smaller, and it chooses to go on. About two minutes from the bed's edge
+   to the summit with prompt input; snowfall thickens, the flakes turn from falling to driving and the night's wind
+   rises with height (route progress, never a clock). The window shows from the bedside, is out of sight on the lower
+   slopes, is found again from the top of the step, lost in the fog, brought back through it by the player and ahead
+   on the crest; each return is a reveal, never a marker. Three looks back (over the horn after the drift, on top of
+   the step, in the fog) find the bed further below and its lamp dimmer, framed by where the lens already stands.
+   - *Lower slope (no input):* frosted tussocks, half-buried stones, sheep trods, a frozen trickle the bird hops by
+     itself, and a bent hawthorn with a rabbit asleep in its form under it (background life: it never wakes on the
+     climb; in the morning it washes its face and lopes off).
+   - *The drift (strokes):* wind-carved snow packed in a notch between an outcrop and the drop, standing over the
+     bird's head behind a chest-deep skirt. The bird wades in to its chest, struggles, backs out and shakes, then
+     looks at the drift and the air over it. Strokes lift spindrift off it in streams that follow the stroke and take
+     it down a layer at a time into a channel between rounded banks; prints stay in what is left.
+   - *The step (circles):* a frost-heaved bank too high to hop. It tries, slides back and bows its head to its
+     bandaged wing; circles round it make it rise on its toes beating only its good wing, and a loop and a half of
+     real circling gets it over in a lopsided clamber that sheds a few feathers. On top it shakes, glances down at the
+     lamp and walks on toward the window, 2.5 s from landing.
+   - *The fog (strokes):* fog closes over the shoulder and takes the window and the sky; the bird shivers, calls once
+     and only the wind answers; the fog thins downhill by itself to show the lamp far below; it turns uphill and the
+     lens comes round with it. The player's strokes then part the fog uphill, the window glowing back through the
+     lane, and the bird takes the feather into its bill.
+   - *The crest (optional strokes):* above the fog sea, snow streaming sideways, the bird braced in small steps;
+     strokes behind it are a tailwind. It is never blown back and never in danger. It lets the feather go at the
+     summit.
 5. **The ribbon.** The window stands on the crest; its curtains are tied with a ribbon whose loose end hangs beyond
    the lip over open air. A close three-quarter view shows feet on the edge, ribbon beyond, nothing beneath. A gust
    billows the cloth but the knot holds. The bird reaches, falls short, looks back at the child, and takes its
@@ -617,12 +638,22 @@ Rulings:
 - No voiced yawns or narration.
 - Callbacks reuse familiar mechanics in this island's own setting (the snow notch recalls the scarf).
 - No snow play after this island: the curtains opening is the greening moment that turns winter to spring.
+- The climax is the bird flying out to pull the ribbon and gliding down to the bed; nothing on the climb competes
+  with it. The player's wind only ever serves the way up: the fog is never cleared back downhill.
+- The feather leads at a lively pace by itself (about 1.2 m/s); strokes send it faster, never back.
+- Each stop waits for its gesture and never solves on time; wrong input is harmless. A gust or a shaky hand at the
+  step only lifts the bird's hopes: it goes over only on circles wound round it (`stepWound`).
+- Scripted holds stay short: the bank top 2.5 s from landing to walking on; the fog's wind counts from 5 s after it
+  closes, and parting it takes a deliberate amount of stroking (`mistStroke`).
+- The rabbit sleeps in a soft, slow tremble with slow breaths, never jerky bouts. The tall white line during the
+  step's circles is the updraft's own wind effect.
 
 Rules: the window stays above the skyline in the bedside view with a clear path for its light to the pillow. No
 image of strangulation or helpless dangling; no crash or retry after the bird commits; nothing implying the child
 has died. Morning uses the island's own winter palette, not the sunset played backwards.
 
-Knobs: `tuning.sleeping`. Checks: `tools/sleeping-logic-check.mjs`, `sleeping-check.mjs` (`ADVERSARIAL=1`,
+Knobs: `tuning.sleeping`; the climb's stops are `SLEEP_DRIFT_STOP`, `SLEEP_STEP_STOP`, `SLEEP_FOG_STOP` and
+`SLEEP_CREST_STOP` on `SLEEP_PATH`, its lens `CLIMB_LENS` keyed by distance up the route. Checks: `tools/sleeping-logic-check.mjs`, `sleeping-check.mjs` (`ADVERSARIAL=1`,
 `TOUCH=1`; `SUMMIT=1` and `CLIMB=1` stage the ledge and the feather), `wing-care-check.mjs`. Checkpoints `feather`
 and `morning`.
 
