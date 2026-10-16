@@ -294,6 +294,11 @@ Fixed (`b3348d9a`): the raked heaps start held in `world/birches.ts`, before the
 > Can you please take a look at the performance profile of the birches chapter? I notice the auto quality always
 > dropping to medium at some point or other.
 
+Then, on the second knot:
+
+> Another thing, after the second knot challenge around the tree trunk, the squirrel teleports down to the base of the
+> tree trunk.
+
 What follows from it (2026-10-16):
 - **Red Door enters with the reveal.** On the meadow sail its entrance coincides with the lens beginning its swing
   round to the port side to reveal the island, not after it.
@@ -306,6 +311,8 @@ What follows from it (2026-10-16):
 - **No heap can be blown away before the squirrel has gone into it**, whatever the route, save or gesture.
 - **At the first knot** she stops closer to the knot and stands facing it, body and head, not turned away with her
   head looking back.
+- **After the second knot** the squirrel climbs down the broken birch and runs on to where it goes next, in
+  continuous motion, never a jump cut.
 - **The swing:** proposal pending Jeremy's answer (below, once given).
 - **Performance:** find why the quality governor steps down to medium on the birches, and fix the cause without
   changing the look.
@@ -910,6 +917,21 @@ comes up to the knot.
 **Tangles 1 and 3.** Tangle 1's frame already holds the squirrel on its branch at about 35 px in landscape and
 20 px in portrait; closer lenses were tried and pushed the knot under the near crowns, so it is unchanged. Tangle 3's
 landscape perch moved to the birch east of the slipped loop (35 px, 23 before).
+
+**Her stance at tangle 1 (after the second playtest).** She walks on 3.5 m past the stop toward the knot
+(`SNAGS_AT[0].nearer`), so she stands about 6.6 m from it rather than 10, and as she arrives she turns her whole body
+to face it, feet stepping round, her head on the loop. The stop itself, which the walk, the lens and the grown wood's
+sightline are judged from, is where it was, so the frame and the trees are unchanged; she stands nearer the middle of
+it (landscape 0.43 across and 0.85 down, from 0.38 and 0.95; portrait 0.36 and 0.77, from 0.22 and 0.85). A perch with
+a floor of its own (the branch) keeps it when the squirrel settles there at the end of its way: on the ground's floor
+it sank off the branch to the ground a few seconds after greeting her.
+
+**Leaving the broken birch (after the second playtest).** After tangle 2 the squirrel steps off the broken top onto
+the trunk's south-west face, the side both orientations' lenses see, climbs down it head first, hops off at its foot
+and runs round it into the hollow, every frame continuous (worst move 0.38 m in a frame, 4.1 m before). It keeps
+the top as its floor until it is down off it: on the ground's floor it dropped to the foot in one frame. Its bark
+steps on the broken birch are the scarf's own trunk (`birches.scarf.stump`); `trunkAt` only knows the grown trees,
+and the nearest of them stands 4 m off, so it had been climbing that one, on the way up as well.
 
 **The arrival.** The boat leaves the beach they landed on only once that beach has been out of the picture for a
 second and she is 15 m up the ride (`afterCamera`), or whenever she is past the crest or resumes a save; measured, it

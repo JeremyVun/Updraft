@@ -377,7 +377,7 @@ export class BirchesSquirrel {
       s.act('climb', put ? { at, up, forward: UP, radius, look: this.face } : { look: this.face });
     } else if (put) {
       s.act(spec.action, { at: spec.at, yaw: spec.yaw, floor: spec.floor ?? ground, radius: spec.action === 'perch' ? spec.radius : undefined, look: this.face, nut: false });
-    } else s.act(spec.action, { yaw: spec.yaw, look: this.face, nut: false });
+    } else s.act(spec.action, { yaw: spec.yaw, floor: spec.floor, look: this.face, nut: false });
   }
 
   /** `run` in `seconds`; `own` ties it to what the squirrel is doing now, so a change of plan drops it. */
@@ -395,6 +395,8 @@ export class BirchesSquirrel {
 
   /** Off along its way to `station`, from wherever it is; once found, it glances back at her a few metres on. */
   private goTo(station: Station, glanceBack = false): void {
+    /** Leaving the broken top it stands on the top until it is down off it, rather than on the ground below. */
+    const floor = this.station === 'tangle2' ? ON_THE_STUMP : floorTo(station);
     this.generation++;
     this.station = station;
     this.hidden = null;
@@ -418,7 +420,7 @@ export class BirchesSquirrel {
         run += points[i].at.distanceTo(points[i - 1].at);
         if (run > tuning.birches.squirrel.glanceAfter && points[i].on === 'ground') {
           this.glanceRest = points.slice(i);
-          s.follow(points.slice(0, i + 1), () => this.lookBack(station), { floor: floorTo(station) });
+          s.follow(points.slice(0, i + 1), () => this.lookBack(station), { floor });
           return;
         }
       }
@@ -426,7 +428,7 @@ export class BirchesSquirrel {
     /** On ahead to hide, it dashes, so it is under the leaves before she gets there; to wait for her, it only runs. */
     const round = ROUND_OF[station], k = tuning.birches.squirrel;
     const pace = round === undefined ? 1 : ROUNDS[round].shuffle ? k.shuffleRunOn : k.dash;
-    s.follow(points, () => this.arrive(station), { floor: floorTo(station), pace });
+    s.follow(points, () => this.arrive(station), { floor, pace });
   }
 
   /** It stops, sits up and looks back at her once: come on, then. */

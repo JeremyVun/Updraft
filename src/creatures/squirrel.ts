@@ -37,7 +37,7 @@ export interface ActOptions {
   up?: THREE.Vector3;
   /** Which way it faces along a surface that is not level: up a trunk, say. */
   forward?: THREE.Vector3;
-  /** What it stands on, in the world; by default a level surface through `at`. */
+  /** What it stands on, in the world; by default a level surface through `at`, or what it stood on if not put. */
   floor?: Floor | null;
   /** The radius of the trunk or branch it holds, so its paws wrap round it. */
   radius?: number;
@@ -279,7 +279,10 @@ export class Squirrel {
     if (name === 'burst') return this.burst(opts);
     if ((name === 'startle' || name === 'indignant') && PERCHED.includes(this.doing)) this.perchedAs = this.doing;
     if (opts.at) this.place(opts.at, opts.yaw ?? this.yaw, opts);
-    else if (opts.yaw !== undefined) this.face(opts.yaw);
+    else {
+      if (opts.yaw !== undefined) this.face(opts.yaw);
+      if (opts.floor !== undefined) this.floor = opts.floor;
+    }
     this.mode = 'hold';
     this.doing = name;
     if (name === 'buried' || name === 'peek') this.tailOut = opts.tailOut ?? (name === 'buried' ? false : this.tailOut);

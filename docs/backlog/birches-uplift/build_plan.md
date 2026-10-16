@@ -309,7 +309,9 @@ music checks), so the music work sits on the merged code.
 - **8b. Heaps.** `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps2`, port 5242. Heaps
   yield only to updrafts; none can be taken before the squirrel is in (reproduce Jeremy's case first).
 - **8c. The first knot.** `/Users/jeremy/projects/updraft-birches-knot`, branch `birches-uplift-knot`, port 5243.
-  She stops closer to tangle 1 and faces it.
+  She stops closer to tangle 1 and faces it; after tangle 2 the squirrel climbs down the broken birch rather than
+  dropping to its foot. Done ☑: she stands 6.6 m from the knot (10 before), facing it; the squirrel keeps its
+  branch at tangle 1 and its worst one-frame move leaving tangle 2 is 0.38 m (4.1 before).
 - **8d. Performance.** `/Users/jeremy/projects/updraft-birches-perf`, branch `birches-uplift-perf`, port 5244. Why
   the quality governor steps down to medium on the birches; fix the cause without changing the look.
 - **8e. The swing.** Waits on Jeremy's answer to the proposal.

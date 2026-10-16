@@ -12,9 +12,12 @@ import { birchesAt, birchesLocal, birchesZ } from './birches-layout';
 
 const X = (x: number): number => birchesAt(x, 0).x;
 
-/** The same strip passes through all four tangles, in walking order. */
+/**
+ * The same strip passes through all four tangles, in walking order. The stop is where the walk and the lens judge the
+ * tangle from; she stands `nearer` metres on from it toward the knot.
+ */
 const SNAGS_AT = [
-  { x: 10, z: -1088, treeX: 14, treeZ: -1089, stopX: 3, stopZ: -1081, kind: 'lift' },
+  { x: 10, z: -1088, treeX: 14, treeZ: -1089, stopX: 3, stopZ: -1081, nearer: 3.5, kind: 'lift' },
   { x: -10, z: -1139, treeX: -10, treeZ: -1139, stopX: -3, stopZ: -1132, kind: 'unwind' },
   { x: 2, z: -1163, treeX: -23, treeZ: -1166, stopX: -5, stopZ: -1157, kind: 'pull' },
   { x: -10.2, z: -1179.2, treeX: -13, treeZ: -1180, stopX: -3, stopZ: -1176, kind: 'bow' },
@@ -110,6 +113,11 @@ interface Snag {
 }
 interface Section { tied: THREE.CatmullRomCurve3; loose: THREE.CatmullRomCurve3; snag: number; count: number; stretch: number }
 const ground = (x: number, z: number, above: number): THREE.Vector3 => new THREE.Vector3(x, Math.max(0, heightAt(x, z)) + above, z);
+
+const standAt = (s: (typeof SCARF_SNAGS)[number]): THREE.Vector3 => {
+  const nearer = 'nearer' in s ? s.nearer : 0, d = Math.hypot(s.x - s.stopX, s.z - s.stopZ);
+  return ground(s.stopX + (s.x - s.stopX) / d * nearer, s.stopZ + (s.z - s.stopZ) / d * nearer, 0);
+};
 
 /** How far through freeing the second tangle its coils close in over the broken top, and have lifted clear of it again. */
 export const SCARF_OVER = { from: 0.42, to: 0.8 };
@@ -211,7 +219,7 @@ function wind(frame: Frame): Section[] {
 export class BirchScarf {
   readonly mesh: THREE.Mesh;
   readonly snags: Snag[] = SCARF_SNAGS.map(s => ({
-    center: ground(s.x, s.z, s.kind === 'lift' ? 3.5 : 2.1), before: ground(s.stopX, s.stopZ, 0),
+    center: ground(s.x, s.z, s.kind === 'lift' ? 3.5 : 2.1), before: standAt(s),
     work: 0, release: 0, freed: false, impulse: 0, target: 0, brushAge: Infinity,
   }));
   active = -1;

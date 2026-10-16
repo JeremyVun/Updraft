@@ -527,7 +527,8 @@ export class BirchesChapter implements Chapter {
     this.play = 'carry';
     child.stop();
     child.lookAt = snag.center;
-    child.walkTo(snag.before.x, snag.before.z, false, undefined, 0.6);
+    const faceIt = scarf.active === 0 ? () => child.faceToward(snag.center.x, snag.center.z, 1) : undefined;
+    child.walkTo(snag.before.x, snag.before.z, false, faceIt, 0.6);
   }
 
   /**

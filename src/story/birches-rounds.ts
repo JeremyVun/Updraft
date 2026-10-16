@@ -209,6 +209,8 @@ const BESIDE_KNOT = 0.4;
 const STUMP = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ };
 const STUMP_TOP = lifted(STUMP, 4.12);
 const T2_STOP = { x: SCARF_SNAGS[1].stopX, z: SCARF_SNAGS[1].stopZ };
+/** The broken birch's south-west face, toward the second tangle's lens in both orientations. */
+const STUMP_FRONT = birchesAt(-13, -1135);
 /** The broken birch's top, where it sits through the second tangle, and the ground round it. */
 export const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.5 ? STUMP_TOP.y : ground(x, z));
 /** The birch standing behind the slipped loop, beyond the fallen one, in that tangle's view. */
@@ -297,10 +299,10 @@ export const PATHS = {
     bark(SWING_TREE, 3.4, SWING_LENS), bark(SWING_TREE, 0.5, SWING_LENS), g(-0.2, -1118.5),
     g(-4.5, -1124), g(-8, -1133), g(-9.3, -1137.5), bark(STUMP, 0.4, T2_STOP), bark(STUMP, 2, T2_STOP), bark(STUMP, 3.9, T2_STOP),
   ],
-  /** Down the broken birch's far side and across the hollow, past the deep heap, to where it waits for her at the third round. */
+  /** Down the broken birch on the side the lens sees, round it, and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [
-    bark(STUMP, 3.9, birchesAt(-10, -1145)), bark(STUMP, 0.4, birchesAt(-10, -1145)),
-    g(-10, -1144), g(-9.5, -1151), gap(2, 4, -8.8), gap(2, 9.5, -9.6), { ground: SHUFFLE_FROM },
+    bark(STUMP, 3.9, STUMP_FRONT), bark(STUMP, 0.4, STUMP_FRONT),
+    g(-11.1, -1140.6), g(-10, -1144), g(-9.5, -1151), gap(2, 4, -8.8), gap(2, 9.5, -9.6), { ground: SHUFFLE_FROM },
   ],
   /** On her side of the heaps, between the middle one and the far one, and up the birch behind them. */
   toFarTrunk: [gap(2, 22.4, -11.6), g(-15.6, -1154.3), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
@@ -332,7 +334,10 @@ const v = new THREE.Vector3();
 
 /** A place on bark, as the trees are grown: on the bark's surface, its outward `up`, and the trunk's radius there. */
 export function onTrunk(birches: AutumnBirches, t: OnTrunk): { at: THREE.Vector3; up: THREE.Vector3; radius: number } {
-  const radius = birches.trunkAt(t.tree.x, t.tree.z, t.height, v);
+  /** The broken birch is the scarf's, not a grown tree: the nearest grown one stands 4 m off. */
+  const stump = birches.scarf.stump, broken = t.tree.x === stump.x && t.tree.z === stump.z;
+  const radius = broken ? stump.radius : birches.trunkAt(t.tree.x, t.tree.z, t.height, v);
+  if (broken) v.copy(lifted(stump, Math.min(t.height, stump.height)));
   const up = new THREE.Vector3(t.toward.x - v.x, 0, t.toward.z - v.z).normalize();
   return { at: v.clone().addScaledVector(up, radius), up, radius };
 }
