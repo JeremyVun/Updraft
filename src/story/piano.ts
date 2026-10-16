@@ -1,12 +1,16 @@
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { FROM, verticalFov, widthFit, type Shot } from '../camera';
 import { tuning } from '../tuning';
-import { piano } from '../world/piano';
+import { heightAt } from '../world/island';
+import { piano, PLACE } from '../world/piano';
 import { windBough } from '../world/wind-bough';
 import { MEADOW_CALLS, MEADOW_FINALE, type MeadowAnswer } from '../audio/meadow-duet';
 import type { Cast } from './cast';
 
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
+/** A view as a shot gives it: what it looks at, the bearing it stands on from there, how far back and how high. */
+interface View { target: THREE.Vector3; bearing: number; distance: number; height: number }
+const view = (): View => ({ target: new THREE.Vector3(), bearing: 0, distance: 1, height: 0 });
 
 /**
  * Each mirrored sweep wakes a wider stretch of the meadow. The fourth sends the whole lullaby across the island.
@@ -69,6 +73,10 @@ export class PianoStop {
   private readonly side = new THREE.Vector3();
   private readonly hands = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly approachChild = new THREE.Vector3();
+  /** The finale's three views: the playing view it rises from, the whole island, and the walk's view it comes down to. */
+  private readonly rest = view();
+  private readonly high = view();
+  private readonly onward = view();
   /** The paper plane gliding to the music desk as she comes to the piano, and back into her hand as she leaves. */
   private planeGlide: { to: 'desk' | 'hand'; start: number; length: number } | null = null;
   /** Whose paper it is while it waits on the desk, so a restore past the stop hands it straight back. */
@@ -167,7 +175,9 @@ export class PianoStop {
           this.releaseHands(cast);
           piano.expect = null;
           c.dismount();
-          c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(cast), 1);
+          c.lookAt = null;
+          const [beside, behind] = piano.wayRound;
+          c.walkTo(beside.x, beside.z, false, () => c.walkTo(behind.x, behind.z, false, () => this.give(cast), 0.6), 0.35);
           this.to('leaving');
           this.glidePlane('hand', cast);
         }
@@ -186,6 +196,14 @@ export class PianoStop {
   frame(shot: Shot): number | null {
     if (this.beat === 'ahead' || this.beat === 'done') return null;
     const t = tuning.piano;
+    if (this.roseFrom > 0) {
+      // The walk's own view of her, which the story has already put in the shot, is where the finale comes down to.
+      const from = shot.from ?? FROM;
+      this.onward.target.copy(shot.target);
+      this.onward.bearing = Math.atan2(from.x, from.z);
+      this.onward.distance = shot.distance;
+      this.onward.height = shot.height;
+    }
     /** It waits further out while they are still on their way to it and comes in as they sit: one move, not two. */
     const settled = this.beat === 'walking' || this.beat === 'looking' ? 0 : 1;
     let bearing = piano.yaw + t.frameTurn;
@@ -215,20 +233,52 @@ export class PianoStop {
       height = THREE.MathUtils.lerp(rest(t.restUp, height, step - 1), rest(t.restUp, height, step), ease);
       this.mid.z -= on - t.frameOn;
     }
-    if (this.roseFrom > 0) {
-      /** Eased at both ends, so the rise begins and settles without a hand on it anywhere in between. */
-      const k = THREE.MathUtils.smoothstep(this.now - this.roseFrom, 0, t.riseFor);
-      const far = this.answered ? 1 : t.riseQuiet;
-      bearing += (t.riseTo - bearing) * k;
-      distance += (t.riseBack * far - distance) * k;
-      height += (t.riseUp * far - height) * k;
-      this.mid.z -= (t.riseOn * far - on) * k;
-    }
+    if (this.roseFrom > 0) return this.finale(shot, bearing, distance, height);
     shot.target.copy(this.mid);
     shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.distance = distance;
     shot.height = height;
-    return this.roseFrom > 0 ? t.risePace : this.responseAt >= 0 && this.now - this.responseAt < t.phraseRest ? 1.3 : t.framePace;
+    return this.responseAt >= 0 && this.now - this.responseAt < t.phraseRest ? 1.3 : t.framePace;
+  }
+
+  /**
+   * Under the bough's finale, one move: up and out until the whole island is seen turning green, a hold on it, and
+   * down to the walk's own view of her as she gets up. It is the playing view drawn back for a narrow screen at the
+   * start and the walk's view at the end, so nothing moves at either hand-over.
+   */
+  private finale(shot: Shot, bearing: number, distance: number, height: number): number {
+    const t = tuning.piano;
+    const aspect = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 16 / 9;
+    const fit = widthFit(verticalFov(aspect), aspect);
+    const far = this.answered ? 1 : t.riseQuiet;
+    this.rest.target.copy(this.mid);
+    this.rest.bearing = bearing;
+    this.rest.distance = distance * fit;
+    this.rest.height = height * fit;
+    const x = PLACE.x + t.riseLook[0] * far, z = PLACE.z + t.riseLook[1] * far;
+    this.high.target.set(x, Math.max(heightAt(x, z), 0), z);
+    this.high.bearing = t.riseTo;
+    // One view for any screen: a tall one already sees more of the island's length, and from steeper the pond goes black.
+    this.high.distance = t.riseBack * far;
+    this.high.height = t.riseUp * far;
+    const since = this.now - this.roseFrom, down = t.riseFor + t.riseHold;
+    if (since < down) this.between(this.rest, this.high, THREE.MathUtils.smootherstep(since, 0, t.riseFor), shot);
+    else this.between(this.high, this.onward, THREE.MathUtils.smootherstep(since, down, down + t.descendFor), shot);
+    shot.fitWidth = false;
+    return t.risePace;
+  }
+
+  /** Part of the way from one view to another, by ratio of reach so a move from near to far runs evenly. */
+  private between(a: View, b: View, k: number, shot: Shot): void {
+    const ra = Math.hypot(a.distance, a.height), rb = Math.hypot(b.distance, b.height);
+    const reach = ra * (rb / ra) ** k;
+    const along = Math.abs(rb - ra) > 1e-3 ? (reach - ra) / (rb - ra) : k;
+    const lift = THREE.MathUtils.lerp(Math.atan2(a.height, a.distance), Math.atan2(b.height, b.distance), k);
+    const bearing = a.bearing + shortest(b.bearing - a.bearing) * k;
+    shot.target.lerpVectors(a.target, b.target, along);
+    shot.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+    shot.distance = reach * Math.cos(lift);
+    shot.height = reach * Math.sin(lift);
   }
 
   /**
@@ -301,7 +351,7 @@ export class PianoStop {
     this.completeAt = ends + tuning.piano.completionRest;
     this.wakeAt = starts + tuning.windBough.inhale + MEADOW_FINALE.greenAt;
     this.walkAt = this.wakeAt;
-    this.finishedAt = Math.max(this.completeAt, this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor);
+    this.finishedAt = Math.max(this.completeAt, this.wakeAt + finaleFor());
     this.walkFrom = -1;
   }
 
@@ -354,7 +404,7 @@ export class PianoStop {
     this.wakeAt = 0;
     this.roseFrom = time;
     this.onWake?.(4, this.answered);
-    this.finishedAt = Math.max(this.finishedAt, time + tuning.piano.riseFor + tuning.piano.restFor);
+    this.finishedAt = Math.max(this.finishedAt, time + finaleFor());
   }
 
   /** The paper never vanishes: it flies from wherever it is, in a low arc, to the desk or to her hand. */
@@ -416,6 +466,12 @@ export class PianoStop {
     this.beat = beat;
     this.since = this.now;
   }
+}
+
+/** From the greening to the camera coming back down to her, when she gets up. */
+function finaleFor(): number {
+  const t = tuning.piano;
+  return t.riseFor + t.riseHold + t.descendFor;
 }
 
 function shortest(angle: number): number {

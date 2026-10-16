@@ -311,7 +311,11 @@ onsets, melody, tilts and the greening cue into `audio/meadow-cuts-measured.ts`,
 turns into calls, answers, steps and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera steps back and up over the field
 and stays there (`restBack`, `restUp`). On the finale's arrival the cygnet climbs out onto the keys and walks them,
-each footfall a soft recorded C, A♭ or E♭ of the finale's chord under the flute; the camera rises and widens with the wave, and the grey hold is released only once the front covers it. Competing wind
+each footfall a soft recorded C, A♭ or E♭ of the finale's chord under the flute. The camera rises up and out with the
+wave until the whole island is seen turning green, holds there through the flute's last phrase and comes down to the
+walk's view of her as she gets up (`tuning.piano.rise*`, `descendFor`); the final front crosses at `finaleSpeed` so
+its far shores green while the camera is up, and the grey hold is released only once the front covers it. She walks
+round the piano's far end from the bough (`Piano.wayRound`), never through it. Competing wind
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
 In the Meadow rework ([design](backlog/meadow-echoes/design.md)), the piano stands on a nearby rounded knoll
@@ -328,7 +332,9 @@ The walk goes on over the west rise and through a pass along `WAY` (`world/field
 reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she
 comes and bolts from a gust, like any flock, and nothing waits on it. Over the brow the ground falls to **the pond** (`POND`) on the open
 north slope, with the cygnet's family resting on it, white on dark water. Like the sheep they sleep with the island: the pond is
-grey and empty until the lullaby's colour reaches the hollow, and then they dissolve into view (`SwanFlock.shown`); their
+grey and empty until the lullaby's colour reaches the hollow, and then they dissolve in only while the lens cannot see
+the water, off screen or behind ground (`MeadowChapter.seesPond`, `SwanFlock.shown`), so the finale's view over the whole
+island finds the pond empty and they are simply there at the crest; their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
 first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
 own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts

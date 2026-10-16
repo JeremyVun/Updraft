@@ -18,7 +18,9 @@ const URLS: Record<MeadowFile, string> = { walk: walkUrl, duet: duetUrl, after: 
 const BEDS = { walk: MEADOW_MEASURED.walk, after: MEADOW_MEASURED.after, ending: MEADOW_MEASURED.ending };
 type Bed = keyof typeof BEDS;
 const TRIM: Record<Bed, () => number> = { walk: () => tuning.meadowMusic.walkDb, after: () => tuning.meadowMusic.afterDb, ending: () => tuning.meadowMusic.endingDb };
+const FADE_IN: Record<Bed, () => number> = { walk: () => 0, after: () => tuning.meadowMusic.afterFadeIn, ending: () => 0 };
 const gain = (db: number) => 10 ** (db / 20);
+const smoothstep = (x: number) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
 
 /** Which files the meadow needs soon, from where the story is: the walk and duet ahead of it, the rest during it. */
 export function meadowFilesAhead(chapter: string, part: MeadowMusicPart | undefined, music: boolean): MeadowFile[] {
@@ -55,7 +57,7 @@ class MeadowMusic {
   private readonly failed = new Set<MeadowFile>();
   private wanted = '';
   private part: MeadowMusicPart | undefined;
-  private bed: { name: Bed; bus: GainNode; voices: Set<Voice>; next: number; once: boolean } | null = null;
+  private bed: { name: Bed; bus: GainNode; voices: Set<Voice>; next: number; once: boolean; from: number } | null = null;
   private endingPlayed = false;
   private readonly duetVoices = new Set<Voice>();
   /** QA: what was last sounded from the duet, on the audio clock. */
@@ -179,7 +181,7 @@ class MeadowMusic {
         const bus = ctx.createGain();
         bus.gain.value = 0;
         bus.connect(this.background!);
-        this.bed = { name: want, bus, voices: new Set(), next: now + 0.05, once: want === 'ending' };
+        this.bed = { name: want, bus, voices: new Set(), next: now + 0.05, once: want === 'ending', from: now + 0.05 };
         if (want === 'ending') this.endingPlayed = true;
       }
     }
@@ -187,7 +189,9 @@ class MeadowMusic {
     if (!bed) return;
     if (bed.name === 'walk' && part === 'duet' && stool <= 0.001) { this.fadeBed(0.1); return; }
     if (bed.once && bed.next === Infinity && bed.voices.size === 0) { this.fadeBed(0); this.release(bed.name); return; }
-    const level = gain(BEDS[bed.name].gainDb + TRIM[bed.name]()) * (bed.name === 'walk' ? Math.max(0, stool) : 1);
+    const fadeIn = FADE_IN[bed.name]();
+    const rise = fadeIn > 0 ? smoothstep((now - bed.from) / fadeIn) : 1;
+    const level = gain(BEDS[bed.name].gainDb + TRIM[bed.name]()) * (bed.name === 'walk' ? Math.max(0, stool) : 1) * rise;
     bed.bus.gain.setTargetAtTime(level, now, 0.08);
     const buffer = this.buffers.get(bed.name);
     if (buffer && now + 0.25 >= bed.next) {

@@ -257,8 +257,8 @@ given), levels each to the room reference by measured loudness, and writes what 
   (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
   answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
   end raises no `restored`: the flute's finale is the reward.
-- From the duet's end the warm bed plays through the flowers and seeds from `meadow_extended.ogg` (take E as Jeremy
-  extended it): 0:22.60 to 2:53.05, then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`).
+- From the duet's end the warm bed swells in over `afterFadeIn` (6 s) and plays through the flowers and seeds from
+  `meadow_extended.ogg` (take E as Jeremy extended it): 0:22.60 to 2:53.05, then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`).
   The cut's last 0.6 s carries the source's lead into 1:36.60 under its own end (an equal-power crossfade baked in by
   the tool), so the seam continues the phrase; the tool's seam check measures it against the source's own
   continuation there. It fades over `listenFade` for the listening rest. The family's departure is silent. The ending

@@ -347,6 +347,11 @@ export const tuning = {
     cameraLead: 6, cameraRise: 6, cameraBack: 44, cameraExtra: 22,
     cameraMargin: 0.78, cameraPace: 0.8,
   },
+  /**
+   * The top of the meadow's landing bank: the camera's look round from the climb's profile onto her line to the piano
+   * takes `turnFor` seconds from her arrival, and she stands taking in the view for `holdFor` before walking on.
+   */
+  meadowBrow: { turnFor: 7, holdFor: 7.8 },
   planeIndicator: {
     /** Screen pixels beyond the edge to reach full visibility; fade time stays independent of frame rate. */
     edgeFade: 24, fadeRate: 8, opacity: 0.86,
@@ -1022,6 +1027,8 @@ export const tuning = {
     callAgainAfter: 25, callAgainDb: -4,
     /** The warm bed fades over this long for the listening rest before the family's call. */
     listenFade: 1.8,
+    /** And swells in over this long when it begins, after the finale has rung down. */
+    afterFadeIn: 6,
   },
   piano: {
     place: [-18, -678],
@@ -1101,18 +1108,22 @@ export const tuning = {
     framePace: 0.32,
     approachShare: 0.65, approachBack: 0.45, approachMargin: 0.84, approachExtra: 35,
     /**
-     * And the one move out of it, when the tune is whole and the island goes green: how long the rise takes, the
-     * bearing it spirals round to, how far back and how high it comes to rest, how far along the way north its
-     * eye travels, how fast the camera follows the move, how long it rests before the child gets up, and how much
-     * less of all of it a wake nobody answered gets.
+     * And the one move out of it under the finale, when the tune is whole and the island goes green: `riseFor`
+     * seconds up and out to a view of the whole island, looking at `riseLook` (metres east and north of the piano)
+     * from bearing `riseTo`, `riseBack` back and `riseUp` above it, at any shape of screen; held for
+     * `riseHold`, then `descendFor` down to the walk's view of her as she gets up. The final wave crosses the island
+     * at `finaleSpeed`, so its far shores turn green while the camera is up. `risePace` is how closely the camera
+     * follows the move, and `riseQuiet` how much less of it a wake nobody answered gets.
      */
-    riseFor: 10,
-    riseTo: -0.12,
-    riseBack: 32,
-    riseUp: 3.5,
-    riseOn: 9,
-    risePace: 0.6,
-    restFor: 6,
+    riseFor: 11,
+    riseHold: 7,
+    descendFor: 9,
+    riseTo: 0.1,
+    riseLook: [5, -100],
+    riseBack: 220,
+    riseUp: 110,
+    finaleSpeed: 16,
+    risePace: 1,
     riseQuiet: 0.72,
   },
   wood: {

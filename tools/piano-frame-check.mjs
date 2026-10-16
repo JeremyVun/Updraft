@@ -10,7 +10,7 @@ globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo()
 const {PianoStop}=await import('../src/story/piano.ts');
 const {piano}=await import('../src/world/piano.ts');
 const {windBough}=await import('../src/world/wind-bough.ts');
-const {CameraRig}=await import('../src/camera.ts');
+const {CameraRig,widthFit,verticalFov}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
 // The actual approach hands camera ownership to the piano while the child is still on its slope.
@@ -31,6 +31,7 @@ for(const [w,h] of [[1280,800],[390,844]])for(const bearing of [-1.1,0,1.1]){
 }
 console.log('Piano approach keeps the walking child visible from three directions in landscape and portrait.');
 for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;stage++){
+ Object.assign(globalThis.window,{innerWidth:w,innerHeight:h});
  const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
  const shot={target:new THREE.Vector3(),distance:19,height:4};stop.frame(shot);rig.cut(shot);
  stop.responseAt=1;stop.heardTo=stage;if(stage===4){stop.roseFrom=1;stop.answered=true;}
@@ -45,8 +46,11 @@ for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;s
  console.log({viewport:[w,h],stage,worst});
 }
 for(const [w,h] of [[1280,800],[390,844]]){
+ Object.assign(globalThis.window,{innerWidth:w,innerHeight:h});
  const stop=new PianoStop(),rig=new CameraRig();rig.resize(w,h);stop.beat='seated';
  const shot={target:new THREE.Vector3(),distance:19,height:4};
+ // The finale stands where the playing view's narrow-screen widening had put it, and widens no further itself.
+ const fit=widthFit(verticalFov(w/h),w/h);
  stop.heardTo=3;stop.responseAt=1;stop.now=10;stop.frame(shot);rig.cut(shot);
  const before={distance:shot.distance,height:shot.height,target:shot.target.clone()};
  stop.heardTo=4;stop.responseAt=stop.now;stop.answered=true;stop.frame(shot);
@@ -54,8 +58,8 @@ for(const [w,h] of [[1280,800],[390,844]]){
  assert.equal(shot.height,before.height,'Final answer lowers the camera');
  assert(shot.target.distanceTo(before.target)<1e-6,'Final answer resets the gaze');
  stop.now+=tuning.piano.finaleWaveAfter;stop.roseFrom=stop.now;stop.frame(shot);
- assert.equal(shot.distance,before.distance,'Final reveal restarts from the close playing view');
- assert.equal(shot.height,before.height,'Final reveal resets camera height');
+ assert(!shot.fitWidth&&Math.abs(shot.distance-before.distance*fit)<1e-6,'Final reveal restarts from the close playing view');
+ assert(Math.abs(shot.height-before.height*fit)<1e-6,'Final reveal resets camera height');
  assert(shot.target.distanceTo(before.target)<1e-6,'Final reveal resets the gaze');
  const child=piano.seat.clone().add(new THREE.Vector3(0,1.2,0));
  const initialGap=rig.camera.position.distanceTo(child);

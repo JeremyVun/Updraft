@@ -12,6 +12,11 @@ export function verticalFov(aspect: number): number {
   const vfovForWidth = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
   return THREE.MathUtils.clamp(Math.max(38, vfovForWidth), 38, 62);
 }
+/** How far `Shot.fitWidth` draws a view back on a narrow screen to keep the landscape composition's horizontal field. */
+export function widthFit(fov: number, aspect: number): number {
+  const horizontal = Math.tan(THREE.MathUtils.degToRad(fov) / 2) * aspect;
+  return Math.max(1, Math.tan(THREE.MathUtils.degToRad(MIN_HFOV) / 2) / horizontal);
+}
 /**
  * The slow drift an eased lens has about where it is put, `reach` metres from what it looks at; a placed move that
  * hands over to an eased one carries it in, so nothing moves at the hand-over.
@@ -22,7 +27,7 @@ export function breathe(time: number, reach: number, out: THREE.Vector3): THREE.
 }
 
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
-const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
+export const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
 const GROUND_CLEARANCE = 2.8;
 const OCCLUSION_STEPS = [0.3, 0.55];
@@ -186,11 +191,7 @@ export class CameraRig {
       .addScaledVector(shot.from ?? FROM, shot.distance)
       .setY(shot.target.y + shot.height);
     this.direction.compose(shot, out, this.wantLook);
-    if (shot.fitWidth) {
-      const horizontal = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect;
-      const back = Math.max(1, Math.tan(THREE.MathUtils.degToRad(MIN_HFOV) / 2) / horizontal);
-      out.sub(this.wantLook).multiplyScalar(back).add(this.wantLook);
-    }
+    if (shot.fitWidth) out.sub(this.wantLook).multiplyScalar(widthFit(this.camera.fov, this.camera.aspect)).add(this.wantLook);
     return out;
   }
 

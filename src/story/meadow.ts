@@ -76,7 +76,7 @@ const WAVE_REACH = 3600;
 const WAKING = [
   { reach: PATCH.radius, speed: 0 },
   ...tuning.piano.responseReach.map((reach, i) => ({ reach, speed: tuning.piano.responseSpeed[i] })),
-  { reach: WAVE_REACH, speed: 32 },
+  { reach: WAVE_REACH, speed: tuning.piano.finaleSpeed },
 ];
 /** How long the wind keeps driving the last wave across the island, and how quiet a wake nobody answered is. */
 const GUST_FOR = 15;
@@ -151,6 +151,12 @@ export class MeadowChapter implements Chapter {
   private readonly flockBounds = new THREE.Box3();
   private readonly flockAt = new THREE.Vector3();
   private readonly flockWater = new THREE.Vector3();
+  /** Whether the lens can see the water the family rests on, while they are still to come into it. */
+  private familySeen = true;
+  /** Where the lens stands round what it looks at, and where it stood when she came over the brow. */
+  private lensBearing = 0;
+  private browFrom = NaN;
+  private readonly browLook = new THREE.Vector3();
   /** On the way down only she has to stay in frame; the family is let go out of the top of it. */
   private readonly descentFraming = { primary: this.cameraChild, secondary: this.cameraChild, primaryRadius: 1.6, margin: 0.88, extra: 0 };
   /** The side the pond is watched from, chosen once on the rise and kept down to the water and through the swim. */
@@ -158,9 +164,8 @@ export class MeadowChapter implements Chapter {
   private readonly eyeAt = new THREE.Vector3();
   private crestDone = false;
   private boatMoved = false;
-  /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
+  /** Where the grass is pressed flat while she kneels at the pond, so the cygnet is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
-  private readonly songTurf = new THREE.Vector3();
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
   /** The duet has been heard to its end; a checkpoint past the feather plays the ending afresh. */
@@ -310,11 +315,34 @@ export class MeadowChapter implements Chapter {
   private readonly onScreen = new THREE.Vector3();
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    this.lensBearing = Math.atan2(camera.position.x - this.shot.target.x, camera.position.z - this.shot.target.z);
+    const flock = this.cast.flock;
+    this.familySeen = flock.active && flock.shown < 1 && this.cast.life.at(POND.x, POND.z) >= 0.75
+      && this.seesPond(camera, flock.bounds(this.flockBounds));
     if (!this.windInvitation) return;
     const to = this.onScreen.copy(this.song.active ? meadowEchoes.receiver : this.cast.cygnet.position).project(camera);
     const tx = to.x, ty = to.y;
     const from = this.onScreen.copy(this.windInvitation).project(camera);
     this.featherHeading = Math.atan2(ty - from.y, (tx - from.x) * camera.aspect);
+  }
+
+  /** Whether any of the family's raft, up to the top of a raised neck, is on screen with no ground between it and the lens. */
+  private seesPond(camera: THREE.PerspectiveCamera, raft: THREE.Box3): boolean {
+    const eye = camera.position;
+    const { min, max } = raft;
+    const cx = (min.x + max.x) / 2, cz = (min.z + max.z) / 2, top = POND_LEVEL + 1.4;
+    for (const [x, z] of [[cx, cz], [min.x, cz], [max.x, cz], [cx, min.z], [cx, max.z]]) {
+      const p = this.onScreen.set(x, top, z).project(camera);
+      if (Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05 || p.z > 1) continue;
+      const span = Math.hypot(x - eye.x, z - eye.z), steps = Math.min(120, Math.ceil(span / 3));
+      let open = true;
+      for (let i = 1; i < steps && open; i++) {
+        const f = i / steps;
+        open = heightAt(eye.x + (x - eye.x) * f, eye.z + (z - eye.z) * f) < eye.y + (top - eye.y) * f;
+      }
+      if (open) return true;
+    }
+    return false;
   }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
@@ -485,7 +513,7 @@ export class MeadowChapter implements Chapter {
         /** And over the top, all of it at once: a grey island, and one patch of colour with a piano in it. */
         c.stop();
         c.lookAt = PIANO_AT;
-        if (this.t > 5.5 && !c.busy) this.walkOn();
+        if (this.t > tuning.meadowBrow.holdFor && !c.busy) this.walkOn();
         break;
       case 'walk':
         if (!this.piano.hold(dt, time, this.cast)) {
@@ -493,8 +521,6 @@ export class MeadowChapter implements Chapter {
             this.updateWalk(time);
             this.hearBells();
           }
-          this.trodden = this.song.active
-            ? this.songTurf.set(c.position.x, tuning.meadowEchoes.tread, c.position.z) : null;
         }
         break;
       case 'crest':
@@ -568,7 +594,9 @@ export class MeadowChapter implements Chapter {
 
     /** Asleep with the island, the family wakes with it when the lullaby reaches the hollow, as the sheep do. */
     const flock = this.cast.flock;
-    if (flock.active) flock.shown = THREE.MathUtils.clamp(flock.shown + dt * (life.at(POND.x, POND.z) >= 0.75 ? 1 / 2.5 : -1), 0, 1);
+    // They only come in out of sight, so the finale's view over the whole island finds the water still empty.
+    const waking = life.at(POND.x, POND.z) >= 0.75 ? (this.familySeen && !this.crestDone ? 0 : 1 / 2.5) : -1;
+    if (flock.active) flock.shown = THREE.MathUtils.clamp(flock.shown + dt * waking, 0, 1);
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
     if (!this.wentOn && boat && time > this.nextBugle && flock.shown > 0.5) {
       const far = Math.hypot(c.position.x - POND_AT.x, c.position.z - POND_AT.z);
@@ -1054,25 +1082,30 @@ export class MeadowChapter implements Chapter {
        * sky, which is the whole point of landing here. On the top the camera comes round onto the line to the
        * piano, so what the player sees over the brow is the grey island with the one patch of colour in it.
        */
-      const top = this.beat === 'brow';
-      const look = top ? PIANO_AT : BROW_AT;
+      const top = this.beat === 'brow' ? THREE.MathUtils.smoothstep(this.t, 0, tuning.meadowBrow.turnFor) : 0;
+      // The look round starts from wherever the lagging climb view has got to, so it never first swings back.
+      if (this.beat !== 'brow') this.browFrom = NaN;
+      else if (Number.isNaN(this.browFrom)) this.browFrom = this.lensBearing;
       /**
        * On the way up the camera stands off to the side of the bank rather than below it, because from below a
        * rig that answers a hill by rising ends up looking down the slope at the top of the child's head. In
        * profile they are plainly climbing, against the sky the bank is hiding everything else behind.
        */
-      const bearing = Math.atan2(c.x - look.x, c.z - look.z) + (top ? 0 : 1.15);
+      const climb = this.beat === 'brow' ? this.browFrom : Math.atan2(c.x - BROW_AT.x, c.z - BROW_AT.z) + 1.15;
+      const onward = Math.atan2(c.x - PIANO_AT.x, c.z - PIANO_AT.z);
+      const bearing = climb + Math.atan2(Math.sin(onward - climb), Math.cos(onward - climb)) * top;
       s.from = this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
       const ground = Math.max(heightAt(c.x, c.z), 0);
-      const toward = top ? 0.04 : 0.16;
-      s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 3.4 : 2.4), c.z + (look.z - c.z) * toward);
-      s.distance = top ? 21 : 19;
-      s.height = top ? 7.5 : 2.6;
+      this.tmp.set(c.x + (BROW_AT.x - c.x) * 0.16, ground + 2.4, c.z + (BROW_AT.z - c.z) * 0.16);
+      this.browLook.set(c.x + (PIANO_AT.x - c.x) * 0.04, ground + 3.4, c.z + (PIANO_AT.z - c.z) * 0.04);
+      s.target.lerpVectors(this.tmp, this.browLook, top);
+      s.distance = THREE.MathUtils.lerp(19, 21, top);
+      s.height = THREE.MathUtils.lerp(2.6, 7.5, top);
       // A narrow screen loses her off the side of this profile as she walks up the sand.
       this.cameraChild.copy(c).y += 1.2;
       this.framing.secondary.copy(this.cameraChild);
       s.subjects = this.framing;
-      this.pace = top ? 0.9 : 0.4;
+      this.pace = this.beat === 'brow' ? 0.9 : 0.4;
       this.focus.set(c.x, ground, c.z);
       return;
     }

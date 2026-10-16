@@ -298,6 +298,8 @@ export class Piano {
   readonly keys = new THREE.Vector3();
   readonly seat = new THREE.Vector3();
   readonly stand = new THREE.Vector3();
+  /** Her way round the end away from the bough and out behind the case, leaving the stool. */
+  readonly wayRound = [new THREE.Vector3(), new THREE.Vector3()] as const;
   readonly yaw = YAW;
   /** The last few notes it has played, for tuning it by eye when nobody can listen. */
   readonly log: NoteLog[] = [];
@@ -378,6 +380,8 @@ export class Piano {
     /** The lift is a fact about how the child's own pose sits, so it is added in world units, after the scale. */
     this.local(0.06, STOOL_TOP, STOOL_Z, this.seat).y += SEAT_LIFT;
     this.local(0.16, 0, 1.9, this.stand);
+    this.local(-1.5, 0, 1.3, this.wayRound[0]);
+    this.local(-1.5, 0, -0.9, this.wayRound[1]);
     for (let i = 0; i < QUEUE; i++) {
       this.queue.push({ at: 0, midi: 60, key: 0, velocity: 0, source: 'answer', step: -1, voiced: false, active: false });
     }
