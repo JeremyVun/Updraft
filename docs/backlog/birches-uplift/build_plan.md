@@ -330,5 +330,7 @@ music checks), so the music work sits on the merged code.
   dropping to its foot. Done ☑: she stands 6.6 m from the knot (10 before), facing it; the squirrel keeps its
   branch at tangle 1 and its worst one-frame move leaving tangle 2 is 0.38 m (4.1 before).
 - **8d. Performance.** `/Users/jeremy/projects/updraft-birches-perf`, branch `birches-uplift-perf`, port 5244. Why
-  the quality governor steps down to medium on the birches; fix the cause without changing the look.
+  the quality governor steps down to medium on the birches; fix the cause without changing the look. Done
+  (2026-10-17): measured, no change to the room or the governor. Alone on the GPU the whole walk holds Ultra at 60 fps;
+  the step-down came from captures sharing the GPU (design.md, Performance).
 - **8e. The swing.** Waits on Jeremy's answer to the proposal.
