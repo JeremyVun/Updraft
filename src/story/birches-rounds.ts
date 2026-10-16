@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import { FALLEN_LOG, FORK_BRANCH, SCARF_SNAGS } from '../world/birch-scarf';
-import { BIRCH_PILES, ROUND_VIEWS, ROUND_VIEWS_TALL, type AutumnBirches } from '../world/birches';
+import { BIRCH_PILES, FALLEN_SOUTH, ROUND_VIEWS, ROUND_VIEWS_TALL, fallenBole, fallenRadius, fallenTop, type AutumnBirches } from '../world/birches';
 import { birchesAt, birchesGap } from '../world/birches-layout';
 import { heightAt } from '../world/island';
 
@@ -271,6 +271,19 @@ export type Step = { ground: Spot } | { trunk: OnTrunk } | { line: THREE.Vector3
 const g = (x: number, z: number): Step => ({ ground: birchesAt(x, z) });
 const gap = (i: number, into: number, x: number): Step => ({ ground: birchesGap(i, into, x) });
 const bark = (tree: Spot, height: number, toward: Spot): Step => ({ trunk: { tree, height, toward } });
+/** On the ground a stride off the fallen birch's widest `t` along it, on the side she comes from (1) or beyond it (−1). */
+const boleFoot = (t: number, side: 1 | -1): Step => {
+  const b = fallenBole(t), r = side * (fallenRadius(t) + 0.6);
+  return { ground: { x: b.x + FALLEN_SOUTH.x * r, z: b.z + FALLEN_SOUTH.y * r } };
+};
+/** Up its round side from its widest to its top, or down from its top on the far side: never through its belly. */
+const overBole = (t: number, side: 1 | -1): Step[] => {
+  const b = fallenBole(t), r = fallenRadius(t);
+  const round = [0, Math.PI / 4, Math.PI / 2].map((a): Step => ({
+    line: new THREE.Vector3(b.x + FALLEN_SOUTH.x * side * r * Math.cos(a), b.y + r * Math.sin(a), b.z + FALLEN_SOUTH.y * side * r * Math.cos(a)),
+  }));
+  return side > 0 ? round : round.reverse();
+};
 /** A point on the scarf as it hangs before its tangles are freed, `lift` above the ground: taken from the strip. */
 const wool = (p: Spot, lift: number): Step => ({ line: lifted(p, lift) });
 
@@ -295,10 +308,14 @@ export const PATHS = {
   ],
   /** Up the ride from the second round to the swing tree, and up its trunk to just under the limb. */
   toSwing: [g(3.6, -1103.5), g(1.2, -1110.5), bark(SWING_TREE, 0.5, SWING_LENS), bark(SWING_TREE, 3.4, SWING_LENS)],
-  /** Down the swing tree and round it, across the crest to the broken birch, and up inside its loose coils to the top. */
+  /**
+   * Down the swing tree, up onto the fallen birch and along its top ahead of them, down off its far side, across the
+   * crest to the broken birch, and up inside its loose coils to the top.
+   */
   toTangle2: [
-    bark(SWING_TREE, 3.4, SWING_LENS), bark(SWING_TREE, 0.5, SWING_LENS), g(-0.2, -1118.5),
-    g(-4.5, -1124), g(-8, -1133), g(-9.3, -1137.5), bark(STUMP, 0.4, T2_STOP), bark(STUMP, 2, T2_STOP), bark(STUMP, 3.9, T2_STOP),
+    bark(SWING_TREE, 3.4, SWING_LENS), bark(SWING_TREE, 0.5, SWING_LENS), g(-0.4, -1118.6), boleFoot(0.62, 1),
+    ...overBole(0.61, 1), { line: fallenTop(0.47) }, ...overBole(0.36, -1), boleFoot(0.35, -1), g(-6.2, -1123.4),
+    g(-8, -1133), g(-9.3, -1137.5), bark(STUMP, 0.4, T2_STOP), bark(STUMP, 2, T2_STOP), bark(STUMP, 3.9, T2_STOP),
   ],
   /** Down the broken birch on the side the lens sees, round it, and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [

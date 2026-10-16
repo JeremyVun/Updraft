@@ -21,17 +21,17 @@ export class ScarfInvitation {
   update(dt: number, camera: THREE.Camera, world: AutumnBirches | null): void {
     const scarf = world?.scarf;
     const snag = scarf?.snags[scarf.active];
-    const key = snag && !snag.freed && snag.target < 1 ? scarf!.active : world?.swing.invited ? SCARF_SNAGS.length : -1;
+    const key = snag && !snag.freed && snag.target < 1 ? scarf!.active : -1;
     this.gesture.hide(); this.coax = null;
     if (key !== this.key) { this.key = key; this.elapsed = 0; this.alpha = 0; }
     if (key < 0 || !world) return;
     const k = tuning.birches.scarf;
     this.elapsed += dt;
-    const quiet = key === SCARF_SNAGS.length ? world.swing.brushAge : snag!.brushAge;
+    const quiet = snag!.brushAge;
     const offered = this.elapsed > k.inviteAfter && quiet > k.inviteResume;
     this.alpha += ((offered ? k.inviteAlpha : 0) - this.alpha)
       * (1 - Math.exp(-dt * (offered ? 6 : tuning.invitation.handover)));
-    if (key === SCARF_SNAGS.length) world.swing.seat(this.center); else this.center.copy(snag!.center);
+    this.center.copy(snag!.center);
     const kind = SCARF_SNAGS[key]?.kind;
     if (kind === 'unwind') {
       this.winding.at.copy(this.center);

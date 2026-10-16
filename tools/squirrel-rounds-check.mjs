@@ -694,6 +694,8 @@ const cased = {
     for (const [point, [data, station, mode]] of Object.entries(expect)) {
       const s = await page.evaluate(async ({ point, data, mode }) => {
         const g = __game, c = g.story.current;
+        /** Each from where the walk begins: a save past the fallen birch puts her beyond it, and she must not carry that into the next. */
+        g.child.place(__sq.BIRCHES_LANDING.x, __sq.BIRCHES_LANDING.y, Math.PI);
         c.restoreCheckpoint(point, data);
         for (let t = 0; t < 30 && c.squirrel.mode !== mode; t++) await new Promise((r) => setTimeout(r, 100));
         await new Promise((r) => setTimeout(r, 150));
