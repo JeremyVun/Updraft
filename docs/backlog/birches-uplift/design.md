@@ -98,7 +98,7 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 | −1113 / −1118 | −1129 / −1134 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
 | −1132 / −1139 | −1148 / −1155 | tangle 2, circle the coils up | as now |
 | −1149 | −1165 | heap 2, the deep one at the bottom of the hollow, just short of gap C | as now |
-| gap C, 24 m, in the hollow | −1170 to −1194 | **round 3**, the shuffle among three new heaps in a row up the hollow's west bank; then **the leap** | new |
+| gap C, 24 m, in the hollow | −1170 to −1194 | **round 3**, the shuffle among three new heaps set out in front of her on the hollow's west bank; then **the leap** | new |
 | −1157 / −1163 | −1197 / −1203 | tangle 3, draw the slipped loop sideways | as now |
 | −1172 | −1212 | heap 3, free play as now | as now |
 | −1176 / −1180 | −1216 / −1220 | tangle 4, the bow; the scarf gathers into the boat as its sail | as now |
@@ -130,14 +130,14 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 5. **Tangle 2.** The squirrel is up on the broken birch's top while the coils are circled off. On their way up they
    close in over it for a moment: it startles, jolting down with a squeak, and is uncovered again as they lift clear
    and slide off to the side, when it shakes itself and scolds the wool (Jeremy's idea, 2026-10-16).
-6. **Round 3, the hollow (three heaps): the shuffle.** No counting. The squirrel has run on ahead and sits up between
-   the near heap and the middle one, waiting for her. She comes and stands watching; it chatters at her (watch this)
+6. **Round 3, the hollow (three heaps): the shuffle.** No counting. Three heaps stand side by side in front of her, like
+   cups on a table. The squirrel has run on ahead and sits up between the left heap and the middle one, waiting for her. She comes and stands watching; it chatters at her (watch this)
    and dives into one of the heaps in plain view, with the splash. Then it shuffles: it bursts out and bounds to the
    heap beside it, three or four times, quickening, sometimes doubling back; the last one or two moves are under the
    leaves, a hump of litter heaving across the floor between heaps with the loose leaves popping over it and a rustle
    going with it. Then it settles and stays put. She and the cygnet follow every move with their eyes. Blowing a heap
    it is not in makes the real one answer at once with its tail and a chitter. When it is found, the squirrel bounds up
-   the birch behind the heaps and stays in the canopy from here on. Then **the leap**: the cygnet dives into the nearest
+   the birch behind the middle heap and stays in the canopy from here on. Then **the leap**: the cygnet dives into the nearest
    deep heap left, and the child takes a run and jumps in after it, lands sitting in an explosion of leaves, and the two
    come up together covered in gold. This is the room's showpiece, the moment the child plays in the leaves herself.
 7. **Tangles 3 and 4** as now, the squirrel a background presence in the trees above. **The goodbye:** as the boat
@@ -739,7 +739,8 @@ haze. Round 3 has no count: after the second tangle the squirrel runs on ahead a
 
 After round 3, the child runs at the nearest heap in the hollow still deep enough to land in (found by the same readback;
 a standing heap of the round before any drift, and round 3's empty heaps always stand), leaps
-(`child.leap`, landing on her seat), the leaves burst round her (`burst` at 1.4), and she sits up as the cygnet's
+(`child.leap`, landing on her seat), the leaves go up all round her and the heap stands (`splash` at `leapSplash`,
+1.4), so she sits in it, and she sits up as the cygnet's
 head pops up beside her. Then they get up and walk on. If the hollow has been blown bare,
 she runs through what is left kicking leaves up instead. The moment always happens in some form.
 
@@ -764,14 +765,15 @@ the ground (portrait 0–1.3 m), and portrait stands further back on screens nar
 | | portrait | band (11.5, −1075), world (−124.5, −1091) | 75° (0.966, 0.259) | 18, 5 | 1.25 |
 | 2 | landscape | gap B 12.5 m in, x 5; world (−131.5, −1146.5) | 15° (0.259, 0.966) | 18, 6.5 | 1 |
 | | portrait | gap B 13 m in, x 3; world (−133, −1146.5) | 65° (0.906, 0.423) | 20, 7.5 | 1.3 |
-| 3 | landscape | gap C 13.8 m in, x −11.8; world (−147.8, −1215.8) | 55° (0.819, 0.574) | 21, 7 | 1.15 |
-| | portrait | gap C 18 m in, x −14; world (−150, −1220) | 8° (0.139, 0.990) | 25, 12 | 1.3 |
+| 3 | landscape | gap C 11.37 m in, x −13.03; target 1.2 m up | 55° (0.819, 0.574) | 17, 5.5 | 1 |
+| | portrait | gap C 12.52 m in, x −12.23; target 6 m up | 58° (0.85, 0.527) | 23, 4.5 | 0.7 |
 
 Every portrait lens is eased by a spring in the chapter (`lensEase`), so it comes in and out like a dolly rather than
 with the rig's quick start.
 
 Gap-grown trees keep off each round's views in both orientations (3.5 m either side of the line from the look point
-back 24 m), as they already kept off the tangles' sightlines, and off every raked heap and a metre round it. Only the
+back 24 m; round 3's widens to 11.5 m at the look point, narrowing to the lens, since its heaps stand across the
+view), as they already kept off the tangles' sightlines, and off every raked heap and a metre round it. Only the
 heaps on the walk show in the walking frames.
 
 **Round 1** (heap 0). She stops at the heap's south-west rim by the ride (band (6.4, −1073.2)). For the meeting the
@@ -786,12 +788,23 @@ banked against a birch on its east. The far heap is west (r 2.8, deep 4.8, 5.9 m
 it. She stands between them on the ride. The squirrel is last seen where that wool meets the floor, running on
 between the heaps.
 
-**Round 3** (gap C, heaps 6, 7 and 8). Three heaps stand in a row north–south up the hollow's west bank, centres
-8.8 m apart and 3 m of bare floor between rims (r 2.8, 3, 2.8; deep 5, 5.4, 5): world (−150, −1213), (−151, −1221.8)
-and (−150.6, −1230.6), the far one banked against the last perch's birch. She stands south-east of the near heap,
-by the ride (world (−146.8, −1209)), and the squirrel waits for her between the near heap and the middle one, on her
-side of them (`ROUNDS[2].shuffle`, world (−147.4, −1217.4)). Landscape sees the row across the frame from near-left
-to far-right with her at the left third; portrait stacks it up the frame from the near heap above her.
+**Round 3** (gap C, heaps 6, 7 and 8). Jeremy's ruling: the heaps are "roughly presented in front of her", not a
+line leading away. She stands on the ride's west edge (gap C 11 m in, x −8) and the three heaps stand on an arc round
+her to the west, side by side across her view: the left one (r 2.6) west-south-west of her at gap C 7.19 m in, x
+−16.48; the middle one (r 2.8, a little nearer) west-north-west at 14.58 in, x −16.04; the right one (r 2.6)
+north-north-west at 19.85 in, x −10.85. Centres are 8.8–9.3 m from her and 2 m of bare floor lies between rims, close
+enough for one portrait frame to hold all three. Each is banked against a birch behind it from where she stands; the
+middle one's (`HOLLOW_FAR_TREE`) is the birch the squirrel climbs to watch the leap. It waits for her between the left
+heap and the middle one, a little toward her (`ROUNDS[2].shuffle`, gap C 10.91 in, x −14.66).
+
+Both lenses stand behind her, a little to her left, so she stands between the middle heap and the right one and the
+three are set out across the frame, left to right: every move of the shuffle is a bound or a hump across it.
+Landscape is low (5.5 m over a target 1.2 m up, 17 m back) so the heaps stand up as mounds; from 7 m up they read as
+flat patches. Portrait holds all three across its width at 390 × 844 from 23 m back on a wider lens (0.7), looking
+over them into the gold so the heaps and her are in the lower half of the frame. Its target is 6 m up with the lens
+4.5 m above that: the lift sets where the heaps sit in the frame, the height how steeply it looks down. The tangle 3
+birch with its wool shows in the top right corner of landscape and at the right edge of wider portrait screens; the
+strip crossing the hollow over heap 2 is behind both lenses.
 
 **Heap 2 is not in round 3** (the plan had heap 2 plus two new heaps). The strip from perch 5 to perch 6 crosses the
 hollow about 3 m up, right over heap 2, so every frame toward the light that holds heap 2 looks through the wool;
@@ -801,14 +814,14 @@ orbit of 140–180° from the walking shot. Heap 2 stays the free-play heap she 
 The round-3 lenses stand north of that wool.
 
 **The leap.** From her stand she runs at the nearest heap deep enough to land in that the lens shows, leaves the
-ground at its rim and lands sitting a little way in. She runs away from the lens toward the sun, so the burst is
-backlit.
+ground at its rim and lands sitting a little way in. The left and right heaps are the near ones, so she runs across
+the frame to one side, toward the low sun, and the leaves going up round her are backlit.
 
 **Hides** sit in each heap's deep, 0.3 of its radius out on the side away from the lens (round 1: toward her).
 Read back (`depthAt`) the leaves stand 0.73–0.82 m over them; the round heaps' middles 0.87–0.97 m.
 
-**Banks** (`BANKS`) are placed birches beside the gaps' heaps (round 3's far heap uses the last perch's birch), and
-one more behind round 3's middle and far heaps for the squirrel to watch the leap from. They are placed rather than
+**Banks** (`BANKS`) are placed birches beside the gaps' heaps, one behind each of round 3's from where she stands;
+the middle one's is the one the squirrel watches the leap from. They are placed rather than
 grown, so a heap never loses its tree; a tree grown within 1.6 m of one gives way to it. The island has 144 trees.
 
 **The squirrel's places** (`MEETING`, `TANGLE_PERCHES`, `SWING_PERCH`, `FAR_TRUNK`, `GOODBYE`):
@@ -832,7 +845,9 @@ grown, so a heap never loses its tree; a tree grown within 1.6 m of one gives wa
 - Tangle 4: 5 m up the bow's own birch, above its low limb.
 - The swing: 3.4 m up the swing tree's trunk, just under the limb, on the side toward the swing's lens, where its red
   reads on the white bark. Out on the limb it sat in the sun's glow against the gold and was lost.
-- After round 3: 3.6 m up the birch behind round 3's middle and far heaps, in view through the leap.
+- After round 3: 3.6 m up the birch behind round 3's middle heap, in view through the leap. From the left or middle
+  heap it runs there round behind the gap between the left heap and the middle one, from the right heap behind the gap
+  between it and the middle one (`toFarTrunk`, `toFarTrunkRight`), never across a standing heap.
 - The goodbye: the berth's beach is sand below the tree line all the way up to the wood, so no branch reaches it. The
   squirrel comes down the beach after them and sits up at the water's edge beside the boat, in the departure frame.
 
@@ -903,8 +918,9 @@ circles.
   shaking off; at `hintAfter` it goes to the right heap's rim and peers; on a find it chases a few steps.
 - **The leap.** One readback over round 3's heaps and ground picks the deepest leaves the round's lens shows; the
   cygnet goes in first; she
-  runs and leaps (`Traveller.leap` with `seat`: she lands on her seat with no stumble), the leaves burst at 1.4, she
-  sits 1.8 s and gets up. Below `leapDepth` (0.35 m) she runs on through the hollow toward the sun, kicking leaves
+  runs and leaps (`Traveller.leap` with `seat`: she lands on her seat with no stumble), the leaves go up round her
+  (`splash` at 1.4) and the heap stands, a little flattened where she sits (0.85 m to 0.65), she sits 1.8 s and gets
+  up. Below `leapDepth` (0.35 m) she runs on through the hollow toward the sun, kicking leaves
   up. Measured 5–7.5 s.
 - **Frames.** Landscape keeps phase 4's frames; portrait's are in the table above. The meeting and the goodbye get
   `shot.attention` at `glance` (0.28).
@@ -970,17 +986,20 @@ verification's own list. Built on `birches-uplift-heaps`.
   answer `answerAfter` (0.3 s) later with a tell: its tail stands up out of the leaves and waves with a chitter and call
   marks, and she turns to that heap for 1.6 s. Measured 0.75–0.85 s after the stroke began, at most every
   `answerEvery` (1.5 s).
-- Found, it bounds between the middle and far heaps and up the birch behind them; the leap goes to the nearest heap
+- Found, it bounds round behind the heaps and up the birch behind the middle one; the leap goes to the nearest heap
   still deep enough to land in.
 
 **Uncovering is generous.** Raked heaps are loose (`LitterField.heaps`, `tuning.birches.looseReach`, `looseLift`):
 their leaves feel the strongest lift within 1.6 m as well as the air over them, and go 1.6 times as readily. Circles
 over the right heap find it in two to three loops whatever their size, centre or pace; strokes never do (above).
 
-**Spacing.** Round 3's heaps are 3 m apart at the rim. An updraft's column is wider than any spacing the frame allows
+**Spacing.** Round 3's heaps are 2 m apart at the rim. An updraft's column is wider than any spacing the frame allows
 (5–9 m), so once circles over one heap of the round being played have wound the charge past `circleHoldFrom` (0.35,
-well past what random swipes wind up), and for `circleLinger` (3 s) after, the round's other heaps hold against it:
-circles over the heap it is in take that one to nothing and leave the other two standing. Round 2's two heaps are
+well past what random swipes wind up), and for `circleLinger` (3 s) after, the round's other heaps hold against it.
+The heap being circled is the one whose rim is nearest the column's middle, so circles drawn off a heap's middle
+toward its neighbour still count as that heap. Measured with real circles half a radius off each heap's middle toward
+each neighbour, a little too big: that heap goes to nothing in three loops and finds it, both others stand as they
+were. Round 2's two heaps are
 7 m apart.
 
 **Frames** (the storyboard table above): round 2 is looked at from the south, high enough that the near heap and
@@ -1022,8 +1041,9 @@ south-west the lens loses the ride up into the trees, so the shot itself is unch
 its gesture), landscape: 4:20 (259.9 s), from stepping ashore to the push-off.
 
 **Not right yet.**
-- Portrait round 3 is small: from the south the three heaps stack up the frame, the squirrel sitting up 33, 22 and 16
-  px by heap (landscape 46, 35, 31). Its call marks carry it on each bound, but the far heap's hump is faint.
+- Portrait round 3 is small: holding all three heaps across the frame sets its scale, so the squirrel sits up 27,
+  22 and 25 px by heap at 900 × 1600 and 14, 12 and 13 at 390 × 844 (landscape 49, 41, 41). Its call marks carry it
+  on each bound.
 - Portrait tangle 3's squirrel is still about 11 px on the birch behind the loop.
 - The shuffle's middle heap is its most common end (half the time).
 

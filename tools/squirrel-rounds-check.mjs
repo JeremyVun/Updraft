@@ -10,7 +10,8 @@
 // screen and how much of it shows buried tail in.
 // Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer apart random shuffle plans stall early flat free leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
-// the squirrel's size at runtime; ROUND=2 or 3 runs only that round of `wrong`, EARLY=toBirches or birches only that
+// the squirrel's size at runtime; EXCLUSIVE=1 takes the GPU alone (circles are drawn by the wall clock, so a shared GPU slows
+// the game and costs loops); ROUND=2 or 3 runs only that round of `wrong`, EARLY=toBirches or birches only that
 // start of `early`, FLAT=blown, drift or trunk only that kind of `flat`.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
 import { openBrowser } from './lib/browser.mjs';
@@ -20,7 +21,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600), H = Number(process.env.H ?? 900);
 const out = process.env.OUT ?? '/tmp/updraft-squirrel-rounds';
 const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'answer', 'apart', 'random', 'shuffle', 'plans', 'stall', 'early', 'flat', 'free', 'leap', 'bare', 'resume', 'frames'];
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: process.env.EXCLUSIVE === '1' });
 const errors = [];
 const results = {};
 let page;
@@ -50,6 +51,8 @@ const state = () => page.evaluate(() => {
     child: g.child.action?.kind ?? null, sitting: g.child.sitting, chapter: g.story.name };
 });
 const __heaps = (round) => [1, 2, 3][round];
+/** Round 3's heap `i` as a `BIRCH_PILES` index. */
+const __heapOf = (i) => [6, 7, 8][i];
 const until = (fn, arg, timeout = 30000) => page.waitForFunction(fn, arg, { timeout, polling: 100 });
 
 /** Puts her just short of round `round`'s heaps with everything before it done, and waits for her to kneel there. */
@@ -333,24 +336,42 @@ const cased = {
   },
 
   /**
-   * Round 3's heaps, the squirrel in the middle one: hard strokes across each take none of them, and circles over the
-   * middle one take it and find it, leaving the near and far ones standing.
+   * Round 3's heaps, 2 m apart at the rim: hard strokes across each take none of them; then, with it in each heap in
+   * turn, sloppy circles drawn off that heap's middle toward a neighbour (half its radius off, a little too big) take
+   * that heap and find it, and leave both others standing.
    */
   async apart() {
-    await load();
-    await jump(2);
-    await hideIn(1);
-    await page.waitForTimeout(1500);
-    const before = await depthsOf();
-    for (const heap of [0, 1, 2]) await stroke(await acrossHeap(heap, 1.8), 260);
-    await page.waitForTimeout(2000);
-    const stroked = await depthsOf();
-    const loops = await circleOver(1, 2, 6);
-    await page.waitForTimeout(3000);
-    const circled = await depthsOf([6, 7, 8]);
-    assert.ok(stroked.every((d, i) => d >= before[i] * 0.9), `strokes took a heap: ${JSON.stringify({ before, stroked })}`);
-    assert.ok(loops !== null && circled[1] < before[1] * 0.6 && circled[0] >= before[0] * 0.85 && circled[2] >= before[2] * 0.85, `circles over the middle heap: ${JSON.stringify({ loops, before, circled })}`);
-    return { before, stroked, loops, circled };
+    const rows = [];
+    for (const [heap, toward] of [[0, 1], [1, 0], [1, 2], [2, 1]]) {
+      await load();
+      await jump(2);
+      await hideIn(heap);
+      await page.waitForTimeout(1500);
+      const before = await depthsOf();
+      if (rows.length === 0) {
+        for (const h of [0, 1, 2]) await stroke(await acrossHeap(h, 1.8), 260);
+        await page.waitForTimeout(2000);
+        const stroked = await depthsOf();
+        assert.ok(stroked.every((d, i) => d >= before[i] * 0.9), `strokes took a heap: ${JSON.stringify({ before, stroked })}`);
+      }
+      const ring = await page.evaluate(({ heap, toward }) => {
+        const r = __sq.ROUNDS[2], p = __sq.BIRCH_PILES[r.heaps[heap]], q = __sq.BIRCH_PILES[r.heaps[toward]], y = r.hides[heap].y + 0.3;
+        const d = Math.hypot(q.x - p.x, q.z - p.z), cx = p.x + (q.x - p.x) / d * p.r * 0.5, cz = p.z + (q.z - p.z) / d * p.r * 0.5;
+        return Array.from({ length: 24 }, (_, i) => {
+          const a = (i / 24) * Math.PI * 2;
+          return window.__screen(r.hides[heap].clone().set(cx + Math.cos(a) * p.r * 1.1, y, cz + Math.sin(a) * p.r * 1.1));
+        });
+      }, { heap, toward });
+      const loops = await circleRing(ring, 2, 6);
+      await page.waitForTimeout(3000);
+      const circled = await depthsOf();
+      const others = [0, 1, 2].filter((i) => i !== heap);
+      rows.push({ heap, toward, loops, before, circled });
+      assert.ok(loops !== null, `circles off heap ${heap} toward ${toward} never found it: ${JSON.stringify(rows)}`);
+      assert.ok(circled[heap] < before[heap] * 0.6, `circles off heap ${heap} toward ${toward} did not take it: ${JSON.stringify(rows)}`);
+      assert.ok(others.every((i) => circled[i] >= before[i] * 0.85), `circles off heap ${heap} toward ${toward} took a neighbour: ${JSON.stringify(rows)}`);
+    }
+    return rows;
   },
 
   /** Wind on a wrong heap: the right one answers with a tell at once, with no tells of its own due, and she looks at it. */
@@ -400,6 +421,14 @@ const cased = {
       c.restoreCheckpoint(__sq.birchesPoint(2, 2, true), [4, 1, 0.62, 2, 2]);
       c.update(0, c.now); g.rig.cut(c.shot);
     });
+    /** Every frame while it is under the leaves, kept in the page, so a blow from the case cannot hide the hump from it. */
+    await page.evaluate(() => {
+      window.__under = [];
+      const watch = () => { const q = __game.story.current.squirrel;
+        if (q.shuffle?.step === 'burrow') window.__under.push({ visible: __game.squirrel.visible, hump: __game.birches.burrowing.w });
+        requestAnimationFrame(watch); };
+      watch();
+    });
     const log = [];
     const sample = () => page.evaluate(() => {
       const g = __game, c = g.story.current, q = c.squirrel, s = g.squirrel, r = __sq.ROUNDS[2];
@@ -437,11 +466,12 @@ const cased = {
     const plan = shuffling.find((l) => l.order)?.order;
     const end = log[log.length - 1];
     assert.equal(end.beat, 'round', 'the shuffle never settled');
-    const hide = await page.evaluate(() => __game.story.current.squirrel.hideout.heap);
+    /** A blow still going when it settled may have found it since, so where it settled is where it last hid. */
+    const hide = await page.evaluate(() => { const q = __game.story.current.squirrel; return q.hideout?.heap ?? (q.lastHide?.round === 2 ? q.lastHide.heap : null); });
     const inFrame = ([u, v]) => u > 0.02 && u < 0.98 && v > 0.02 && v < 0.98;
     const watched = shuffling.filter((l) => l.step && l.step !== 'dare');
     const outside = shuffling.filter((l) => (l.visible ? !inFrame(l.at) : !inFrame(l.tracked)) || !l.heaps.every(inFrame) || !inFrame(l.head) || !inFrame(l.feet));
-    const humps = shuffling.filter((l) => l.step === 'burrow');
+    const humps = await page.evaluate(() => window.__under);
     assert.ok(plan && plan.length >= 4 && plan.length <= 5, `plan ${plan}`);
     assert.ok(plan.every((h, i) => i === 0 || Math.abs(h - plan[i - 1]) === 1), `a move skipped a heap: ${plan}`);
     assert.equal(hide, plan[plan.length - 1], 'it did not stay where it settled');
@@ -571,7 +601,7 @@ const cased = {
     return rows;
   },
 
-  /** Found after a wrong guess (circles over a heap it is not in, which stands): she leaps into a heap still standing. */
+  /** Found after a wrong guess (circles over a heap it is not in, which stands): she leaps into a heap still standing, and it stands with her sitting in it. */
   async leap() {
     await load();
     await jump(2);
@@ -598,6 +628,10 @@ const cased = {
     await page.screenshot({ path: `${out}-leap-landed.png` });
     await until(() => __game.child.action === null && __game.child.sitting, null, 5000);
     await page.screenshot({ path: `${out}-leap-sitting.png` });
+    /** She sits in it: the leaves went up round her and the heap still stands, a little flattened where she sits. */
+    const sat = (await depthsOf([__heapOf(into.heap)]))[0];
+    assert.ok(sat >= into.depth * 0.6, `the heap she landed in did not stand: ${JSON.stringify({ into, sat })}`);
+    into.sat = sat;
     await until(() => __game.story.current.beat === 'walk', null, 15000);
     const ended = await page.evaluate(() => __game.story.current.now);
     return { leap: +(ended - began).toFixed(1), into, station: (await state()).station };

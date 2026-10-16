@@ -77,10 +77,15 @@ export const BIRCH_PILES = [
   /** The squirrel's second round: one either side of the ride on the shelf below the rise, each at a trunk's foot. */
   { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8, raked: true },
   { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8, raked: true },
-  /** Its third, up the hollow's west side beyond the deep one, in a line toward the low sun. */
-  { ...birchesGap(2, 11, -14), r: 2.8, deep: 5, raked: true },
-  { ...birchesGap(2, 19.8, -15), r: 3, deep: 5.4, raked: true },
-  { ...birchesAt(-14.6, -1158.6), r: 2.8, deep: 5, raked: true },
+  /**
+   * Its third, on the hollow's west bank, set out side by side in front of her like cups on a table: on an arc round
+   * where she stands (`ROUNDS[2].stand`, gap C 11 m in, x −8), the left one west-south-west of her, the middle one
+   * west-north-west, the right one north-north-west, 9.3 m off and the middle one a little nearer, 2 m apart at the rim
+   * so one portrait frame from behind her holds all three.
+   */
+  { ...birchesGap(2, 7.19, -16.48), r: 2.6, deep: 5, raked: true },
+  { ...birchesGap(2, 14.58, -16.04), r: 2.8, deep: 5.4, raked: true },
+  { ...birchesGap(2, 19.85, -10.85), r: 2.6, deep: 5, raked: true },
 ];
 
 /** The steepest a heap is laid, in depth a metre: a little under what the litter field lets stand (`litterRepose`). */
@@ -100,14 +105,19 @@ function pileDepth(pile: (typeof BIRCH_PILES)[number], from: number): number {
 /** How far out a heap's own leaves and the floor raked into it reach. */
 const pileReach = (pile: (typeof BIRCH_PILES)[number]): number => pile.r + (pile.raked ? tuning.birches.heapRaked : 1.2);
 
-/** The trunks the gaps' heaps are banked against (the far one in round 3 against the last perch's birch): placed rather than grown, so a heap never loses its tree. */
+/** The birch behind round 3's middle heap, which the squirrel climbs to watch her leap. */
+export const HOLLOW_FAR_TREE = birchesGap(2, 15.96, -19.15);
+/** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
 const BANKS = [
   { ...birchesGap(1, 13.8, 10.1), scale: 15, variant: 2 },
   { ...birchesGap(1, 15.5, -4.1), scale: 16, variant: 0 },
-  { ...birchesGap(2, 11.6, -16.6), scale: 14.5, variant: 1 },
-  { ...birchesGap(2, 20.2, -17.8), scale: 13.3, variant: 0 },
-  /** Between the third round's middle heap and its far one, behind them from the lens: the squirrel watches the leap from it. */
-  { ...birchesAt(-17.4, -1154.4), scale: 16.4, variant: 2 },
+  /** Behind each of the third round's heaps from where she stands; the middle one's is the birch the squirrel watches the leap from. */
+  { ...birchesGap(2, 5.88, -19.4), scale: 14.5, variant: 1 },
+  { ...HOLLOW_FAR_TREE, scale: 16.4, variant: 2 },
+  { ...birchesGap(2, 22.9, -11.83), scale: 13.3, variant: 0 },
+  /** STAGING (birches-uplift-concept): standing birches at both ends of the fallen one, so there is no way round. */
+  { ...birchesAt(-12.4, -1118.6), scale: 15.5, variant: 0 },
+  { ...birchesAt(14.2, -1123.4), scale: 14.5, variant: 3 },
 ];
 const nearBank = (x: number, z: number): boolean => BANKS.some(b => Math.hypot(b.x - x, b.z - z) < 1.6);
 const inHeap = (x: number, z: number): boolean => BIRCH_PILES.some(p => p.raked && Math.hypot(p.x - x, p.z - z) < p.r + 1);
@@ -123,16 +133,19 @@ const bearing = (degrees: number): { x: number; z: number } =>
 export const ROUND_VIEWS_TALL = [
   { at: birchesAt(11.5, -1075), from: bearing(75) },
   { at: birchesGap(1, 13, 3), from: bearing(65) },
-  { at: birchesGap(2, 18, -14), from: bearing(8) },
+  { at: birchesGap(2, 12.52, -12.23), from: { x: 0.85, z: 0.527 } },
 ] as const;
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
-  { at: birchesGap(2, 13.8, -11.8), from: { x: 0.819, z: 0.574 } },
+  { at: birchesGap(2, 11.37, -13.03), from: { x: 0.819, z: 0.574 } },
 ] as const;
-const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some(v => {
-  const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(24, ax * v.from.x + az * v.from.z));
-  return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5;
+/** How much wider a round's view is kept clear from what it looks at back toward the lens, narrowing to it: round 3's heaps stand across its view. */
+const VIEW_FAN = [0, 0, 8];
+const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some((v, i) => {
+  const ax = x - v.at.x, az = z - v.at.z, toward = ax * v.from.x + az * v.from.z, along = Math.max(0, Math.min(24, toward));
+  const fan = toward < 0 ? 0 : VIEW_FAN[i % ROUND_VIEWS.length] * (1 - along / 24);
+  return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5 + fan;
 });
 
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
@@ -140,8 +153,40 @@ const SWING_TREE = flat(-2.4, -1116.6);
 /** A small glade opens toward the wound trunk, keeping its cloth readable below the canopy. */
 const GLADE = { ...birchesAt(-5, -1121), rx: 10, rz: 18 };
 const SWING_SCALE = 16.5;
-/** Where the rope is over the limb, in the unit tree the swing variant is grown as. */
-const SWING_LIMB = new THREE.Vector3(0.26, 0.25, 0.04);
+/**
+ * Where the rope is over the limb, in the unit tree the swing variant is grown as. STAGING (birches-uplift-concept):
+ * raised from 0.25 so the rope is about 6 m, as long as the drowned village's, and the arc's forward top clears the
+ * fallen birch.
+ */
+const SWING_LIMB = new THREE.Vector3(0.26, 0.41, 0.04);
+
+/**
+ * STAGING (birches-uplift-concept): the birch that came down across the ride just past the swing. Its root plate
+ * stands up on the west side and its dead crown lies in a tangle over the east, closing the ride from tree to tree;
+ * the bole between is too high to climb, and the swing's forward arc carries her over it. Band-local; each end's
+ * `lift` is the bole's middle above the ground there.
+ */
+export const FALLEN_BIRCH = {
+  root: { x: -9.6, z: -1120.3, lift: 1.6, r: 0.62 },
+  crown: { x: 5.6, z: -1121.5, lift: 1.4, r: 0.4 },
+  plate: 2.1,
+} as const;
+const FALLEN_ROOT = birchesAt(FALLEN_BIRCH.root.x, FALLEN_BIRCH.root.z);
+const FALLEN_CROWN = birchesAt(FALLEN_BIRCH.crown.x, FALLEN_BIRCH.crown.z);
+/** The bole's middle `t` of the way from its root plate to its crown, in the world. */
+export function fallenBole(t: number, out = new THREE.Vector3()): THREE.Vector3 {
+  const x = FALLEN_ROOT.x + (FALLEN_CROWN.x - FALLEN_ROOT.x) * t, z = FALLEN_ROOT.z + (FALLEN_CROWN.z - FALLEN_ROOT.z) * t;
+  const lift = FALLEN_BIRCH.root.lift + (FALLEN_BIRCH.crown.lift - FALLEN_BIRCH.root.lift) * t - Math.sin(t * Math.PI) * 0.12;
+  return out.set(x, Math.max(heightAt(x, z), 0) + lift, z);
+}
+export const fallenRadius = (t: number): number => FALLEN_BIRCH.root.r + (FALLEN_BIRCH.crown.r - FALLEN_BIRCH.root.r) * t;
+/** Nothing grows through it: within a couple of metres of the bole, the plate, or the crown's spread. */
+const nearFallen = (x: number, z: number): boolean => {
+  const ax = FALLEN_CROWN.x - FALLEN_ROOT.x, az = FALLEN_CROWN.z - FALLEN_ROOT.z, span = ax * ax + az * az;
+  const t = THREE.MathUtils.clamp(((x - FALLEN_ROOT.x) * ax + (z - FALLEN_ROOT.z) * az) / span, 0, 1);
+  const bole = Math.hypot(x - FALLEN_ROOT.x - ax * t, z - FALLEN_ROOT.z - az * t);
+  return bole < 2.2 || Math.hypot(x - FALLEN_CROWN.x - 4, z - FALLEN_CROWN.z + 2) < 6.5;
+};
 
 interface Seg {
   a: THREE.Vector3;
@@ -921,6 +966,7 @@ export class AutumnBirches {
     this.objects.push(this.swing.group);
 
     this.objects.push(this.fallen(shared));
+    this.objects.push(...this.fallenBirch(shared));
     this.objects.push(this.scarf.mesh);
     const hook = this.scarf.snags[0].center;
     const branch = mergeGeometries([
@@ -980,6 +1026,108 @@ export class AutumnBirches {
     const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared }));
     mesh.frustumCulled = false;
     return mesh;
+  }
+
+  /**
+   * STAGING (birches-uplift-concept): the birch across the ride past the swing. Its bole lies propped on its root
+   * plate and its crown's lower limbs; the plate stands on edge, earth and roots torn up with it; the crown is dead
+   * limbs and twigs, the ones that were on top now standing up.
+   */
+  private fallenBirch(shared: Record<string, THREE.IUniform>): THREE.Mesh[] {
+    const rand = mulberry32(5150);
+    const parts: THREE.BufferGeometry[] = [];
+    const floor = (x: number, z: number): number => Math.max(heightAt(x, z), 0);
+    /** Not a pipe: it bows a little and kinks where it broke its fall. */
+    const bole = Array.from({ length: 11 }, (_, i) => fallenBole(i / 10).add(new THREE.Vector3(0, Math.sin(i * 1.7) * 0.04, Math.sin(i * 0.9 + 1) * 0.12)));
+    const spine = new THREE.CatmullRomCurve3(bole), rings = 40, round = 16;
+    const tube = new THREE.TubeGeometry(spine, rings, 1, round, false);
+    const tp = tube.attributes.position, mid = new THREE.Vector3(), v = new THREE.Vector3();
+    for (let i = 0; i <= rings; i++) {
+      spine.getPointAt(i / rings, mid);
+      for (let j = 0; j <= round; j++) {
+        const k = i * (round + 1) + j;
+        v.fromBufferAttribute(tp, k).sub(mid).multiplyScalar(fallenRadius(i / rings) * (1 + 0.04 * Math.sin(j * 2.1 + i * 0.7)));
+        tp.setXYZ(k, mid.x + v.x, mid.y + v.y, mid.z + v.z);
+      }
+    }
+    tube.deleteAttribute('uv');
+    tube.computeVertexNormals();
+    parts.push(tube);
+    const along = bole[10].clone().sub(bole[0]).setY(0).normalize();
+    const across = new THREE.Vector3(-along.z, 0, along.x);
+    /** Broken stubs standing up off the root half, where a child would have to climb. */
+    for (const t of [0.12, 0.27, 0.42, 0.55]) {
+      const from = fallenBole(t).add(new THREE.Vector3(0, fallenRadius(t) * 0.7, 0));
+      const lean = across.clone().multiplyScalar((rand() - 0.5) * 1.2).add(along.clone().multiplyScalar(rand() * 0.6));
+      const to = from.clone().add(lean.add(new THREE.Vector3(0, 0.8 + rand() * 0.7, 0)));
+      parts.push(log(from, to, 0.09, 0.03, 6));
+    }
+    /** The crown, spread east over the ride's far half and its edge. */
+    const crown = bole[10];
+    const twig = (from: THREE.Vector3, dir: THREE.Vector3, len: number, r: number, depth: number): void => {
+      const to = from.clone().addScaledVector(dir, len);
+      to.y = Math.max(to.y, floor(to.x, to.z) + 0.08);
+      parts.push(log(from, to, r, r * 0.55, 5));
+      if (depth <= 0) return;
+      for (let k = 0; k < 2 + (depth > 1 ? 1 : 0); k++) {
+        const d = dir.clone().add(new THREE.Vector3((rand() - 0.5) * 1.4, 0.3 + rand() * 0.9, (rand() - 0.5) * 1.4)).normalize();
+        twig(to, d, len * (0.45 + rand() * 0.25), r * 0.55, depth - 1);
+      }
+    };
+    /** Splayed mostly to the north, the far side from the swing's lens, so the near side stays low over where she lands. */
+    for (let i = 0; i < 13; i++) {
+      const upright = i < 4;
+      const bearing = upright ? (rand() - 0.3) * 0.9 : -0.45 + rand() * 1.9;
+      const level = along.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), bearing);
+      const dir = level.clone().setY(upright ? 1.1 + rand() * 0.8 : 0.15 + rand() * 0.6).normalize();
+      let p = crown.clone().addScaledVector(along, rand() * 0.6);
+      let r = upright ? 0.11 : 0.15;
+      for (let k = 0; k < 3; k++) {
+        const len = (upright ? 1.4 : 1.7) + rand() * 0.9;
+        const next = p.clone().addScaledVector(dir, len);
+        next.y = Math.max(next.y, floor(next.x, next.z) + 0.1);
+        parts.push(log(p, next, r, r * 0.62, 6));
+        for (let j = 0; j < 2; j++) {
+          const side = level.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (j ? 1 : -1) * (0.6 + rand() * 0.9));
+          twig(next, side.setY(0.4 + rand() * 0.9).normalize(), 0.7 + rand() * 0.6, r * 0.5, 2);
+        }
+        dir.y -= upright ? 0.35 + rand() * 0.2 : 0.3 + rand() * 0.25;
+        dir.x += (rand() - 0.5) * 0.3;
+        dir.z += (rand() - 0.5) * 0.3;
+        dir.normalize();
+        r *= 0.62;
+        p = next;
+      }
+    }
+    const bark = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared }));
+    parts.length = 0;
+    /** The roots, torn out round the plate's rim and off its far face. */
+    const plateAt = bole[0].clone().addScaledVector(along, -0.4);
+    plateAt.y = floor(plateAt.x, plateAt.z) + FALLEN_BIRCH.plate * 0.7;
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2 + rand() * 0.4;
+      const out = across.clone().multiplyScalar(Math.cos(a)).add(new THREE.Vector3(0, Math.sin(a), 0));
+      const from = plateAt.clone().addScaledVector(out, FALLEN_BIRCH.plate * (0.4 + rand() * 0.55)).addScaledVector(along, -0.3);
+      const to = from.clone().addScaledVector(out, 0.5 + rand() * 0.9).addScaledVector(along, -(0.4 + rand() * 0.9));
+      to.y = Math.max(to.y, floor(to.x, to.z) - 0.1);
+      parts.push(log(from, to, 0.07 + rand() * 0.06, 0.02, 5));
+    }
+    const plate = new THREE.CylinderGeometry(FALLEN_BIRCH.plate, FALLEN_BIRCH.plate * 0.9, 0.55, 18, 1, false);
+    plate.deleteAttribute('uv');
+    const pos = plate.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i), a = Math.atan2(z, x), torn = 1 + 0.12 * Math.sin(a * 5 + 1) + 0.08 * Math.sin(a * 9);
+      pos.setX(i, x * torn);
+      pos.setZ(i, z * torn);
+    }
+    plate.computeVertexNormals();
+    plate.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), along));
+    plate.translate(plateAt.x, plateAt.y, plateAt.z);
+    parts.push(plate);
+    const earth = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: ROPE_FRAG,
+      uniforms: { ...shared, uPaint: { value: new THREE.Color('#b08a5c') } } }));
+    for (const m of [bark, earth]) m.frustumCulled = false;
+    return [bark, earth];
   }
 
   /**
@@ -1099,7 +1247,7 @@ export class AutumnBirches {
         const scale = (12 + rand() * 6) * (0.6 + 0.4 * shelter);
         const yaw = rand() * 6.2831, variant = Math.floor(rand() * 4);
         const { x, z } = birchesAt(lx, lz), y = heightAt(x, z);
-        if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242) || nearBank(x, z)) continue;
+        if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242) || nearBank(x, z) || nearFallen(x, z)) continue;
         this.trees.push({ x, y: y - 0.25, z, scale, yaw, variant, strip: 0, shed: 0 });
       }
     }
@@ -1114,7 +1262,7 @@ export class AutumnBirches {
           if (y < TREE_LINE) continue;
           const way = walkDistance(x, z);
           if (way < RIDE || this.scarf.crosses(x, z) || onSightline(x, z) || draw() > standsAt(x, z) || thinned(way, column, row, 4243 + gap)
-            || nearBank(x, z) || inHeap(x, z) || inRoundView(x, z)) continue;
+            || nearBank(x, z) || inHeap(x, z) || inRoundView(x, z) || nearFallen(x, z)) continue;
           const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
           const scale = (12 + draw() * 6) * (0.6 + 0.4 * shelter);
           this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0, shed: 0 });
