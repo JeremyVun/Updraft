@@ -855,8 +855,9 @@ export class AutumnBirches {
   /** Something that has just gone into the heap, and the seconds left of it: it outranks anybody merely walking. */
   private readonly kicking = new THREE.Vector4(1e6, 1e6, 3, 0);
   private readonly burrowing = new THREE.Vector4(1e6, 1e6, 1, 0);
-  private holding: readonly number[] = [];
-  private readonly held = new Map<number, number>();
+  /** The squirrel's heaps stand from the start: the wind reaches the first from the boat, before its round can hold it. */
+  private holding: readonly number[] = BIRCH_PILES.flatMap((p, i) => (p.raked ? [i] : []));
+  private readonly held = new Map(this.holding.map((heap) => [heap, 1]));
   private kickFor = 0;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly walker = new THREE.Vector3();
