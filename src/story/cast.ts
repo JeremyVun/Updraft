@@ -217,6 +217,8 @@ export interface Chapter {
   steerLight?(at: THREE.Vector3, power: number): number;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
+  /** How far the player's cursor has wound round one way, in radians, for a beat that wants real circles. */
+  circling?(wound: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
   readonly silence?: boolean;
   /** True once the story is over and the credits may roll. */

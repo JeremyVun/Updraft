@@ -40,6 +40,8 @@ export class PointerInput {
   readonly gustDir = new THREE.Vector2(1, 0);
   /** Updraft charge, 0..1: wound up by tracing circles, and running down as soon as the circling stops. */
   charge = 0;
+  /** How far the cursor has wound round one way, in radians, since it last paused: a shaky hand turns both ways and cancels. */
+  wound = 0;
   /** The middle of the circles being traced, where the air rises. */
   readonly updraftAt = new THREE.Vector3();
   /**
@@ -151,7 +153,7 @@ export class PointerInput {
     this.ndc.copy(this.eventNdc);
     this.prevNdc.copy(this.ndc);
     this.vel.set(0, 0);
-    this.gust = this.charge = this.spin = this.sinceHeading = 0;
+    this.gust = this.charge = this.spin = this.sinceHeading = this.wound = 0;
     this.heading = null;
     if (wasDown) this.listeners.forEach(l => l('up'));
   }
@@ -205,13 +207,14 @@ export class PointerInput {
       let turning = 0;
       if (this.heading !== null) {
         const turned = Math.atan2(Math.sin(heading - this.heading), Math.cos(heading - this.heading));
-        if (Math.abs(turned) < 1.2) turning = turned / this.sinceHeading;
+        if (Math.abs(turned) < 1.2) { turning = turned / this.sinceHeading; this.wound += turned; }
       }
       this.spin += (turning - this.spin) * (1 - Math.exp(-this.sinceHeading * 5));
       this.heading = heading;
       this.sinceHeading = 0;
     } else if (this.sinceHeading > 0.15) {
       this.spin *= Math.exp(-dt * 5);
+      if (this.sinceHeading > 0.5) this.wound = 0;
     }
     const want = THREE.MathUtils.smoothstep(Math.abs(this.spin) * this.twirlGain, T.twirlFrom, T.twirlFull);
     if (want > this.charge) this.charge = Math.min(want, this.charge + dt * T.chargeRate * want);

@@ -223,6 +223,7 @@ export class SleepingChapter implements Chapter {
   private callAt = 0;
   private pillowStroke = 0;
   private bedBreath = 0;
+  private wound = 0;
   private readonly bedEntry = new THREE.Vector3();
   private readonly birdEntry = new THREE.Vector3();
   private birdPlaced = false;
@@ -412,6 +413,7 @@ export class SleepingChapter implements Chapter {
 
   /** The existing screen-space sweep reaches the pillow even when the ground lies behind it. */
   brushDry(amount: number): void { this.bedBreath = amount; }
+  circling(wound: number): void { this.wound = wound; }
 
   get coax(): Coax | null {
     const { cygnet } = this.cast;
@@ -1091,7 +1093,8 @@ export class SleepingChapter implements Chapter {
     if (this.stage === 'ready') {
       this.face(this.stepTo, dt, 2);
       k.watch(this.lipAt);
-      if (k.hoping < T.stepHope) return;
+      // A gust or a shaky hand lifts its hopes; only circles wound round it get it up.
+      if (k.hoping < T.stepHope || Math.abs(this.wound) < T.stepWound * Math.PI * 2) return;
       k.clamber(this.bankEdge, this.stepTo, T.stepClamberFor, T.stepFeathers);
       this.heardFlutter();
       this.next('over');
@@ -1157,7 +1160,7 @@ export class SleepingChapter implements Chapter {
     sleeping.feather.goal.copy(target);
     this.play(this.fogMoments,t);
     const p=k.position,uphill=Math.atan2(UP_THE_LANE.x,UP_THE_LANE.y);
-    const looking=t<T.mistShiverAt?0:t<T.mistCallAt?Math.sin((t-T.mistShiverAt)/(T.mistCallAt-T.mistShiverAt)*Math.PI*2)*1.1:0;
+    const looking=t<T.mistShiverAt?0:t<T.mistCallAt?Math.sin((t-T.mistShiverAt)/(T.mistCallAt-T.mistShiverAt)*Math.PI)*0.8:0;
     const glimpsing=t>=T.mistGlimpseAt && t<T.mistGlimpseAt+T.mistLookFor;
     const toLamp=Math.atan2(LAMP.x-p.x,LAMP.z-p.z)-uphill;
     const turned=glimpsing?Math.atan2(Math.sin(toLamp),Math.cos(toLamp))*T.mistGlimpseTurn:0;
@@ -1184,7 +1187,7 @@ export class SleepingChapter implements Chapter {
   }
 
   private readonly fogMoments: readonly (readonly [number, () => void])[] = [
-    [T.mistShiverAt, () => this.cast.cygnet.does('shiver', undefined, 3.2)],
+    [T.mistShiverAt, () => this.cast.cygnet.does('shiver', undefined, T.mistShiverFor)],
     [T.mistCallAt, () => this.cast.cygnet.call(true)],
     [T.mistGlimpseAt, () => {
       this.cast.sleeping.trail.glimpse = 1;

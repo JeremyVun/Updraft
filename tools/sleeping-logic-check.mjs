@@ -126,9 +126,15 @@ for (const fps of [30,60]) {
       if(c.stage!=='ready'&&c.stage!=='over')assert(!c.invitesFlight,'the step asks for circles only after the try');
       if(c.stage==='ready'){
         if(player.ready<0)player.ready=player.since;
-        if(player.since-player.ready>1)Object.assign(f.air,{lift:1.0,energy:0.3});
+        const into=player.since-player.ready;
+        // A gust under it and a shaky hand first, which only lift its hopes; then gentle circles, a loop in 1.6 s.
+        if(into>1&&into<3){Object.assign(f.air,{lift:1.0,energy:0.3});c.circling(Math.sin(into*40)*.6);}
+        if(into>=3){Object.assign(f.air,{lift:1.0,energy:0.3});c.circling((into-3)*Math.PI*2/1.6);}
       }
-      if(c.stage==='over'&&player.steppedAt===null)player.steppedAt=player.since-player.ready;
+      if(c.stage==='over'&&player.steppedAt===null){
+        player.steppedAt=player.since-player.ready;
+        assert(player.steppedAt>3,`a gust and a shaky hand must not get it up the step: ${player.steppedAt}`);
+      }
     }
     if(c.beat==='mist'){
       if(!c.windInvitation)assert.equal(c.encounterStroke,0,'the fog counts strokes only once the bird has turned uphill');
@@ -169,7 +175,7 @@ for (const fps of [30,60]) {
   }
   for(const b of ['snow','step','mist','crest'])assert(beats.includes(b),`the ${b} stop must be on the walking route`);
   assert(player.deepest>.15&&player.deepest<.4,`the bird tries the drift chest deep: ${player.deepest}`);
-  assert(player.steppedAt!==null&&player.steppedAt<3.5,`gentle circles must get it up the step: ${player.steppedAt}`);
+  assert(player.steppedAt!==null&&player.steppedAt<6.5,`a loop and a half of gentle circles must get it up the step: ${player.steppedAt}`);
   assert(k.position.y>12.5,'the step leaves it on top');
   assert(c.glances===3,`three looks back: ${c.glances}`);
   const at=Object.entries(starts).map(([b,t])=>`${b} ${(t-starts.edge).toFixed(1)}s`).join(', ');
@@ -275,6 +281,7 @@ console.log(`Terrain and feather guidance pass; assisted ${activeWalk.toFixed(1)
       if(!c.windInvitation)assert.equal(c.encounterStroke,0,'ambient and violent wind must not solve a winter gate');
       else c.brushDry(.3);
     }
+    if(c.beat==='step')c.circling(i*.12);
     f.step(c);feather.update(1/30,f.time);
     const slope=Math.hypot(heightAt(k.position.x+.1,k.position.z)-heightAt(k.position.x-.1,k.position.z),heightAt(k.position.x,k.position.z+.1)-heightAt(k.position.x,k.position.z-.1))/.2;
     if(!onBank(k.position.x,k.position.z)){worstSlope=Math.max(worstSlope,slope);assert(slope<.65,'crosswinds steered the bird onto the cliff');}

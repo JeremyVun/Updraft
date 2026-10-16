@@ -3267,7 +3267,7 @@ export const tuning = {
     mistBrushRadius: .55,
     featherTakeRate: 3.8,
     snowStroke: 1.0,
-    mistStroke: 0.7,
+    mistStroke: 1.5,
     encounterNoticeFor: 2.2,
     climbPace: 0.32,
     climbEncouragement: 0.28,
@@ -3332,6 +3332,8 @@ export const tuning = {
     stepLooksFor: 2.4,
     stepLift: 0.6,
     stepHope: 0.85,
+    /** Turns the cursor has to wind round one way before it goes. */
+    stepWound: 1.5,
     stepWingRecovery: 0.45,
     stepClamberFor: 2.1,
     stepEdge: 1.3,
@@ -3345,18 +3347,19 @@ export const tuning = {
      * thinning downhill and the long look at the lamp, then the invitation. How much the glimpse thins the saddle's bank,
      * and the seconds the window's glow and the glimpse ease over.
      */
-    mistShiverAt: 0.9,
-    mistCallAt: 4.2,
-    mistGlimpseAt: 6.0,
-    mistLookFor: 1.9,
+    mistShiverAt: 0.4,
+    mistShiverFor: 1.6,
+    mistCallAt: 1.6,
+    mistGlimpseAt: 2.6,
+    mistLookFor: 1.4,
     /**
      * How far its body comes round toward the lamp while it looks, as a share of the way; then, once it has turned back
      * uphill, the seconds before the lens starts round after it and the seconds the lens takes to come round behind it.
      */
     mistGlimpseTurn: 0.35,
-    mistTurnAfter: 0.3,
-    mistTurnFor: 4.5,
-    mistInviteAt: 11.2,
+    mistTurnAfter: 0.2,
+    mistTurnFor: 3.2,
+    mistInviteAt: 6.0,
     mistGlimpseThins: 0.75,
     /** How much thicker the saddle's bank stands while the window is lost in it, so less of the crest shows through. */
     mistBankCloses: 1.7,
@@ -3389,7 +3392,7 @@ export const tuning = {
      * window and by `summitLull` from the summit on, below the bedside's.
      */
     nightWindGusts: 0.3, nightWindRoar: 0.3, nightWindMost: 0.95, nightWindAnswer: 0.6, fogLull: 0.55, summitLull: 0.4,
-    windAnswersAfter: 1.7, windAnswerRises: 0.9, windAnswerFades: 3.5,
+    windAnswersAfter: 0.9, windAnswerRises: 0.9, windAnswerFades: 3.5,
     nightWindSettles: 3,
     /** The bird's sounds on the climb: the snow depth (m) under it from which its feet crunch, and their overall level. */
     crunchFrom: 0.02, climbFoley: 1,

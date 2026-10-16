@@ -764,6 +764,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
+  story.current.circling?.(input.wound);
   washingPassage.active?.brush(rig.camera, input, wind);
   if (story.name === 'lines') rotaryWashing.brush(rig.camera, input, wind);
   if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
