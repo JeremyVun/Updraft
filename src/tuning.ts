@@ -1483,6 +1483,8 @@ export const tuning = {
     holdEase: 0.5,
     /** Stepping off the bow under the sail in the first shot, she is seen through all but this much of it. */
     landingGivesWay: 0.06,
+    /** The sail's longer lens is let go between these seconds ashore, while the first shot is still closing in on her. */
+    arrivalLens: { holdFor: 1.5, goneBy: 6 },
     /**
      * The boat goes round to the far berth once she is `away` metres from it and no part of it, hull to `mast` metres
      * up, has been within `margin` of the frame for `unseen` seconds: a lens tilting up the ride must not catch it go.

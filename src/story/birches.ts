@@ -65,7 +65,8 @@ export class BirchesChapter implements Chapter {
   private lensSpeed = 0;
   private lensAt = 0;
   private readonly lensWas = new THREE.Vector3();
-  private beatStart = 0;
+  /** The first beat, ashore, starts on the first frame the island is played. */
+  private beatStart = -1;
   private holdUntil = 0;
   private now = 0;
   private cheered = false;
@@ -121,6 +122,7 @@ export class BirchesChapter implements Chapter {
     plane.homeRadius = 28;
     /** It never flies over this island, whatever the player does with the air: everything here is on the ground. */
     cast.cygnet.mayFly = false;
+    this.lens = tuning.crossingCamera.arrivals.birches.reveal.zoom;
     child.stepAshore(cast.boat);
     child.walkTo(BIRCHES_LANDING.x - 1, BIRCHES_LANDING.y - 9, false, () => this.to('wonder'), 0.9);
   }
@@ -234,6 +236,7 @@ export class BirchesChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
+    if (this.beatStart < 0) this.beatStart = time;
     const { child: c, plane: p, boat, birches } = this.cast;
     p.guided = this.beat === 'walk';
     const scarf = birches.scarf;
@@ -755,6 +758,9 @@ export class BirchesChapter implements Chapter {
       s.target.set(c.x, Math.max(heightAt(c.x, c.z), 0) + 3, c.z - 6);
       s.distance = 28;
       s.height = 7;
+      const k = tuning.birches.arrivalLens;
+      if (this.beat === 'ashore') s.zoom = THREE.MathUtils.lerp(tuning.crossingCamera.arrivals.birches.reveal.zoom, 1,
+        THREE.MathUtils.smootherstep(this.t, k.holdFor, k.goneBy));
       this.pace = 0.3;
       this.focus.copy(c);
       return;

@@ -973,7 +973,8 @@ export class CrossingChapter implements Chapter {
       this.shot.target.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead);
       this.shot.distance = distance;
       this.shot.height = height;
-      this.shot.zoom = isle?.zoom ? THREE.MathUtils.lerp(1, isle.zoom, reveal) : undefined;
+      // Held to the beach: the room lets it go while its lens is still closing in, so it never reads as a zoom out.
+      this.shot.zoom = isle?.zoom ? THREE.MathUtils.lerp(1, isle.zoom, revealed) : undefined;
       this.pace = 0.4;
       if (isle && lens && reveal > 0) {
         this.revealAttention.point.copy(isle.sight);

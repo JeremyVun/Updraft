@@ -329,7 +329,14 @@ leaves only once she is 25 m from it and no part of it (hull ends to 6 m up, a 1
 
 Red Door enters 3 s into the swing. The reveal's lens stands 20 m off the boat (from 24) on a longer lens
 (`IslandReveal.zoom` 1.3, eased in and out with the reveal), so the island fills the frame on the way in rather than
-showing small end to end; by the landing the zoom has eased back to 1 for the room's first view.
+showing small end to end.
+
+> there's still a subtle zoom out when they come into shore
+
+The longer lens now holds through the landing (it follows the reveal alone, not the arrival) and the room lets it go
+between 1.5 and 6 s ashore (`tuning.birches.arrivalLens`), while the first shot is still closing in on her, so the
+island only ever grows in the frame: measured, it shrinks under 2% as the boat stops (the lens settling from the sail's
+8.5 m to the room's 7 m) where it shrank 4% as the lens widened before.
 
 What follows from it (2026-10-16):
 - **Red Door enters with the reveal.** On the meadow sail its entrance coincides with the lens beginning its swing
