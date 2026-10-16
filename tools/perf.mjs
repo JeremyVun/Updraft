@@ -9,8 +9,8 @@
 //   env: BASE (default http://127.0.0.1:5230/), DSF (device scale factor, default 1), W/H viewport (1600x900)
 //        WARMUP (milliseconds after ready before measurement, default 1500)
 //        WHOLE / BLOCK flicker spike thresholds (default 1.5 / 8; lower them for a frozen world, `hold=`)
-// Takes the same machine-wide browser lock as tools/play.mjs. Note that other processes using the GPU
-// (another capture, a browser playing video) inflate every number here: check before trusting a run.
+// Has the GPU alone among the browser tools. Note that other processes using the GPU
+// (a browser playing video, a simulator) inflate every number here: check before trusting a run.
 import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 
@@ -134,7 +134,7 @@ const INIT = {
   },
 };
 
-const { browser, close } = await openBrowser();
+const { browser, close } = await openBrowser({ exclusive: true });
 try {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: Number(process.env.DSF ?? 1) });
   const page = await context.newPage();

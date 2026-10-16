@@ -18,7 +18,7 @@
 // Traps:
 //   - k1 sails the open sea from the start (about 80 s) and dive waits for the crossing's sighting (about 45 s): a
 //     full set takes about six minutes, so pass only the shots needed.
-//   - The browser lock is shared with every capture tool: a run may wait for another session's capture first.
+//   - A run waits while a timing tool has the GPU alone.
 //   - eye, k3, heave, k4 and k5 resume a save in the running page (`restoreCheckpoint`), as the net check does; k4 and k5 lift
 //     the flipper by `liftFin` rather than a stroke, so no drawn wind of the player's crosses the frame.
 //   - Run it against your own dev server: a server that hot-reloads mid-capture yields a frame of the start screen.
