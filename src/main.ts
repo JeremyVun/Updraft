@@ -1108,8 +1108,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
   if (story.name === 'meadow') swanFeather.update(dt, time);
-  harebells.update(dt, time, rig.camera, wind, input, sound.output, [child.visible ? child.position : null, glider.position], (x, z) => life.at(x, z), story.name === 'meadow');
-  meadowEchoes.update(dt, time, rig.camera, input, sound.output, story.name === 'meadow', wind);
+  harebells.update(dt, time, rig.camera, wind, input, [child.visible ? child.position : null, glider.position], (x, z) => life.at(x, z), story.name === 'meadow');
+  meadowEchoes.update(dt, time, rig.camera, input, story.name === 'meadow', wind);
   departureKites.update(dt, time, rig.camera, story);
   cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);

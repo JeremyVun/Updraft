@@ -357,18 +357,41 @@ export const tuning = {
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
   meadowEchoes: {
     patches: [[-22, -729, 9, 13], [6, -793, 11, 10]],
-    clusters: [[-4, 4], [3, 0], [-1, -6]],
+    /** Points across the flower bed the camera keeps in frame and the invitation picks the sleepiest of. */
+    bedPoints: [[-4, 4], [3, 0], [-1, -6]],
     stands: [[-23, -717], [3, -779], [2, -821]],
-    approach: 16, brush: 0.13, liftReach: 13,
-    strokeGain: 2.2, bloomEffort: 0.58, liftGain: 0.17, sweepLift: 1.2,
-    liftSettle: 0.025, liftHold: 1.5, minimumPlay: 5,
-    inviteAfter: 5, arrivalRest: 3, listenFor: 5.5, familyAfter: 2,
+    approach: 16,
+    /**
+     * The bed sleeps short, bowed and closed. A sweep over it on screen (`brush`, screen heights) wakes what it
+     * passes: about two passes open a flower. Once `bedAwake` of the bed is up, the last sleepers rise with it over
+     * `bedFinish` seconds and the play is done.
+     */
+    brush: 0.2, wakeGain: 6.5, wakeCap: 0.2, bedAwake: 0.75, bedFinish: 1.6,
+    sleepHeight: 0.5, sleepBow: 1.9, wakeStiffness: 18, wakeDamping: 6.5, sweepPush: 30,
+    /**
+     * Circling over the seed heads lifts their down: `releaseTime` seconds of a well-wound updraft (charge from
+     * `chargeFrom` to `chargeFull`) take it all. Lifted down rides the column to `columnTop` and never sinks back;
+     * once all of it is up the column stands to `releaseTop` for `afterlift` seconds, and the cloud drifts off on
+     * `drift` (metres a second).
+     */
+    liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
+    down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
+    hoverHeight: 3, afterlift: 5, drift: [-0.55, -1.05], downFade: 16,
+    inviteAfter: 5, arrivalRest: 3, seedRest: 6, listenFor: 5.5, familyAfter: 2,
     departureWalk: 16,
+    /**
+     * The play's camera: over the flower bed (`Bed`), then round to the seed heads against the far slope (`Seed`,
+     * rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold` metres), then the
+     * listening rise (plain names), each blended in as she walks.
+     */
+    cameraBedBack: 18, cameraBedUp: 6, cameraPortraitBedBack: 21, cameraPortraitBedUp: 7,
+    cameraSeedSide: 2.5, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedSide: -1, cameraPortraitSeedBack: 19,
+    cameraPortraitSeedUp: 7.5, cameraSeedRise: 1.5, cameraSeedHold: 4,
     cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
-    cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65, cameraPortraitSecondSide: .15,
-    seedHeight: 5, voice: 0.079, musicDuck: 0.65,
+    cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65,
+    musicDuck: 0.65,
     flowers: 290, seedHeads: 140, stemBend: .06, stemSaturation: .24,
-    turf: .42, turfExtra: 8, tread: 5, listeningTurf: [2, -821, 11, 10],
+    turf: .42, turfExtra: 8, listeningTurf: [2, -821, 11, 10],
   },
   meadowLife: {
     approachRadius: 3.2, approachRate: 2.2,

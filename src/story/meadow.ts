@@ -311,6 +311,7 @@ export class MeadowChapter implements Chapter {
   /** The feather only wants blowing one way, toward the cygnet. */
   get invitationHeading(): number | null { return this.windInvitation ? this.featherHeading : null; }
   get updraftTarget(): THREE.Vector3 | null { return this.song.active && meadowEchoes.seeds.active && meadowEchoes.seeds.completed === 1 ? meadowEchoes.seed : null; }
+  get coax() { return this.song.coax; }
   private featherHeading = 0;
   private readonly onScreen = new THREE.Vector3();
 

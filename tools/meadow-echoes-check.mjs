@@ -4,6 +4,8 @@
 import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import './lib/typescript.mjs';
+const { tuning: { meadowEchoes: tuning } } = await import('../src/tuning.ts');
 
 const out = process.env.OUT ?? '/tmp/updraft-meadow-echoes';
 fs.mkdirSync(out, { recursive: true });
@@ -39,6 +41,30 @@ try {
     };
   });
   const touch = process.env.TOUCH === '1' ? await context.newCDPSession(page) : null;
+  // Every rendered frame: how sharply any lifted mote of down changed its velocity, and whether any sank.
+  await page.evaluate(() => {
+    const e = __game.meadowEchoes, last = new Map();
+    window.__down = { accel: 0, sank: 0, frames: 0 };
+    window.__bed = { finishing: -1, awake: -1 };
+    let at = __stats.time;
+    const tick = () => {
+      if (window.__bed.finishing < 0 && e.seeds.finishing >= 0) window.__bed.finishing = __stats.time;
+      if (window.__bed.awake < 0 && e.seeds.completed > 0) window.__bed.awake = __stats.time;
+      const dt = __stats.time - at; at = __stats.time;
+      if (dt > 0) for (let i = 0; i < e.phase.length; i++) {
+        if (e.phase[i] !== 1) { last.delete(i); continue; }
+        const j = i * 3, was = last.get(i), now = [e.pos[j + 1], e.vel[j], e.vel[j + 1], e.vel[j + 2]];
+        if (was) {
+          window.__down.accel = Math.max(window.__down.accel, Math.hypot(now[1] - was[1], now[2] - was[2], now[3] - was[3]) / dt);
+          window.__down.sank = Math.max(window.__down.sank, was[0] - now[0]);
+          window.__down.frames++;
+        }
+        last.set(i, now);
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   const state = () => page.evaluate(() => {
     const g = __game, c = g.story.current, e = g.meadowEchoes;
     const p = v => { const q = v.clone().project(g.rig.camera); return [(q.x+1)*innerWidth/2,(1-q.y)*innerHeight/2,q.z]; };
@@ -46,7 +72,8 @@ try {
       count: e.seeds.completed, progress: e.seeds.progress, active: e.seeds.active, matched: g.piano.matched,
       seed: p(e.seed), target: p(e.receiver), child: p(g.child.position.clone().add({x:0,y:1.5,z:0})),
       feet: p(g.child.position), head: p(g.child.position.clone().add({x:0,y:2.8,z:0})),
-      sectors: e.sectors.map(p), blooms: e.seeds.blooms.slice(), bird: p(g.cygnet.position),
+      sectors: e.sectors.map(p), patch: p(e.patches[1]), finishing: e.seeds.finishing, bird: p(g.cygnet.position),
+      opened: e.flowers.filter(f => f.seen && f.shown > .6).length, flying: e.down.count,
       invitation: c.windInvitation ? p(c.windInvitation) : null, heading: c.invitationHeading,
       piano: g.piano.expect && c.piano?.at === 'seated'
         ? { expect: g.piano.expect, path: [0,1].map(t=>p(g.piano.guideAlong(t,g.piano.keys.clone()))) } : null,
@@ -56,6 +83,18 @@ try {
     const s = await state(); report.states.push({ label, ...s });
     await page.screenshot({ path: `${out}/${String(report.states.length).padStart(3,'0')}-${label}.png` });
     console.log(JSON.stringify({ label, time: s.time, beat: s.beat, song: s.song, count: s.count, progress:s.progress }));
+  };
+  const circle = async (centre, loops, r = height * .08) => {
+    const at = a => [centre[0] + Math.cos(a) * r, centre[1] + Math.sin(a) * r];
+    if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:at(0)[0],y:at(0)[1]}]});
+    else await page.mouse.move(...at(0));
+    for(let i=1;i<=loops*24;i++) {
+      const [x,y]=at(i*Math.PI*2/24);
+      if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});
+      else await page.mouse.move(x,y);
+      await page.waitForTimeout(30);
+    }
+    if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
   const sweep = async (a,b,ms=1000) => {
     a = [Math.max(16,Math.min(width-16,a[0])),Math.max(16,Math.min(height-16,a[1]))];
@@ -72,7 +111,8 @@ try {
     if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
   await shot('entry');
-  let idleChecked = false, last = '', count = 0, shotsAt = -10, auditAt = -10, matched = 0;
+  const idleChecked = new Set(); let last = '', count = 0, shotsAt = -10, auditAt = -10, matched = 0;
+  let sweeps = 0, loops = 0, swept = false, lifted = 0;
   const end = Date.now() + 9 * 60000;
   while(Date.now() < end) {
     const s = await state();
@@ -95,22 +135,44 @@ try {
       await sweep(s.piano.path[forward?0:1],s.piano.path[forward?1:0],1500);
       await page.waitForTimeout(1500);
     } else if(s.active) {
-      if(!idleChecked) {
+      if(!idleChecked.has(s.count)) {
+        const stage=s.count;
         await page.mouse.move(4,4); await page.waitForTimeout(6500);
-        assert.equal((await state()).count,0,'idle must not complete the flower phrase');
-        assert((await state()).progress < .02, 'ambient wind must not complete the flower phrase');
+        assert.equal((await state()).count,stage,'idle must not complete the play');
+        assert((await state()).progress < .02, 'ambient wind must not wake the bed or lift the down');
         await sweep([width*.8,height*.12],[width*.95,height*.12]);
-        assert((await state()).progress < .02, 'off-target motion must not play the flowers');
-        idleChecked = true; await shot('waiting-for-wind'); continue;
+        assert((await state()).progress < .02, 'off-target motion must not play');
+        idleChecked.add(stage); await shot(`waiting-for-wind-${stage}`); continue;
       }
-      for(const p of [s.head,s.feet,s.bird,...(s.count===0?s.sectors:[s.seed])]) {
+      for(const p of [s.head,s.feet,s.bird,...(s.count===0?s.sectors:[s.patch])]) {
         assert(p[0]>12&&p[0]<width-12&&p[1]>12&&p[1]<height-12&&p[2]<1,`playable subject clipped: ${JSON.stringify(s)}`);
       }
       if(s.count===0) {
-        const i=s.blooms.indexOf(Math.min(...s.blooms)), at=s.sectors[i];
-        await sweep([at[0]-height*.1,at[1]],[at[0]+height*.1,at[1]],1000);
+        const at=s.invitation??s.sectors[1];
+        await sweep([at[0]-height*.3,at[1]],[at[0]+height*.3,at[1]],1000);
+        sweeps++;
+        if(sweeps===1) {
+          await page.waitForTimeout(900);
+          assert((await state()).opened>4,'one sweep must visibly wake flowers along its track');
+        }
+        if((await state()).finishing>=0) {
+          await page.waitForFunction(()=>window.__bed.awake>=0,null,{timeout:20000});
+          const bed=await page.evaluate(()=>window.__bed), took=bed.awake-bed.finishing;
+          assert(took<tuning.bedFinish+.2,`the bed's last sleepers rise at once, not after a hidden wait (${took.toFixed(2)} s)`);
+          console.log(JSON.stringify({bed:'awake',sweeps,finish:+took.toFixed(2)}));
+        }
       } else {
-        await sweep([s.seed[0],s.seed[1]+height*.06],[s.seed[0],Math.max(20,s.seed[1]-height*.22)],1100);
+        if(!swept) {
+          await sweep([s.patch[0]-height*.25,s.patch[1]],[s.patch[0]+height*.25,s.patch[1]-height*.08],900);
+          await page.waitForTimeout(1500);
+          assert.equal((await state()).progress,0,'a sweep stirs the seed heads but lifts no down');
+          swept=true; continue;
+        }
+        await circle([s.patch[0],s.patch[1]-height*.02],1); loops++;
+        const now=await state();
+        assert(now.progress>=lifted||now.count===2,'lifted down is never lost');
+        lifted=now.progress;
+        if(now.count===2) console.log(JSON.stringify({seeds:'lifted',loops}));
       }
       if(s.time-shotsAt>3) { await shot(s.count === 0 ? 'flower-strokes' : 'lifting-seeds'); shotsAt=s.time; }
       if(++count>80) throw new Error('Meadow play did not finish after broad real strokes');
@@ -122,6 +184,11 @@ try {
   }
   const final = await state();
   assert.equal(final.count,2,'both meadow play moments must be completed');
+  const down = await page.evaluate(() => window.__down);
+  console.log(JSON.stringify({down}));
+  assert(down.frames>100,'lifted down was measured');
+  assert.equal(down.sank,0,'lifted down never sinks');
+  assert(down.accel<15,`down rises smoothly rather than stepping with each gust (${down.accel.toFixed(1)} m/s²)`);
   if(process.env.FULL) assert.equal(final.chapter,'toBirches','full play must depart Meadow');
   assert.equal(report.errors.length,0,report.errors.join('\n'));
   console.log('PASS: player gestures, visible subjects, idle/off-target, flower phrases, seed lift and onward story.');

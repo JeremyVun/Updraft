@@ -178,6 +178,11 @@ them.
   ambient wind never turn it. A continuous sweep keeps its turn direction as the cloth rotates past the pointer.
   Local circles lift the snagged hem through the shared lift field. Partial progress stays earned. Each aligned frame catches independently; both must settle before
   the travellers cross. Drawn spiral/sweep invitations never supply wind.
+- **The meadow's flower bed and seed heads.** `MeadowEchoes.brush` tests moving strokes against each flower and
+  head on screen: flowers keep the wakefulness a sweep gives them and lean along it, and a splat is laid at the bed
+  so its grass answers. Seed heads only lean. Their down is taken by the circling charge while the column stands at
+  the heads (`input.updraftAt`, anchored there by `updraftTarget`); it rides an explicit funnel round the column,
+  integrated with eased velocities, and never descends.
 - **Storm rain** leans by `tuning.storm.rainLean` along the breeze without writing a gust.
 
 ## What wind can and cannot solve
@@ -193,7 +198,7 @@ them.
   valves.
 - **Updraft, not gust, where the gesture is a circle.** The cygnet's flights, the wrapped trunk, the wood's embers
   (`Embers.updraft` turns the charge at the waiting coal into its breath; burning coals flare from the field's
-  lift) and lifting a filled bubble. Straight strokes build no charge.
+  lift), lifting a filled bubble and the meadow's seed down. Straight strokes build no charge.
 - Each room's wind interaction is described with the room in `docs/chapters.md`.
 
 ## Sailing

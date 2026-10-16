@@ -28,7 +28,7 @@ const browser = [
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'music-mute', 'birches-foley', 'birches-score',
   'boats-score', 'mirror-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'meadow-breath', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sea-music', 'clouds-music', 'village-music', 'sleeping-score', 'sleeping-music', 'whale-voice', 'drowned-audio-regression',
+  'meadow-score', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sea-music', 'clouds-music', 'village-music', 'sleeping-score', 'sleeping-music', 'whale-voice', 'drowned-audio-regression',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';
