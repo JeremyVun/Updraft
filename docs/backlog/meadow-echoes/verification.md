@@ -157,3 +157,38 @@ occurs on pre-merge main (`/tmp/meadow-merge-foghorn-baseline.log`); it remains 
 
 No deployment or push was requested or performed. Recorded phrases and final musical synchronisation remain
 pending; the existing player-camera captures are the visual evidence, not a new motion or listening review.
+
+## Second playthrough: story and camera — 2026-10-16
+
+Items 1, 2, 3 and 6 of "Second playthrough of the recorded duet" in [design.md](design.md), from player-camera
+captures on the dev server (fixed 1/60 s steps; the duet's answers given through `piano.perform` to reach the
+finale quickly, then the real-input piano check). Stills and numbers, not a motion or listening review.
+
+- **Finale.** From the greening cue the camera rises from 14 m above the ground (17 m from her) to 123 m above it
+  and 155 m from her, about 13 s in, holds to about 20 s and comes down to the walk's own view of her (26 m up,
+  45 m back) by 28 s, as she gets up; distance only grows on the way up and only shrinks on the way down. The final
+  front crosses at 16 m/s, so the far half of the island turns from grey to green while the camera is up (it
+  reaches the pond about 13.5 s in). Landscape and portrait use the same high view; portrait sees the island's
+  length and crops its sides. The pond's water is seen from the high view and is empty: the family stays at
+  `shown` 0 while `seesPond` finds the raft on screen, and came in 43 to 45 s after the cue, once the camera had
+  come down into the fold behind her. The boat stayed at the landing, out of frame, and the departure kite is
+  disabled until the crest. Strips: `/tmp/updraft-story-hbJM/f2-strip.jpg` (landscape),
+  `/tmp/updraft-story-hbJM/p2-strip.jpg` (portrait).
+- **Leaving the stool.** She steps off the stool to the west, round the end away from the bough and out behind the
+  case, then throws and walks on north; the old path took her through the case. Strip:
+  `/tmp/updraft-story-hbJM/walkround-strip.jpg`.
+- **Warm bed.** Rendered with `tools/meadow-duet-render.mjs`: it now swells in over `afterFadeIn` (6 s,
+  smoothstep), at −20 dB 1.25 s in, −6 dB at 3 s and full by about 5.5 s; before, it reached full level within
+  about 0.3 s.
+- **Brow.** Against the unchanged prototype on 5251, the same 0.48–0.5 rad look round from the climb's profile onto
+  her line to the piano took 10–90 % in 0.55–3.1 s and settled by 4.4 s (peak 0.22 rad/s; the camera rose
+  4.6 m/s at most); it now begins as she arrives, settles by 7.5 s and she walks on at 7.8 s (peak 0.11 rad/s,
+  1.7 m/s). Start and end framings are the old ones. Strip: `/tmp/updraft-story-hbJM/b4-strip.jpg`.
+- **No trodden grass.** The flower and seed play no longer press the grass flat round her.
+- **Cygnet in the grass.** With the pressing gone, real strokes through both plays (`meadow-echoes-check.mjs`,
+  landscape, passed) show the cygnet's head and neck above the grass and its body half in it; in the flower bed it is
+  small at her feet and at times behind her legs, so it is easy to miss there. Reported, not compensated.
+- Gates after merging `main`: typecheck, production build (existing chunk-size warning), `piano-frame-check.mjs`,
+  and the real-input `piano-check.mjs` in landscape and portrait touch all pass. Two portrait runs earlier failed
+  at the first call because the machine was heavily loaded (load average 75): the check's touch strokes fell so far
+  behind the fixed-step clock that the bough had already repeated; the unchanged prototype and a rerun pass.

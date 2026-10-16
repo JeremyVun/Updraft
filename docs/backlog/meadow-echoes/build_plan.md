@@ -38,7 +38,7 @@ Brief and the cut table: "Piano hill and the meadow score" in [design.md](design
 Brief: "Second playthrough of the recorded duet" in [design.md](design.md). Two parallel worktrees off the prototype
 branch, merged back into it for Jeremy on 5251.
 
-- [ ] Story and camera (`src/story/meadow.ts`, `src/story/piano.ts`, `src/audio/meadow-music.ts`, the `piano`,
+- [x] Story and camera (`src/story/meadow.ts`, `src/story/piano.ts`, `src/audio/meadow-music.ts`, the `piano`,
   `meadowMusic` and `crest` tuning): finale rise and descent with the surprises absent while it is up; the walk
   round the piano; the warm bed's fade-in; the slower brow turn; no trodden grass in the flower and seed play.
 - [ ] Flowers and seeds (`src/world/meadow-echoes.ts`, `src/world/meadow-seeds.ts`, `src/story/meadow-song.ts`,
