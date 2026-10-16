@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
-import { screenBrush } from '../creatures/motion';
-import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BirchCanopyMotion } from '../fx/birch-canopy';
 import { FallenLeaves, HEAP_GLSL, LEAF_SHAPE_GLSL, LEAF_SIDE, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_RES, LitterField, litterTop } from '../fx/leaves';
@@ -11,6 +9,8 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES, birchesFirstHeight } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
+import { RopeSwing } from './crossings/rope-swing';
+import type { SwingWay } from './crossings/swing-crossing';
 import { BirchScarf, FALLEN_LOG, FORK_BRANCH, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
 import { BIRCHES_CUTS, BIRCHES_LOCAL, birchesAt, birchesGap, birchesLocal, birchesNoise, birchesOut } from './birches-layout';
 
@@ -115,7 +115,7 @@ const BANKS = [
   { ...birchesGap(2, 7.13, -17.76), scale: 14.5, variant: 1 },
   { ...HOLLOW_FAR_TREE, scale: 16.4, variant: 2 },
   { ...birchesGap(2, 20.84, -11.67), scale: 13.3, variant: 0 },
-  /** STAGING (birches-uplift-concept): standing birches at both ends of the fallen one, so there is no way round. */
+  /** Standing birches at both ends of the fallen one, so there is no way round it. */
   { ...birchesAt(-12.4, -1118.6), scale: 15.5, variant: 0 },
   { ...birchesAt(14.2, -1123.4), scale: 14.5, variant: 3 },
 ];
@@ -154,17 +154,22 @@ const SWING_TREE = flat(-2.4, -1116.6);
 const GLADE = { ...birchesAt(-5, -1121), rx: 10, rz: 18 };
 const SWING_SCALE = 16.5;
 /**
- * Where the rope is over the limb, in the unit tree the swing variant is grown as. STAGING (birches-uplift-concept):
- * raised from 0.25 so the rope is about 6 m, as long as the drowned village's, and the arc's forward top clears the
- * fallen birch.
+ * Where the rope is over the limb, in the unit tree the swing variant is grown as: high enough that the rope is as long
+ * as the drowned village's and the top of a forward swing carries her over the fallen birch.
  */
 const SWING_LIMB = new THREE.Vector3(0.26, 0.41, 0.04);
+/** Band-local: across the ride where she stops at the bole, east of the seat; where she comes down past it; and on. */
+const SWING_STOP_X = 3.4;
+const SWING_LANDING = [1.6, -1125.4] as const;
+const SWING_ONWARD = [0.2, -1129.6] as const;
+/** Where along the fallen birch a limb it snapped under itself props it up, and on which side (1 south, −1 north). */
+const FALLEN_PROPS = [[0.17, 1], [0.24, -1], [0.38, -1], [0.45, 1], [0.6, 1], [0.7, -1], [0.95, 1], [0.97, -1]] as const;
 
 /**
- * STAGING (birches-uplift-concept): the birch that came down across the ride just past the swing. Its root plate
- * stands up on the west side and its dead crown lies in a tangle over the east, closing the ride from tree to tree;
- * the bole between is too high to climb, and the swing's forward arc carries her over it. Band-local; each end's
- * `lift` is the bole's middle above the ground there.
+ * The birch that came down across the ride just past the swing. Its root plate stands up on the west side and its
+ * dead crown lies in a tangle over the east, closing the ride from tree to tree; the bole between is too high to
+ * climb and the limbs it broke under it fill the gap below, so the swing's forward arc is the way over. Band-local;
+ * each end's `lift` is the bole's middle above the ground there.
  */
 export const FALLEN_BIRCH = {
   root: { x: -9.6, z: -1120.3, lift: 1.6, r: 0.62 },
@@ -180,6 +185,17 @@ export function fallenBole(t: number, out = new THREE.Vector3()): THREE.Vector3 
   return out.set(x, Math.max(heightAt(x, z), 0) + lift, z);
 }
 export const fallenRadius = (t: number): number => FALLEN_BIRCH.root.r + (FALLEN_BIRCH.crown.r - FALLEN_BIRCH.root.r) * t;
+/** Level, from the bole toward the swing: south, the side she comes up on. */
+export const FALLEN_SOUTH = new THREE.Vector2(FALLEN_ROOT.z - FALLEN_CROWN.z, FALLEN_CROWN.x - FALLEN_ROOT.x).normalize();
+/** How far (x, z) is from the fallen birch's bole on the side she comes up on: negative beyond it. */
+export const southOfFallen = (x: number, z: number): number => (x - FALLEN_ROOT.x) * FALLEN_SOUTH.x + (z - FALLEN_ROOT.z) * FALLEN_SOUTH.y;
+/** The bole's top `t` of the way from its root plate to its crown. */
+export const fallenTop = (t: number, out = new THREE.Vector3()): THREE.Vector3 => fallenBole(t, out).setY(out.y + fallenRadius(t));
+/** How far along the bole (x, z) is, as `t`. */
+export function alongFallen(x: number, z: number): number {
+  const ax = FALLEN_CROWN.x - FALLEN_ROOT.x, az = FALLEN_CROWN.z - FALLEN_ROOT.z;
+  return ((x - FALLEN_ROOT.x) * ax + (z - FALLEN_ROOT.z) * az) / (ax * ax + az * az);
+}
 /** Nothing grows through it: within a couple of metres of the bole, the plate, or the crown's spread. */
 const nearFallen = (x: number, z: number): boolean => {
   const ax = FALLEN_CROWN.x - FALLEN_ROOT.x, az = FALLEN_CROWN.z - FALLEN_ROOT.z, span = ax * ax + az * az;
@@ -645,6 +661,60 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
+/**
+ * The fallen birch's bole: the standing birches' bark laid on its side, its dashes running round the bole rather than
+ * round the world's up; damp and greener underneath, where the leaves have banked against it.
+ */
+const BOLE_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${DISSOLVE_GLSL}
+${BARK_GLSL}
+uniform vec3 uBoleFrom;
+uniform vec3 uBoleAlong;
+in vec3 vWorld;
+in vec3 vNormal;
+void main() {
+  if (inTheWay(vWorld, 0.9)) discard;
+  vec3 N = normalize(vNormal);
+  vec3 side = normalize(cross(uBoleAlong, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(side, uBoleAlong);
+  vec3 alb = birchBark(vec3(dot(N, side), 0.0, dot(N, up)), dot(vWorld - uBoleFrom, uBoleAlong) * 1.4);
+  float under = 1.0 - smoothstep(-0.6, 0.35, N.y);
+  float moss = smoothstep(0.45, 0.85, vnoise(vWorld.xz * 1.3 + 4.0)) * under;
+  alb = mix(alb, alb * vec3(0.72, 0.7, 0.62), under);
+  alb = mix(alb, vec3(0.3, 0.33, 0.19), moss * 0.6);
+  float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
+  vec3 V = normalize(cameraPosition - vWorld);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 4.0) * max(dot(-V, uSunDir), 0.0);
+  vec3 ambient = hemiLight(N) * vec3(1.15, 1.02, 0.82) + uGroundBounce * 0.6;
+  vec3 col = alb * (ambient + uSunColor * max(dot(N, uSunDir), 0.0) * 0.8 * sun) + uSunColor * rim * 0.3 * sun;
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+/** Earth torn up with a root plate, and the roots in it: clods and grit, catching the low sun round their edges. */
+const EARTH_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${DISSOLVE_GLSL}
+uniform vec3 uPaint;
+in vec3 vWorld;
+in vec3 vNormal;
+void main() {
+  if (inTheWay(vWorld, 0.9)) discard;
+  vec3 N = normalize(vNormal);
+  float clod = vnoise(vWorld.xy * 3.1 + vWorld.z * 2.3) * 0.6 + vnoise(vWorld.zy * 9.0 + vWorld.x) * 0.4;
+  vec3 alb = uPaint * (0.72 + 0.5 * clod);
+  float stone = smoothstep(0.78, 0.9, vnoise(vWorld.xy * 5.0 + vWorld.zx * 4.0));
+  alb = mix(alb, vec3(0.6, 0.58, 0.52), stone * 0.6);
+  float sun = groundAt(vWorld.xz).w * cloudShadow(vWorld.xz);
+  vec3 V = normalize(cameraPosition - vWorld);
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0) * max(dot(-V, uSunDir), 0.0);
+  vec3 ambient = hemiLight(N) * vec3(1.12, 1.0, 0.84) + uGroundBounce * 0.7;
+  vec3 col = alb * (ambient + uSunColor * max(dot(N, uSunDir), 0.0) * 0.85 * sun) + uSunColor * rim * 0.4 * sun;
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
 const PLAIN_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
@@ -792,83 +862,23 @@ function walkDistance(x: number, z: number, way = WAY): number {
 }
 
 /**
- * A swing hanging from a branch with nobody on it. The wind moves it before anyone arrives; then the child gets
- * on and the player finds out what they have been doing all this time — pushing a child on a swing.
+ * A swing hanging from a branch with nobody on it: the old seat and its two ropes, `rope` long. The wind moves it
+ * before anyone arrives; then the child gets on and the player finds out what they have been doing all this time,
+ * pushing a child on a swing.
  */
-export class Swing {
-  readonly group = new THREE.Group();
-  readonly pivot = new THREE.Vector3();
-  readonly materials: THREE.ShaderMaterial[];
-  /** How far it is out of true, in radians, and how fast. Positive swings north, away from the camera. */
-  angle = 0;
-  speed = 0;
-  /** 0 empty, 1 with the child on it: a loaded swing is slower and takes more pushing. */
-  rider = 0;
-  braking = false;
-  invited = false;
-  brushAge = Infinity;
-  length = 3.6;
-  private readonly seatLocal = new THREE.Vector3();
-  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
-
-  constructor(pivot: THREE.Vector3, ground: number, subject: THREE.Vector4) {
-    this.pivot.copy(pivot);
-    this.length = Math.max(2.2, pivot.y - ground - 0.55);
-    const seat = new THREE.BoxGeometry(1.25, 0.12, 0.42).translate(0, -this.length, 0);
-    const rope = (side: number): THREE.BufferGeometry =>
-      log(new THREE.Vector3(side * 0.44, 0.1, 0), new THREE.Vector3(side * 0.46, -this.length, 0), 0.045, 0.038, 7);
-    const paint = (colour: string): THREE.ShaderMaterial =>
-      new THREE.ShaderMaterial({
-        vertexShader: PLAIN_VERT,
-        fragmentShader: ROPE_FRAG,
-        uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) }, uSubject: { value: subject } },
-      });
-    const wood = paint('#705030');
-    const cord = paint('#725b3c');
-    this.group.add(new THREE.Mesh(seat, wood));
-    this.group.add(new THREE.Mesh(mergeGeometries([rope(1), rope(-1)]), cord));
-    this.group.position.copy(pivot);
-    this.materials = [wood, cord];
-  }
-
-  /** Where the seat is now, in the world. */
-  seat(out: THREE.Vector3): THREE.Vector3 {
-    return out.set(this.pivot.x, this.pivot.y - this.length * Math.cos(this.angle), this.pivot.z + this.length * Math.sin(this.angle));
-  }
-
-  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
-    if ((!this.invited && !this.rider) || input.muted || !input.present || input.gust < 1.4) return;
-    const seat = this.seat(this.seatLocal);
-    const touch = screenBrush(camera, seat, input.prevNdc, input.ndc, .25);
-    if (touch < .01) return;
-    this.brushAge = 0;
-    wind.addSplat({ source: this, ax: seat.x, az: seat.z, bx: seat.x, bz: seat.z,
-      vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
-      radius: 3, energy: Math.min(.8, input.gust / 20) * Math.sqrt(touch), lift: 0, swirl: 0 });
-  }
-
-  update(dt: number, wind: WindField): void {
-    this.brushAge += dt;
-    const seat = this.seat(this.seatLocal);
-    const w = wind.sample(seat.x, seat.z, this.air);
-    const load = 1 + this.rider * 0.8;
-    /** A pendulum, pushed by the air along its travel and given a shove by any gust that reaches it. */
-    const along = w.z;
-    const travel = this.length * this.speed * Math.cos(this.angle);
-    const push = (along - travel * 0.5) * tuning.birches.swingPush * (0.5 + 0.5 * this.rider);
-    /** Any gust that reaches it helps it along, whichever way it is blowing: a player who keeps at it gets height. */
-    const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : Math.sign(along) || 1;
-    const gust = w.energy * tuning.birches.swingGust * way;
-    const gravity = -9.81 * 0.78 * Math.sin(this.angle);
-    this.speed += ((gravity + (this.braking ? 0 : (push + gust) / load)) / this.length) * dt;
-    this.speed *= Math.exp(-dt * (this.braking ? tuning.birches.scarf.swingBrake : tuning.birches.swingDamping));
-    this.angle += this.speed * dt;
-    if (Math.abs(this.angle) > 1.15) {
-      this.angle = Math.sign(this.angle) * 1.15;
-      this.speed *= -0.3;
-    }
-    this.group.rotation.x = -this.angle;
-  }
+function birchSwing(rope: number, subject: THREE.Vector4): THREE.Group {
+  const seat = new THREE.BoxGeometry(1.25, 0.12, 0.42).translate(0, -rope, 0);
+  const cord = (side: number): THREE.BufferGeometry =>
+    log(new THREE.Vector3(side * 0.44, 0.1, 0), new THREE.Vector3(side * 0.46, -rope, 0), 0.045, 0.038, 7);
+  const paint = (colour: string): THREE.ShaderMaterial =>
+    new THREE.ShaderMaterial({
+      vertexShader: PLAIN_VERT,
+      fragmentShader: ROPE_FRAG,
+      uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color(colour) }, uSubject: { value: subject } },
+    });
+  const look = new THREE.Group();
+  look.add(new THREE.Mesh(seat, paint('#705030')), new THREE.Mesh(mergeGeometries([cord(1), cord(-1)]), paint('#725b3c')));
+  return look;
 }
 
 /**
@@ -880,7 +890,9 @@ export class AutumnBirches {
   readonly objects: THREE.Object3D[] = [];
   /** Who must stay in sight: x, y, z and 1 while it applies. Anything in front of them gives way. */
   readonly subject = new THREE.Vector4();
-  readonly swing: Swing;
+  readonly swing: RopeSwing;
+  /** The swing's way over the fallen birch, and where she stops at the bole first and sees it is in the way. */
+  readonly swingWay: SwingWay & { stop: THREE.Vector3; onward: THREE.Vector3 };
   readonly scarf = new BirchScarf();
   private readonly trees: Birch[] = [];
   private readonly table: Float32Array;
@@ -962,8 +974,11 @@ export class AutumnBirches {
     const tree = this.trees[this.trees.length - 1];
     const limb = new THREE.Vector3(SWING_LIMB.x, SWING_LIMB.y + 0.006, SWING_LIMB.z).multiplyScalar(tree.scale);
     const pivot = new THREE.Vector3(tree.x + limb.x, tree.y + limb.y, tree.z + limb.z);
-    this.swing = new Swing(pivot, Math.max(heightAt(pivot.x, pivot.z), 0), this.subject);
+    const rope = Math.max(2.2, pivot.y - Math.max(heightAt(pivot.x, pivot.z), 0) - 0.55);
+    this.swing = new RopeSwing({ pivot, toward: new THREE.Vector2(0, -1), rope }, birchSwing(rope, this.subject),
+      { ...tuning.crossings.swing, ...tuning.birches.swing.ride });
     this.objects.push(this.swing.group);
+    this.swingWay = this.wayOver(pivot);
 
     this.objects.push(this.fallen(shared));
     this.objects.push(...this.fallenBirch(shared));
@@ -1009,6 +1024,25 @@ export class AutumnBirches {
     fixInPlace(...this.objects.filter((o) => o !== this.swing.group), ...this.swing.group.children);
   }
 
+  /**
+   * Where she stops on the ride at the bole, a step off it, and looks; beside the seat as it hangs, where she gets on;
+   * past the bole on the ride where the top of a forward swing lets her down; and on toward the second tangle.
+   */
+  private wayOver(pivot: THREE.Vector3): AutumnBirches['swingWay'] {
+    const onGround = (p: { x: number; z: number }): THREE.Vector3 => new THREE.Vector3(p.x, Math.max(heightAt(p.x, p.z), 0), p.z);
+    const k = tuning.birches.swing;
+    const across = birchesAt(SWING_STOP_X, FALLEN_BIRCH.crown.z), stopAt = alongFallen(across.x, across.z);
+    const bole = fallenBole(stopAt), off = fallenRadius(stopAt) + k.stopShort;
+    const seat = this.swing.seat(new THREE.Vector3());
+    return {
+      stop: onGround({ x: bole.x + FALLEN_SOUTH.x * off, z: bole.z + FALLEN_SOUTH.y * off }),
+      board: onGround({ x: seat.x + 0.75, z: seat.z + 0.3 }),
+      landing: onGround(birchesAt(...SWING_LANDING)),
+      onward: onGround(birchesAt(...SWING_ONWARD)),
+      over: { top: fallenTop(alongFallen(pivot.x, pivot.z)), clear: k.clear },
+    };
+  }
+
   /** The birch that came down, lying along the slope with the first heap of the walk banked against its lee side. */
   private fallen(shared: Record<string, THREE.IUniform>): THREE.Mesh {
     const { a, b } = FALLEN_LOG;
@@ -1029,9 +1063,9 @@ export class AutumnBirches {
   }
 
   /**
-   * STAGING (birches-uplift-concept): the birch across the ride past the swing. Its bole lies propped on its root
-   * plate and its crown's lower limbs; the plate stands on edge, earth and roots torn up with it; the crown is dead
-   * limbs and twigs, the ones that were on top now standing up.
+   * The birch across the ride past the swing. Its bole lies propped on its root plate and its crown's lower limbs, the
+   * limbs it snapped under itself jammed into the ground beneath it; the plate stands on edge, earth and roots torn
+   * up with it; the crown is dead limbs and twigs, the ones that were on top now standing up.
    */
   private fallenBirch(shared: Record<string, THREE.IUniform>): THREE.Mesh[] {
     const rand = mulberry32(5150);
@@ -1039,31 +1073,62 @@ export class AutumnBirches {
     const floor = (x: number, z: number): number => Math.max(heightAt(x, z), 0);
     /** Not a pipe: it bows a little and kinks where it broke its fall. */
     const bole = Array.from({ length: 11 }, (_, i) => fallenBole(i / 10).add(new THREE.Vector3(0, Math.sin(i * 1.7) * 0.04, Math.sin(i * 0.9 + 1) * 0.12)));
-    const spine = new THREE.CatmullRomCurve3(bole), rings = 40, round = 16;
+    const spine = new THREE.CatmullRomCurve3(bole), rings = 48, round = 18;
     const tube = new THREE.TubeGeometry(spine, rings, 1, round, false);
     const tp = tube.attributes.position, mid = new THREE.Vector3(), v = new THREE.Vector3();
     for (let i = 0; i <= rings; i++) {
       spine.getPointAt(i / rings, mid);
+      const t = i / rings;
+      /** It flares into the root plate, and the bark is lumpy where limbs were. */
+      const flare = 1 + 0.45 * (1 - THREE.MathUtils.smoothstep(t, 0, 0.09));
       for (let j = 0; j <= round; j++) {
         const k = i * (round + 1) + j;
-        v.fromBufferAttribute(tp, k).sub(mid).multiplyScalar(fallenRadius(i / rings) * (1 + 0.04 * Math.sin(j * 2.1 + i * 0.7)));
+        const lump = 1 + 0.035 * Math.sin(j * 2.1 + i * 0.7) + 0.03 * Math.sin(j * 5.3 - i * 1.9);
+        v.fromBufferAttribute(tp, k).sub(mid).multiplyScalar(fallenRadius(t) * flare * lump);
         tp.setXYZ(k, mid.x + v.x, mid.y + v.y, mid.z + v.z);
       }
     }
     tube.deleteAttribute('uv');
     tube.computeVertexNormals();
-    parts.push(tube);
     const along = bole[10].clone().sub(bole[0]).setY(0).normalize();
     const across = new THREE.Vector3(-along.z, 0, along.x);
-    /** Broken stubs standing up off the root half, where a child would have to climb. */
-    for (const t of [0.12, 0.27, 0.42, 0.55]) {
+    const bark = new THREE.Mesh(tube, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: BOLE_FRAG,
+      uniforms: { ...shared, uBoleFrom: { value: bole[0].clone() }, uBoleAlong: { value: bole[10].clone().sub(bole[0]).normalize() } } }));
+    /** Its broken top, tapering into the crown. */
+    parts.push(log(bole[10], bole[10].clone().addScaledVector(along, 0.9).setY(bole[10].y + 0.1), fallenRadius(1) * 0.95, 0.13, 10));
+    /** Broken stubs standing up off the root end, where a child would have to climb. */
+    for (const t of [0.08, 0.18, 0.3]) {
       const from = fallenBole(t).add(new THREE.Vector3(0, fallenRadius(t) * 0.7, 0));
       const lean = across.clone().multiplyScalar((rand() - 0.5) * 1.2).add(along.clone().multiplyScalar(rand() * 0.6));
       const to = from.clone().add(lean.add(new THREE.Vector3(0, 0.8 + rand() * 0.7, 0)));
       parts.push(log(from, to, 0.09, 0.03, 6));
     }
+    /**
+     * Underneath, the limbs that were on its lower side when it came down: snapped and driven into the ground on
+     * either side, holding it up, with broken lengths lying among them, so there is no way under it either.
+     */
+    for (const [t, side] of FALLEN_PROPS) {
+      const from = fallenBole(t).addScaledVector(across, side * fallenRadius(t) * 0.55);
+      from.y -= fallenRadius(t) * 0.75;
+      const out = 0.75 + rand() * 0.45;
+      const foot = from.clone().addScaledVector(across, side * out).addScaledVector(along, (rand() - 0.5) * 0.8);
+      foot.y = floor(foot.x, foot.z) - 0.15;
+      parts.push(log(from, foot, 0.11 + rand() * 0.04, 0.07, 6));
+      const snap = foot.clone().lerp(from, 0.45 + rand() * 0.2);
+      const twig = snap.clone().addScaledVector(along, (rand() - 0.5) * 0.9).addScaledVector(across, side * (0.3 + rand() * 0.3));
+      twig.y = Math.max(floor(twig.x, twig.z) + 0.05, snap.y - 0.3 - rand() * 0.3);
+      parts.push(log(snap, twig, 0.04, 0.015, 5));
+    }
+    for (let i = 0; i < 7; i++) {
+      const t = 0.08 + i * 0.13 + rand() * 0.05;
+      const a = fallenBole(t).addScaledVector(across, (rand() - 0.5) * 1.4);
+      const b = fallenBole(Math.min(1, t + 0.06 + rand() * 0.08)).addScaledVector(across, (rand() - 0.5) * 1.6);
+      a.y = floor(a.x, a.z) + 0.07 + rand() * 0.25;
+      b.y = floor(b.x, b.z) + 0.05 + rand() * 0.12;
+      parts.push(log(a, b, 0.07 + rand() * 0.04, 0.04, 5));
+    }
     /** The crown, spread east over the ride's far half and its edge. */
-    const crown = bole[10];
+    const crown = bole[10].clone().addScaledVector(along, 0.6);
     const twig = (from: THREE.Vector3, dir: THREE.Vector3, len: number, r: number, depth: number): void => {
       const to = from.clone().addScaledVector(dir, len);
       to.y = Math.max(to.y, floor(to.x, to.z) + 0.08);
@@ -1099,35 +1164,66 @@ export class AutumnBirches {
         p = next;
       }
     }
-    const bark = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared }));
+    const limbs = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared }));
     parts.length = 0;
-    /** The roots, torn out round the plate's rim and off its far face. */
-    const plateAt = bole[0].clone().addScaledVector(along, -0.4);
-    plateAt.y = floor(plateAt.x, plateAt.z) + FALLEN_BIRCH.plate * 0.7;
-    for (let i = 0; i < 22; i++) {
-      const a = (i / 22) * Math.PI * 2 + rand() * 0.4;
-      const out = across.clone().multiplyScalar(Math.cos(a)).add(new THREE.Vector3(0, Math.sin(a), 0));
-      const from = plateAt.clone().addScaledVector(out, FALLEN_BIRCH.plate * (0.4 + rand() * 0.55)).addScaledVector(along, -0.3);
-      const to = from.clone().addScaledVector(out, 0.5 + rand() * 0.9).addScaledVector(along, -(0.4 + rand() * 0.9));
-      to.y = Math.max(to.y, floor(to.x, to.z) - 0.1);
-      parts.push(log(from, to, 0.07 + rand() * 0.06, 0.02, 5));
-    }
-    const plate = new THREE.CylinderGeometry(FALLEN_BIRCH.plate, FALLEN_BIRCH.plate * 0.9, 0.55, 18, 1, false);
+    /**
+     * The root plate, torn up on edge: a slab of earth thicker at the middle, ragged at the rim where it tore, with
+     * clods hanging off its foot.
+     */
+    const plateAt = bole[0].clone().addScaledVector(along, -0.45);
+    plateAt.y = floor(plateAt.x, plateAt.z) + FALLEN_BIRCH.plate * 0.66;
+    const R = FALLEN_BIRCH.plate;
+    const plate = new THREE.CylinderGeometry(R, R * 0.9, 0.7, 40, 3, false);
     plate.deleteAttribute('uv');
     const pos = plate.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), z = pos.getZ(i), a = Math.atan2(z, x), torn = 1 + 0.12 * Math.sin(a * 5 + 1) + 0.08 * Math.sin(a * 9);
-      pos.setX(i, x * torn);
-      pos.setZ(i, z * torn);
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), a = Math.atan2(z, x), r = Math.hypot(x, z) / R;
+      const torn = 1 + 0.14 * Math.sin(a * 5 + 1) + 0.09 * Math.sin(a * 11 + 2) + 0.05 * Math.sin(a * 23);
+      /** The far face bulges where the root ball was, the near one is flatter where it tore off the bole's side. */
+      const bulge = y < 0 ? (1 - r * r) * 0.55 : (1 - r * r) * 0.15;
+      pos.setXYZ(i, x * torn, y + Math.sign(y) * bulge, z * torn);
     }
     plate.computeVertexNormals();
-    plate.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), along));
+    const face = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), along);
+    plate.applyQuaternion(face);
     plate.translate(plateAt.x, plateAt.y, plateAt.z);
-    parts.push(plate);
-    const earth = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: ROPE_FRAG,
-      uniforms: { ...shared, uPaint: { value: new THREE.Color('#b08a5c') } } }));
-    for (const m of [bark, earth]) m.frustumCulled = false;
-    return [bark, earth];
+    parts.push(plate.toNonIndexed());
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI * (1.15 + 0.7 * (i / 8)) + (rand() - 0.5) * 0.2;
+      const at = plateAt.clone().addScaledVector(across, Math.cos(a) * R * 0.85).setY(plateAt.y + Math.sin(a) * R * 0.85 - 0.1);
+      const clod = new THREE.IcosahedronGeometry(0.22 + rand() * 0.18, 0);
+      clod.deleteAttribute('uv');
+      clod.scale(1, 0.7 + rand() * 0.4, 1).translate(at.x - along.x * 0.2, Math.max(at.y, floor(at.x, at.z) + 0.1), at.z - along.z * 0.2);
+      parts.push(clod);
+    }
+    const earth = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: EARTH_FRAG,
+      uniforms: { ...shared, uPaint: { value: new THREE.Color('#7a5536') } } }));
+    parts.length = 0;
+    /** The roots it tore up with it: thick ones curling out round the rim, thin ones off the far face, and some hanging down. */
+    for (let i = 0; i < 34; i++) {
+      const a = (i / 34) * Math.PI * 2 + rand() * 0.3;
+      const rim = i % 3 !== 0;
+      const out = across.clone().multiplyScalar(Math.cos(a)).add(new THREE.Vector3(0, Math.sin(a), 0));
+      const from = plateAt.clone().addScaledVector(out, R * (rim ? 0.75 + rand() * 0.2 : 0.2 + rand() * 0.45)).addScaledVector(along, -0.35 - (rim ? 0 : 0.25));
+      const len = rim ? 0.7 + rand() * 1.1 : 0.4 + rand() * 0.7;
+      const bend = out.clone().multiplyScalar(rim ? 0.7 : 0.3).addScaledVector(along, -(0.5 + rand() * 0.6));
+      const hang = out.y < -0.2 ? -0.6 : (rand() - 0.6) * 0.5;
+      const pts = [from];
+      for (let k = 1; k <= 3; k++) {
+        const p = pts[k - 1].clone().addScaledVector(bend, len / 3);
+        p.y += hang * (k / 3) * (len / 3);
+        p.y = Math.max(p.y, floor(p.x, p.z) - 0.05);
+        pts.push(p);
+        bend.applyAxisAngle(along, (rand() - 0.5) * 0.8).add(new THREE.Vector3(0, -0.15, 0)).normalize();
+      }
+      const r = rim ? 0.075 + rand() * 0.05 : 0.04 + rand() * 0.03;
+      for (let k = 0; k < 3; k++) parts.push(log(pts[k], pts[k + 1], r * (1 - k * 0.3), r * (0.7 - k * 0.3) + 0.008, 5));
+    }
+    const roots = new THREE.Mesh(mergeGeometries(parts), new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: EARTH_FRAG,
+      uniforms: { ...shared, uPaint: { value: new THREE.Color('#b8936a') } } }));
+    const all = [bark, limbs, earth, roots];
+    for (const m of all) m.frustumCulled = false;
+    return all;
   }
 
   /**
@@ -1176,6 +1272,14 @@ export class AutumnBirches {
         const a = rand() * Math.PI * 2;
         const r = reach * (0.35 + rand() * 0.8);
         at(tree.x + Math.cos(a) * r, tree.z + Math.sin(a) * r, 0.5 * (1 - r / (reach * 1.15)));
+      }
+    }
+    /** And along both sides of the fallen birch, deepest under it, among the limbs it is propped on. */
+    for (let t = 0; t <= 1; t += 0.015) {
+      const at0 = fallenBole(t);
+      for (let off = -1.8; off <= 1.8; off += 0.25) {
+        const fall = 1 - Math.abs(off) / 1.9;
+        at(at0.x + FALLEN_SOUTH.x * off, at0.z + FALLEN_SOUTH.y * off, 0.32 * fall * fall * (0.7 + 0.6 * rand()));
       }
     }
     /**

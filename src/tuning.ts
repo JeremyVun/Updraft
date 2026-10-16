@@ -1347,7 +1347,6 @@ export const tuning = {
       inviteSpan: 4,
       inviteBowSpan: 5,
       inviteCircleRadius: 1.65,
-      swingOfferSeconds: 12,
       releaseSeconds: 2.6,
       /** Seconds the whole freed scarf takes to be drawn in to the mast: about 135 m of wool, so the free end runs at up to 13 m/s. */
       gatherSeconds: 16,
@@ -1385,11 +1384,6 @@ export const tuning = {
       arriveWithin: 9.5,
       /** At a tangle the stroke's wind lands at most this far past the shot's distance, round the wool being worked. */
       strokeReach: 4,
-      /** Seconds the seated child waits, under the invitation, for the player's first push; then quiet seconds between pushes before they drag their feet (`swingBrake`, per second) and step off. */
-      firstPushWait: 7,
-      quietToLeaveSwing: 4,
-      swingBrake: 0.9,
-      swingMountSeconds: 0.8,
     },
     /** The companion explores within sight of the child and responds to local gusts. */
     playRadius: 9,
@@ -1402,7 +1396,6 @@ export const tuning = {
     playRummageNear: 6,
     playScuffRadius: 0.85,
     playScuffStrength: 0.65,
-    swingInvitation: 0.22,
     /** Shed clusters keep their own velocity for this many seconds, then fade. */
     shedFlight: 3.2,
     shedDrag: 1.5,
@@ -1499,11 +1492,30 @@ export const tuning = {
     /** The buried squirrel's paws this far under the leaves' surface (at 3.6 times life its back about 0.2 m under), and at most this far into the soil. */
     buryBelow: 0.45,
     burySoil: 0.12,
-    /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
-    swingPush: 0.8,
-    swingGust: 3.8,
-    /** How long a swing takes to die away when nobody is pushing it (seconds to lose most of it). */
-    swingDamping: 0.13,
+    /**
+     * The swing over the fallen birch (`story/birches.ts`), pumped as the drowned village's (`crossings.swing`); `ride`
+     * is what differs here. She stops `stopShort` metres off the bole and looks along it for `lookFor` seconds before
+     * she turns to the swing, and her feet clear its top by `clear` when she lets go over it.
+     */
+    swing: {
+      ride: { most: 1.05 },
+      stopShort: 1.5, lookFor: 2.4, clear: 0.4,
+      /**
+       * Its lens: three-quarters on from the south-east and low, into the sun, `distance` back and `height` up from a
+       * point `ahead` of the rope's hang toward the bole and `lift` above the ground; portrait nearer along the arc on a
+       * longer lens. As she flies it rises `rise` and looks `follow` further on, so she lands in the middle of it.
+       */
+      lens: { from: [0.6, 0.8], distance: 20, height: 4.8, ahead: 3.4, lift: 2.4, zoom: 1 },
+      lensTall: { from: [0.22, 0.97], distance: 24, height: 4.5, ahead: 3.4, lift: 4.6, zoom: 1.2 },
+      rise: 6, follow: 5, landedIn: 1.8,
+      /**
+       * The cygnet's beat after she lands before it goes after her, its flutter up onto the bole and its hop down the far
+       * side (seconds, metres of arc), and its pause on top.
+       */
+      flutterWait: 0.6, flutterFor: 0.75, flutterArc: 0.55, onTopFor: 1.1, hopDownFor: 0.6, hopDownArc: 0.3,
+      /** How loud the leaves she lands in are, as a share of a heap thrown up. */
+      landLeaves: 0.7,
+    },
     /** The squirrel's hide-and-seek (`story/birches-squirrel.ts`). */
     squirrel: {
       /** Seconds between the hidden heap's tells, and how hard each shivers it; under a waving tail, less. */

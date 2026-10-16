@@ -341,4 +341,12 @@ music checks), so the music work sits on the merged code.
   the quality governor steps down to medium on the birches; fix the cause without changing the look. Done
   (2026-10-17): measured, no change to the room or the governor. Alone on the GPU the whole walk holds Ultra at 60 fps;
   the step-down came from captures sharing the GPU (design.md, Performance).
-- **8e. The swing.** Waits on Jeremy's answer to the proposal.
+- **8e. The swing over the fallen birch.** `/Users/jeremy/projects/updraft-birches-swing`, branch
+  `birches-uplift-swing`, port 5247, from the concept staging (`birches-uplift-concept`, stills in
+  `/tmp/birches-concept.ULH0/stills/1-swing/`). Jeremy approved the fallen birch (2026-10-16); the build reuses the
+  drowned village's swing so its pumping and let-go are the training for it.
+- **8f. Round 3 in front of her.** `/Users/jeremy/projects/updraft-birches-round3`, branch `birches-uplift-round3`,
+  port 5248, from the same staging (stills in `2-round3/`). The three heaps on an arc in front of her, close enough
+  (about 2 m between rims) that portrait holds all three.
+- The agents leave `build_plan.md` to the orchestrator and report; the QA concept tool
+  (`src/story/birches-concept.ts`, `tools/birches-concept.mjs`) is removed at the merge.

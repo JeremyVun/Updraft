@@ -694,6 +694,17 @@ export class Cygnet {
   }
 
   /**
+   * Up onto something above the ground it cannot walk onto, such as a fallen trunk: a flapping scramble, and it stands
+   * there, as on any perch, until the story moves it on.
+   */
+  hopOnto(at: THREE.Vector3, yaw: number, dur: number, arc: number): void {
+    this.seating.go({ seat: null, held: false }, 'dash', dur, arc);
+    this.heard.push({ kind: 'scramble', amount: 1 });
+    this.errand = null;
+    this.perch(at, yaw);
+  }
+
+  /**
    * Up a bank too high to hop, on one good wing: a crouch and a spring, its chest onto the lip with its feet pedalling
    * at the face, a heave over on its breast and a stumble onto its feet on top. `lip` is the top of the bank's edge,
    * where the turf lies; `feathers` come loose at the worst of it. Short of the wing to do it (`fails`), its chest
@@ -1041,6 +1052,11 @@ export class Cygnet {
     else if (this.state === 'perched') {
       this.effort = this.flightPose * 0.6;
       if (this.flightPose > 0) this.flap = ease(this.flap, this.flightPose * 0.9, 6, dt);
+      if (this.seating.move?.kind === 'dash') {
+        this.flap = ease(this.flap, 0.85, 12, dt);
+        this.flapPhase += dt * 10;
+        this.effort = 0.65;
+      }
       /**
        * Tumbled onto something rather than set down on it: it goes over onto its breast as it arrives and picks
        * itself up off it in its own time. Eased on the way in as well as out, because a pose that switches is a pop.
