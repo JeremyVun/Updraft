@@ -857,7 +857,9 @@ export class BirchesSquirrel {
     const s = this.cast.squirrel;
     const k = tuning.birches.squirrel;
     const beside = h.heap < 0 ? h.reach : 0;
-    const lift = this.liftOn(h.round, h.at, beside), rate = this.windOn(h.at, h.reach) + lift;
+    /** Behind a trunk every heap is gone, so any column standing over it counts, wherever else it reaches. */
+    const lift = h.trunk ? THREE.MathUtils.clamp(this.cast.wind.sample(h.at.x, h.at.z, this.air).lift * k.liftWork, 0, 1) : this.liftOn(h.round, h.at, beside);
+    const rate = this.windOn(h.at, h.reach) + lift;
     const elsewhere = this.notCircledElsewhere(h.round, h.at, beside);
     const rise = (rate - this.rate > 0.004 ? rate - this.rate : 0) * elsewhere;
     const lifting = (lift - this.lifted > 0.004 ? lift - this.lifted : 0) * elsewhere;

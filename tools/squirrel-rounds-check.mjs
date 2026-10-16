@@ -11,7 +11,7 @@
 // Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer apart random shuffle plans stall early flat free leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
 // the squirrel's size at runtime; ROUND=2 or 3 runs only that round of `wrong`, EARLY=toBirches or birches only that
-// start of `early`.
+// start of `early`, FLAT=blown, drift or trunk only that kind of `flat`.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
@@ -416,15 +416,20 @@ const cased = {
       log.push(s);
       assert.notEqual(s.beat, 'counting', 'she counted before round 3');
       if (s.beat === 'round') break;
-      if (s.step === 'rest' && s.move === 1 && !log.some((l) => l.blown)) {
-        s.blown = true;
-        const before = await page.evaluate(() => __game.birches.depthAt(__sq.ROUNDS[2].hides).then((d) => d.map((v) => +v.toFixed(2))));
-        for (const heap of [0, 1, 2]) await stroke(await acrossHeap(heap, 1.8), 260);
-        for (const heap of [0, 1, 2]) await circleRing(await heapLoop(heap, 0.8), -1, 2);
-        await page.waitForTimeout(1500);
-        const after = await page.evaluate(() => __game.birches.depthAt(__sq.ROUNDS[2].hides).then((d) => d.map((v) => +v.toFixed(2))));
-        s.held = { before, after };
-        assert.ok(after.every((d, i) => d >= before[i] * 0.85), `the heaps did not hold through the shuffle: ${JSON.stringify(s.held)}`);
+      /** Every heap blown hard, strokes then circles, while it waits, rests in a heap, and moves under the leaves. */
+      const phase = s.mode === 'waiting' && log.filter((l) => l.mode === 'waiting').length > 10 ? 'waiting'
+        : s.step === 'rest' && s.move === 1 ? 'resting' : s.step === 'burrow' ? 'burrowing' : null;
+      if (phase && !log.some((l) => l.blown === phase)) {
+        s.blown = phase;
+        const heaps = await page.evaluate(() => __sq.ROUNDS[2].heaps), before = await depthsOf(heaps);
+        for (const heap of heaps) { const at = await pileOnScreen(heap); if (at) await stroke([at.a, at.b], 220); }
+        if (phase !== 'burrowing') for (const heap of heaps) { const at = await pileOnScreen(heap); if (at) await circleRing(at.ring, -1, 2); }
+        else { const at = await page.evaluate(() => window.__screen(__game.story.current.squirrel.tracked.clone())); await circleRing(screenRing(at, 0.08), -1, 1); }
+        await page.waitForTimeout(1200);
+        const after = await depthsOf(heaps), still = await page.evaluate(() => __game.story.current.squirrel.wentIn < 2);
+        s.held = { phase, before, after, still };
+        /** Once it has settled the heap it is in is free to go, so only blows that ended before then are judged. */
+        if (still) assert.ok(after.every((d, i) => d >= before[i] * 0.85), `the heaps did not hold through the shuffle: ${JSON.stringify(s.held)}`);
       }
       await page.waitForTimeout(100);
     }
@@ -447,7 +452,7 @@ const cased = {
     assert.ok(outside.length === 0, `out of frame: ${JSON.stringify(outside.slice(0, 3))}`);
     const dare = shuffling[0].t;
     await page.screenshot({ path: `${out}-shuffle-settled-${W}x${H}.png` });
-    return { plan, under: shuffling.find((l) => l.under !== null)?.under, hide, seconds: +(end.t - dare).toFixed(1), held: log.find((l) => l.held)?.held, samples: log.length };
+    return { plan, under: shuffling.find((l) => l.under !== null)?.under, hide, seconds: +(end.t - dare).toFixed(1), held: log.filter((l) => l.held).map((l) => l.held), samples: log.length };
   },
 
   /** The shuffle's plans: three or four moves to a heap beside the one it is in, the last one or two under, ending anywhere. */
@@ -504,7 +509,7 @@ const cased = {
    */
   async flat() {
     const rows = [];
-    for (const kind of ['blown', 'drift', 'trunk']) {
+    for (const kind of process.env.FLAT ? [process.env.FLAT] : ['blown', 'drift', 'trunk']) {
       await load();
       for (const round of [1, 2]) {
         let before = null, after = null;
@@ -529,7 +534,12 @@ const cased = {
               await stroke(pass % 2 ? [ends[1], ends[0]] : ends, 220);
             }
           }
-          for (let heap = 0; heap < __heaps(round); heap++) await circleRing(await heapLoop(heap, 0.8), -1, 3);
+          let circled = 0;
+          for (const heap of await page.evaluate((round) => __sq.ROUNDS[round].heaps, round)) {
+            const at = await pileOnScreen(heap);
+            if (at) { await circleRing(at.ring, -1, 3); circled++; }
+          }
+          assert.ok(circled > 0, `round ${round + 1}: no heap on screen to circle before it was in`);
           await page.waitForTimeout(3000);
           after = await read();
           await page.evaluate(() => { const c = __game.story.current; delete c.updateWalk; delete c.frame; });
@@ -638,16 +648,20 @@ const cased = {
     return rows;
   },
 
-  /** The free-play heaps (1, 2 and 3) stand against hard strokes and go to a few loops of circles, wherever one is on screen. */
+  /** The free-play heaps (1, 2 and 3) stand against hard strokes and go to a few loops of circles, wherever one is on screen and in reach. */
   async free() {
-    const rows = [];
+    const rows = [], skipped = [];
     for (const round of [1, 2]) {
       await load();
       await jump(round);
       await page.evaluate(() => { const q = __game.story.current.squirrel; q.lying = () => {}; q.seek = () => {}; });
       for (const heap of [1, 2, 3]) {
         const at = await pileOnScreen(heap);
-        if (!at || rows.some((r) => r.heap === heap)) continue;
+        /** Only where the wind lands: a stroke past `pointerReach` comes down short of the heap. */
+        const reach = await page.evaluate((heap) => { const p = __sq.BIRCH_PILES[heap], cam = __game.rig.camera.position;
+          return { far: +(Math.hypot(p.x - cam.x, p.z - cam.z) - p.r).toFixed(1), reach: +__game.story.current.pointerReach.toFixed(1) }; }, heap);
+        skipped.push({ heap, round: round + 1, seen: !!at, ...reach });
+        if (!at || reach.far >= reach.reach || rows.some((r) => r.heap === heap)) continue;
         const before = (await depthsOf([heap]))[0];
         for (let i = 0; i < 3; i++) await stroke(i % 2 ? [at.b, at.a] : [at.a, at.b], 220);
         await page.waitForTimeout(1500);
@@ -660,7 +674,7 @@ const cased = {
         assert.ok(circled < before * 0.5, `free heap ${heap} stood against four loops: ${JSON.stringify(rows)}`);
       }
     }
-    assert.ok(rows.length > 0, 'no free-play heap was on screen');
+    assert.ok(rows.length > 0, `no free-play heap was on screen and in reach: ${JSON.stringify(skipped)}`);
     return rows;
   },
 

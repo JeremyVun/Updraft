@@ -1511,7 +1511,7 @@ export const tuning = {
        * behind a trunk; each rise of any air, `nearlyWork` in one gust, makes it peek. Counts are forgotten at
        * `findForget` a second.
        */
-      driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
+      driftReach: 1.6, trunkReach: 2.6, findWork: [0.35, 0.35, 0.35], nearlyWork: 0.05, findForget: 0.03,
       /**
        * In the leaves it is found once they are thinner than `uncovered` m over where its paws are set (its back is
        * about 0.22 m above them at 3.6 times life, and red shows through the last few centimetres), read every

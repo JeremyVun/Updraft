@@ -639,10 +639,10 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
   sitting up in what is left of the leaves) for `startledFor` (0.4 s), then bursts out. Only an updraft takes the
   leaves off it: the litter under a column is thrown outward down the slope of its lift (`litterLiftThrow`) and
   whirled round with the circles, so the heap thins from the top. Measured with real circles over the right heap,
-  it starts (`freeze`) after about two loops and is out about 2.5 s after the circling began, in every round; hard
-  strokes across it take none of it. A column is wider than the gap between neighbouring heaps, so while circles are
-  wound over one heap of the round, the others hold against it (`circleLinger`), and circles over another heap never
-  uncover it.
+  the heap holds through the first loop and a half and it starts (`freeze`) after about two, out 2.5–3.5 s after the
+  circling began, in every round; hard strokes across it take none of it. A column is wider than the gap between
+  neighbouring heaps, so while circles are wound over one heap of the round, the others hold against it
+  (`circleLinger`), and circles over another heap never uncover it.
   Behind a trunk there are no leaves to read, so there each rise of the updraft over it, or over the heap it stands
   behind, is counted (`liftWork`, `findWork`; circles wound over another heap count only there). A gust that only
   shaves the right heap makes it `peek`, as a "nearly", and a gust on a wrong heap makes the right one answer. A wrong
@@ -830,7 +830,8 @@ standing up out of it. Now each round heap is a raked mound, judged in every rou
 ### As built (phase 5b)
 
 `story/birches-squirrel.ts` (`BirchesSquirrel`, the chapter's `squirrel`) plays the game; `story/birches.ts` gates
-the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-check.mjs` drives it with real strokes.
+the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-check.mjs` drives it with real strokes and
+circles.
 
 - **Its places.** Where the squirrel is follows from the story: rounds found, tangles freed, the swing ridden or
   passed, the leap done and the scarf gathered. When that changes it goes along `PATHS` from wherever it is (cutting
@@ -846,7 +847,7 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   middle from the lens) so the tail tip shows over the top. Turned out before she arrives, it hides again.
 - **Tells and finding.** The tell is a `shiver` at 0.18 with a rustle; the tail is re-dealt at each tell by round
   (0.5, 0.33, 0.2); a fifth of tells are a peek. In the leaves it is found when an updraft has uncovered it ("A
-  round"); behind a trunk each rise of the updraft counts, 0.12 flushing it in round 1 and 0.25 after. A child's
+  round"); behind a trunk each rise of the updraft over it counts (`liftWork`), and 0.35 (about two loops) flushes it. A child's
   random swipes take no heap and never find it; sloppy circles drawn round the right heap on the screen (off its
   middle, 0.04–0.12 screen heights, squashed, 0.6–1.4 s a loop) find it in 2–3 loops ("Heaps yield only to
   updrafts").
