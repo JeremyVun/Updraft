@@ -18,7 +18,7 @@ meadow's bank rises over it, high and wide over the little boats' pools and spit
 (`IslandReveal`), anchored in the world rather than on the hull. As the birches come out of their mist, about
 halfway over, the lens swings round from astern in one slow move to the port side, low over the water, and holds the
 whole island with the low sun over it and the boat at a third (in portrait
-further round, the island standing behind the boat), the child looking at it; Red Door comes in on that hold. As the
+further round, the island standing behind the boat), the child looking at it; Red Door comes in as the swing begins. As the
 bow runs in, the lens rises into the birches' first view from the south, so landing needs no swing. Jeremy: "It just
 stays behind the child and never does a cinematic reveal of the birches island until she gets off the boat." On the
 birches' sail the stairs lie in their own mist until about 80 m out; from halfway over the lens turns in one slow arc

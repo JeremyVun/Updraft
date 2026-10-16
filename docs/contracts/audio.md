@@ -278,10 +278,27 @@ rearrange the recording. It loops only while the story is on the Birches island 
 
 > when the music loops on the birches island, it needs to have a better fade in.
 
-So it enters `birchesArrivalLater` (3 s) later and fades in on a 1.8 s time constant (`recordedMusicFadeIn`: about
-0.4 of full at 1 s, 0.7 at 2 s, 0.94 at 5 s). Going round, the song is never butted end to start: each pass plays to
-its natural end, rests `recordedMusicLoop.birches.rest` (3.5 s) with only the room's world sounds, and begins again
-from its top with the same entrance. The decoded recording is held through the rest and released once the loop is
+Jeremy (2026-10-16):
+
+> The start of the birches music should coincide with the camera panning to reveal it, so it needs to start a bit earlier now.
+
+> There's too much of a pause in between the looping of the birches music, reduce it by atleast 3 seconds.
+
+On the meadow sail it enters as the lens begins its swing round to reveal the island: the birches' `IslandReveal`
+carries `music`, so the crossing is ready for it the frame the reveal starts (`revealing` above 0), not as the shore
+nears. The meadow's music is asked to leave early enough that its longest phrase wait, fade and quiet
+(`arrivalPhraseWait` + `arrivalFadeOut` + `arrivalQuiet`, 10.5 s at the boat's speed) all fall before the reveal. It
+fades in on a 1.8 s time constant (`recordedMusicFadeIn`: about 0.4 of full at 1 s, 0.7 at 2 s, 0.94 at 5 s), rising
+with the swing. With no input from `?chapter=toBirches` (crossing clock): the meadow fades 5.4–8.4 s, sea and wind
+until the reveal begins at 17.9 s, Red Door from that frame, the lens visibly turning from about 19.5 s and settled
+at 27.8 s, landing at 38.8 s.
+
+Going round, the song is never butted end to start: each pass plays to its natural end, rests
+`recordedMusicLoop.birches.rest` (0.3 s) with only the room's world sounds, and begins again from its top with the same
+entrance. The recording's last chord dies away over its final seconds, so the pause heard is longer than the rest:
+measured on the render (`music-transition-audit.mjs`, `birches-seam`, 50 ms windows within 30 dB of the piece's average
+as played), the last audible sound falls 2.7 s before the end of the file and the next pass is audible 0.17 s after it
+begins, a 3.25 s pause. The decoded recording is held through the rest and released once the loop is
 over (play-out, stop or leaving). Once they have sailed (`toStairs`) it stops looping (`RecordedScore.playOut`) and
 the pass under way plays out; sailing during a rest, nothing more plays. A `toStairs` start is quiet until the stairs
 song. The

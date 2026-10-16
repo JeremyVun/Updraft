@@ -11,7 +11,7 @@ import type { SeaScorePhase } from '../audio/sea-score';
 import type { LinesScorePhase } from '../audio/lines-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
-import type { ArrivalMusic } from '../audio/arrival-music';
+import { arrivalQuiet, type ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
@@ -65,6 +65,8 @@ export interface IslandReveal {
   distance: number;
   height: number;
   sight: THREE.Vector3;
+  /** The destination's music enters as the lens begins its swing, rather than as the shore nears. */
+  music?: boolean;
 }
 
 /** How near a waypoint counts as rounded. */
@@ -463,6 +465,7 @@ export class CrossingChapter implements Chapter {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
+    if (this.musicReveal) return this.cast.boat.grounded || this.revealing(this.framed) > 0;
     return this.cast.boat.grounded || this.remainingSail()<=this.entrance(Math.max(4.5,this.cast.boat.speed));
   }
 
@@ -474,14 +477,19 @@ export class CrossingChapter implements Chapter {
 
   /** How far out the destination's music may come in. */
   private entrance(speed: number): number {
-    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier
-      : this.destinationMusic === 'birches' ? -tuning.audio.birchesArrivalLater : 0;
+    if (this.musicReveal) return this.musicReveal.from;
+    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
     return Math.min(tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalEntranceLead + earlier) * speed,
       this.routeLength * tuning.audio.arrivalEntranceRouteShare);
   }
 
   /** Seconds since the boat left the Mirror. */
   get homewardTime(): number | undefined { return this.homeward ? this.time : undefined; }
+
+  private get musicReveal(): IslandReveal | undefined {
+    const reveal = this.arrivalView?.reveal;
+    return reveal?.music ? reveal : undefined;
+  }
 
   /** Remaining sailing distance, not straight-line proximity across an intervening island. */
   private remainingSail(): number {
@@ -498,7 +506,11 @@ export class CrossingChapter implements Chapter {
     const speed=Math.max(4.5,this.cast.boat.speed);
     const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
     const lead = tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalMusicLead + earlier) * speed;
-    if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
+    // Entering with the reveal, the outgoing music's longest phrase wait, fade and quiet all fall before it.
+    const a = tuning.audio, reveal = this.musicReveal;
+    const due = reveal ? reveal.from + (a.arrivalPhraseWait + a.arrivalFadeOut + arrivalQuiet(this.destinationMusic)) * speed
+      : Math.min(lead, this.routeLength * a.arrivalMusicRouteShare);
+    if (remaining <= due) {
       this.arrivalHeard = true;
     }
   }

@@ -27,7 +27,11 @@ export async function checkRecordedScore(page, track) {
     const score = sound[field], source = score.source, epoch = score.epoch;
     const trackDuration = source?.buffer?.duration;
     check(score instanceof RecordedScore && source?.buffer?.duration > 0, `${track}: the supplied full recording is decoded`);
-    check(source.loop && source.playbackRate.value === 1, `${track}: native-speed playback loops for a lingering player`);
+    const { tuning } = await productionModule('/src/tuning.ts');
+    // A recording that rests between passes goes round in the soundscape (`village-music-check` covers it).
+    const rests = tuning.audio.recordedMusicLoop[track] !== undefined;
+    check(source.loop === !rests && source.playbackRate.value === 1, rests
+      ? `${track}: native-speed playback, each pass ending to rest before the next` : `${track}: native-speed playback loops for a lingering player`);
     const update = tick => {
       const t = tick / 8;
       if (t === 6) sound.setMusicMuted(true);
@@ -54,19 +58,21 @@ export async function checkRecordedScore(page, track) {
     check(cues.length === 0, `${track}: gestures add no notes over the recording`);
 
     // Decode directly as well, so an actual loop is compared against the original samples.
-    const loopCtx = new OfflineAudioContext(2, Math.ceil((trackDuration + 4) * 24000), 24000);
-    const loop = new RecordedScore(loopCtx, loopCtx.destination, track);
-    await loop.ready;
-    const original = loop.buffer, duration = original.duration;
-    loop.update(phases[0], 1);
-    const looped = await loopCtx.startRendering();
-    const a = original.getChannelData(0), b = looped.getChannelData(0);
-    let error = 0, reference = 0;
-    for (let i = 24000; i < 3 * 24000; i++) {
-      error += (b[original.length + i] - a[i]) ** 2; reference += a[i] ** 2;
+    if (!rests) {
+      const loopCtx = new OfflineAudioContext(2, Math.ceil((trackDuration + 4) * 24000), 24000);
+      const loop = new RecordedScore(loopCtx, loopCtx.destination, track);
+      await loop.ready;
+      const original = loop.buffer, duration = original.duration;
+      loop.update(phases[0], 1);
+      const looped = await loopCtx.startRendering();
+      const a = original.getChannelData(0), b = looped.getChannelData(0);
+      let error = 0, reference = 0;
+      for (let i = 24000; i < 3 * 24000; i++) {
+        error += (b[original.length + i] - a[i]) ** 2; reference += a[i] ** 2;
+      }
+      check(error / reference < 1e-8, `${track}: the next loop preserves the supplied samples (${duration.toFixed(2)} seconds)`);
+      loop.stop(0);
     }
-    check(error / reference < 1e-8, `${track}: the next loop preserves the supplied samples (${duration.toFixed(2)} seconds)`);
-    loop.stop(0);
 
     const { ctx: liveCtx, sound: live } = (() => {
       const sound = new audioModule.Soundscape(); sound.start(); return { ctx: sound.ctx, sound };
@@ -102,7 +108,6 @@ export async function checkRecordedScore(page, track) {
     await lateCtx.close();
 
     if (track === 'home') {
-      const { tuning } = await productionModule('/src/tuning.ts');
       const { ctx, sound } = offlineSound(6);
       sound.master.disconnect(); sound.musicDryGain.connect(ctx.destination);
       const restoredAt = HOME_ENDING.musicEndsAt - 2;

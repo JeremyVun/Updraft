@@ -189,12 +189,19 @@ try {
     const sounding=(b,from,to,dir)=>{const l=b.getChannelData(0),r=b.getChannelData(1),a=Math.round(from*b.sampleRate),z=Math.round(to*b.sampleRate);
       if(dir<0){for(let i=z-1;i>=a;i--)if(Math.abs(l[i])+Math.abs(r[i])>1e-5)return i/b.sampleRate;}
       else for(let i=a;i<z;i++)if(Math.abs(l[i])+Math.abs(r[i])>1e-5)return i/b.sampleRate;return null;};
+    // Audible: a 50 ms window within 30 dB of the recording's average as played (about -60 dBFS), the level under
+    // which its tail is lost under the room's own sound.
+    const audible=(b,from,to,dir)=>{const W=.05,floor=10**(-6)*W*b.sampleRate;
+      if(dir<0){for(let t=to-W;t>=from;t-=W/5)if(power(b,t,t+W)>floor)return t+W;}
+      else for(let t=from;t<to-W;t+=W/5)if(power(b,t,t+W)>floor)return t;return null;};
     const next=starts[1],ended=starts[0].when+238.893-starts[0].offset;
     const lastHeard=sounding(buffer,0,next.when,-1),firstHeard=sounding(buffer,next.when,SECONDS,1);
+    const lastAudible=audible(buffer,0,next.when,-1),firstAudible=audible(buffer,next.when,SECONDS,1);
     const envelope=Object.fromEntries([0,1,2,3,5].map(t=>{const a=Math.max(0,t-.05),b=t+.05;
       return [t,+(Math.sqrt(power(buffer,next.when+a,next.when+b)/power(raw,a,b))/level).toFixed(3)];}));
     const report={passEnds:+ended.toFixed(3),lastHeard:+lastHeard.toFixed(3),nextStarts:+next.when.toFixed(3),nextOffset:next.offset,firstHeard:+firstHeard.toFixed(3),
-      gap:+(next.when-ended).toFixed(3),heardGap:+(firstHeard-lastHeard).toFixed(3),rest,fadeIn:tuning.audio.recordedMusicFadeIn.birches,envelope};
+      gap:+(next.when-ended).toFixed(3),heardGap:+(firstHeard-lastHeard).toFixed(3),
+      lastAudible:+lastAudible.toFixed(3),firstAudible:+firstAudible.toFixed(3),audibleGap:+(firstAudible-lastAudible).toFixed(3),rest,fadeIn:tuning.audio.recordedMusicFadeIn.birches,envelope};
     return {report,...encodeAudio((await go(false)).buffer)};
   });
   assert.equal(seam.clipped,0);
