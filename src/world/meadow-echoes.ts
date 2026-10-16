@@ -61,7 +61,7 @@ void main() {
   vec4 w = transform * vec4(p, 1.);
   float h = w.y - root.y;
   vec2 bend = uAir * ${glsl(T.stemBend)} / (1. + length(uAir) * ${glsl(T.stemSaturation)});
-  w.xz += (bend + aState.yz + vec2(sin(uTime * 1.4 + root.x * .7 + root.z * .3), cos(uTime * .95 + root.z)) * .04) * h * h;
+  w.xz += (bend + aState.yz / (1. + length(aState.yz) * ${glsl(T.stemSaturation * 8)}) + vec2(sin(uTime * 1.4 + root.x * .7 + root.z * .3), cos(uTime * .95 + root.z)) * .04) * h * h;
   vWorld = w.xyz;
   vNormal = normalize(mat3(transform) * n);
   vec3 petal = aTint * instanceColor;
@@ -246,6 +246,7 @@ export class MeadowEchoes {
   /** 0 on its head, 1 flying, 2 gone. */
   private readonly phase: Uint8Array;
   private readonly perHead: Uint16Array;
+  private readonly gone: Uint16Array;
   private readonly column = new THREE.Vector3();
   private readonly toward = new THREE.Vector3();
   private readonly mean = new THREE.Vector3();
@@ -311,7 +312,7 @@ export class MeadowEchoes {
     const n = T.down;
     this.home = new Float32Array(n * 3); this.pos = new Float32Array(n * 3); this.vel = new Float32Array(n * 3);
     this.rnd = new Float32Array(n); this.order = new Float32Array(n); this.headOf = new Uint16Array(n);
-    this.phase = new Uint8Array(n); this.perHead = new Uint16Array(T.seedHeads);
+    this.phase = new Uint8Array(n); this.perHead = new Uint16Array(T.seedHeads); this.gone = new Uint16Array(T.seedHeads);
     const centre = this.patches[1], rank: [number, number][] = [];
     for (let i = 0; i < n; i++) {
       const h = i % tops.length, top = tops[h], a = this.rand() * Math.PI * 2, y = .1 + this.rand() * .9, r = Math.sqrt(1 - y * y);
@@ -323,7 +324,7 @@ export class MeadowEchoes {
     const looseMaterial = new THREE.ShaderMaterial({ vertexShader: LOOSE_VERT, fragmentShader: LOOSE_FRAG,
       uniforms: { ...atmo.uniforms, uGlow: { value: .8 } }, vertexColors: true, side: THREE.DoubleSide });
     this.down = new THREE.InstancedMesh(tuftGeometry(false), looseMaterial, n);
-    this.petals = new THREE.InstancedMesh(painted(new THREE.SphereGeometry(.065, 5, 3).scale(1, .18, 1.7), '#ffffff', 1), looseMaterial, 160);
+    this.petals = new THREE.InstancedMesh(painted(new THREE.SphereGeometry(.065, 5, 3).scale(1, .18, 1.7), '#ffffff', 1), looseMaterial, 240);
     for (const mesh of [this.down, this.petals]) {
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       for (let i = 0; i < mesh.count; i++) mesh.setColorAt(i, new THREE.Color('#ffffff'));
@@ -409,7 +410,8 @@ export class MeadowEchoes {
       const hit = screenBrush(camera, f.at, input.prevNdc, input.ndc, T.brush);
       if (hit < .01) return;
       if (plants === this.flowers) this.seeds.stir(i, movement * hit * T.wakeGain);
-      f.leanSpeed.x += input.gustDir.x * hit * T.sweepPush; f.leanSpeed.y += input.gustDir.y * hit * T.sweepPush;
+      const push = hit * T.sweepPush * dt;
+      f.leanSpeed.x += input.gustDir.x * push; f.leanSpeed.y += input.gustDir.y * push;
       if (hit > best) { best = hit; if (this.now - this.heardAt > 1.1) this.heard.copy(f.at); }
     });
     if (best > 0) {
@@ -438,7 +440,7 @@ export class MeadowEchoes {
       this.sway(f, dt);
     });
     const released = this.seeds.completed >= 2 ? 1 : 0;
-    const gone = new Uint16Array(this.seedHeads.length);
+    const gone = this.gone.fill(0);
     for (let i = 0; i < this.phase.length; i++) if (this.phase[i] || released) gone[this.headOf[i]]++;
     this.seedHeads.forEach((h, i) => {
       h.shown += (gone[i] / Math.max(1, this.perHead[i]) - h.shown) * (1 - Math.exp(-dt * 3));
@@ -460,9 +462,9 @@ export class MeadowEchoes {
 
   /** The bed's last sleepers come up all together, and petals lift off the whole of it. */
   private flourish(): void {
-    for (let k = 0; k < 70; k++) {
+    for (let k = 0; k < 150; k++) {
       const f = this.flowers[Math.floor(this.rand() * this.flowers.length)];
-      if (f.seen) this.shed(f.at, f.color, 1.6);
+      if (f.seen) this.shed(f.at, f.color, 2.2);
     }
   }
 
@@ -491,7 +493,7 @@ export class MeadowEchoes {
       }
       this.piece.position.copy(p.at);
       this.piece.rotation.set(p.age * 2.3 + p.spin, p.spin, flap * .6);
-      this.piece.scale.setScalar(alive ? Math.min(1, p.age * 4, (p.life - p.age) * 1.5) * 1.3 : 0);
+      this.piece.scale.setScalar(alive ? Math.min(1, p.age * 4, (p.life - p.age) * 1.5) * 1.7 : 0);
       this.piece.updateMatrix();
       this.petals.setMatrixAt(i, this.piece.matrix);
     });

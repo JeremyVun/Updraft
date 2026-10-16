@@ -41,9 +41,10 @@ branch, merged back into it for Jeremy on 5251.
 - [ ] Story and camera (`src/story/meadow.ts`, `src/story/piano.ts`, `src/audio/meadow-music.ts`, the `piano`,
   `meadowMusic` and `crest` tuning): finale rise and descent with the surprises absent while it is up; the walk
   round the piano; the warm bed's fade-in; the slower brow turn; no trodden grass in the flower and seed play.
-- [ ] Flowers and seeds (`src/world/meadow-echoes.ts`, `src/world/meadow-seeds.ts`, `src/story/meadow-song.ts`,
-  `src/audio/meadow-breath.ts`, the `meadowEchoes` tuning): legible cluster opening, no pitched notes, updraft
-  seeds that rise smoothly and never sink back, seed framing against the hills.
+- [x] Flowers and seeds (`src/world/meadow-echoes.ts`, `src/world/meadow-seeds.ts`, `src/story/meadow-song.ts`,
+  `src/world/harebells.ts`, the `meadowEchoes` tuning): a sleeping bed that each sweep visibly wakes, no pitched
+  notes from the play or the harebells, updraft seeds that rise smoothly and never sink back, seed framing
+  against the hills.
 
 ## Wind instrument foundation
 

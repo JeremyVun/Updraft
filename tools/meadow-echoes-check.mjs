@@ -41,6 +41,30 @@ try {
     };
   });
   const touch = process.env.TOUCH === '1' ? await context.newCDPSession(page) : null;
+  // Every rendered frame: how sharply any lifted mote of down changed its velocity, and whether any sank.
+  await page.evaluate(() => {
+    const e = __game.meadowEchoes, last = new Map();
+    window.__down = { accel: 0, sank: 0, frames: 0 };
+    window.__bed = { finishing: -1, awake: -1 };
+    let at = __stats.time;
+    const tick = () => {
+      if (window.__bed.finishing < 0 && e.seeds.finishing >= 0) window.__bed.finishing = __stats.time;
+      if (window.__bed.awake < 0 && e.seeds.completed > 0) window.__bed.awake = __stats.time;
+      const dt = __stats.time - at; at = __stats.time;
+      if (dt > 0) for (let i = 0; i < e.phase.length; i++) {
+        if (e.phase[i] !== 1) { last.delete(i); continue; }
+        const j = i * 3, was = last.get(i), now = [e.pos[j + 1], e.vel[j], e.vel[j + 1], e.vel[j + 2]];
+        if (was) {
+          window.__down.accel = Math.max(window.__down.accel, Math.hypot(now[1] - was[1], now[2] - was[2], now[3] - was[3]) / dt);
+          window.__down.sank = Math.max(window.__down.sank, was[0] - now[0]);
+          window.__down.frames++;
+        }
+        last.set(i, now);
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   const state = () => page.evaluate(() => {
     const g = __game, c = g.story.current, e = g.meadowEchoes;
     const p = v => { const q = v.clone().project(g.rig.camera); return [(q.x+1)*innerWidth/2,(1-q.y)*innerHeight/2,q.z]; };
@@ -131,12 +155,10 @@ try {
           await page.waitForTimeout(900);
           assert((await state()).opened>4,'one sweep must visibly wake flowers along its track');
         }
-        const after=await state();
-        if(after.finishing>=0) {
-          const from=after.time;
-          await page.waitForFunction(()=>__game.meadowEchoes.seeds.completed>0,null,{timeout:20000});
-          const took=(await state()).time-from;
-          assert(took<tuning.bedFinish+.6,`the bed's last sleepers rise at once, not after a hidden wait (${took.toFixed(2)} s)`);
+        if((await state()).finishing>=0) {
+          await page.waitForFunction(()=>window.__bed.awake>=0,null,{timeout:20000});
+          const bed=await page.evaluate(()=>window.__bed), took=bed.awake-bed.finishing;
+          assert(took<tuning.bedFinish+.2,`the bed's last sleepers rise at once, not after a hidden wait (${took.toFixed(2)} s)`);
           console.log(JSON.stringify({bed:'awake',sweeps,finish:+took.toFixed(2)}));
         }
       } else {
@@ -162,6 +184,11 @@ try {
   }
   const final = await state();
   assert.equal(final.count,2,'both meadow play moments must be completed');
+  const down = await page.evaluate(() => window.__down);
+  console.log(JSON.stringify({down}));
+  assert(down.frames>100,'lifted down was measured');
+  assert.equal(down.sank,0,'lifted down never sinks');
+  assert(down.accel<15,`down rises smoothly rather than stepping with each gust (${down.accel.toFixed(1)} m/s²)`);
   if(process.env.FULL) assert.equal(final.chapter,'toBirches','full play must depart Meadow');
   assert.equal(report.errors.length,0,report.errors.join('\n'));
   console.log('PASS: player gestures, visible subjects, idle/off-target, flower phrases, seed lift and onward story.');

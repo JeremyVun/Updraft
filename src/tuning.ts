@@ -367,14 +367,14 @@ export const tuning = {
      * `bedFinish` seconds and the play is done.
      */
     brush: 0.2, wakeGain: 6.5, wakeCap: 0.2, bedAwake: 0.75, bedFinish: 1.6,
-    sleepHeight: 0.5, sleepBow: 1.9, wakeStiffness: 18, wakeDamping: 6.5, sweepPush: 9,
+    sleepHeight: 0.5, sleepBow: 1.9, wakeStiffness: 18, wakeDamping: 6.5, sweepPush: 30,
     /**
      * Circling over the seed heads lifts their down: `releaseTime` seconds of a well-wound updraft (charge from
      * `chargeFrom` to `chargeFull`) take it all. Lifted down rides the column to `columnTop` and never sinks back;
      * once all of it is up the column stands to `releaseTop` for `afterlift` seconds, and the cloud drifts off on
      * `drift` (metres a second).
      */
-    liftReach: 13, liftCap: 0.05, releaseTime: 2.8, chargeFrom: 0.05, chargeFull: 0.45,
+    liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
     down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
     hoverHeight: 3, afterlift: 5, drift: [-0.55, -1.05], downFade: 16,
     inviteAfter: 5, arrivalRest: 3, seedRest: 6, listenFor: 5.5, familyAfter: 2,
@@ -385,8 +385,8 @@ export const tuning = {
      * listening rise (plain names), each blended in as she walks.
      */
     cameraBedBack: 18, cameraBedUp: 6, cameraPortraitBedBack: 21, cameraPortraitBedUp: 7,
-    cameraSeedSide: 2.5, cameraSeedBack: 17, cameraSeedUp: 7, cameraSeedAim: .45, cameraPortraitSeedSide: 1.5, cameraPortraitSeedBack: 22,
-    cameraPortraitSeedUp: 10, cameraSeedRise: 1.5, cameraSeedHold: 4,
+    cameraSeedSide: 2.5, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedSide: -1, cameraPortraitSeedBack: 19,
+    cameraPortraitSeedUp: 7.5, cameraSeedRise: 1.5, cameraSeedHold: 4,
     cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
     cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65,
     musicDuck: 0.65,

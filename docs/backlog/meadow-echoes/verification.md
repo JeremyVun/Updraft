@@ -157,3 +157,30 @@ occurs on pre-merge main (`/tmp/meadow-merge-foghorn-baseline.log`); it remains 
 
 No deployment or push was requested or performed. Recorded phrases and final musical synchronisation remain
 pending; the existing player-camera captures are the visual evidence, not a new motion or listening review.
+
+## Flower bed and seed down — 2026-10-16
+
+Branch `meadow-fix-flowers` (design items 4, 5 and 7, with Jeremy's follow-up on the bed and the harebells).
+Before/after stills from the actual play camera are in `/tmp/updraft-flowers/` and are scratch evidence.
+
+- Flower bed: asleep it is a scatter of closed, bowed violet buds in the grass. Each ordinary sweep opens the
+  flowers along its track on screen; about two passes open a flower. Broad strokes aimed at the sleeping stretch
+  woke the bed in 5 sweeps (landscape mouse) and 7 (portrait touch); the last sleepers then rose with it, and the
+  play ended 1.6 s after the bed reached three quarters awake (`tuning.meadowEchoes.bedFinish`), with no timer
+  before that. Sheet: `bed-before-after.png` (top row the previous build, bottom row this one), strip of the first
+  sweep `fin-bed-strip.png`.
+- Seeds: sweeps only lean the heads. Circling over them lifted all the down in 3 loops (landscape and portrait);
+  a pause between loops keeps what is up hovering above the heads. In-browser, the worst change of velocity of
+  any lifted mote was 10.3 m/s² over about 1.2 million mote-frames, and none ever moved down. Landscape frames the
+  column against the green west slope with the low sun behind it; portrait looks north-east over the golden hay
+  slope, which keeps the pond out of the narrow frame. Sheet: `seeds-before-after.png` (Jeremy's screenshot, the
+  previous build, this one circling and released); motion strip from a recording, `b3-rise-strip.png`.
+- No notes: the flower and seed play and the harebells make no pitched sound; `audio/meadow-breath.ts` and its
+  check are gone.
+- `node tools/meadow-seeds-check.mjs`, `node tools/meadow-echoes-state-check.mjs`, `meadow-echoes-check.mjs` in
+  landscape (FULL, TRACE) and `W=390 H=844 TOUCH=1`, `ONLY=meadow progress-check.mjs` (piano, echoes-1,
+  echoes-2, pond) pass. `meadow-camera-audit.mjs` passes (character margin 11.8%, departure 17.5 m), and
+  `camera-intent-report.mjs` flags the same small jerks in the play beats as a trace of the previous build, with
+  no reversals in them.
+
+Not established: a human motion review of the rise and of the bed waking, and Jeremy's creative verdict.
