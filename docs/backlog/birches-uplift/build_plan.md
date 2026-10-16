@@ -297,7 +297,7 @@ what the branch changes, with stills and the clip paths, and merges only on his 
   section reads forward and gains the squirrel's sounds; testing.md lists `squirrel-check` and
   `squirrel-rounds-check`; progress.md's swing perch is the trunk; AGENTS.md points at the squirrel's files.
 
-### 8. Second playtest. Opus. Done: ☐
+### 8. Second playtest. Opus. Done: ☑ (2026-10-17)
 
 Jeremy's notes and what follows from them: design.md "Jeremy's second playtest". Four parallel parcels; each but 8a
 builds in its own worktree branched from `birches-uplift` and is merged back by the orchestrator. 8a first merges
@@ -348,5 +348,11 @@ music checks), so the music work sits on the merged code.
 - **8f. Round 3 in front of her.** `/Users/jeremy/projects/updraft-birches-round3`, branch `birches-uplift-round3`,
   port 5248, from the same staging (stills in `2-round3/`). The three heaps on an arc in front of her, close enough
   (about 2 m between rims) that portrait holds all three.
-- The agents leave `build_plan.md` to the orchestrator and report; the QA concept tool
-  (`src/story/birches-concept.ts`, `tools/birches-concept.mjs`) is removed at the merge.
+- **Done (8e):** the swing is the drowned village's `RopeSwing`/`SwingCrossing` over a modelled fallen birch; a good
+  pumper clears it in about 9 strokes (22 s), a sloppy one in 28 (37 s), feet 0.9–1 m over the bole, landing 4 m
+  beyond; scarf-check's swing cases, `squirrel-rounds-check resume`, `crossing-camera` and `drowned-gating` pass.
+- **Done (8f):** round 3's heaps (r 2.1/2.3/2.1, 1.5 m between rims, 7.4–7.8 m from her) on an arc in front of her;
+  the squirrel sits up at 58/48/47 px landscape, 39/33/36 portrait 900×1600, 17/15/16 at 390×844; every round-3 case
+  of `squirrel-rounds-check` passes (circle cases with `EXCLUSIVE=1`).
+- Known failures shared with the base commit: `scarf-check` tangle 4 sometimes needs 6–9 strokes against its 5, and
+  `birches-foley-check`'s audition sits about 1 dB over its −30 dBFS ceiling.
