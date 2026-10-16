@@ -146,9 +146,10 @@ export interface Round {
   frames: Frames;
 }
 
-const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 7, -10.8)];
-/** Between the third round's near heap and its middle one, on her side of them: where it sits up and waits for her. */
-const SHUFFLE_FROM = birchesGap(2, 15.4, -11.4);
+/** STAGING (birches-uplift-concept): the third stand is on the ride's west edge, the three heaps on an arc in front of her. */
+const STAND = [birchesAt(6.4, -1073.2), birchesGap(1, 14.4, 5.2), birchesGap(2, 11, -8)];
+/** In the gap between the third round's left heap and its middle one, a little toward her: where it sits up and waits for her. */
+const SHUFFLE_FROM = birchesGap(2, 10.7, -15.6);
 
 export const ROUNDS: readonly Round[] = [
   {
@@ -187,8 +188,8 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(7), 0.5),
     lastSeen: lifted(SHUFFLE_FROM),
     shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
-    cygnet: [lifted(birchesGap(2, 9, -9.6)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: { ...view(2, 21, 7), zoom: 1.15 }, portrait: tall(2, 25, 12, 0, 1.3) },
+    cygnet: [lifted(birchesGap(2, 9.2, -7.4)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
+    frames: { landscape: view(2, 19.5, 7), portrait: tall(2, 27, 9, 0.6, 1) },
   },
 ];
 
@@ -223,8 +224,8 @@ const BOW_TREE = { x: SCARF_SNAGS[3].treeX, z: SCARF_SNAGS[3].treeZ };
 const T1_LENS = { x: SCARF_SNAGS[0].stopX, z: SCARF_SNAGS[0].stopZ + 20 };
 const T3_LENS = { x: SCARF_SNAGS[2].stopX, z: SCARF_SNAGS[2].stopZ + 20 };
 const T4_LENS = { x: SCARF_SNAGS[3].stopX, z: SCARF_SNAGS[3].stopZ + 20 };
-/** The birch behind the hollow's middle heap and its far one (`world/birches.ts` BANKS). */
-const FAR_TREE = birchesAt(-17.4, -1154.4);
+/** The birch behind the hollow's middle heap (`world/birches.ts` BANKS). */
+const FAR_TREE = birchesGap(2, 16.1, -20.3);
 const ROUND_3_LENS = lensOf(2, 21);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
@@ -300,19 +301,19 @@ export const PATHS = {
   /** Down the broken birch's far side and across the hollow, past the deep heap, to where it waits for her at the third round. */
   toRound3: [
     bark(STUMP, 3.9, birchesAt(-10, -1145)), bark(STUMP, 0.4, birchesAt(-10, -1145)),
-    g(-10, -1144), g(-9.5, -1151), gap(2, 4, -8.8), gap(2, 9.5, -9.6), { ground: SHUFFLE_FROM },
+    g(-10, -1144), g(-9.5, -1151), gap(2, 4, -9.5), gap(2, 8.5, -13.5), { ground: SHUFFLE_FROM },
   ],
-  /** On her side of the heaps, between the middle one and the far one, and up the birch behind them. */
-  toFarTrunk: [gap(2, 22.4, -11.6), g(-15.6, -1154.3), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
+  /** Behind the heaps, and up the birch behind the middle one. */
+  toFarTrunk: [gap(2, 12, -20.2), bark(FAR_TREE, 0.5, ROUND_3_LENS), bark(FAR_TREE, 3.6, ROUND_3_LENS)],
   /** Down the far trunk, between the middle heap and the far one and past the far one, to the birch beyond the slipped loop. */
   toTangle3: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
-    g(-11.4, -1154.2), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),
+    g(-14.5, -1155.4), g(-8.5, -1163.5), g(-2.5, -1169), g(0.4, -1171), bark(BEHIND_SLIP, 0.5, T3_LENS), bark(BEHIND_SLIP, 4.5, T3_LENS),
   ],
   /** In landscape: down the far trunk, across the ride short of where she will stand, and up the birch east of the loop. */
   toTangle3Wide: [
     bark(FAR_TREE, 3.6, ROUND_3_LENS), bark(FAR_TREE, 0.5, ROUND_3_LENS),
-    g(-11.4, -1154.2), g(-4.5, -1155), g(3, -1157.5), g(7.5, -1159.5), bark(EAST_OF_SLIP, 0.5, T3_LENS), bark(EAST_OF_SLIP, 3.2, T3_LENS),
+    g(-14.5, -1155.4), g(-4.5, -1157), g(3, -1157.5), g(7.5, -1159.5), bark(EAST_OF_SLIP, 0.5, T3_LENS), bark(EAST_OF_SLIP, 3.2, T3_LENS),
   ],
   /** And from there round the fallen birch's end and along the top of the beach's wood to the bow's birch. */
   toTangle4Wide: [
