@@ -181,13 +181,20 @@ function tuftGeometry(head: boolean): THREE.BufferGeometry {
     }
   } else {
     ribbon(new THREE.Vector3(0, -.11, 0), new THREE.Vector3(), .006);
+    const seed = shape(p, indices, '#8c7556');
+    p.length = indices.length = 0;
     for (let i = 0; i < 9; i++) {
       const a = i * Math.PI * 2 / 9;
       ribbon(new THREE.Vector3(), new THREE.Vector3(Math.cos(a) * .085, .065, Math.sin(a) * .085), .005);
     }
+    return mergeGeometries([seed, shape(p, indices, '#fff8ea')])!;
   }
+  return shape(p, indices, '#bcc3b0');
+}
+
+function shape(p: number[], indices: number[], color: string): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-  g.setIndex(indices); g.computeVertexNormals(); return painted(g, head ? '#bcc3b0' : '#fff8ea', 1);
+  g.setIndex(indices); g.computeVertexNormals(); return painted(g, color, 1);
 }
 
 interface Plant {
@@ -218,6 +225,8 @@ export class MeadowEchoes {
   readonly seed = new THREE.Vector3();
   /** The top of the rising column, kept in the camera's frame. */
   readonly crown = new THREE.Vector3();
+  /** How high the bulk of the lifted down reaches. */
+  cloudTop = 0;
   readonly heard = new THREE.Vector3();
   heardAt = -Infinity;
   /** The last time the player's updraft was taking down. */
@@ -327,9 +336,10 @@ export class MeadowEchoes {
       rank.push([i, Math.hypot((top.x - centre.x) / srx, (top.z - centre.z) / srz) + this.rand() * .45]);
     }
     rank.sort((a, b) => a[1] - b[1]).forEach(([i], k) => { this.order[i] = k / n * .985; });
-    const looseMaterial = new THREE.ShaderMaterial({ vertexShader: LOOSE_VERT, fragmentShader: LOOSE_FRAG,
-      uniforms: { ...atmo.uniforms, uGlow: { value: .8 } }, vertexColors: true, side: THREE.DoubleSide });
-    this.down = new THREE.InstancedMesh(tuftGeometry(false), looseMaterial, n);
+    const loose = (glow: number) => new THREE.ShaderMaterial({ vertexShader: LOOSE_VERT, fragmentShader: LOOSE_FRAG,
+      uniforms: { ...atmo.uniforms, uGlow: { value: glow } }, vertexColors: true, side: THREE.DoubleSide });
+    const looseMaterial = loose(.8);
+    this.down = new THREE.InstancedMesh(tuftGeometry(false), loose(T.downGlint), n);
     this.petals = new THREE.InstancedMesh(painted(new THREE.SphereGeometry(.065, 5, 3).scale(1, .18, 1.7), '#ffffff', 1), looseMaterial, 240);
     for (const mesh of [this.down, this.petals]) {
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -376,6 +386,7 @@ export class MeadowEchoes {
     this.column.copy(this.patches[1]);
     this.seed.copy(this.patches[1]);
     this.crown.copy(this.patches[1]);
+    this.cloudTop = this.patches[1].y;
     this.down.visible = this.petals.visible = false;
     this.writePlants();
   }
@@ -404,7 +415,7 @@ export class MeadowEchoes {
     }
     if (!finishing && this.seeds.finishing >= 0) this.flourish();
     this.grow(dt);
-    this.fly(dt, time);
+    this.fly(dt, time, camera);
     this.flutter(dt);
   }
 
@@ -529,15 +540,18 @@ export class MeadowEchoes {
   }
 
   /** Down rides the column the player winds: drawn in, round and up, spilling out over the top. */
-  private fly(dt: number, time: number): void {
+  private fly(dt: number, time: number, camera: THREE.Camera): void {
     const s = this.seeds, done = s.completed >= 2, released = s.completed === 1 ? s.progress : done ? 1 : 0;
     const since = time - this.lastReceived;
-    const after = done ? 1 - THREE.MathUtils.smoothstep(since, T.afterlift, T.afterlift + 4) : 0;
+    const after = done ? 1 - THREE.MathUtils.smoothstep(since, T.afterlift, T.afterlift + T.afterFade) : 0;
     const want = Math.max(this.effort, after);
     this.updraft += (want - this.updraft) * (1 - Math.exp(-dt * (want > this.updraft ? 1.8 : .4)));
-    const c = this.column, ground = c.y - 1.3, driftX = this.away.x * T.drift, driftZ = this.away.y * T.drift;
+    // The breeze takes the cloud gradually, as the column under it gives out.
+    const breeze = done ? T.drift * THREE.MathUtils.smoothstep(since, 0, T.driftGather) : 0;
+    const c = this.column, ground = c.y - 1.3, driftX = this.away.x * breeze, driftZ = this.away.y * breeze;
+    const eye = camera.position;
     const top = done ? T.releaseTop : T.columnTop;
-    let shown = 0, sx = 0, sy = 0, sz = 0, highest = 0;
+    let shown = 0, sx = 0, sy = 0, sz = 0, syy = 0, highest = 0;
     for (let i = 0; i < this.phase.length; i++) {
       if (this.phase[i] === 2) continue;
       const r = this.rnd[i], j = i * 3;
@@ -561,7 +575,8 @@ export class MeadowEchoes {
       const wx = Math.sin(time * .7 + r * 40) * .3, wz = Math.cos(time * .53 + r * 23) * .3;
       let fx: number, fy: number, fz: number;
       if (done) {
-        fx = driftX * (.6 + .7 * r) + wx; fz = driftZ * (.6 + .7 * r) + wz; fy = T.driftRise * (.5 + r);
+        const own = 1 + T.driftSpread * (r - .5);
+        fx = driftX * own + wx; fz = driftZ * own + wz; fy = T.driftRise * (.6 + .8 * r);
       } else {
         const hover = 2.2 + r * 3, settle = T.hoverHeight + r * 2.5;
         fx = uz * .45 * this.turning + ux * (hover - d) * .25 + wx; fz = -ux * .45 * this.turning + uz * (hover - d) * .25 + wz;
@@ -573,14 +588,16 @@ export class MeadowEchoes {
       this.vel[j + 2] += (fz + (cz - fz) * reach - this.vel[j + 2]) * k;
       x += this.vel[j] * dt; y += Math.max(0, this.vel[j + 1]) * dt; z += this.vel[j + 2] * dt;
       this.pos[j] = x; this.pos[j + 1] = y; this.pos[j + 2] = z;
-      const fade = done ? 1 - THREE.MathUtils.smoothstep(since, T.downFade + r * 8, T.downFade + 6 + r * 8) : 1;
+      const fade = done ? 1 - THREE.MathUtils.smoothstep(since, T.downFade + r * T.downFadeSpread, T.downFade + 5 + r * T.downFadeSpread) : 1;
       if (fade <= 0) { this.phase[i] = 2; continue; }
       this.piece.position.set(x, y, z);
       this.piece.rotation.set(THREE.MathUtils.clamp(this.vel[j + 2] * .25, -.6, .6), time * (.3 + r) + r * 9, THREE.MathUtils.clamp(-this.vel[j] * .25, -.6, .6));
-      this.piece.scale.setScalar(fade * Math.min(1, (y - this.home[j + 1]) * 3 + .3) * (1.3 + r * .6));
+      // Far off, a mote is drawn a little larger, so it stays a soft fleck rather than a glittering sub-pixel thread.
+      const far = 1 + T.downFarScale * THREE.MathUtils.smoothstep(Math.hypot(x - eye.x, y - eye.y, z - eye.z), 25, 110);
+      this.piece.scale.setScalar(fade * far * Math.min(1, (y - this.home[j + 1]) * 3 + .3) * (1.3 + r * .6));
       this.piece.updateMatrix();
       this.down.setMatrixAt(shown++, this.piece.matrix);
-      sx += x; sy += y; sz += z; highest = Math.max(highest, y);
+      sx += x; sy += y; sz += z; syy += y * y; highest = Math.max(highest, y);
     }
     this.down.count = shown;
     this.down.visible = shown > 0;
@@ -588,6 +605,8 @@ export class MeadowEchoes {
     if (shown) {
       this.seed.lerp(this.mean.set(sx / shown, sy / shown, sz / shown), 1 - Math.exp(-dt * 1.5));
       this.crown.set(c.x, Math.min(highest, ground + top + 2), c.z);
+      const spread = Math.sqrt(Math.max(0, syy / shown - (sy / shown) ** 2));
+      this.cloudTop += (this.mean.y + spread * 1.5 - this.cloudTop) * (1 - Math.exp(-dt * 1.5));
     }
   }
 }

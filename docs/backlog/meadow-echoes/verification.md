@@ -321,3 +321,41 @@ sweeps and circles. Nobody has watched any of it in motion.
 
 Not established: a human motion review of any of these moves, the landscape cloud's contrast against the low sun's
 glow (it reads at full size, faintly at strip size), and Jeremy's verdict on the ceiling and the steps' size.
+
+## Seeds watched away; the pond kept for the crest — 2026-10-17
+
+Branch `meadow-fix-camera` (design item 3 of "Third playthrough", and the walk to the crest). Real circles from the bed
+through the crest in both shapes, recorded with `VIDEO=1` at the game's own pace (60 fps, so the webm runs at real
+time), stepped through at one-second intervals and traced per frame. Nobody has watched it in motion.
+
+- **Seeds framed away from the sun.** The play's view now stands beyond the heads (`cameraSeedBearing` 2.36,
+  portrait 2.74) and looks back over them to the shaded slope and the sky away from the sun, so the low sun is out of
+  frame and the pond behind the lens. Walking from the bed the view comes round her right side over the whole walk
+  (peak turn 10.8°/s landscape, 11.8°/s portrait; lens at most 5.7 and 7.7 m/s); from a reload at `echoes-1` the walk's
+  view gives way over her last 55 m (`seedApproach`; 12.1 and 13.5°/s, at most 8.2 m/s), by bearing rather than
+  through the vertical. The aim moves onto the heads over her last 10 m and the heads join the framing over 4 s
+  once she stands, which removes the 8 m fit that pushed the lens back and in again on arrival.
+- **The down.** The column stands to 12 m for 6 s and gives out over 5; the breeze takes the cloud over 6 s to
+  3.6 m/s, rising 0.3 m/s, away from the lens and 0.35 rad off the pond's side; it thins from 27 s and is gone by
+  about 40 s. Each mote has a darker seed under its white pappus, its filaments glint at 0.15 (was 0.8), and far off
+  it is drawn up to 3.5 times larger so it stays a fleck of down rather than glitter.
+- **The watch.** From the release the lens lifts its gaze after the cloud's upper part (landscape −20° to +2°, portrait
+  −21° to +10°, peak 6.3 and 9.5°/s), following at pace 0.8, drawing back 14 m (6 m portrait) and settling 5–6 m
+  over the grass. The cloud stays in the frame's upper half against the sky over the bed and the piano knoll while
+  it drifts to about 100 m; she stays whole near the bottom. She walks on at 28 s, the lens comes down to her over
+  7 s and turns with her to the listening view (peak 10 and 13.1°/s). The column still overruns the top edge for
+  about a second at 1–2 s in landscape, before the gaze catches it.
+- **Pond.** Sampling 60 points of water with terrain occlusion, no water is in frame from the bed through the play,
+  the watch, the walk on, the listening stop and the walk to the crest in either shape; it first appears 2.2–2.4 s
+  into the crest beat and the family 3–4 s in. On the walk to the crest the view is turned round her away from the
+  water by the least angle (up to 1.2 rad) that keeps the pond's rim 12 % outside the frame; at the crest that turn
+  eases out over 8 s (peak 11°/s landscape, 7.2°/s portrait), so the lens comes round onto the water as the reveal.
+- Gates: typecheck, production build (existing chunk warning), `meadow-seeds-check`, `meadow-echoes-state-check`,
+  `pond-view-check`, `ONLY=meadow progress-check`, `meadow-echoes-check` FULL with TRACE in landscape and portrait
+  touch with `meadow-camera-audit` (character margin 5.1 % and 6.2 %, departure 17.3 m and 20.5 m).
+- Evidence (scratch): `/tmp/updraft-seedcam-yjVy/seeds-strip-landscape.jpg`, `seeds-strip-portrait.jpg`,
+  `crest-strip-landscape.jpg`, `crest-strip-portrait.jpg`, labelled in seconds from the release; recordings
+  `final2-l.webm` and `final2-p.webm` (release at 62.0 s and 60.2 s), cut as `seeds-moment-*.webm` and `crest-walk-*.webm`.
+
+Not established: a human motion review, Jeremy's verdict on the longer arc round her to the seeds' view (163° in
+landscape and 166° in portrait, against 95° and 36° before), and the pace of the reveal turn.

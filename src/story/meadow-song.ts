@@ -5,10 +5,21 @@ import type { Cast } from './cast';
 import { meadowEchoes as garden } from '../world/meadow-echoes';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
+import { POND, POND_LEVEL } from '../world/heightfield';
 
 type Beat = 'ahead' | 'approach' | 'settle' | 'play' | 'follow' | 'listen' | 'gather' | 'done';
 const PLAY_MARGIN = .8;
 const LENS = new THREE.PerspectiveCamera();
+const POND_LENS = new THREE.PerspectiveCamera();
+/** The pond's shore and a swan's height over it, which the walk to the crest keeps out of the frame. */
+const RIM = Array.from({ length: 32 }, (_, i) => {
+  const a = i * Math.PI / 8;
+  return new THREE.Vector3(POND.x + Math.cos(a) * POND.rx, POND_LEVEL + (i < 16 ? 0 : 1.2), POND.z + Math.sin(a) * POND.rz);
+});
+const SEEN = new THREE.Vector3();
+const POND_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z);
+const UP = new THREE.Vector3(0, 1, 0);
+const ORIGIN = new THREE.Vector3();
 
 export class MeadowSong {
   beat: Beat = 'ahead';
@@ -19,6 +30,8 @@ export class MeadowSong {
   private tending = false;
   private lastCuriosity = 0;
   leaving = false;
+  /** How far round her, away from the water, the walk to the crest last held the lens (radians about the vertical). */
+  pondTurn = 0;
   private readonly childAt = new THREE.Vector3();
   private readonly center = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
@@ -26,6 +39,8 @@ export class MeadowSong {
   private readonly exitEye = new THREE.Vector3();
   private readonly exitLook = new THREE.Vector3();
   private readonly exitAt = new THREE.Vector3();
+  private readonly leaveLook = new THREE.Vector3();
+  private readonly leaveEye = new THREE.Vector3();
   /** How far the gaze had gone after the down when she walked on. */
   private watchedTo = 0;
   private readonly placedEye = new THREE.Vector3();
@@ -33,9 +48,13 @@ export class MeadowSong {
   private readonly walkLook = new THREE.Vector3();
   private readonly played = new THREE.Vector3();
   private readonly gaze = new THREE.Vector3();
+  private readonly cloud = new THREE.Vector3();
+  private readonly aimAt = new THREE.Vector3();
+  private arrivedAt = -Infinity;
   private readonly onScreen = new THREE.Vector3();
   private readonly kept = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-  private readonly frameSubjects = { primary: this.childAt, secondary: this.center, primaryRadius: 1.8,
+  private readonly framed = new THREE.Vector3();
+  private readonly frameSubjects = { primary: this.childAt, secondary: this.framed, primaryRadius: 1.8,
     points: Array.from({ length: 5 }, () => new THREE.Vector3()), margin: PLAY_MARGIN, extra: 8 };
   private readonly asking: Coax = { at: new THREE.Vector3(), urgency: .8, radius: 2.2 };
 
@@ -54,6 +73,11 @@ export class MeadowSong {
   private get waiting(): boolean {
     return this.beat === 'play' && garden.seeds.active && this.now - this.since > tuning.meadowEchoes.inviteAfter;
   }
+  /** How closely the lens follows the play's framing; watching the down go, it keeps up with the rising column. */
+  get pace(): number {
+    const t = tuning.meadowEchoes;
+    return this.beat === 'approach' ? t.cameraArrivePace : this.watching > 0 ? t.watchPace : t.cameraPace;
+  }
   /** She has stopped on the far rise to listen, or walked on past it. */
   get listening(): boolean { return this.beat === 'listen' || this.beat === 'gather' || this.beat === 'done'; }
   get goal(): THREE.Vector3 | null { return this.beat === 'done' ? null : garden.stands[this.index]; }
@@ -63,6 +87,7 @@ export class MeadowSong {
     this.index = Math.max(0, Math.min(2, completed));
     this.mix = this.since = this.now = 0;
     this.leaving = this.tending = false;
+    this.pondTurn = 0;
     this.beat = finished ? 'done' : 'ahead';
   }
 
@@ -74,7 +99,7 @@ export class MeadowSong {
     if (this.beat === 'done') return false;
     const stand = garden.stands[this.index], patch = garden.patches[Math.min(1, this.index)];
     if (this.beat === 'ahead') {
-      if (Math.hypot(child.position.x - stand.x, child.position.z - stand.z) > tuning.meadowEchoes.approach || carry.busy) return false;
+      if (Math.hypot(child.position.x - stand.x, child.position.z - stand.z) > this.approach || carry.busy) return false;
       child.stop(); plane.hold(child); child.stowPlane(true); plane.visible = false;
       this.to('approach'); this.walk(cast);
     }
@@ -136,11 +161,17 @@ export class MeadowSong {
     return true;
   }
 
+  /** How far from a stand the walk's view starts giving way to the play's: the seeds' view is round on her far side. */
+  private get approach(): number { return this.index === 1 ? tuning.meadowEchoes.seedApproach : tuning.meadowEchoes.approach; }
+
   private walk(cast: Cast): void {
     const at = garden.stands[this.index];
     cast.child.walkTo(at.x, at.z, false, undefined, .12);
   }
-  private to(beat: Beat): void { this.beat = beat; this.since = this.now; }
+  private to(beat: Beat): void {
+    this.beat = beat; this.since = this.now;
+    if (beat === 'settle') this.arrivedAt = this.now;
+  }
 
   frame(shot: Shot, cast: Cast): boolean {
     if (!this.active) return false;
@@ -158,13 +189,20 @@ export class MeadowSong {
     this.center.copy(traveling ? this.childAt : patch);
     if (traveling) this.center.z -= 4;
     else if (this.index === 1) this.center.y += garden.seeds.progress * t.cameraSeedRise;
+    // Nearing a stand, the lens's aim moves on from her walk to the play there, so nothing lunges as she stops.
+    const next = garden.stands[Math.min(this.index, 1)];
+    const settled = !traveling ? 1 : this.index === 2 ? 0
+      : 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - next.x, c.z - next.z), 0, t.cameraSettleFrom);
+    this.aimAt.copy(this.center).lerp(patch, traveling ? settled : 0);
     // Three framings blended by where she has walked: the flower bed, the seeds against the far slope, the listening rise.
-    const turn = 1 - THREE.MathUtils.smootherstep(c.z, t.cameraTurnTo, t.cameraTurnFrom);
-    const onward = 1 - THREE.MathUtils.smootherstep(c.z, garden.stands[2].z, garden.stands[1].z);
+    const turn = 1 - THREE.MathUtils.smoothstep(c.z, t.cameraTurnTo, t.cameraTurnFrom);
+    const onward = 1 - THREE.MathUtils.smoothstep(c.z, garden.stands[2].z, garden.stands[1].z);
     const bed = 1 - turn, seeds = turn * (1 - onward), listen = turn * onward;
     const pick = (a: number, b: number, d: number) => a * bed + b * seeds + d * listen;
-    this.side.set(pick(portrait ? -.15 : -.5, portrait ? t.cameraPortraitSeedSide : t.cameraSeedSide, t.cameraSecondSide), 0, 1).normalize();
-    shot.target.copy(this.childAt).lerp(this.center, traveling ? .4 : this.index === 1 ? t.cameraSeedAim : t.cameraBedAim);
+    const bearing = pick(Math.atan2(portrait ? -.15 : -.5, 1), portrait ? t.cameraPortraitSeedBearing : t.cameraSeedBearing,
+      Math.atan2(t.cameraSecondSide, 1));
+    this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
+    shot.target.copy(this.childAt).lerp(this.aimAt, THREE.MathUtils.lerp(.4, this.index === 1 ? t.cameraSeedAim : t.cameraBedAim, settled));
     shot.from = this.side;
     shot.distance = portrait ? pick(t.cameraPortraitBedBack, t.cameraPortraitSeedBack, t.cameraPortraitBack) : pick(t.cameraBedBack, t.cameraSeedBack, t.cameraBack);
     shot.height = portrait ? pick(t.cameraPortraitBedUp, t.cameraPortraitSeedUp, t.cameraPortraitUp) : pick(t.cameraBedUp, t.cameraSeedUp, t.cameraUp);
@@ -184,20 +222,30 @@ export class MeadowSong {
       // The walk's view gives way to this one over her last steps to the stand, so the lens never races in ahead of her.
       // Reach eases by ratio, so the lens comes in at an even pace rather than rushing the far part of the way.
       const stand = garden.stands[this.index];
-      const k = THREE.MathUtils.smoothstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, t.approach);
+      const k = THREE.MathUtils.smoothstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, this.approach);
+      // Round her by bearing and elevation, so a wide change of side circles her rather than passing over her head.
       const near = this.placedEye.set(this.side.x * shot.distance, shot.height, this.side.z * shot.distance);
       const far = this.walkEye.sub(this.walkLook), reach = near.length() * (far.length() / near.length()) ** k;
+      const [nearYaw, nearPitch] = aim(ORIGIN, near), [farYaw, farPitch] = aim(ORIGIN, far);
+      const yaw = nearYaw + Math.atan2(Math.sin(farYaw - nearYaw), Math.cos(farYaw - nearYaw)) * k;
+      const pitch = THREE.MathUtils.lerp(nearPitch, farPitch, k);
       shot.target.lerp(this.walkLook, k);
-      shot.eye = near.normalize().lerp(far.normalize(), k).setLength(reach).add(shot.target);
+      shot.eye = look(shot.target, yaw, pitch, reach, near);
     }
     const points = this.frameSubjects.points;
     points[0].copy(cast.cygnet.position).y += .45;
+    this.framed.copy(this.center);
     if (traveling) for (let i = 1; i < 5; i++) points[i].copy(this.center);
     else if (this.index === 0) { points[1].copy(this.center); for (let i = 0; i < 3; i++) points[i + 2].copy(garden.sectors[i]); }
     else {
       points[1].copy(garden.seed);
       points[2].copy(garden.crown); points[2].y = Math.min(points[2].y, patch.y + t.cameraSeedHold);
       points[3].copy(patch); points[4].copy(patch);
+      // The heads come into the framing only once the lens has come round, or its lag would push it back and in again.
+      this.gaze.copy(this.childAt).setZ(this.childAt.z - 4);
+      const round = THREE.MathUtils.smoothstep(this.now - this.arrivedAt, 0, t.cameraSettleFor);
+      for (let i = 1; i < 5; i++) points[i].lerpVectors(this.gaze, points[i], round);
+      this.framed.lerpVectors(this.gaze, this.center, round);
     }
     shot.subjects = this.frameSubjects;
     this.frameSubjects.margin = PLAY_MARGIN;
@@ -217,7 +265,7 @@ export class MeadowSong {
   private get watching(): number {
     const t = tuning.meadowEchoes;
     if (this.beat === 'play' && this.index === 1 && garden.seeds.completed >= 2)
-      return THREE.MathUtils.smootherstep(this.now - garden.receivedAt, t.watchFrom, t.watchFrom + t.watchRise);
+      return THREE.MathUtils.smoothstep(this.now - garden.receivedAt, t.watchFrom, t.watchFrom + t.watchRise);
     if (this.beat === 'follow' && this.index === 2)
       return this.watchedTo * (1 - THREE.MathUtils.smootherstep(this.now - this.since, 0, t.watchReturn));
     return 0;
@@ -231,17 +279,18 @@ export class MeadowSong {
     const t = tuning.meadowEchoes;
     const eye = shot.eye = this.placedEye.copy(shot.target).addScaledVector(this.side, shot.distance);
     eye.y = shot.target.y + shot.height;
-    // Drawing back up a slope it keeps its height over the grass, rather than meeting the ground and being pushed off it.
-    const under = Math.max(heightAt(eye.x, eye.z), 0);
+    // Drawing back over the rolling ground it settles to a height over the grass, never meeting a slope.
+    const above = eye.y - Math.max(heightAt(eye.x, eye.z), 0);
     eye.addScaledVector(this.side, (portrait ? t.watchPortraitBack : t.watchBack) * watch);
-    eye.y += Math.max(0, Math.max(heightAt(eye.x, eye.z), 0) - under);
+    eye.y = Math.max(heightAt(eye.x, eye.z), 0) + THREE.MathUtils.lerp(above, portrait ? t.watchPortraitAbove : t.watchAbove, watch);
     const c = cast.child.position;
     this.kept[0].copy(c);
     this.kept[1].copy(c).y += 1.9;
     this.kept[2].copy(cast.cygnet.position).y += .45;
     // Up after it first, then round after it, each as far as still keeps them in frame (found by halving).
     const from = LENS.position, reach = from.distanceTo(shot.target);
-    const [yaw, pitch] = aim(from, shot.target), [cloudYaw, cloudPitch] = aim(from, garden.seed);
+    this.cloud.copy(garden.seed).y = THREE.MathUtils.lerp(garden.seed.y, garden.cloudTop, t.watchTop);
+    const [yaw, pitch] = aim(from, shot.target), [cloudYaw, cloudPitch] = aim(from, this.cloud);
     const turn = Math.atan2(Math.sin(cloudYaw - yaw), Math.cos(cloudYaw - yaw)) * t.watchTurn * watch;
     const lift = (cloudPitch - pitch) * t.watchShare * watch;
     const up = this.room(k => look(from, yaw, pitch + lift * k, reach, this.gaze));
@@ -250,15 +299,15 @@ export class MeadowSong {
     // Only she and the cygnet are kept in frame now: the bare heads go out of the bottom of it.
     const points = this.frameSubjects.points;
     for (let i = 1; i < 5; i++) points[i].lerp(this.childAt, watch);
-    this.center.lerp(this.childAt, watch);
+    this.framed.lerp(this.childAt, watch);
     this.frameSubjects.margin = THREE.MathUtils.lerp(PLAY_MARGIN, t.watchMargin, watch);
   }
 
   /** The lens as it last stood, which the watch tests its turns of the gaze from. */
   seenFrom(camera: THREE.PerspectiveCamera): void {
     LENS.position.copy(camera.position);
-    if (LENS.fov !== camera.fov || LENS.aspect !== camera.aspect) {
-      LENS.fov = camera.fov; LENS.aspect = camera.aspect; LENS.updateProjectionMatrix();
+    for (const lens of [LENS, POND_LENS]) if (lens.fov !== camera.fov || lens.aspect !== camera.aspect) {
+      lens.fov = camera.fov; lens.aspect = camera.aspect; lens.updateProjectionMatrix();
     }
   }
 
@@ -285,14 +334,45 @@ export class MeadowSong {
     });
   }
 
+  /**
+   * On to the crest the listening view gives way to the crest's as she walks, but it is turned round her away from
+   * the water as far as keeps the pond out of the frame: the family on it is the crest's to show.
+   */
   depart(shot: Shot, cast: Cast): number {
     const c = cast.child.position, stand = garden.stands[2];
     const walked = THREE.MathUtils.smootherstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, tuning.meadowEchoes.departureWalk);
     shot.target.lerp(this.exitAt.copy(c).add(this.exitLook), 1 - walked);
     shot.eye!.lerp(this.exitAt.copy(c).add(this.exitEye), 1 - walked);
+    this.leaveLook.copy(shot.target).sub(c); this.leaveEye.copy(shot.eye!).sub(c);
+    const [yaw] = aim(this.exitEye, this.exitLook), [pond] = aim(c, POND_AT);
+    const away = Math.sign(Math.atan2(Math.sin(yaw - pond), Math.cos(yaw - pond))) || 1;
+    const turned = (k: number) => {
+      shot.target.copy(this.leaveLook).applyAxisAngle(UP, away * k).add(c);
+      shot.eye!.copy(this.leaveEye).applyAxisAngle(UP, away * k).add(c);
+      return hidesPond(shot.eye!, shot.target);
+    };
+    const most = tuning.meadowEchoes.crestPondTurn;
+    this.pondTurn = 0;
+    if (!turned(0)) {
+      let low = 0, high = most;
+      if (turned(most)) for (let i = 0; i < 10; i++) { const mid = (low + high) / 2; if (turned(mid)) high = mid; else low = mid; }
+      turned(high);
+      this.pondTurn = away * high;
+    }
     shot.composition = 'hold'; shot.smoothFit = 2;
     return THREE.MathUtils.lerp(tuning.meadowEchoes.cameraPace, .9, walked);
   }
+}
+
+function hidesPond(eye: THREE.Vector3, at: THREE.Vector3): boolean {
+  POND_LENS.position.copy(eye);
+  POND_LENS.lookAt(at);
+  POND_LENS.updateMatrixWorld();
+  const edge = tuning.meadowEchoes.crestPondMargin;
+  return RIM.every(p => {
+    const q = SEEN.copy(p).project(POND_LENS);
+    return q.z >= 1 || Math.abs(q.x) > edge || Math.abs(q.y) > edge;
+  });
 }
 
 /** The bearing and elevation of a point as seen from an eye. */
