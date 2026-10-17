@@ -38,6 +38,8 @@ export class PointerInput {
   /** Current gust speed in world units/s after shaping (0 when idle), and its direction on the ground. */
   gust = 0;
   readonly gustDir = new THREE.Vector2(1, 0);
+  /** The gust as it is heard, on the same scale: from the stroke's speed across the screen rather than over the ground. */
+  heard = 0;
   /** Updraft charge, 0..1: wound up by tracing circles, and running down as soon as the circling stops. */
   charge = 0;
   /** How far the cursor has wound round one way, in radians, since it last paused: a shaky hand turns both ways and cancels. */
@@ -73,6 +75,9 @@ export class PointerInput {
   private strokeSource = {};
   private readonly vel = new THREE.Vector2();
   private readonly instVel = new THREE.Vector2();
+  /** The stroke's speed across the screen, in screen heights a second. */
+  private readonly screenVel = new THREE.Vector2();
+  private readonly instScreen = new THREE.Vector2();
   /** The stroke's speed where its wind lands, short of `reach`; the same as `vel` with no reach. */
   private readonly landVel = new THREE.Vector2();
   private readonly instLand = new THREE.Vector2();
@@ -160,7 +165,8 @@ export class PointerInput {
     this.ndc.copy(this.eventNdc);
     this.prevNdc.copy(this.ndc);
     this.vel.set(0, 0);
-    this.gust = this.charge = this.spin = this.sinceHeading = this.wound = 0;
+    this.screenVel.set(0, 0);
+    this.gust = this.heard = this.charge = this.spin = this.sinceHeading = this.wound = 0;
     this.heading = null;
     if (wasDown) this.listeners.forEach(l => l('up'));
   }
@@ -267,10 +273,12 @@ export class PointerInput {
       this.prevNdc.copy(this.ndc);
       this.hasPrev = false;
       this.vel.set(0, 0);
+      this.screenVel.set(0, 0);
       this.heading = null;
       this.spin = 0;
       this.sinceHeading = 0;
       this.gust = this.muted ? 0 : this.gust * Math.exp(-dt * 6);
+      this.heard = this.muted ? 0 : this.heard * Math.exp(-dt * 6);
       this.charge = this.muted ? 0 : Math.max(0, this.charge - dt * 1.5);
       return;
     }
@@ -280,7 +288,8 @@ export class PointerInput {
       this.strokeSource = {};
       this.vel.set(0, 0);
       this.landVel.set(0, 0);
-      this.gust = 0;
+      this.screenVel.set(0, 0);
+      this.gust = this.heard = 0;
       this.hasPrev = true;
       // A touch stroke begins where the finger landed, so its first frame of movement is wind too.
       this.prevNdc.copy(this.frameLanded ? this.frameFrom : this.ndc);
@@ -293,6 +302,7 @@ export class PointerInput {
 
     this.instVel.set(0, 0);
     this.instLand.set(0, 0);
+    this.instScreen.set(0, 0);
     const a = this.reached(camera, this.prev, this.near), b = this.reached(camera, this.world, this.nearTo);
     if (!this.ndc.equals(this.prevNdc)) {
       /** Both ends of a stroke use this frame's camera: moving the camera cannot supply any of the wind. */
@@ -302,6 +312,8 @@ export class PointerInput {
       this.reached(camera, this.prev, a);
       this.reached(camera, this.world, b);
       this.instLand.set((b.x - a.x) / dt, (b.z - a.z) / dt);
+      const aspect = camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1;
+      this.instScreen.set((this.ndc.x - this.prevNdc.x) * aspect / 2 / dt, (this.ndc.y - this.prevNdc.y) / 2 / dt);
     }
     /** With no new gesture, its last gust settles where it was made; no ground picking is needed. */
     const ease = 1 - Math.exp(-dt * 30), gain = this.down || this.frameReleased ? T.pressedGain : T.hoverGain;
@@ -309,6 +321,9 @@ export class PointerInput {
     this.landVel.lerp(this.instLand, ease);
     const speed = T.maxGust * Math.tanh(this.vel.length() * gain / T.maxGust);
     this.gust = speed;
+    this.screenVel.lerp(this.instScreen, ease);
+    const A = tuning.audio;
+    this.heard = T.maxGust * A.strokeMost * Math.tanh(this.screenVel.length() * gain / T.hoverGain / A.strokeSpan);
     if (speed > T.minGust) {
       this.gustDir.set(this.vel.x / this.vel.length(), this.vel.y / this.vel.length());
       /** Short of `reach`, the stroke still counts as fast as it was drawn; the wind it writes is as fast as where it lands. */

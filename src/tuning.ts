@@ -217,6 +217,17 @@ export const tuning = {
     windDb: -3,
     /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
+    /**
+     * When the air dies (the drowned village's becalming) the ambient breeze falls this share of the way to silence and
+     * the sea's wash this share quieter, easing in and out at `calmEase` per second; the player's own wind stays.
+     */
+    calmBreeze: 0.95, calmSea: 0.6, calmEase: 0.4,
+    /**
+     * The player's wind is heard by how fast the stroke crosses the screen, not the ground under it, so the same gesture
+     * sounds alike over near ground and far sky: `strokeMost` of a full gust at most, approached as the stroke passes
+     * `strokeSpan` screen heights a second.
+     */
+    strokeMost: 0.6, strokeSpan: 1.6,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
     playerWindFilterRange: .8,
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
