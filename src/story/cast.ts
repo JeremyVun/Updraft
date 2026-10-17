@@ -126,6 +126,8 @@ export interface Chapter {
   readonly hush?: number;
   /** How far a fog lying over the water muffles the sea, 0 to 1. */
   readonly seaMuffle?: number;
+  /** How far the air has died, 0 to 1: the ambient breeze falls away and the sea lies quiet. */
+  readonly calm?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
   /** The piano supplies gesture notes while engaged, independently of its fading mix. */

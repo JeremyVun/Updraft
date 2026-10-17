@@ -1051,7 +1051,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   const riseNow = input.ndc.x - input.prevNdc.x + (input.ndc.y - input.prevNdc.y);
   soundState.rise += (Math.sign(riseNow) - soundState.rise) * (Math.abs(riseNow) > 1e-4 ? 0.3 : 0);
-  soundState.gust = input.present ? input.gust : 0;
+  soundState.gust = input.present ? input.heard : 0;
   soundState.pan = input.ndc.x;
   if (gustFront && gustFront.strength * tuning.pointer.maxGust > soundState.gust) {
     soundState.gust = gustFront.strength * tuning.pointer.maxGust;
@@ -1111,6 +1111,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
   soundState.seaMuffle = story.current.seaMuffle ?? 0;
+  soundState.calm = story.current.calm ?? 0;
   soundState.piano = story.current.pianoMix ?? 0;
   soundState.pianoActive = story.current.pianoActive ?? false;
   soundState.caringWind = story.current.caringWind ?? false;

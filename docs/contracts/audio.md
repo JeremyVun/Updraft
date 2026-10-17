@@ -94,6 +94,14 @@ gate.
   `grassRustleDb` (−12 dB). These apply in every room and ease off as a stroke strengthens (`playerWindEase`: about −1 dB at half strength,
   −6 dB at full); their filter sweeps are scaled by `playerWindFilterRange`. The trim leaves the weather floor,
   ambient breeze, sea and rain unchanged.
+- The player's wind is heard by the stroke's speed across the screen (`PointerInput.heard`), not the gust it makes on
+  the ground, so the same gesture sounds alike over near ground and over far ground or sky. Jeremy (2026-10-17): "if i
+  do the very same gestures near the bottom of the screen, it hardly makes a noise. That lower bound volume needs to be
+  brought up, and the higher bound volume brought down." It reaches `strokeMost` (0.6) of a full gust at most, nearing
+  it past `strokeSpan` (1.6) screen heights a second; held strokes count by the same pressed gain as the wind. A stroke
+  across 0.4 of a 16:9 screen peaks the gust layer at about −30 dB in 0.9 s, −25 dB in 0.45 s and −23 dB in 0.22 s at any
+  height (before, −20 dB over sky and −35 to −55 dB near the bottom). A story's gust front still sounds at its own
+  strength. The wind itself and its gameplay are unchanged.
 - Sleeping's night wind has its own noise voice, filter and slow pan (`nightGain`, `nightWhistleGain`, `nightPan`),
   never shared with the player's gust, so the player's wind stays audible over it: the night wind gives way under a
   stroke (by `nightWindUnder`, fully at `nightWindUnderAt` of a full gust) and the player's wind sits `nightPlayerDb`
@@ -388,6 +396,10 @@ After it there is no music through the rescue, the becalming, the fog, the run, 
 goodbye below. The generic pad stays silent throughout the village and the storm, so nothing fills the quiet. The
 sound effects stay: the bell's strikes (foley), the foghorn, the cat, the herons, the weather and the physical sounds.
 No musical cue marks the air dying: Jeremy (2026-10-15), "oh, yea the becalming tone needs to go doesn't it".
+The air itself falls nearly silent as it dies: Jeremy (2026-10-17), "When the becalming starts, I think the ambient
+wind sound needs to go more silent". Through the still beats (the air dying to the church, until the bell's breeze
+carries the boat) the story's `calm` eases to 1 at `calmEase` and back as the storm gathers; the ambient breeze falls
+by `calmBreeze` (about −26 dB) and the sea's wash by `calmSea` (−8 dB, quiet lapping). The player's own wind stays.
 
 Measured with no input on the game clock (`tools/village-music-browser-check.mjs`, at 60 fps, the audio clock in step):
 from `?chapter=drowned` it starts with the chapter and ends at 36.9 s; the boat holds and the tub becomes the player's

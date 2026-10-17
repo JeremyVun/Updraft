@@ -72,6 +72,8 @@ export interface SoundState {
   sea: number;
   /** How far a fog lying over the water muffles it, 0 to 1. */
   seaMuffle?: number;
+  /** How far the air has died, 0 to 1: the breeze falls nearly silent and the sea lies quiet. */
+  calm?: number;
   /** 1 out over the green hills, where skylarks sing. */
   meadow: number;
   /** Ground beneath the story, independent of the pointer's overLand test. */
@@ -1161,12 +1163,13 @@ export class Soundscape {
     const air = (1 - piano * 0.82) * 10 ** (tuning.audio.windDb / 20);
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
-    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air * room.breeze, now, 0.5);
+    const calm = s.calm ?? 0;
+    this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air * room.breeze * (1 - tuning.audio.calmBreeze * calm), now, 0.5);
     this.fade(this.rainGain.gain, s.shower * 0.07, now, 1.2);
     this.fade(this.patterGain.gain, s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
     const muffle = s.seaMuffle ?? 0;
     this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze) * room.sea
-      * (1 - tuning.audio.seaMuffleLevel * muffle), now, 0.3);
+      * (1 - tuning.audio.seaMuffleLevel * muffle) * (1 - tuning.audio.calmSea * calm), now, 0.3);
     this.seaFilter.frequency.setTargetAtTime(380 * (1 - tuning.audio.seaMuffleCutoff * muffle), now, 0.5);
     this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);

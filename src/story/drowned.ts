@@ -79,6 +79,8 @@ type Beat = 'enter' | 'drift' | 'still' | 'becalmed' | 'run' | 'nave' | 'church'
 export class DrownedChapter implements Chapter {
   beat: Beat = 'enter';
   breeze = 1;
+  /** How far the air has gone out of the village, for the ambient wind and sea: 0 in the breeze, 1 dead calm. */
+  calm = 0;
   readonly worldLife = 1;
   pace = 0.4;
   haze = 0.6;
@@ -559,6 +561,8 @@ export class DrownedChapter implements Chapter {
     boat.becalmed += ((slack ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (slack ? 0.7 : 1.1)));
     const air = still ? (carried ? ch.carryBreeze : 0) : gathering ? THREE.MathUtils.lerp(tuning.storm.breezeFrom, 1, rising) : 1;
     this.breeze += (air - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
+    const calm = still && !carried ? 1 : 0;
+    this.calm += (calm - this.calm) * (1 - Math.exp(-dt * tuning.audio.calmEase));
     /**
      * The light goes on going down while the dark comes, a little further than the drift would have taken it; as the
      * fog closes round it takes the rest of the light itself, and the storm's night takes over from it as it gathers,
