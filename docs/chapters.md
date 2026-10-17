@@ -464,9 +464,10 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   told.
 - **A round.** Each has its own frame, lower and closer than the walk, from the south-east quarter toward the low sun,
   so leaves thrown up are lit through (`ROUNDS[].frames`; portrait on a longer lens eased in by a spring). She walks
-  round any heap in her way to her stand, turns there to face the heaps, body and head (round 2's far heap, round
-  3's middle one, so she faces the three as a whole), kneels and peers, and turns her head to each heap the wind
-  bursts. The right heap
+  round any heap in her way to her stand, turns there to face the heaps, body and head (in round 2 the heap it is
+  in, `BirchesSquirrel.facing`, so she never kneels turned to the wrong one; round 3's middle one, so she faces the
+  three as a whole), kneels and peers, and turns her head to each heap the wind bursts. The plane rides on her bag
+  from the walk in until the walk goes on, so it never sticks into her as she kneels. The right heap
   shivers every 2.5–4 s with a rustle; its tail tip is out half the time in round 1, a third in round 2 and a fifth in
   round 3; now and then it peeks. Wrong heaps never tell.
 - **Heaps yield only to updrafts** (Jeremy, 2026-10-16). Every heap, the squirrel's and the free-play ones, stands
@@ -485,16 +486,19 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
 - **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 7 s without
   an updraft on the right heap, swiping or not, it goes to that heap's rim and peers in (the in-story hint). The drawn
   updraft turns over it after 4 s at the first heap, once the leaves of its dive are down, and after 6 s in round 2.
-  Round 3 has none: the updraft is learned by then, and drawn over one heap of three it would give the hide away.
-  Neither supplies wind.
+  In round 3 it turns over all three heaps at once as soon as the squirrel has settled, so the player sees when the
+  heaps are ready to play (Jeremy: "we do need to show the updrafts over each pile, otherwise the player doesn't know
+  when they can start playing the game or not"); over one heap of three it would give the hide away. Neither supplies
+  wind.
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
   bow's own birch, on the swing tree's trunk under the limb (and on along the fallen birch's top once she is over). **Seeing it off:** before round 2 it dashes on ahead to hide
   (`dash`) as the first tangle's loop starts to lift, down the fork tree beside the loop and away east among the
   trunks, up the perch tree and down the wool beyond the rise. Freed before it has hidden, she and the cygnet watch it
-  go, at least `seeOffFor` (2.5 s), and set off after it once it has come down to the leaves beyond the rise
-  (`seeOffMost`, 7 s, at most), about 5.5 s after the loop is free. The lens stays in the tangle's frame and never
+  go, at least `seeOffFor` (2.5 s), and set off after it once it has come down to the leaves beyond the rise or
+  `seeOffMost` (4 s) after the loop is free, whichever is sooner, so she never stands about after the squirrel has
+  gone from the frame. The lens stays in the tangle's frame and never
   follows it; the depth blur keeps it sharp. Out of her sight its dive barely stirs the leaves (`splash`), so no spray
   far up the ride marks the heap. Before round 3 it waits in plain view instead (the shuffle).
 - **The leap.** After round 3 the cygnet dives into the deepest leaves left in the hollow that the lens shows, and the
@@ -515,8 +519,11 @@ tangled back and forth among the trees, with four tangles in order where the chi
 upward sweep), circle the coils up off a broken birch (updraft circles, the column anchored at the wrap, the swirl
 invitation), draw a slipped loop sideways off the upturned limb of a fallen birch, then draw the bow outward off a low
 limb. Partial progress holds; the breeze cannot solve them. Released lengths fall and settle as cloth (`ScarfCloth`).
-Freed, the scarf draws along its length into the boat (`tuning.birches.scarf.gatherSeconds`) and becomes the red sail
-for the rest of the voyage. Under the canopy a stroke's wind lands no further than the shot's distance plus a reach
+The drawn gesture for a tangle waits until she has come to it and stands facing it (`BirchScarf.faced`), never while
+she is still walking up. Freed, the scarf draws along its length into the boat and becomes the red sail for the rest of
+the voyage. It reels in like a tape measure (`gatherSeconds` 10, `gatherPace`): it starts to run as the bow slips,
+unhurried while the bow falls and the lens draws back, gathers pace through the lengths behind her, and comes to rest
+at the mast as the sail fills from the arriving wool, so no row ever jumps and nobody waits on the far tail. Under the canopy a stroke's wind lands no further than the shot's distance plus a reach
 (`pointerReach`; `docs/contracts/wind.md`), so strokes at the trees or circles round the wool never flatten the next
 round's heaps.
 
@@ -528,7 +535,9 @@ with strokes along its arc exactly as in the drowned village (`SwingCrossing`, `
 `tuning.birches.swing.ride`), and at the top of a forward swing that will carry her she lets go, flies over the bole and
 lands on her feet in the leaves beyond with a laugh. If the player stops she waits on the swing, the drawn push along its
 arc offered after 5 s. The squirrel watches from the swing tree's trunk and runs on along the bole's top ahead of them;
-the cygnet flutters up onto the bole and hops down after her. Her walk, her fetching and the plane all keep to her side
+the cygnet flutters up onto the bole, losing a few feathers as it beats up over it, as on the sleeping island's bank
+(`flutterFeathers`), and hops down after her; she looks back at it coming, holding the lens a moment (under a second,
+`featherWait`) so the feathers fall in the frame before it turns to the next tangle. Her walk, her fetching and the plane all keep to her side
 of it (`southOfFallen`, the plane's `playEdge`).
 
 **Music.** "The Red Door Opens" (`assets/music/red_door.ogg`) plays from the approach crossing through boarding and
@@ -538,7 +547,9 @@ come between the two songs. Timings: `docs/contracts/audio.md` "Birches".
 
 Rulings: the leaves must not behave like grass; the room should be fun, and the cygnet's play is its own, not a
 scripted beat. The scarf reads as tangled wool, not a ribbon; every support is physical (no knot floating in the air);
-the wrapped trunk needs circling; the draw-in into the boat is unhurried. One corridor, never branched: "I do like the
+the wrapped trunk needs circling; the draw-in into the boat starts unhurried and never keeps the player waiting: "we
+need a clever way to "shorten" it so that the player doesn't have to wait so much for all the scarf behind her to reel
+in first". One corridor, never branched: "I do like the
 look of how the birches island is set up already as sort of this one corridor instead of zig zag paths everywhere like
 in the other chapters." The island's look is kept or lifted: "try to preserve or even uplift the aesthetics of the
 island with the swirling leaves and the golden light etc." The sails from the meadow and to the stairs are

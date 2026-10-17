@@ -105,7 +105,7 @@ const surfaceJitter = (seconds) => {
   return { meanMm: mm(all.reduce((s, v) => s + v, 0) / all.length), p95FrameMm: mm(all[Math.floor(all.length * .95)]), maxFrameMm: mm(all[all.length - 1]) };
 };
 const { tuning } = await import(path.join(root, 'src/tuning.ts'));
-const gatherDrawn = () => { const x = Math.min(1, scarf.gathering / tuning.birches.scarf.gatherSeconds); return x * x * x * (x * (x * 6 - 15) + 10); };
+const gatherDrawn = () => { const k = tuning.birches.scarf, x = Math.min(1, scarf.gathering / k.gatherSeconds) ** k.gatherPace; return x * x * x * (x * (x * 6 - 15) + 10); };
 const jitterTied = jitter(8);
 const result = { root, jitter: { tied: jitterTied }, tied: { meanVerticalSway: +(tiedSway.reduce((s, v) => s + v, 0) / tiedSway.length).toFixed(4), maxVerticalSway: +Math.max(...tiedSway).toFixed(4) } };
 

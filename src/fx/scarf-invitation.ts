@@ -22,7 +22,7 @@ export class ScarfInvitation {
   update(dt: number, camera: THREE.Camera, world: AutumnBirches | null): void {
     const scarf = world?.scarf;
     const snag = scarf?.snags[scarf.active];
-    const key = snag && !snag.freed && snag.target < 1 ? scarf!.active : -1;
+    const key = snag && scarf!.faced && !snag.freed && snag.target < 1 ? scarf!.active : -1;
     this.gesture.hide(); this.coax = null;
     if (key !== this.key) { this.key = key; this.elapsed = 0; this.alpha = 0; }
     if (key < 0 || !world) return;

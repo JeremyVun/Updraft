@@ -704,6 +704,12 @@ export class Cygnet {
     this.perch(at, yaw);
   }
 
+  /** `count` feathers, `size` times a startle's, come loose at the effort of a scramble, flung back the way it came. */
+  shed(count: number, size = 0.6): void {
+    this.nodes[BODY].getWorldPosition(this.tmp);
+    this.looseDown.burst(this.tmp, this.yaw + Math.PI, count, 0.45, size);
+  }
+
   /**
    * Up a bank too high to hop, on one good wing: a crouch and a spring, its chest onto the lip with its feet pedalling
    * at the face, a heave over on its breast and a stumble onto its feet on top. `lip` is the top of the bank's edge,
@@ -781,8 +787,7 @@ export class Cygnet {
       this.pitch = ease(this.pitch, -0.95 - 0.12 * Math.sin(this.time * 7), 9, dt);
       this.roll = ease(this.roll, 0.2 + 0.12 * Math.sin(this.time * 9), 7, dt);
       if (k > 0.45 && this.clamberShed > 0) {
-        this.nodes[BODY].getWorldPosition(this.tmp);
-        this.looseDown.burst(this.tmp, this.yaw + Math.PI, this.clamberShed, 0.45, 0.6);
+        this.shed(this.clamberShed);
         this.clamberShed = 0;
       }
     } else if (fails) {
