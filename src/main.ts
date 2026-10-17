@@ -1180,7 +1180,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
   if (QA && params.whale) whaleForQa();
   sealife.update(dt, time);
-  crossingLinen.update(dt, story.current.stillCrossingTime, boat.position, boat.yaw, sound.output);
+  crossingLinen.update(dt, story.current.stillCrossingTime, boat.position, boat.yaw, sound.output,
+    story.name === 'toLines' || story.name === 'lines');
   skyMirror.update(dt, time, child.position);
   water.step(dt);
 }

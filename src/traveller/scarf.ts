@@ -109,7 +109,9 @@ export class Scarf {
   /** The child's velocity over the ground, smoothed of the bob in their stride. */
   private readonly carried = new THREE.Vector3();
   private readonly gust = new THREE.Vector3();
-  private gustAngle = 0;
+  /** The way the ends stream between them, in the child's frame: round from their own splay toward a gust's way. */
+  private gustAngle: number;
+  private readonly splay: number;
   private readonly lastAnchor = new THREE.Vector3();
   private anchored = false;
   private lastStep = STEP;
@@ -134,6 +136,8 @@ export class Scarf {
       end(15, 0.1, new THREE.Vector3(0.03, -0.02, 0.01), 0.75, 1, 0),
       end(10, 0.1, new THREE.Vector3(-0.035, 0.005, 0.025), 1.05, 0.55, 2.1),
     ];
+    this.splay = this.ends.reduce((sum, e) => sum + e.splay, 0) / this.ends.length;
+    this.gustAngle = this.splay;
     let verts = 0;
     for (const e of this.ends) {
       e.offset = verts;
@@ -207,7 +211,7 @@ export class Scarf {
     this.lastAnchor.copy(anchor);
     this.carried.set(0, 0, 0);
     this.gust.set(0, 0, 0);
-    this.gustAngle = 0;
+    this.gustAngle = this.splay;
     this.anchored = true;
   }
 
@@ -261,9 +265,12 @@ export class Scarf {
     const gustBack = Math.max(0, -(this.gust.x * sin + this.gust.z * cos));
     const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain, k.gustMost);
     const takeover = Math.min(1, felt / k.gustTakeover);
-    /** Heavy wool comes round to a new way slowly, rather than cracking across behind the child as a gust veers. */
-    this.gustAngle += (Math.atan2(gustLeft, gustBack) - this.gustAngle) * (1 - Math.exp(-span * k.gustTurn));
-    const gustAngle = this.gustAngle;
+    /**
+     * Heavy wool comes round to a new way slowly, rather than cracking across behind the child as a gust veers. It
+     * comes round from where the ends are, so a gust arriving takes them from there, not from where the last one left.
+     */
+    const toward = THREE.MathUtils.lerp(this.splay, Math.atan2(gustLeft, gustBack), takeover);
+    this.gustAngle += (toward - this.gustAngle) * (1 - Math.exp(-span * k.gustTurn));
     const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
     const steps = Math.max(1, Math.ceil(span / STEP - 1e-3));
     const h = span / steps;
@@ -274,16 +281,14 @@ export class Scarf {
       /**
        * The air past the child that the end streams on, in their frame: the breeze, out behind and round toward the
        * knot's side, and the air of their going, a little straighter behind, so seen from behind the ends still reach
-       * out past the bag. A gust swings it round to its own way and never weakens it, so the ends follow a gust
-       * rather than falling slack where it meets the breeze.
+       * out past the bag. A gust swings the breeze round to its own way and never weakens it, so the ends follow a
+       * gust rather than falling slack where it meets the breeze. The air of their going still adds to it: a gust
+       * bends the stream behind a child sailing past, it does not whip it round to the gust's way and back.
        */
-      const left = Math.sin(e.splay) * breeze + Math.sin(e.splay * 0.65) * pace;
-      const back = Math.cos(e.splay) * breeze + Math.cos(e.splay * 0.65) * pace;
-      const own = Math.hypot(left, back);
-      const angle = THREE.MathUtils.lerp(Math.atan2(left, back), gustAngle, takeover);
-      const strength = THREE.MathUtils.lerp(own, Math.max(felt, own), takeover);
-      const bx = Math.sin(angle) * strength;
-      const bz = -Math.cos(angle) * strength;
+      const angle = this.gustAngle + (e.splay - this.splay) * (1 - takeover);
+      const strength = THREE.MathUtils.lerp(breeze, Math.max(felt, breeze), takeover);
+      const bx = Math.sin(angle) * strength + Math.sin(e.splay * 0.65) * pace;
+      const bz = -Math.cos(angle) * strength - Math.cos(e.splay * 0.65) * pace;
       const flowX = bx * cos + bz * sin;
       const flowZ = bz * cos - bx * sin;
       const flow = Math.hypot(flowX, flowZ);
