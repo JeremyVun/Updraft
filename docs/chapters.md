@@ -350,17 +350,18 @@ ordinary sweep passes over them on screen they rise, lift their heads and open w
 bed from close behind her so each sweep's track shows across it and the woken part spreads; about two passes wake a
 flower, and the invitation only points at sleepers inside the lens. Once three quarters of the bed is up
 the last sleepers rise with it and petals lift off the whole bed, and that is the end of it. They walk together to
-seed heads farther through the fold, framed against the far slope. Sweeps only stir the heads; circling winds an
+seed heads farther through the fold, the lens opening onto the hills and sky as they go (`cameraOpen*`) and
+settling back over the last stretch into the seeds' own view, framed against the far slope. Sweeps only stir the heads; circling winds an
 updraft (the spiral invitation shows it) whose column draws the down off them, round and up. Lifted down never
 sinks back: unwound it hangs over the heads, and once it is all up the column carries it out over the top to drift
 away over the island, away from the lens and off the pond's side. She stands and watches it go: the lens lifts its
 gaze after the cloud and holds on it as it thins, keeping her and the cygnet at the foot of the frame, and comes back
-to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). The lens comes down in front of the pair as they
-walk on together toward it, the hill they came from behind them, and holds them there for a final listening pause
-(`cameraListenBearing`): the real swan call comes from beyond the frame, the cygnet's head comes up and she turns
-toward it, then gathers the cygnet into the satchel. She walks on past the lens, which turns after her and comes round
-behind her as she starts down (`departure*`); the pond and the family come into the edge of the frame as she reaches
-the crest, and once she stops there the lens turns from her onto the water (`tuning.crest.revealFor`). Neither play makes a note; ambient wind and idle time complete neither.
+to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). As the pair walk on together toward the pond the
+lens comes slowly round behind them, looking the way they are going, and stands behind her right shoulder for a
+final listening pause (`cameraListenBearing`): the real swan call comes from beyond the right of the frame, the water
+still out of it, the cygnet's head comes up and she turns toward it, then gathers the cygnet into the satchel. As she
+walks on the lens follows round behind her onto her line to the water (`departure*`); the pond and the family come
+into the edge of the frame as she nears the crest, and once she stops there the lens turns from her onto the water (`tuning.crest.revealFor`). Neither play makes a note; ambient wind and idle time complete neither.
 `world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`;
 `?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
 walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.
