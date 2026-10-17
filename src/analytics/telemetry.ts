@@ -17,7 +17,7 @@ const client = new Analytics({
   beatIntervalMs: 0,
 });
 const build = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'development';
-const environment = QA ? 'qa' : 'production';
+const environment = QA || build.endsWith('-dirty') ? 'qa' : 'production';
 const chapters: Record<ChapterName, true> = {
   island: true, toLines: true, lines: true, toBoats: true, boats: true, toMeadow: true, meadow: true,
   toBirches: true, birches: true, toStairs: true, stairs: true, drowned: true, toWood: true, wood: true,
@@ -48,23 +48,21 @@ export const telemetry = {
     chapter = name;
     count('chapter_entered');
   },
-  quality(name: QualityLevelName, ratio: number, samples: number): void {
+  quality(name: QualityLevelName): void {
     const direction = level === 'unknown' ? 'initial' : 'changed';
     this.performance();
     level = name;
-    count('quality_changed', { level, scale: band(ratio,[.8,1,1.3,1.8],['under_0_8','0_8_1','1_1_3','1_3_1_8','1_8_plus']), samples: String(samples), direction });
+    count('quality_changed', { level, direction });
   },
   frame(intervalMs: number): void {
     if (!started || !client.enabled() || document.hidden || !Number.isFinite(intervalMs) || intervalMs <= 0) return;
     elapsed += intervalMs; frames++; if (intervalMs > 50) hitches++;
-    if (elapsed >= 60000) this.performance();
   },
   performance(): void {
     if (elapsed >= 10000 && frames) {
       const fps = band(frames * 1000 / elapsed,[25,40,55],['under_25','25_39','40_54','55_plus']);
       count('performance_sampled', {
-        fps, hitches: band(hitches,[1,6],['0','1_5','6_plus']), level,
-        'chapter.level': `${chapter}.${level}`, 'chapter.fps': `${chapter}.${fps}`, 'level.fps': `${level}.${fps}`,
+        fps, hitches: band(hitches,[1,6],['0','1_5','6_plus']), 'chapter.fps': `${chapter}.${fps}`, 'level.fps': `${level}.${fps}`,
       });
     }
     elapsed = frames = hitches = 0;

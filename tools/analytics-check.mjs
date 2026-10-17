@@ -33,7 +33,9 @@ const source=fs.readFileSync('src/analytics/telemetry.ts','utf8')
 globalThis.testQa=false;
 const {telemetry:t}=await load('telemetry.ts',source);
 t.loadingFinished(2300,933);t.start('island',false);t.start('island',false);t.chapter('island');t.chapter('lines');
-t.quality('high',1.25,2);for(let i=0;i<3601;i++)t.frame(1000/60);t.quality('low',.72,2);
+t.quality('high');for(let i=0;i<7201;i++)t.frame(1000/60);
+assert.equal(recorded.filter(e=>e.t==='performance_sampled').length,0);
+t.quality('low');
 t.failure('runtime',new TypeError('secret email user@example.invalid'));t.failure('runtime',new TypeError('another error'));
 t.complete();t.complete();t.flush();
 assert.equal(recorded.filter(e=>e.t==='game_started').length,1);
@@ -43,18 +45,20 @@ assert.equal(recorded.filter(e=>e.t==='game_failed').length,1);
 assert.equal(recorded.find(e=>e.t==='loading_finished').d.stall,'500ms_plus');
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d.fps,'55_plus');
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d['chapter.fps'],'lines.55_plus');
-assert.equal(recorded.find(e=>e.t==='performance_sampled').d.level,'high');
-assert.equal(recorded.find(e=>e.t==='performance_sampled').d['chapter.level'],'lines.high');
 assert.equal(recorded.find(e=>e.t==='performance_sampled').d['level.fps'],'high.55_plus');
-assert.deepEqual(recorded.filter(e=>e.t==='quality_changed').map(e=>[e.d.level,e.d.scale,e.d.samples,e.d.direction]),[['high','1_1_3','2','initial'],['low','under_0_8','2','changed']]);
+assert.deepEqual(recorded.filter(e=>e.t==='quality_changed').map(e=>[e.d.level,e.d.direction]),[['high','initial'],['low','changed']]);
+assert.equal(recorded[0].d.environment,'production');
 assert(!JSON.stringify(recorded).includes('secret'));assert(!JSON.stringify(recorded).includes('@'));
-const expected=new Set(['build','environment','chapter','duration','stall','mode','level','scale','samples','direction','fps','hitches','chapter.level','chapter.fps','level.fps','phase','kind']);
+const expected=new Set(['build','environment','chapter','duration','stall','mode','level','direction','fps','hitches','chapter.fps','level.fps','phase','kind']);
 for(const event of recorded) {assert(Object.keys(event.d).every(k=>expected.has(k)));assert(Object.values(event.d).every(v=>v.length<=64));}
 for (const search of ['?shot&chapter=stage', '?shot&chapter=stage&analytics=1', '?analytics=0']) {
   location.search=search;
   const {telemetry:production}=await load('telemetry-production.ts',source+'\n// '+search);
   assert.equal(production.enabled(), !search.endsWith('analytics=0'));
 }
+location.search='';const dirtyAt=recorded.length;
+const {telemetry:dirty}=await load('telemetry-dirty.ts',source.replace("'test-build'","'test-build-dirty'"));
+dirty.start('island',false);assert.equal(recorded[dirtyAt].d.environment,'qa');
 globalThis.testQa=true;
 location.search='?shot';const before=recorded.length;
 const {telemetry:qa}=await load('telemetry-qa.ts',source+'\n// qa');qa.start('island',false);assert.equal(recorded.length,before);
@@ -85,4 +89,4 @@ for(const direct of [false,true]){
   stairs.performance();stairs.failure('runtime',new TypeError());
   assert.deepEqual(recorded.slice(from).map(e=>[e.t,e.d.chapter]),[['performance_sampled','stairs'],['game_failed','stairs']]);
 }
-console.log('Analytics transport, privacy, lifecycle, QA isolation, every chapter and stairs attribution passed.');
+console.log('Analytics transport, privacy, lifecycle, QA isolation, dirty builds, every chapter and stairs attribution passed.');

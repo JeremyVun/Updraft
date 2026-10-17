@@ -530,7 +530,7 @@ const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, wind
   pixelRatio = level.ratio;
   post.samples = level.samples;
   applyWorldQuality(level);
-  telemetry.quality(level.name, level.ratio, level.samples);
+  telemetry.quality(level.name);
   if (resizeTargets) resize();
 }, controls.qualityMode, coarsePointer ? 1.25 : maxPixelRatio);
 function applyWorldQuality(level: QualityLevel, immediate = false): void {
@@ -1598,7 +1598,7 @@ async function play(resumed: boolean): Promise<void> {
     playing = true;
     syncMusicLoading();
     telemetry.start(story.name, resumed, !!story.current.finished);
-    telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
+    telemetry.quality(quality.level.name);
     last = performance.now();
     pacer.reset(last);
     quality.reset(last);
