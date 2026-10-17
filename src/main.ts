@@ -1,5 +1,6 @@
 import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, journeyReveal, type Room } from './world/journey-rooms';
 import { LittleBoats } from './world/little-boats';
+import { boatsWaterBase } from './world/little-boats-layout';
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
 import { StillGestures } from './audio/still-gestures';
@@ -106,7 +107,7 @@ import { TerrainHeights } from './world/terrain-heights';
 import { Cottage } from './world/cottage';
 import { createJetty } from './world/jetty';
 import { createHomeToy } from './world/home-toy';
-import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
+import { COTTAGE, ISLES, meadowPoint, POND_LEVEL, pondOut } from './world/heightfield';
 import { SKY_MIRROR } from './world/sky-mirror-layout';
 import { Pond } from './world/pond';
 import { Feather } from './fx/feather';
@@ -1055,7 +1056,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     soundState.pan = THREE.MathUtils.clamp(frontNdc.copy(gustFront.at).project(rig.camera).x, -1, 1);
   }
   soundState.charge = input.charge;
-  soundState.overLand = heightAt(input.world.x, input.world.z) > 0.5;
+  // The boats' pools and the meadow pond lie well above the sea; wind over them must not rustle like grass.
+  const waterUnder = Math.max(0, boatsWaterBase(input.world.x, input.world.z), pondOut(input.world.x, input.world.z) < 1 ? POND_LEVEL : 0);
+  soundState.overLand = heightAt(input.world.x, input.world.z) > waterUnder + 0.5;
   /** The wind where the story is, not where it started: the rooms past the first island are most of the game. */
   const b = wind.sample(story.focus.x, story.focus.z, breezeSample);
   soundState.breeze = Math.min(1, Math.hypot(b.x, b.z) / 6);
