@@ -1041,7 +1041,7 @@ export class Cygnet {
       this.tucked = ease(this.tucked, 1, 4, dt);
     } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
-    else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
+    else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind);
     else if (this.state === 'following' && this.clambering) this.clamberStep(dt);
     else if (this.state === 'following' && this.seating.move?.kind === 'dash' && this.stay) {
       // A brief scrambling flutter; ground locomotion cannot move the landing beneath it.
@@ -1316,7 +1316,7 @@ export class Cygnet {
    * The cygnet on the wing, for as long as the player can hold it there. It is not flying — it is being flown, and
    * the moment the updraft stops it sinks. This is where a player finds out they are the reason it can go home.
    */
-  private soar(dt: number, wind: WindSample, child: THREE.Vector3): void {
+  private soar(dt: number, wind: WindSample): void {
     this.glideT += dt;
     const afloat = this.water && this.water.over(this.position.x, this.position.z) ? this.water.level : null;
     const ground = afloat ?? Math.max(this.ground(this.position.x, this.position.z), 0);
@@ -1513,13 +1513,12 @@ export class Cygnet {
   }
 
   private walk(dt: number, child: THREE.Vector3): void {
-    const ground = Math.max(this.ground(this.position.x, this.position.z), 0);
     if (this.debug.stand) {
-      this.position.y = ground;
+      this.position.y = Math.max(this.ground(this.position.x, this.position.z), 0);
       return;
     }
     if (this.hopT > 0) {
-      this.hopping(dt, ground);
+      this.hopping(dt);
       return;
     }
     if (this.landing > 0) {
@@ -1705,7 +1704,7 @@ export class Cygnet {
   }
 
   /** A crouch and a look up, then everything it has straight up, three times, and a stumble when it comes down. */
-  private hopping(dt: number, ground: number): void {
+  private hopping(dt: number): void {
     this.hopT -= dt;
     const t = HOP_FOR - this.hopT;
     let hop = 0;

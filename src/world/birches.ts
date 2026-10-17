@@ -212,16 +212,14 @@ interface Seg {
 }
 
 interface Birch {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  yaw: number;
-  variant: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly scale: number;
+  readonly yaw: number;
+  readonly variant: number;
   /** How much of its gold is gone, 0 to 1. It only ever rises. */
   strip: number;
-  /** How much of it is in the air right now: what the last few seconds took off, decaying as that lands. */
-  shed: number;
 }
 
 /** The tree's own frame, read once from the tree table and used by everything drawn on it. */
@@ -229,11 +227,9 @@ const BIRCH_TREE_GLSL = /* glsl */ `
 uniform sampler2D uTrees;
 vec4 birchT;
 vec4 birchS;
-vec4 birchF;
 void rootBirch(int i) {
   birchT = texelFetch(uTrees, ivec2(i, 0), 0);
   birchS = texelFetch(uTrees, ivec2(i, 1), 0);
-  birchF = texelFetch(uTrees, ivec2(i, 2), 0);
 }
 /**
  * A point on the unit tree put where the tree stands, and bent by the air at its foot. A birch is a whip: it
@@ -932,8 +928,12 @@ export class AutumnBirches {
     this.scarf.setTrees(this.trees, settleScarf);
 
     const width = Math.max(this.trees.length, 1);
-    this.table = new Float32Array(width * 3 * 4);
-    this.treeTex = new THREE.DataTexture(this.table, width, 3, THREE.RGBAFormat, THREE.FloatType);
+    this.table = new Float32Array(width * 2 * 4);
+    this.treeTex = new THREE.DataTexture(this.table, width, 2, THREE.RGBAFormat, THREE.FloatType);
+    this.trees.forEach((t, i) => {
+      this.table.set([t.x, t.y, t.z, t.scale], i * 4);
+      this.table.set([Math.cos(t.yaw), Math.sin(t.yaw), t.strip, (i * 0.618034) % 1], (width + i) * 4);
+    });
     this.treeTex.needsUpdate = true;
     this.litterCover = this.litterSeed(rand);
     this.litter = new LitterField(renderer, this.litterCover, this.wade, BIRCH_PILES);
@@ -945,9 +945,8 @@ export class AutumnBirches {
       uWade: { value: this.wade },
       uBurrow: { value: this.burrowing },
     };
-    this.writeTable();
 
-    /** One draw call per shape of tree; every tree of that shape is an instance of it. */
+    /** Trunks, then crowns, draw before the ground and sea they cover. One draw call per shape of tree. */
     variants.forEach((variant, v) => {
       const mine = this.trees.filter((t) => t.variant === v);
       if (!mine.length) return;
@@ -960,6 +959,7 @@ export class AutumnBirches {
       geo.instanceCount = mine.length;
       geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(ISLE.x, 10, ISLE.z), 200);
       const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: TRUNK_VERT, fragmentShader: TRUNK_FRAG, uniforms: shared }));
+      mesh.renderOrder = -2;
       mesh.frustumCulled = false;
       this.objects.push(mesh);
     });
@@ -1352,7 +1352,7 @@ export class AutumnBirches {
         const yaw = rand() * 6.2831, variant = Math.floor(rand() * 4);
         const { x, z } = birchesAt(lx, lz), y = heightAt(x, z);
         if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242) || nearBank(x, z) || nearFallen(x, z)) continue;
-        this.trees.push({ x, y: y - 0.25, z, scale, yaw, variant, strip: 0, shed: 0 });
+        this.trees.push({ x, y: y - 0.25, z, scale, yaw, variant, strip: 0 });
       }
     }
     BIRCHES_CUTS.forEach((cut, gap) => {
@@ -1369,34 +1369,37 @@ export class AutumnBirches {
             || nearBank(x, z) || inHeap(x, z) || inRoundView(x, z) || nearFallen(x, z)) continue;
           const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
           const scale = (12 + draw() * 6) * (0.6 + 0.4 * shelter);
-          this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0, shed: 0 });
+          this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0 });
         }
       }
     });
     for (const s of SCARF_SNAGS) {
       if (s.kind === 'unwind' || s.kind === 'pull') continue;
-      this.trees.push({ x: s.treeX, y: heightAt(s.treeX, s.treeZ) - 0.25, z: s.treeZ, scale: 16, yaw: 0.4, variant: 1, strip: 0, shed: 0 });
+      this.trees.push({ x: s.treeX, y: heightAt(s.treeX, s.treeZ) - 0.25, z: s.treeZ, scale: 16, yaw: 0.4, variant: 1, strip: 0 });
     }
     for (const s of SCARF_PERCHES) {
       this.trees.push({ x: s.x, y: heightAt(s.x, s.z) - 0.25, z: s.z, scale: 15 + s.h * .2,
-        yaw: birchesLocal(s.x, s.z).x * .4, variant: 1, strip: 0, shed: 0 });
+        yaw: birchesLocal(s.x, s.z).x * .4, variant: 1, strip: 0 });
     }
     for (const b of BANKS) {
-      this.trees.push({ x: b.x, y: heightAt(b.x, b.z) - 0.25, z: b.z, scale: b.scale, yaw: birchesLocal(b.x, b.z).x * .7, variant: b.variant, strip: 0, shed: 0 });
+      this.trees.push({ x: b.x, y: heightAt(b.x, b.z) - 0.25, z: b.z, scale: b.scale, yaw: birchesLocal(b.x, b.z).x * .7, variant: b.variant, strip: 0 });
     }
     /** Keep the swing tree last: the rope's pivot is read from this exact tree. */
     const y = heightAt(SWING_TREE.x, SWING_TREE.y);
-    this.trees.push({ x: SWING_TREE.x, y: y - 0.3, z: SWING_TREE.y, scale: SWING_SCALE, yaw: 0, variant: 4, strip: 0, shed: 0 });
+    this.trees.push({ x: SWING_TREE.x, y: y - 0.3, z: SWING_TREE.y, scale: SWING_SCALE, yaw: 0, variant: 4, strip: 0 });
   }
 
-  private writeTable(): void {
+  /** Only the stripped fraction changes after construction; upload the table only when it has. */
+  private writeStrip(): void {
     const n = this.trees.length;
-    this.trees.forEach((t, i) => {
-      this.table.set([t.x, t.y, t.z, t.scale], i * 4);
-      this.table.set([Math.cos(t.yaw), Math.sin(t.yaw), t.strip, (i * 0.618034) % 1], (n + i) * 4);
-      this.table.set([t.shed, 0, 0, 0], (n * 2 + i) * 4);
-    });
-    this.treeTex.needsUpdate = true;
+    let changed = false;
+    for (let i = 0; i < n; i++) {
+      const at = (n + i) * 4 + 2, strip = Math.fround(this.trees[i].strip);
+      if (this.table[at] === strip) continue;
+      this.table[at] = strip;
+      changed = true;
+    }
+    if (changed) this.treeTex.needsUpdate = true;
   }
 
   /** Gold hung on the twig ends: one card is a handful of leaves, and a tree loses them one at a time. */
@@ -1442,6 +1445,7 @@ export class AutumnBirches {
         alphaToCoverage: true,
       }),
     );
+    mesh.renderOrder = -1;
     mesh.frustumCulled = false;
     return mesh;
   }
@@ -1707,19 +1711,15 @@ export class AutumnBirches {
     if (!near) return;
 
     const { stripRate, stripTrickle, gripSpeed, stripSpeed } = tuning.birches;
-    const land = Math.exp(-dt / SHED_FLIGHT);
     for (const tree of this.trees) {
-      tree.shed *= land;
       if (tree.strip >= 0.985) continue;
       const w = this.wind.sample(tree.x, tree.z, this.air);
       const speed = Math.hypot(w.x, w.z);
       const gust = Math.min(1, w.energy * 0.85) + Math.min(1, Math.max(0, (speed - gripSpeed) / (stripSpeed - gripSpeed)));
       const shaken = tree.variant === 4 ? this.shaking * 0.06 : 0;
-      const was = tree.strip;
       tree.strip = Math.min(0.985, tree.strip + (stripTrickle + shaken + stripRate * gust) * dt);
-      tree.shed += tree.strip - was;
     }
-    this.writeTable();
+    this.writeStrip();
     this.canopyMotion.update(dt);
 
     if (walker) {

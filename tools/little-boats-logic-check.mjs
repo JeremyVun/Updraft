@@ -47,12 +47,12 @@ function look(at) {
   eye.updateMatrixWorld();
 }
 /** A stroke across `at` on screen, `angle` radians anticlockwise from the right. */
-function strokeAcross(room, at, angle, dt) {
+function strokeAcross(room, at, angle) {
   look(at);
   const c = at.clone().project(eye), dx = Math.cos(angle) / eye.aspect * 0.01, dy = Math.sin(angle) * 0.01;
   hand.prevNdc.set(c.x - dx, c.y - dy);
   hand.ndc.set(c.x + dx, c.y + dy);
-  room.drain.brush(eye, hand, room.toys[0].s, dt);
+  room.drain.brush(eye, hand);
 }
 function circleOver(room, at, dt) {
   hand.charge = 1;
@@ -66,7 +66,7 @@ function helpOut(room, dt) {
   if (waiting === d.bathAt) {
     look(d.bathAt);
     d.aim(eye);
-    strokeAcross(room, d.bathAt, d.pushAngle, dt);
+    strokeAcross(room, d.bathAt, d.pushAngle);
   } else if (waiting === d.plugAt) circleOver(room, d.plugRest, dt);
 }
 function fixture(fps = 60, portrait = false) {
@@ -522,7 +522,7 @@ for (const fps of [30, 60, 120]) {
   for (let i = 0; i < 60 * 5; i++) {
     look(d.bathAt);
     d.aim(eye);
-    strokeAcross(f.room, d.bathAt, d.pushAngle + Math.PI, 1 / 60);
+    strokeAcross(f.room, d.bathAt, d.pushAngle + Math.PI);
     f.step();
   }
   assert.equal(d.rise, 0, 'a push away from the stream never pours the bath');
@@ -533,7 +533,7 @@ for (const fps of [30, 60, 120]) {
   for (let i = 0; i < 60 * 90 && d.waiting(f.room.toys[0].s) !== d.plugAt; i++) f.step();
   assert.equal(d.waiting(f.room.toys[0].s), d.plugAt, 'the fleet waits at the plug');
   for (let i = 0; i < 60 * 10; i++) {
-    strokeAcross(f.room, d.plugAt, (i % 120) < 60 ? 0 : Math.PI, 1 / 60);
+    strokeAcross(f.room, d.plugAt, (i % 120) < 60 ? 0 : Math.PI);
     f.step();
   }
   assert(d.loose === 0 && !d.pulled, `gusts across the plug never loosen it: ${d.loose}`);

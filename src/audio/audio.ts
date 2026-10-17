@@ -508,6 +508,22 @@ export class Soundscape {
     const ctx = new AudioContext();
     this.ctx = ctx;
     this.realtime = ctx instanceof AudioContext;
+    try {
+      this.buildGraph(ctx);
+      this.syncPlayback();
+    } catch (error) {
+      this.ctx = null;
+      this.realtime = false;
+      this.graph = null;
+      this.noiseWork = null;
+      this.noiseInputs = [];
+      this.synthesis.length = this.padVoices.length = 0;
+      void ctx.close().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private buildGraph(ctx: AudioContext): void {
     ctx.addEventListener('statechange', () => {
       if (ctx.state === 'running' ? this.hidden || this.muted : this.interrupted) this.syncPlayback();
     });
@@ -600,7 +616,6 @@ export class Soundscape {
     }
     this.graph = { ctx, bus: this.master, reverb: this.reverb };
     meadowMusic.attach(ctx, this.master, this.backgroundDry);
-    this.syncPlayback();
   }
 
   /** The impulse, then the convolver's analysis of it (10–30 ms on a desktop) on a frame of its own. */

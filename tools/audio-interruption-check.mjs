@@ -20,6 +20,28 @@ try {
     const { foghornParts } = await productionModule('/src/audio/foghorn.ts');
     const { Soundscape, PianoStrings } = audioModule;
 
+    for (const [method, failAt] of [['createGain', 1], ['createOscillator', 4]]) {
+      const original = AudioContext.prototype[method];
+      let calls = 0, failedContext, failure;
+      AudioContext.prototype[method] = function (...args) {
+        if (++calls === failAt) { failedContext = this; throw new Error('injected audio graph failure'); }
+        return original.apply(this, args);
+      };
+      const failed = new Soundscape();
+      try { failed.start(); } catch (error) { failure = error; }
+      finally { AudioContext.prototype[method] = original; }
+      check(failure?.message === 'injected audio graph failure', `${method}: graph creation fault reached`);
+      failed.setMuted(true);
+      check(!failed.running && failed.output === null, `${method}: failed graph can be muted safely`);
+      await settle(() => failedContext.state === 'closed', `${method}: partial context is closed`);
+      check(failed.synthesis.length === 0 && failed.noiseInputs.length === 0 && failed.padVoices.length === 0,
+        `${method}: partial graph work is discarded`);
+      failed.setMuted(false); failed.start();
+      await settle(() => failed.running && !!failed.output, `${method}: a later gesture can retry successfully`);
+      check(failed.padVoices.length === 4, `${method}: retry has exactly four pad voices`);
+      await failed.ctx.close();
+    }
+
     // A call or Siri suspends a visible, unmuted real-time context; the system refuses to resume until it ends.
     const sound = new Soundscape();
     sound.start();
