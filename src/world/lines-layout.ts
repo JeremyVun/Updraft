@@ -79,19 +79,29 @@ export function linesGrassCrop(x: number, z: number): number {
   return crop;
 }
 
-/** Same fixed, noise-edged patches in both grass render paths and CPU height queries. */
+/** How many clearings the shader walks; `uLinesClearings` in `gl/loops.ts` bounds its loop. */
+export const LINES_CLEARINGS = CLEARINGS.length;
+
+/**
+ * Same fixed, noise-edged patches in both grass render paths and CPU height queries. A table walked by a
+ * uniform-bounded loop: unrolled, every clearing's fbm was inlined and the grass table's first draw cost seconds on D3D11.
+ */
 export const LINES_GRASS_GLSL = /* glsl */ `
+uniform int uLinesClearings;
+const vec4 LINES_CLEARING_AT[${LINES_CLEARINGS}] = vec4[](${CLEARINGS.map(p =>
+  `vec4(${glsl(p.x)}, ${glsl(p.z)}, ${glsl(p.radius * 1.4)}, ${glsl(p.radius)})`).join(', ')});
+const float LINES_CLEARING_CROP[${LINES_CLEARINGS}] = float[](${CLEARINGS.map(p => glsl(p.crop ?? 0.6)).join(', ')});
 float linesGrassCrop(vec2 xz) {
   if (xz.x < ${glsl(BOUNDS.left)} || xz.x > ${glsl(BOUNDS.right)} || xz.y < ${glsl(BOUNDS.far)} || xz.y > ${glsl(BOUNDS.near)}) return 1.0;
   float crop = 1.0;
-  vec2 d;
-  float r;
-  ${CLEARINGS.map(p => `
-  d = xz - vec2(${glsl(p.x)}, ${glsl(p.z)});
-  if (length(d) < ${glsl(p.radius * 1.4)}) {
-    r = length(d) / ${glsl(p.radius)} * (0.78 + 0.5 * fbm(d * 0.22));
-    crop = min(crop, 1.0 - ${glsl(p.crop ?? 0.6)} * (1.0 - smoothstep(0.1, 1.05, r)));
-  }`).join('')}
+  for (int i = 0; i < uLinesClearings; i++) {
+    vec4 p = LINES_CLEARING_AT[i];
+    vec2 d = xz - p.xy;
+    if (length(d) < p.z) {
+      float r = length(d) / p.w * (0.78 + 0.5 * fbm(d * 0.22));
+      crop = min(crop, 1.0 - LINES_CLEARING_CROP[i] * (1.0 - smoothstep(0.1, 1.05, r)));
+    }
+  }
   return crop;
 }
 `;

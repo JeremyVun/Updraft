@@ -22,10 +22,16 @@ uniform vec2 uFogLookupProjection;
 vec2 fogLookupPixel(vec3 direction) {
   vec3 view = uFogLookupView * direction;
   vec2 uv = view.xy / max(-view.z, 0.00001) * uFogLookupProjection / ${glsl(FOG_GUARD)} * 0.5 + 0.5;
+  // A pixel's own sightline lies inside the guard band, so pixel shaders (three's prefix defines gl_FragDepthEXT
+  // only there) need no way round it, unless they fog other points (FOG_OFF_SCREEN); vertex shaders keep it.
+#if defined(gl_FragDepthEXT) && !defined(FOG_OFF_SCREEN)
+  return clamp(uv, 0.0, 1.0) * vec2(${glsl(FOG_VIEW.x - 1)}, ${glsl(FOG_VIEW.y - 1)}) + 0.5;
+#else
   if (view.z < 0.0 && all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0))))
     return uv * vec2(${glsl(FOG_VIEW.x - 1)}, ${glsl(FOG_VIEW.y - 1)}) + 0.5;
   uv = vec2(atan(direction.z, direction.x) / 6.28318530718 + 0.5, asin(clamp(direction.y, -1.0, 1.0)) / 3.14159265359 + 0.5);
   return uv * vec2(${glsl(FOG_SPHERE.x - 1)}, ${glsl(FOG_SPHERE.y - 1)}) + vec2(0.5, ${glsl(FOG_VIEW.y + 0.5)});
+#endif
 }
 vec2 fogLookupUv(vec2 pixel, float slice) {
   vec2 tile = vec2(mod(slice, ${FOG_TILES}.0), floor(slice / ${FOG_TILES}.0));

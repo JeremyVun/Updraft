@@ -53,8 +53,9 @@ try {
  report.bootSteps = await page.evaluate(() => window.__stats?.bootSteps);
  assert.equal(report.bootSteps?.counted, report.bootSteps?.expected, `world construction took ${report.bootSteps?.counted} steps; update BUILD_STEPS in src/main.ts`);
  report.noiseLoops = await page.evaluate(() => {
-   const gl=__game.renderer.getContext(), bad=[], checked={uNoiseOctaves:0,uHeightOctaves:0,uNoiseCorners:0,uGroundSamples:0};
-   for(const p of __game.renderer.info.programs)for(const [name,expected] of Object.entries({uNoiseOctaves:4,uHeightOctaves:6,uNoiseCorners:4,uGroundSamples:3})){
+   const bounds={uNoiseOctaves:4,uHeightOctaves:6,uNoiseCorners:4,uGroundSamples:3,uLinesClearings:62,uMistPasses:3,uSwellSamples:3,uHeightTests:17,uRosetteCells:4,uLichenScales:2,uShellScatters:3,uFormTaps:4};
+   const gl=__game.renderer.getContext(), bad=[], checked=Object.fromEntries(Object.keys(bounds).map(name=>[name,0]));
+   for(const p of __game.renderer.info.programs)for(const [name,expected] of Object.entries(bounds)){
      const location=gl.getUniformLocation(p.program,name);if(location===null)continue;
      checked[name]++;const actual=gl.getUniform(p.program,location);if(actual!==expected)bad.push({program:p.id,name,expected,actual});
    }

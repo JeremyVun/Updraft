@@ -171,6 +171,11 @@ uniform vec3 uEyeAt;
 uniform vec2 uGaze;
 uniform vec3 uSlap;
 uniform vec3 uShape;
+/** Loop bounds, fixed at 4, 2, 3 and 4: Windows compiles every unrolled call of a helper over again (gl/loops.ts). */
+uniform int uRosetteCells;
+uniform int uLichenScales;
+uniform int uShellScatters;
+uniform int uFormTaps;
 in vec3 vRest;
 in vec3 vRestNormal;
 in vec4 vRig;
@@ -242,13 +247,19 @@ vec3 shells(vec2 m, float where, float cell, float px) {
   return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, (0.78 + 0.2 * d.y - 0.12 * q) * (0.88 + 0.2 * hash12(id + 1.3)), under);
 }
 
+/** Each scatter of shells: its offset, its share of \`where\`, its cell size. */
+const vec4 SHELL_SCATTER[3] = vec4[](vec4(0.0, 0.0, 1.0, 0.62), vec4(0.13, 0.27, 0.9, 0.38), vec4(0.41, 0.07, 0.8, 0.22));
+
 /** Barnacles: three scatters of shells of their own sizes, so no grid shows; soft domes, never pits. */
 vec3 barnacles(vec2 m, float where, float px) {
-  vec3 a = shells(m, where, 0.62, px);
-  vec3 b = shells(m + vec2(0.13, 0.27), where * 0.9, 0.38, px);
-  vec3 c = shells(m + vec2(0.41, 0.07), where * 0.8, 0.22, px);
-  vec3 ab = a.x > b.x ? vec3(a.xy, max(a.z, b.z * (1.0 - a.x))) : vec3(b.xy, max(b.z, a.z * (1.0 - b.x)));
-  return ab.x > c.x ? vec3(ab.xy, max(ab.z, c.z * (1.0 - ab.x))) : vec3(c.xy, max(c.z, ab.z * (1.0 - c.x)));
+  // Starts below any shell's cover, so the first scatter is taken whole.
+  vec3 ab = vec3(-1.0, 0.0, 0.0);
+  for (int i = 0; i < uShellScatters; i++) {
+    vec4 k = SHELL_SCATTER[i];
+    vec3 c = shells(i == 0 ? m : m + k.xy, i == 0 ? where : where * k.z, k.w, px);
+    ab = ab.x > c.x ? vec3(ab.xy, max(ab.z, c.z * (1.0 - ab.x))) : vec3(c.xy, max(c.z, ab.z * (1.0 - c.x)));
+  }
+  return ab;
 }
 
 const vec2 SCAR_CELL = vec2(5.0, 2.6);
@@ -297,8 +308,15 @@ float rosette(vec2 m, vec2 id, float cell, float where, float px) {
 /** The strongest of the four rosettes round m in a scatter \`cell\` metres across. */
 float rosettes(vec2 m, float cell, float where, float px) {
   vec2 i0 = floor(m / cell - 0.5);
+#ifdef WHALE_GHOST
+  // The ghost keeps its rosettes written out: rolled, its flippers and flukes drew about 5% slower.
   return max(max(rosette(m, i0, cell, where, px), rosette(m, i0 + vec2(1.0, 0.0), cell, where, px)),
     max(rosette(m, i0 + vec2(0.0, 1.0), cell, where, px), rosette(m, i0 + vec2(1.0, 1.0), cell, where, px)));
+#else
+  float best = 0.0;
+  for (int i = 0; i < uRosetteCells; i++) best = max(best, rosette(m, i0 + vec2(float(i % 2), float(i / 2)), cell, where, px));
+  return best;
+#endif
 }
 
 /**
@@ -310,10 +328,20 @@ vec2 lichen(vec2 m, float cover, float px) {
   float colony = smoothstep(0.3, 0.75, vnoise(m * 0.2 + 41.0) * 0.7 + vnoise(m * 0.55 + 7.0) * 0.3 + cover - 0.3);
   float tone = vnoise(m * 0.4 + 17.0);
   if (colony <= 0.0) return vec2(0.0, tone);
-  float big = rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px);
-  float small = rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.3, px);
+#ifdef WHALE_GHOST
+  float near = max(rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px),
+    rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.3, px));
+#else
+  // The big rosettes, then the small ones among them.
+  float near = 0.0;
+  for (int i = 0; i < uLichenScales; i++) {
+    bool small = i == 1;
+    near = max(near, rosettes(small ? m + 0.31 : m, small ? 0.45 : 1.3, small ? colony * 0.75 + 0.1 * cover : colony * 0.9, px)
+      * shows(small ? 0.3 : 0.5, px));
+  }
+#endif
   float far = colony * 0.3 * (1.0 - shows(0.5, px));
-  return vec2(max(max(big, small), far), tone);
+  return vec2(max(near, far), tone);
 }
 
 struct Skin {
@@ -570,9 +598,14 @@ Skin skin(float far, float dry) {
     if (part == ${BODY}) {
       float d = 0.006;
       float fine = 1.0 - smoothstep(0.006, 0.02, fwidth(vRest.y) + fwidth(vRest.z));
-      float f0 = form(vRest, flank, fine);
-      k.slope = vec3(form(vRest + vec3(d, 0.0, 0.0), flank, fine) - f0, form(vRest + vec3(0.0, d, 0.0), flank, fine) - f0,
-        form(vRest + vec3(0.0, 0.0, d), flank, fine) - f0) / d;
+      // The form here, then a step along each axis.
+      float f0 = 0.0;
+      vec3 f1 = vec3(0.0);
+      for (int i = 0; i < uFormTaps; i++) {
+        float v = form(i == 0 ? vRest : vRest + vec3(i == 1 ? d : 0.0, i == 2 ? d : 0.0, i == 3 ? d : 0.0), flank, fine);
+        if (i == 0) f0 = v; else if (i == 1) f1.x = v; else if (i == 2) f1.y = v; else f1.z = v;
+      }
+      k.slope = (f1 - f0) / d;
     }
   } else if (part == ${FIN}) {
     // The back's own slate, a little paler beneath, along the knobs of its leading edge and in a few blotches toward
@@ -718,6 +751,11 @@ in vec3 vAxisX;
 in vec3 vAxisY;
 in vec3 vAxisZ;
 
+/** hazed() with the fog at world already found, so the gold line shares it. */
+vec3 hazedIn(vec3 col, vec3 world, float s, float filmed, vec4 fog) {
+  return lost(mix(mix(col, seaLook(world), hazeAt(world, s, filmed)), fog.rgb, fog.a), world);
+}
+
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
@@ -809,7 +847,8 @@ void main() {
 
   // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
   float filmed = float(part == ${BODY});
-  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)) * (1.0 - uLost), uPresence);
+  vec4 fog = fogOf(vWorld);
+  gl_FragColor = vec4(hazedIn(col, vWorld, vRig.x, filmed, fog) + gold * (1.0 - fog.a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)) * (1.0 - uLost), uPresence);
 }`;
 
 /** The submerged body seen through the sea: slid up its view ray to the surface, tinted and faded by the water. */
@@ -831,6 +870,7 @@ void main() {
 }`;
 
 export const GHOST_FRAG = /* glsl */ `
+#define WHALE_GHOST
 ${ATMO_GLSL}
 ${SKIN_GLSL}
 ${HAZE_GLSL}

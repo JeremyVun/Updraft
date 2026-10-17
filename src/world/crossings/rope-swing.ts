@@ -1,33 +1,23 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
-import { ATMO_GLSL, atmo } from '../atmosphere';
+import { propLook, propMaterial } from '../prop-shader';
 import { REFLECTION_LAYER } from '../water/reflection';
 import { feltWind, type WindField, type WindSample } from '../../wind/field';
 import type { PointerInput } from '../../input/pointer';
 import { PLANK, ROPE, merged, segmentGap, tagged, tube } from './shapes';
 
-const SWING_VERT = /* glsl */ `
-in float aKind;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-out float vKind;
-void main() {
+const SWING_LOOK = propLook({
+  varyings: 'vec3 vLocal; float vKind;',
+  vertexInputs: 'in float aKind;',
+  vertex: /* glsl */ `
   vec4 w = modelMatrix * vec4(position, 1.0);
   vWorld = w.xyz;
   vNormal = mat3(modelMatrix) * normal;
   vLocal = position;
   vKind = aKind;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const SWING_FRAG = /* glsl */ `
-${ATMO_GLSL}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-in float vKind;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   vec3 alb;
@@ -44,8 +34,9 @@ void main() {
   vec3 col = alb * (hemiLight(n) + uSunColor * max(dot(n, uSunDir), 0.0) * 0.85 * sun);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
   col += uSunColor * rim * sun * 0.18;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 /** Where a rope swing hangs and which way it swings. */
 export interface SwingSpot {
@@ -127,7 +118,7 @@ export class RopeSwing {
       ], 0.028, 0.028, 5, ROPE, 0, 0, side)),
       tube([new THREE.Vector3(-0.12, 0.12, 0), new THREE.Vector3(0, 0.2, 0.03), new THREE.Vector3(0.12, 0.12, 0)], 0.045, 0.045, 6, ROPE, 0, 0, 0),
     ];
-    const material = new THREE.ShaderMaterial({ vertexShader: SWING_VERT, fragmentShader: SWING_FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide });
+    const material = propMaterial(SWING_LOOK);
     const mesh = new THREE.Mesh(merged(parts), material);
     mesh.frustumCulled = false;
     this.group.layers.enable(REFLECTION_LAYER);

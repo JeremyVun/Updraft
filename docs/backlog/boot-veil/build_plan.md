@@ -484,3 +484,53 @@ All four continuous recordings pass real Begin/audible-source checks. Still pass
 five-second overlap, all-tail cleanup, preserved drone and crossing offsets; real colour, plane, hidden-page and
 whale/Lines playback pass. Music mute (17), Boats lifecycle (14) and arrival audio (349) checks pass. Dev server remains
 on port 5230. No deployment; the original shader performance and physical-device gates remain open.
+
+## Windows compile audit of the new shaders — 2026-10-15
+
+Jeremy asked for an audit of the shaders added or changed since `75ea734` and approved the fixes it found, with the
+bar: "it's ok if you get a few pixel differences. the bar is that it shouldn't be too noticeable to a human and the game
+shouldn't perform worse". Cold D3D11 startup (Ryzen 5 9600X / RTX 4070 Super, CFT 153, `coldshaders`) had grown from
+33.3 s at `75ea734` to 56.8 s, with 214 → 243 programs and a worst veil gap of 2.0–2.4 s.
+
+Causes: the whale's skin painting (fog evaluated twice, rosettes, relief taps and barnacle shells written out at
+several call sites; 3 programs, about 64 s of compile work, finishing last); the Lines grass clearings written out
+62 times, which made the grass table's first draw (ANGLE compiles a multi-output pixel shader only at its first draw
+into all its targets) stall the veil for 2 s; the sea mist integral inlined at 9 sites in the water's vertex shader;
+the water's three swell samples; the sea-fog lookup every scene shader now samples (about +100 ms per program); and
+29 new programs, each about a second even with a trivial body.
+
+Kept (each checked against a HEAD reference build for pixels and paired GPU cost):
+
+- Loops bounded by frozen uniforms, recorded in `engine.md`: Lines clearings, mist passes, swell samples, height-bake
+  tests, whale rosettes/lichen/shells/relief (the ghost keeps its rosettes written out: looped, its flippers drew 5%
+  slower). The whale evaluates `fogOf` once (whale 2–23% faster to draw).
+- Shared programs: the drowned village's props in `world/prop-shader.ts` (twelve programs to four; the belfry stays
+  apart, beside the others it cost 2.5% of the scene), the net in one program with one fog call, the rotary cloth in
+  the Lines curtain's program, the floating kite paper's fade as a uniform, the sleeping whale on the crossing whale's
+  program (`NoBlending`, same GL state).
+- Dropped as measurably slower: the water's glass sky loop (2–4% slower water in mirror and drowned views), the cat
+  and cygnet coat merges (+5%, +2%: the coat's discard in the skin pass), seabirds into the gulls (+2 µs per frame),
+  the kite spars (+2 µs). Their diffs are kept outside the repo.
+
+Combined result against the HEAD reference, alternated cold loads: time to Begin 48.5 / 48.9 / 49.9 s → 38.9 / 38.9 /
+38.2 s; programs 243 → 230; worst veil gap 1.74–1.80 s → 0.72–0.73 s. (The reference took 48.9 s rather than the
+earlier 56.8 s under lighter machine load; the comparison is paired.) Pixels: 15 of 17 `render-parity-check` views
+identical, boats max 1/255; `stairs-close` differs by the same amount reference against itself (non-deterministic
+view), `stairs-turned` identical. Prop close-ups identical but for scattered single pixels on the wash-sheet rope
+(32 pixels, max 46) and the fallen tree (1 pixel); whale views identical or a handful of scattered pixels. Paired whole
+scene GPU cost in both orders: island, washing, mirror and wood neutral; sea about 3% cheaper; drowned with fog
+0.3–0.4% dearer in both orders, inside the spread. `start-check` passes with `BOOT_MAX_MS=10000` (no stray programs, no
+first draws in play, all twelve loop bounds uploaded); the default 500 ms veil gate still fails, as before.
+
+Follow-up, also approved: materials drawn only in rooms that never share a frame with the village compile the sea fog
+out (`SEA_FOG 0`, `outsideSeaFog` in `world/journey-rooms.ts`: 60 of 232 programs; still 232 programs, none split),
+and pixel shaders compile the fog lookup's off-screen fallback out (`FOG_OFF_SCREEN` keeps it in the grass's
+per-frame pass). Guard: QA `__stats.seaFogMissing` counts their draws while the fog is out; it fired on a village
+material forced to `SEA_FOG 0` (30 draws) and read 0 through a real playthrough from the village save through the wood
+to `toSleeping`. Against the pushed `30cc679` build: all 17 `render-parity-check` views and eight more at `fog=.3`,
+`.6` and `1` (village landscape and upright, church, storm, roofs, belfry) identical; cold time to Begin 38.8 / 38.2 /
+39.0 s → 37.5 / 37.6 / 38.3 s, alternated; paired whole-scene GPU cost in both orders: fog views 1–2% cheaper
+(drowned, belfry, roofs), island, Lines, sea, home and wood within ±0.5% with no consistent sign (Lines re-timed at 16
+rounds: −0.2%, −0.3%). `start-check` passes as before. `drowned-fog-check` now uses the shared browser (it hard-coded
+Metal) and asserts the guard, but its stranding setup times out waiting for `becalmed` on the reference build too, so it
+needs repair before it can take the stills. Physical Apple/Samsung timing and deployment are not covered.

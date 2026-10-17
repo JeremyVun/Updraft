@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Cat, type CatSound } from '../cat';
 import { CREATURE_GLSL } from '../shading';
 import type { Coat } from './shader';
-import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { propLook, propMaterial } from '../../world/prop-shader';
 
 /** A kitten beside its mother: about half her size, cheated large enough to read across the belfry. */
 const KITTEN = 0.92;
@@ -23,31 +23,25 @@ const CONTACT = 0.22;
 /** How near it is in the air when the other starts to go over, so that it is going as the pounce lands. */
 const STRIKE = 0.36;
 
-const STRAW_VERT = /* glsl */ `
-${ATMO_GLSL}
-in vec3 aTint;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vTint;
-void main() {
+const STRAW_LOOK = propLook({
+  program: 'bell',
+  varyings: 'vec3 vTint;',
+  vertexInputs: 'in vec3 aTint;',
+  fragmentGlsl: [CREATURE_GLSL],
+  floored: true,
+  vertex: /* glsl */ `
   vec4 w = modelMatrix * vec4(position, 1.0);
   vWorld = w.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
   vTint = aTint;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const STRAW_FRAG = /* glsl */ `
-${ATMO_GLSL}
-${CREATURE_GLSL}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vTint;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 col = shadeCreature(vTint, N, vWorld, 1.0, 0.0, 0.0, 1.0) + vTint * uSkyAmbient * 0.5;
-  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
-}`;
+  return col;
+`,
+});
 
 /** Old straw heaped in a shallow ring about `radius` across, its stalks lying every way. */
 function strawGeometry(radius: number): THREE.BufferGeometry {
@@ -106,9 +100,7 @@ export class Kittens {
       k.scale = KITTEN;
       k.voice = LITTER[i].voice;
     }
-    this.straw = new THREE.Mesh(strawGeometry(0.75), new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms }, vertexShader: STRAW_VERT, fragmentShader: STRAW_FRAG, side: THREE.DoubleSide,
-    }));
+    this.straw = new THREE.Mesh(strawGeometry(0.75), propMaterial(STRAW_LOOK));
     this.straw.visible = false;
   }
 

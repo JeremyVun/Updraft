@@ -126,6 +126,8 @@ const BAKE = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
 uniform vec4 uHeightBakePatch;
 uniform vec2 uHeightBakeSize;
+// Every point tested (uHeightTests), as a uniform so the compiler keeps worldHeight to one expansion.
+uniform int uHeightTests;
 const vec2 TESTED[${TESTED.length}] = vec2[${TESTED.length}](${TESTED.map(([x, z]) => `vec2(${f(x)}, ${f(z)})`).join(', ')});
 void main() {
   vec2 local = gl_FragCoord.xy - uHeightBakePatch.zw;
@@ -133,7 +135,7 @@ void main() {
   bool cell = all(lessThan(local + 1.0, uHeightBakeSize));
   float corner[4];
   float top = -1e9, worst = 0.0;
-  for (int k = 0; k < ${TESTED.length}; k++) {
+  for (int k = 0; k < uHeightTests; k++) {
     if (k == 1 && !cell) break;
     if (k == 4 && top <= ${f(HEIGHT_FLAG_ABOVE - 1)}) break;
     float h = worldHeight(p + TESTED[k] * ${f(HEIGHT_TEXEL)});
@@ -165,7 +167,11 @@ export class TerrainHeights {
   };
   private readonly patch = { value: new THREE.Vector4() };
   private readonly size = { value: new THREE.Vector2() };
-  private readonly material = simMaterial(BAKE, { uHeightBakePatch: this.patch, uHeightBakeSize: this.size }, this.target);
+  private readonly material = simMaterial(BAKE, {
+    uHeightBakePatch: this.patch,
+    uHeightBakeSize: this.size,
+    uHeightTests: Object.freeze({ value: TESTED.length }),
+  }, this.target);
 
   /** About 75 ms of GPU on an M4 Pro, so `between` can let each patch finish before the next is queued. */
   async bake(renderer: THREE.WebGLRenderer, between?: () => Promise<void>): Promise<void> {

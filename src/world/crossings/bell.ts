@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { tuning } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../atmosphere';
 import { BELFRY_GLSL, type BelfryLight } from '../belfry';
+import { propLook, propMaterial } from '../prop-shader';
 import type { MaterialSound } from '../../audio/foley';
 import type { CrossingCast } from './tree-crossing';
 
@@ -40,31 +41,21 @@ const BRONZE = 0;
 const OAK = 1;
 const IRON = 2;
 
-const BELL_VERT = /* glsl */ `
-in float aKind;
-in vec3 aLocal;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-out float vKind;
-void main() {
+const BELL_LOOK = propLook({
+  program: 'bell',
+  varyings: 'vec3 vLocal; float vKind;',
+  vertexInputs: 'in float aKind; in vec3 aLocal;',
+  fragmentInputs: 'uniform float uIndoors;',
+  fragmentGlsl: [BELFRY_GLSL],
+  vertex: /* glsl */ `
   vec4 w = modelMatrix * vec4(position, 1.0);
   vWorld = w.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
   vLocal = aLocal;
   vKind = aKind;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const BELL_FRAG = /* glsl */ `
-${ATMO_GLSL}
-${BELFRY_GLSL}
-uniform float uIndoors;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-in float vKind;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   int kind = int(vKind + 0.5);
@@ -111,8 +102,9 @@ void main() {
     vec3 alb = vec3(0.05, 0.048, 0.05);
     col = alb * (ambient + uSunColor * ndl * sun) + uSunColor * pow(max(dot(n, normalize(uSunDir + V)), 0.0), 30.0) * 0.1 * sun;
   }
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 function part(geo: THREE.BufferGeometry, kind: number, m?: THREE.Matrix4): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
@@ -202,16 +194,12 @@ export class Bell {
       part(new THREE.SphereGeometry(0.095, 12, 10).translate(0, -CLAPPER, 0), IRON),
       part(new THREE.CylinderGeometry(0.035, 0.02, 0.14, 8).translate(0, -CLAPPER - 0.15, 0), IRON),
     ]);
-    this.material = new THREE.ShaderMaterial({
-      vertexShader: BELL_VERT, fragmentShader: BELL_FRAG, side: THREE.DoubleSide,
-      uniforms: {
-        ...atmo.uniforms,
-        ...(light ?? {
-          uBelfry: { value: new THREE.Vector4() }, uBelfrySize: { value: new THREE.Vector4() }, uBelfryArch: { value: new THREE.Vector3() },
-          uBellPivot: { value: new THREE.Vector3() }, uBellDown: { value: new THREE.Vector3() },
-        }),
-        uIndoors: { value: light ? 1 : 0 },
-      },
+    this.material = propMaterial(BELL_LOOK, {
+      ...(light ?? {
+        uBelfry: { value: new THREE.Vector4() }, uBelfrySize: { value: new THREE.Vector4() }, uBelfryArch: { value: new THREE.Vector3() },
+        uBellPivot: { value: new THREE.Vector3() }, uBellDown: { value: new THREE.Vector3() },
+      }),
+      uIndoors: { value: light ? 1 : 0 },
     });
     const mesh = (g: THREE.BufferGeometry) => {
       const m = new THREE.Mesh(g, this.material);

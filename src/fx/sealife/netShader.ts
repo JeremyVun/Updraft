@@ -73,45 +73,84 @@ vec3 sunkColour(vec3 col, vec3 world) {
   return mix(deep, col * exp(-vec3(0.5, 0.13, 0.1) * vUnder * 2.0), exp(-vUnder * 0.6));
 }`;
 
-const SHEET_VERT = /* glsl */ `
+/**
+ * The sheet, its ropes and its corks are one program, so the net costs one compile behind the veil: `uPart` picks
+ * which is drawn (0 sheet, 1 rope, 2 cork), and every part ends in the same one fog.
+ */
+const NET_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
 ${SINK_VERT}
+uniform int uPart;
+uniform vec2 uRes;
 in float afloat;
 in float contact;
 in vec3 edge;
+in vec3 along;
+in float side;
+in float width;
+in float weed;
+in vec4 iCork;
+in float iSize;
 out vec2 vUv;
 out vec3 vWorld;
 out vec3 vNormal;
 out float vContact;
 out vec3 vEdge;
 out float vAfloat;
+out float vSide;
+out float vCover;
+out float vWeed;
+out vec3 vLocal;
 void main() {
-  vec3 p = position;
-  p.y += seaSurfaceY(p.xz) * afloat;
-  p = sunk(p, sunkAt(p.xz));
+  bool cork = uPart == 2;
+  vec2 at = cork ? iCork.xz : position.xz;
+  vec3 p = cork ? iCork.xyz + position * vec3(1.0, 0.82, 1.0) * iSize : position;
+  p.y += seaSurfaceY(at) * (cork ? iCork.w : afloat);
+  float under = sunkAt(at);
+  // A float goes down last, and whole.
+  if (cork) under = max(0.0, under - 0.6);
+  vec3 ahead = p;
+  if (uPart == 1) ahead = sunk(p + along * 0.05, under);
+  p = sunk(p, under);
   vWorld = p;
   vNormal = normal;
+  if (uPart == 1) {
+    // A rope is drawn across its own direction on screen, at least a pixel and a quarter wide.
+    vec4 c0 = projectionMatrix * viewMatrix * vec4(p, 1.0);
+    vec4 c1 = projectionMatrix * viewMatrix * vec4(ahead, 1.0);
+    vec2 s0 = c0.xy / c0.w * uRes;
+    vec2 s1 = c1.xy / c1.w * uRes;
+    vec2 t = s1 - s0;
+    t = dot(t, t) > 1e-8 ? normalize(t) : vec2(1.0, 0.0);
+    float px = width * projectionMatrix[1][1] * uRes.y / c0.w;
+    float drawn = max(px, 1.25);
+    vCover = px / drawn;
+    c0.xy += vec2(-t.y, t.x) * side * drawn * 0.5 / uRes * c0.w;
+    vSide = side;
+    vWeed = weed;
+    gl_Position = c0;
+    return;
+  }
   vUv = uv;
   vContact = contact;
   vEdge = edge;
   vAfloat = afloat;
+  vLocal = position * 4.5 + iCork.xyz * 1.7;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 
-/**
- * Old rope knotted into diamonds: no two cells quite the same size, each strand sagging a little between its knots
- * toward the edges, the near edge hanging in scallops between its corks. Strands are drawn at their width wherever
- * a pixel can hold them and otherwise a pixel and a half wide, never fainter than \`STRAND_FLOOR\`; once a cell is
- * finer than about two pixels its lines give way to a veil, so the mesh never crawls against the moving sea.
- */
-const SHEET_FRAG = /* glsl */ `
+const NET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${LIGHT}
+uniform int uPart;
 uniform vec3 uStrand;
 uniform vec3 uWeed;
 uniform vec3 uRope;
 uniform vec3 uShadow;
+uniform vec3 uCork;
+uniform vec3 uSpot;
+uniform vec3 uFouled;
 uniform float uFade;
 uniform vec2 uSize;
 uniform float uCell;
@@ -123,6 +162,10 @@ in vec3 vNormal;
 in float vContact;
 in vec3 vEdge;
 in float vAfloat;
+in float vSide;
+in float vCover;
+in float vWeed;
+in vec3 vLocal;
 
 float netHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float netNoise(vec2 p) {
@@ -148,7 +191,13 @@ float band(float d, float w) {
   return (1.0 - smoothstep(drawn * 0.5 - fw * 0.5, drawn * 0.5 + fw * 0.5, abs(d))) * w / drawn;
 }
 
-void main() {
+/**
+ * Old rope knotted into diamonds: no two cells quite the same size, each strand sagging a little between its knots
+ * toward the edges, the near edge hanging in scallops between its corks. Strands are drawn at their width wherever
+ * a pixel can hold them and otherwise a pixel and a half wide, never fainter than \`STRAND_FLOOR\`; once a cell is
+ * finer than about two pixels its lines give way to a veil, so the mesh never crawls against the moving sea.
+ */
+vec4 sheet() {
   float hang = vEdge.x - ${glsl(NET.sag)} * vEdge.y * sin(3.14159 * fract((vUv.x - 0.6) / ${glsl(NET.corkStep)}));
   if (vUv.y > hang + 0.02) discard;
   // Knotted by hand and pulled about since: no two cells the same shape.
@@ -181,98 +230,17 @@ void main() {
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.35);
   col = sunkColour((col * cover + uShadow * (1.0 - cover) * shade) / alpha, vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld, 1.3));
-}`;
+  return vec4(col, alpha * uFade * sunkShows(vWorld, 1.3));
+}
 
-const ROPE_VERT = /* glsl */ `
-${ATMO_GLSL}
-${SWELL_GLSL}
-${SINK_VERT}
-uniform vec2 uRes;
-in vec3 along;
-in float side;
-in float width;
-in float afloat;
-in float weed;
-out vec3 vWorld;
-out float vSide;
-out float vCover;
-out float vWeed;
-void main() {
-  vec3 p = position;
-  p.y += seaSurfaceY(p.xz) * afloat;
-  float under = sunkAt(p.xz);
-  vec3 ahead = sunk(p + along * 0.05, under);
-  p = sunk(p, under);
-  vec4 c0 = projectionMatrix * viewMatrix * vec4(p, 1.0);
-  vec4 c1 = projectionMatrix * viewMatrix * vec4(ahead, 1.0);
-  vec2 s0 = c0.xy / c0.w * uRes;
-  vec2 s1 = c1.xy / c1.w * uRes;
-  vec2 t = s1 - s0;
-  t = dot(t, t) > 1e-8 ? normalize(t) : vec2(1.0, 0.0);
-  float px = width * projectionMatrix[1][1] * uRes.y / c0.w;
-  float drawn = max(px, 1.25);
-  vCover = px / drawn;
-  c0.xy += vec2(-t.y, t.x) * side * drawn * 0.5 / uRes * c0.w;
-  vWorld = p;
-  vSide = side;
-  vWeed = weed;
-  gl_Position = c0;
-}`;
-
-const ROPE_FRAG = /* glsl */ `
-${ATMO_GLSL}
-${LIGHT}
-uniform vec3 uStrand;
-uniform vec3 uWeed;
-uniform float uFade;
-${LOST_GLSL}
-${SINK_FRAG}
-in vec3 vWorld;
-in float vSide;
-in float vCover;
-in float vWeed;
-void main() {
+vec4 rope() {
   float a = vCover * (1.0 - smoothstep(0.55, 1.0, abs(vSide)));
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 col = sunkColour(netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1), vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld, 1.3));
-}`;
+  return vec4(col, a * uFade * sunkShows(vWorld, 1.3));
+}
 
-const CORK_VERT = /* glsl */ `
-${ATMO_GLSL}
-${SWELL_GLSL}
-${SINK_VERT}
-in vec4 iCork;
-in float iSize;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-void main() {
-  vec3 p = iCork.xyz + position * vec3(1.0, 0.82, 1.0) * iSize;
-  p.y += seaSurfaceY(iCork.xz) * iCork.w;
-  // A float goes down last, and whole.
-  p = sunk(p, max(0.0, sunkAt(iCork.xz) - 0.6));
-  vWorld = p;
-  vNormal = normal;
-  vLocal = position * 4.5 + iCork.xyz * 1.7;
-  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
-}`;
-
-/** An old float, cream where the sun has bleached it, with dark spots and a green-fouled underside. */
-const CORK_FRAG = /* glsl */ `
-${ATMO_GLSL}
-${LIGHT}
-uniform vec3 uCork;
-uniform vec3 uSpot;
-uniform vec3 uFouled;
-uniform float uFade;
-${LOST_GLSL}
-${SINK_FRAG}
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
 float corkHash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 float corkNoise(vec3 p) {
   vec3 i = floor(p);
@@ -281,7 +249,11 @@ float corkNoise(vec3 p) {
   return mix(mix(mix(corkHash(i), corkHash(i + vec3(1, 0, 0)), f.x), mix(corkHash(i + vec3(0, 1, 0)), corkHash(i + vec3(1, 1, 0)), f.x), f.y),
     mix(mix(corkHash(i + vec3(0, 0, 1)), corkHash(i + vec3(1, 0, 1)), f.x), mix(corkHash(i + vec3(0, 1, 1)), corkHash(i + 1.0), f.x), f.y), f.z);
 }
-void main() {
+
+/** An old float, cream where the sun has bleached it, with dark spots and a green-fouled underside. */
+vec4 cork() {
+  // Drawn two-sided to share the sheet's program: its back faces are dropped here, as culling dropped them.
+  if (!gl_FrontFacing) discard;
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorld);
   float spot = smoothstep(0.7, 0.76, corkNoise(vLocal));
@@ -291,7 +263,15 @@ void main() {
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
   float shows = uFade * sunkShows(vWorld, 0.35);
   if (shows < 0.004) discard;
-  gl_FragColor = vec4(lost(applyFog(sunkColour(col, vWorld), vWorld), vWorld), shows);
+  return vec4(sunkColour(col, vWorld), shows);
+}
+
+void main() {
+  vec4 c;
+  if (uPart == 0) c = sheet();
+  else if (uPart == 1) c = rope();
+  else c = cork();
+  gl_FragColor = vec4(lost(applyFog(c.rgb, vWorld), vWorld), c.a);
 }`;
 
 export const netLook = {
@@ -313,9 +293,9 @@ export const netLook = {
 
 export function sheetMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    vertexShader: SHEET_VERT,
-    fragmentShader: SHEET_FRAG,
-    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook,
+    vertexShader: NET_VERT,
+    fragmentShader: NET_FRAG,
+    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook, uPart: { value: 0 },
       uSize: { value: new THREE.Vector2(NET.long, NET.far) }, uCell: { value: NET.cell } },
     side: THREE.DoubleSide,
     transparent: true,
@@ -328,9 +308,9 @@ export function sheetMaterial(): THREE.ShaderMaterial {
 
 export function ropeMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    vertexShader: ROPE_VERT,
-    fragmentShader: ROPE_FRAG,
-    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook },
+    vertexShader: NET_VERT,
+    fragmentShader: NET_FRAG,
+    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook, uPart: { value: 1 } },
     side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,
@@ -339,9 +319,11 @@ export function ropeMaterial(): THREE.ShaderMaterial {
 
 export function corkMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    vertexShader: CORK_VERT,
-    fragmentShader: CORK_FRAG,
-    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook },
+    vertexShader: NET_VERT,
+    fragmentShader: NET_FRAG,
+    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook, uPart: { value: 2 } },
+    // Both faces, as the sheet and ropes are, so it shares their program; the shader drops the back faces.
+    side: THREE.DoubleSide,
     // Opaque until it fades into the haze or the deep.
     transparent: true,
   });
