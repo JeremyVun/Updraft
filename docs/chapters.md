@@ -443,7 +443,9 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   told.
 - **A round.** Each has its own frame, lower and closer than the walk, from the south-east quarter toward the low sun,
   so leaves thrown up are lit through (`ROUNDS[].frames`; portrait on a longer lens eased in by a spring). She walks
-  round any heap in her way to her stand, kneels and peers, and turns to each heap the wind bursts. The right heap
+  round any heap in her way to her stand, turns there to face the heaps, body and head (round 2's far heap, round
+  3's middle one, so she faces the three as a whole), kneels and peers, and turns her head to each heap the wind
+  bursts. The right heap
   shivers every 2.5–4 s with a rustle; its tail tip is out half the time in round 1, a third in round 2 and a fifth in
   round 3; now and then it peeks. Wrong heaps never tell.
 - **Heaps yield only to updrafts** (Jeremy, 2026-10-16). Every heap, the squirrel's and the free-play ones, stands
@@ -460,8 +462,10 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   deepest drift the round's lens shows, else round the bark of a heap's bank tree. Turned out before she arrives, it
   hides again. The round never breaks and never waits for leaves that are gone.
 - **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 7 s without
-  an updraft on the right heap, swiping or not, it goes to that heap's rim and peers in (the in-story hint); after 12 s
-  the drawn updraft turns over it. Neither supplies wind.
+  an updraft on the right heap, swiping or not, it goes to that heap's rim and peers in (the in-story hint). The drawn
+  updraft turns over it after 4 s at the first heap, once the leaves of its dive are down, and after 6 s in round 2.
+  Round 3 has none: the updraft is learned by then, and drawn over one heap of three it would give the hide away.
+  Neither supplies wind.
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the

@@ -1631,10 +1631,12 @@ export const tuning = {
        */
       uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
-       * Seconds without updraft on the right heap before the cygnet goes to stand at it, and before the drawn updraft
-       * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
+       * Seconds without updraft on the right heap before the cygnet goes to stand at it, and by round before the drawn
+       * updraft turns over it: soon at the first heap, once the leaves of its dive are down, and never in round 3,
+       * where the updraft is learned and a drawn one over a single heap of three would give its hide away. Its loops
+       * are `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
        */
-      hintAfter: 7, inviteAfter: 12, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
+      hintAfter: 7, inviteAfter: [4, 6, Infinity], inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 3,
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
       /**
