@@ -1914,7 +1914,7 @@ export const tuning = {
      * The sky mirror's kite is wound a few turns round the lamppost, high and clear of the water, and stands off to the
      * north on this much string, within every star-play view.
      */
-    mirrorKite: { hitch: { radius: 0.105, turns: 4, height: 2.1 }, stringLength: 28, azimuth: 3.2 },
+    mirrorKite: { hitch: { radius: 0.105, turns: 4, height: 2.1 }, stringLength: 22, azimuth: 3.5 },
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
     stringLength: 34,
     /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */
