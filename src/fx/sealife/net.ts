@@ -8,6 +8,7 @@ import { NET, corkMaterial, netLook, ropeMaterial, sheetMaterial } from './netSh
 import type { SleepingWhale, Skin } from './sleeper';
 import { MIST, type Spray } from './spray';
 import { WindGesture } from '../wind-gesture';
+import { ClothFlight, type Air, type Ground } from './net-flight';
 
 const K = tuning.netWhale;
 
@@ -179,8 +180,8 @@ export class Net {
   private readonly parts: THREE.Object3D[];
   /** The blue-green net lifted clear of the crown, 0..1. */
   lift = 0;
-  /** The separate upper net carried clear to the far side, 0..1. */
-  slump = 0;
+  /** The blue-green net let go to its first full breath and the breeze after it. */
+  thrown = false;
   /** Peeled back off the jaw and head into a floating mass beside it, 0..1. */
   peel = 0;
   /** The last loop slid along the near flipper and off its tip, 0..1. */
@@ -230,9 +231,17 @@ export class Net {
   private readonly breathContact: THREE.BufferAttribute;
   private readonly breathBounds = { i0: 0, i1: 0, j0: 0, j1: 0 };
   private readonly breathRest = new Float32Array(ROWS * COLS * 3);
-  private breathReleased = false;
-  private breathSettled = false;
   private breathHeight = 0;
+  /** The blue-green net in the air, its points the breath net's own, and where they were the frame before it was thrown. */
+  private flight: ClothFlight | null = null;
+  private readonly breathLast = new Float32Array(ROWS * COLS * 3);
+  private breathDt = 1 / 60;
+  /** Seconds it has lain on the water, sinking away; and gone. */
+  private breathSinking = 0;
+  private breathGone = false;
+  private readonly air: Air;
+  private readonly flightMiddle = new THREE.Vector3();
+  private readonly ground: Ground;
   private readonly fold: THREE.Mesh;
   private readonly ropes: THREE.Mesh;
   private readonly corks: THREE.Mesh;
@@ -363,6 +372,8 @@ export class Net {
   private readonly axis = new THREE.Vector3();
 
   constructor(private readonly whale: SleepingWhale, private readonly spray: Spray) {
+    this.air = (p, t, out) => this.breathAir(p, t, out);
+    this.ground = (x, z) => this.whale.surfaceAt(x, z, this.skin).height;
     const geo = new THREE.BufferGeometry();
     this.pos = new THREE.BufferAttribute(new Float32Array(this.n * 3), 3).setUsage(THREE.DynamicDrawUsage);
     this.normals = new THREE.BufferAttribute(new Float32Array(this.n * 3), 3).setUsage(THREE.DynamicDrawUsage);
@@ -536,11 +547,14 @@ export class Net {
     const c = whale.point(0, TOP(sEye), sEye, this.q);
     this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
-    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = this.billowed = 0;
+    this.thrown = this.breathGone = false;
+    this.flight = null;
+    this.breathSinking = 0;
+    this.breathNet.material.uniforms.uSunk.value = 0;
+    this.breathNet.material.uniforms.uFade.value = 1;
+    this.lift = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = this.billowed = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
-    this.breathReleased = false;
-    this.breathSettled = false;
     this.held = this.fallsTo = this.holder = null;
     this.curlFrom.set(0, 0, 0);
     this.endDropped = false;
@@ -627,7 +641,7 @@ export class Net {
     netLook.uSunk.value = SINK_DEPTH * this.sink ** 2;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
-    this.layBreathNet(time);
+    this.layBreathNet(time, dt);
     this.layFold();
     this.sounds();
     this.moveLeader(dt, time);
@@ -1106,39 +1120,121 @@ export class Net {
     uv.needsUpdate = edge.needsUpdate = true;
   }
 
-  private layBreathNet(time: number): void {
-    // Once afloat, the shader supplies all its motion.
-    if (this.breathSettled && this.slump === 1) return;
+  /**
+   * The blue-green net: over the blowhole, lifted by the updraft and domed by each weak breath; then thrown up by its
+   * first full breath and carried off on the breeze as cloth, down onto the sea far off, where it sinks away.
+   */
+  private layBreathNet(time: number, dt: number): void {
+    if (this.breathGone) return;
     const b = this.breathBounds;
-    if (!this.breathReleased) {
-      if (this.slump === 0) {
-        this.breathRest.set(this.pos.array);
-        this.breathHeight = this.whale.blowhole.y;
+    if (this.thrown && !this.flight) {
+      if (this.snap) {
+        this.breathGone = true;
+        this.breathNet.visible = false;
+        return;
       }
-      else this.breathReleased = true;
+      this.throwBreathNet();
     }
-    const away = this.slump;
-    const down = THREE.MathUtils.smootherstep(away, 0.65, 1);
+    if (this.flight) {
+      this.flyBreathNet(dt);
+      return;
+    }
+    this.breathRest.set(this.pos.array);
+    this.breathHeight = this.whale.blowhole.y;
+    this.breathLast.set(this.breathPos.array as Float32Array);
+    this.breathDt = dt;
     const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35)
-      * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6) * (1 - away);
+      * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6);
     for (let i = b.i0; i <= b.i1; i++) {
       for (let j = b.j0; j <= b.j1; j++) {
         const k = i * COLS + j, shape = this.liftShape[k];
         this.p.fromArray(this.breathRest, k * 3);
-        this.p.addScaledVector(this.side, -K.breathNetAside * away).addScaledVector(this.ahead, -K.breathNetAlong * away);
         const ripple = Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * this.lift * (0.12 + 0.3 * this.updraft);
         const up = K.breathNetGap + this.lift * K.netLift * (0.65 + 0.35 * shape) + dome * this.domes[k];
         const clear = THREE.MathUtils.lerp(this.p.y, Math.max(this.p.y, this.breathHeight), this.lift);
-        this.p.y = THREE.MathUtils.lerp(clear + up, 0.08, down)
-          + (ripple + K.breathNetArc * Math.sin(Math.PI * away)) * (1 - down);
+        this.p.y = clear + up + ripple;
         this.breathPos.setXYZ(k, this.p.x, this.p.y, this.p.z);
-        this.breathAfloat.setX(k, down);
-        this.breathContact.setX(k, this.contact.getX(k) * (1 - this.lift) * (1 - away));
+        this.breathAfloat.setX(k, 0);
+        this.breathContact.setX(k, this.contact.getX(k) * (1 - this.lift));
       }
     }
     this.breathPos.needsUpdate = this.breathAfloat.needsUpdate = this.breathContact.needsUpdate = true;
     this.breathNet.geometry.computeVertexNormals();
-    this.breathSettled = this.slump === 1;
+  }
+
+  private throwBreathNet(): void {
+    const b = this.breathBounds, rows = b.i1 - b.i0 + 1, cols = b.j1 - b.j0 + 1;
+    const rest = new Float32Array(rows * cols * 3), now = new Float32Array(rows * cols * 3), last = new Float32Array(rows * cols * 3);
+    const P = this.breathPos.array as Float32Array;
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const from = ((b.i0 + i) * COLS + b.j0 + j) * 3, to = (i * cols + j) * 3;
+        for (let c = 0; c < 3; c++) {
+          rest[to + c] = this.breathRest[from + c];
+          now[to + c] = P[from + c];
+          last[to + c] = this.breathLast[from + c];
+        }
+      }
+    }
+    this.flight = new ClothFlight(rows, cols, rest);
+    this.flight.start(now, last, this.breathDt);
+    for (let i = b.i0; i <= b.i1; i++) for (let j = b.j0; j <= b.j1; j++) this.breathContact.setX(i * COLS + j, 0);
+    this.breathContact.needsUpdate = true;
+  }
+
+  private flyBreathNet(dt: number): void {
+    const flight = this.flight!, b = this.breathBounds, F = K.netFlight;
+    const uniforms = this.breathNet.material.uniforms;
+    if (this.breathSinking > 0 || flight.settled(F.settle[0], F.water + F.settle[1], F.settle[2])) {
+      if (this.breathSinking === 0) {
+        for (let i = b.i0; i <= b.i1; i++) for (let j = b.j0; j <= b.j1; j++) this.breathAfloat.setX(i * COLS + j, 1);
+        this.breathAfloat.needsUpdate = true;
+      }
+      this.breathSinking += dt;
+      const sunk = Math.min(1, this.breathSinking / F.sinkFor);
+      uniforms.uSunk.value = SINK_DEPTH * sunk * sunk;
+      uniforms.uFade.value = 1 - THREE.MathUtils.smoothstep(sunk, 0.8, 1);
+      if (sunk >= 1) {
+        this.breathGone = true;
+        this.breathNet.visible = false;
+      }
+      return;
+    }
+    flight.centre(this.flightMiddle);
+    flight.update(dt, this.air, F, this.ground);
+    const P = flight.points, cols = b.j1 - b.j0 + 1;
+    for (let i = b.i0; i <= b.i1; i++) {
+      for (let j = b.j0; j <= b.j1; j++) {
+        const m = (i - b.i0) * cols + j - b.j0, k = i * COLS + j;
+        this.breathPos.setXYZ(k, P[m * 3], P[m * 3 + 1], P[m * 3 + 2]);
+        this.breathAfloat.setX(k, flight.wet[m]);
+      }
+    }
+    this.breathPos.needsUpdate = this.breathAfloat.needsUpdate = true;
+    this.breathNet.geometry.computeVertexNormals();
+  }
+
+  /** The air the thrown net rides: its breath rising over the blowhole, then the breeze off over its back, in eddies. */
+  private breathAir(p: THREE.Vector3, t: number, out: THREE.Vector3): THREE.Vector3 {
+    const F = K.netFlight, blow = this.whale.blowhole;
+    const dx = p.x - blow.x, dz = p.z - blow.z;
+    const breath = F.blast * THREE.MathUtils.smoothstep(t, 0, 0.2) * Math.exp(-t / F.exhale)
+      * Math.exp(-(dx * dx + dz * dz) / (F.plume * F.plume));
+    const breeze = F.breeze * THREE.MathUtils.smoothstep(t, F.breezeFrom, F.breezeFrom + 1.5)
+      * (1 + F.gusts * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1));
+    const [tailward, away] = F.toward, norm = Math.hypot(tailward, away);
+    const x = -(this.ahead.x * tailward + this.side.x * away) / norm, z = -(this.ahead.z * tailward + this.side.z * away) / norm;
+    // The air rises over its back and lies still along the water.
+    const over = Math.exp(-Math.sqrt(dx * dx + dz * dz) / F.liftFor);
+    const low = 0.2 + 0.8 * THREE.MathUtils.smoothstep(p.y, F.water, F.water + 2);
+    const eddy = F.flutter * THREE.MathUtils.smoothstep(t, 0, 1) * low;
+    // Up on one side of it and down on the other, turning it over one way and then back.
+    const m = this.flightMiddle, turn = F.tumble * low * Math.sin(t * F.tumbleRate + 1)
+      * ((p.x - m.x) * x + (p.z - m.z) * z + 0.5 * (p.y - m.y)) / 5;
+    return out.set(
+      x * breeze * low + eddy * Math.sin(p.z * 0.45 + t * 1.3) * Math.sin(p.y * 0.6 - t * 0.7),
+      breath + F.lift * over * breeze / F.breeze + turn + eddy * F.eddyRise * Math.sin(p.x * 0.5 - t * 1.7) * Math.sin(p.z * 0.35 + t * 1.1),
+      z * breeze * low + eddy * Math.sin(p.x * 0.4 - t * 1.1) * Math.sin(p.y * 0.5 + t * 0.9));
   }
 
   /** The orange sheet follows the skin, then slides off with the later heaves. */

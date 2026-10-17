@@ -1,5 +1,6 @@
 import type { MirrorScorePhase } from '../audio/dream-score';
 import type { CheckpointPayload } from './checkpoint-data';
+import type { SeaRescue } from '../audio/sea-music';
 import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { STILL_SHIFT } from '../world/geography';
@@ -537,7 +538,7 @@ export class CrossingChapter implements Chapter {
 
   /** Seconds into the open sea's recording, on the passage clock. */
   get seaMusicTime(): number | undefined { return this.whale ? this.time - tuning.audio.seaMusicLead : undefined; }
-  get seaPhrase(): number | undefined { return this.whale?.phrase; }
+  get seaRescue(): SeaRescue | undefined { return this.whale?.rescue; }
   get whaleCalling(): number | undefined { return this.whale?.calling; }
 
   get checkpoint(): string | null { return this.whale?.checkpoint ?? (this.swim === 'done' ? 'swim' : null); }

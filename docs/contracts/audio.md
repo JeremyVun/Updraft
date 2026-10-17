@@ -599,16 +599,9 @@ reservations belong to the AudioContext, survive mute and are cleared only when 
 
 > i think you're right about using another shore for the sea. timed so that 55 seconds is when the boat settles infront of the whale and the start of the puzzle begins. in terms of what accompanying phrases we play each time the child does something e.g. lifts off the nets im not sure though.
 
-He agreed the phrase plan below and asked for it in the game: "yea in terms of the another shore at sea, i was thinking of doing something like that. thanks could you actually wire it up so i can test it on the dev server?"
+He agreed a plan of phrases cued by the rescue's acts and asked for it in the game: "yea in terms of the another shore at sea, i was thinking of doing something like that. thanks could you actually wire it up so i can test it on the dev server?"
 
-`assets/music/sea.ogg` is that recording unchanged (236.6 s, F♯ major). `sea-music.ts` (`SeaMusic`) plays it on the
-dry music route from the crossing's own clock (`CrossingChapter.seaMusicTime`): it begins `tuning.audio.seaMusicLead`
-(6.3) seconds into the passage, so that its second 55, in the near-silent break before the bass enters, falls as the
-boat comes to rest beside the whale and the rescue begins (measured with no input; boat speed at sea is story-only,
-so `tools/sea-music-browser-check.mjs` re-measures it after any change to the passage). Cut points, each just before
-the next attack: the crossing 0–56.43; the rescue's four two-bar phrases of the high section after the bass, back to
-back in the recording, 129.93–136.3, 136.3–143.1, 143.1–150 and 150–159.47, each fading over its last 0.4 s when it
-plays alone; the close 159.47 to the end. The bass section between the crossing and the rescue phrases is unused.
+`assets/music/sea.ogg` is that recording unchanged (236.6 s, F♯ major).
 
 After testing, Jeremy (2026-10-14): "after it ends at that natural seam, it keeps playing instead of there being
 silence", and "the phrases that play on each net lift need to be polished up a bit, some of the phrases are a bit long
@@ -627,34 +620,59 @@ the eye, it's currently too delayed. Both phrases for 1 and 2 are too short, it 
 3) when the child starts holding the line, it shouldn't play a phrase. It should only start playing when the child
 starts pulling it in. 4) same for the cygnet (and the last phrase that was playing before doesn't play anymore....)"
 
-The crossing plays to the break and ends there; nothing plays as the boat comes to rest (`NetWhale.phrase` 0, the
-`whale-rest` checkpoint). There is no continuous bed during the rescue: one whole phrase plays as each physical act
-begins (`NetWhale.phrase` rises once per act and never falls). The first as the net over the blowhole first visibly
-lifts (`net.lift` 0.05, under the player's circles or the valve's dolphin, with the first rope-and-cork sound); the
-second as the fold over its eye first lifts under a sweep or the valve's dolphin; nothing as strokes bring the cork or
-she takes the line; the third as she makes her first pull on it; the fourth as the cygnet, holding the loop's end,
-starts to pull it off the lifted flipper (`bird` `pulling`). The release (`free`: the loop gone and the cygnet back in
-the satchel as the whale's farewell begins) plays the close continuously through the spout, song, flipper wave and
-flukes and the sail on to the Mirror, where the ordinary arrival handoff fades it for `mirror.ogg`; if it ends first,
-it ends. Phrases play in order, never overlap and are never cut or faded early: an act begun while one still sounds
-waits for it, and because each phrase follows the last in the recording, the waiting one starts at the sample where
-the last ends with the last one's fade dropped, so a quick rescue plays the recording unbroken from 129.93 through the
-close. If the waits become noticeable, pace the rescue rather than the music.
-The release has no completion sound: as in Little Boats, the recording carries the conclusion.
+Playing the whole game with one whole phrase from 2:09 cued as each act began, Jeremy (2026-10-17): "The choreography
+up until the child stops at the whale encounter is great. However, I think we need to do alot better in terms of how
+the blue net flies away, as well as how the music is choreographed for each action, taking into consideration the
+pacing and length of each action. Right now, it doesn't sound good at all. Like a series of phrases that have been cut
+up into pieces so a phrase doesn't even really resolve. And the phrases themselves are these very quick piano runs
+which i don't think suit at all. The whole encounter with the whale puzzles should flow with the music from end to
+end. the music that starts playing when the whale is rescued is quite nice, though i think the music should end a bit
+sooner (it starts getting tinny as the clip progresses which was an issue with the generation of the clip)."
+
+So the acts no longer fire music. From the crossing to the whale's farewell the recording is one passage the rescue
+sits inside, re-sequenced only at phrase ends (`sea-music.ts`, `SeaMusic`), with the quick runs from 2:09 left out:
+
+- **The crossing** (0–56.43) plays from the passage clock (`CrossingChapter.seaMusicTime`), beginning
+  `tuning.audio.seaMusicLead` (6.3) seconds into the passage so that its second 55, in the near-silent break before the
+  bass enters, falls as the boat comes to rest beside the whale (measured with no input; boat speed at sea is
+  story-only, so `tools/sea-music-browser-check.mjs` re-measures it after any change to the passage). It ends there,
+  and the boat rests in the quiet with the whale's sighs, as Jeremy asked of that seam.
+- **The bed** enters as the net over the blowhole first visibly lifts (`net.lift` 0.05, under the player's circles or
+  the valve's dolphin; `NetWhale.rescue` `rescue`), as the bass enters after that break in the recording: the bass
+  section's four two-bar phrases (`SEA_BED`: 56.43, 63.78, 70.93, 77.69 to 85.24; piano over
+  the bass in F♯, then its A and G colours and back), before the section thickens and brightens. The first two end on
+  the same chord, the last on F♯ with A. For as long as the rescue takes it goes round again: at the end of the fourth
+  the first follows, the fourth easing off over its last `SEA_SEAM_FADE` (0.35 s) into the quiet before the first's
+  attack, as the break before it did. A prompt rescue hears the bed about one and a half times; a slow one, round
+  after round with no gap. Lifted before the crossing has reached the break, the crossing carries straight on into
+  the bed, sample for sample, as the recording does.
+- **The release** is the close's theme from 2:39 (`SEA_RELEASE`, 159.47 to 188.27): its eight bars to their resolution
+  on F♯, which rings out over its last 1.67 s. From 3:08 the recording thickens and its high end grows by about 10 dB
+  (the generation's tinny shimmer, measured 7–11 kHz against the body), so the release ends before it. It begins when
+  the cygnet starts pulling the last loop off the lifted flipper (`NetWhale.rescue` `freeing`; nothing can stop it from
+  there): the bed finishes the phrase it is in, eases off over its last 0.35 s and the release enters at that phrase's
+  end, 0 to 7.5 s after the pull (about 4 on average), around the loop slipping off (3.9 s into the pull). It plays on
+  under the cygnet's return, the spout (about 13 s later), the song and the flipper's wave, and has ended as the whale
+  dives; the farewell's flukes, its going and the sail on to the Mirror are left to the sea and the whale's voice.
+
+Each next section is chosen 0.8 s before the one sounding ends and starts exactly as it ends, so nothing waits, nothing
+overlaps and no phrase is cut. The release has no completion sound: as in Little Boats, the recording carries the
+conclusion. Played promptly with real gestures (`sea-music-browser-check rescue`), the bed entered 3 s after the boat came to rest
+and the release about 1 to 5 s after the pull.
 
 Restores and QA starts: `?chapter=sea` / `dolphins` begin the whole passage with the recording; a resumed passage
-joins the crossing at its own time. `?chapter=whale` and a restored `whale-rest` stay silent until the first act; saves mid-rescue
-(`whale-breath` to `whale-heave`), like a recording first started mid-rescue after music was switched back on, stay
-silent until the next act begins and plays its phrase; loading never raises a cue. `whale-flipper` and `whale-gone`
-play the close from its start.
+joins the crossing at its own time. `?chapter=whale` and a restored `whale-rest` stay silent until the net first
+lifts; the saves mid-rescue (`whale-breath` to `whale-heave`), like a recording first heard mid-rescue after music was
+switched back on, begin the bed from its first phrase. `whale-flipper` plays the release from its start; `whale-gone` is silent.
 The recording honours music mute (its clock keeps running), mute-all and hidden-page suspension, and permanent
 silence. `hush` does not apply: the recording carries its own dynamics, and makes `whaleCallRoomDb` (−4 dB) of room
 only while the whale calls, so its voice stays clear. The generic pad is silent throughout the passage.
 `CrossingChapter.seaScore` (`open`, `swim`, `return`, `arrival`) remains story state for the swim and the pod.
-`tools/sea-music-check.mjs` checks the cuts, whole phrases, silence at rest, order, waiting, restores, handoff and gates
-offline; `sea-logic-check.mjs` that each cue comes as its act begins; `sea-music-browser-check.mjs rescue` plays the
-rescue with real gestures and reports each phrase's wait. Ordinary crossings keep
-the departing island's music until the handoff.
+`tools/sea-music-check.mjs` checks the cuts, the crossing into the bed, its rounds, the release and its ending,
+restores, handoff and gates offline; `sea-logic-check.mjs` that the rescue state follows the net's first lift, the
+pull and the whale's going; `sea-music-browser-check.mjs` measures the same in the real game. `node tools/sea-rescue-audition.mjs
+<out.wav> [secondsToThePull]` renders the passage for listening at any pace. Ordinary crossings keep the departing
+island's music until the handoff.
 
 **Homeward and Home.** Jeremy's 2026-10-11 instruction: "great, can you set it up so that home.ogg is what plays for
 the home chapter instead of whatever music we currently have." He rejected smaller encodes: "nvm its not worth it,

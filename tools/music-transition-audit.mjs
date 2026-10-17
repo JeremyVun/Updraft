@@ -34,8 +34,8 @@ try {
         ??sound.meadowScore??sound.birchesScore??sound.stairsScore??sound.sleepingMusic??sound.seaMusic;
       const update=tick=>{
         const t=tick/8,landed=t>=landing;
-        // The sea's recording keeps the passage clock: it starts its crossing after the morning, and leaves in its close.
-        const sea=target==='sea'?{seaMusicTime:t-approach-tuning.audio.seaMusicLead,seaPhrase:-1}:source.seaScore?{seaMusicTime:200,seaPhrase:5}:{};
+        // The sea's recording keeps the passage clock: it starts its crossing after the morning, and leaves in its release.
+        const sea=target==='sea'?{seaMusicTime:t-approach-tuning.audio.seaMusicLead,seaRescue:'coming'}:source.seaScore?{seaMusicTime:200,seaRescue:'freeing'}:{};
         sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),...sea,flockChatter:false,
           arrivalMusic:t>=approach&&!landed?target:undefined,arrivalReady:t>=approach+6,
           homewardTime:homeward&&t>=approach&&!landed?t-approach:undefined});

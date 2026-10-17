@@ -1,7 +1,8 @@
 // In the real game (GPU, shared lock): `sea`, with no input, `?chapter=sea` starts `sea.ogg` from its top, its 55th
-// second falls as the boat comes to rest beside the whale and nothing follows it; `whale`, `?chapter=whale` is silent
-// until an act; `rescue` plays the rescue promptly with real gestures and reports how long each phrase waits after
-// its act begins (the net, the fold, her first pull, the cygnet's pull, the release). About 5 minutes in all.
+// second falls as the boat comes to rest beside the whale and nothing follows it until the net first lifts; `whale`,
+// `?chapter=whale` is silent until then; `rescue` plays the rescue promptly with real gestures and reports the
+// sections as they play, the bed entering as the net lifts and how long the release waits after the cygnet starts to
+// pull. About 9 minutes in all.
 // Usage: node tools/sea-music-browser-check.mjs [sea whale rescue]. Vite on 5230, or BASE. The recording's own rules
 // are `sea-music-check.mjs`.
 import assert from 'node:assert/strict';
@@ -34,12 +35,12 @@ try {
     sound.update = (...args) => {
       update(...args);
       const story = __game.story.current, w = story.whale;
-      if (story.seaPhrase !== seaWatch.cued) {
-        seaWatch.cued = story.seaPhrase;
-        seaWatch.cues.push({ phrase: story.seaPhrase, ctx: sound.ctx.currentTime, story: story.time,
+      if (story.seaRescue !== seaWatch.cued) {
+        seaWatch.cued = story.seaRescue;
+        seaWatch.cues.push({ rescue: story.seaRescue, ctx: sound.ctx.currentTime, story: story.time,
           act: w && { step: w.step, lift: __game.sealife.net.lift, progress: w.progress, fold: w.fold, foldT: w.foldT, haul: w.haul, heaves: w.heaves, bird: w.bird } });
       }
-      if (seaWatch.rest === null && story.seaPhrase === 0) {
+      if (seaWatch.rest === null && story.whale?.step === 'breath') {
         const intro = seaWatch.intro;
         seaWatch.rest = { story: story.seaMusicTime, ctx: sound.ctx.currentTime,
           recording: intro ? intro.offset + sound.ctx.currentTime - intro.when : null };
@@ -56,22 +57,22 @@ try {
   const sea = async () => {
     await begin('chapter=sea');
     await page.waitForFunction(() => seaWatch.rest && __game.sound.ctx.currentTime > seaWatch.rest.ctx + 6, null, { timeout: 180000 });
-    const sea = await page.evaluate(() => ({ rest: seaWatch.rest, intro: seaWatch.intro, count: seaWatch.phrases.length }));
+    const sea = await page.evaluate(() => ({ rest: seaWatch.rest, intro: seaWatch.intro, phrases: seaWatch.phrases }));
     console.log(JSON.stringify({ sea, requests }, null, 2));
     assert(requests.filter(url => /\/sea(?:-[\w-]+)?\.ogg$/.test(url)).length === 1
       && requests.every(url => /\/(sea|mirror)(?:-[\w-]+)?\.ogg$/.test(url)), 'the sea downloads once, reused from startup, with only the Mirror next');
     assert(sea.intro && sea.intro.offset === 0, 'the passage starts the recording from its beginning');
     assert(Math.abs(sea.rest.story - 55) <= .6, `the story clock puts recording second ${sea.rest.story.toFixed(2)} at rest`);
     assert(sea.rest.recording >= 54.4 && sea.rest.recording <= 57, `the recording is at ${sea.rest.recording?.toFixed(2)} s at rest`);
-    assert(sea.count === 1, 'nothing plays after the crossing while the boat rests');
+    assert(sea.phrases.length === 1, 'nothing plays after the crossing while the boat rests and nobody plays');
   };
   const whale = async () => {
     await begin('chapter=whale');
-    await page.waitForFunction(() => __game.story.current.seaPhrase === 0 && __game.sound.seaMusic, null, { timeout: 60000 });
+    await page.waitForFunction(() => __game.story.current.whale?.step === 'breath' && __game.sound.seaMusic, null, { timeout: 60000 });
     await page.waitForTimeout(4000);
-    const whale = await page.evaluate(() => ({ count: seaWatch.phrases.length, phrase: __game.story.current.seaPhrase }));
+    const whale = await page.evaluate(() => ({ phrases: seaWatch.phrases.map(c => c.offset), rescue: __game.story.current.seaRescue }));
     console.log(JSON.stringify({ whale }, null, 2));
-    assert(whale.count === 0, 'starting at rest beside the whale stays silent until an act');
+    assert(whale.phrases.length === 0 && whale.rescue === 'coming', 'starting at rest beside the whale stays silent until the net lifts');
   };
   const rescue = async () => {
     await begin('chapter=whale');
@@ -109,16 +110,19 @@ try {
     await page.waitForFunction(() => seaWatch.phrases.some(c => c.offset > 150), null, { timeout: 60000 });
     await gameWait(page, 2);
     const { cues, phrases } = await page.evaluate(() => seaWatch);
-    // Each act's phrase is the next clip to start; its wait is from the act's cue to the clip's start.
-    const waits = cues.filter(c => c.phrase >= 1).map((cue, i) => ({ phrase: cue.phrase, at: +cue.story.toFixed(1),
-      wait: phrases[i] ? +(phrases[i].when - cue.ctx).toFixed(2) : null, offset: phrases[i]?.offset, act: cue.act }));
-    console.log(JSON.stringify({ rescue: waits }, null, 2));
-    assert.deepEqual(cues.map(c => c.phrase), [0, 1, 2, 3, 4, 5], 'one cue as each act begins, in order');
-    assert.deepEqual(phrases.map(c => c.offset), [129.93, 136.3, 143.1, 150, 159.47], 'the four wind phrases and the close each play once');
-    assert(waits[0].act.step === 'breath' && waits[0].act.progress < 1, 'the first phrase as the net over the blowhole starts to lift');
-    assert(waits[1].act.step === 'eye' && waits[1].act.foldT < 0, 'the second as the fold over its eye starts to lift');
-    assert(waits[2].act.haul === 'heaving' && waits[2].act.heaves === 0, 'the third as she first pulls, not as she takes the line');
-    assert(waits[3].act.bird === 'pulling', 'the fourth as the cygnet starts to pull');
+    const pull = cues.find(c => c.rescue === 'freeing'), release = phrases.find(c => c.offset > 150);
+    const report = { sections: phrases.map(c => ({ offset: c.offset, at: +c.story.toFixed(1) })), pull: +pull.story.toFixed(1),
+      wait: +(release.when - pull.ctx).toFixed(2), act: pull.act };
+    console.log(JSON.stringify({ rescue: report }, null, 2));
+    assert.deepEqual(cues.map(c => c.rescue).filter(r => r !== 'coming'), ['rescue', 'freeing'], 'the rest, then the cygnet\'s pull');
+    const stir = cues.find(c => c.rescue === 'rescue');
+    assert(stir.act.step === 'breath' && stir.act.progress < 1 && stir.act.lift >= .05, 'the bed enters as the net first lifts');
+    assert(phrases[0].offset === 56.43 && phrases[0].when - stir.ctx < .1, 'the bed begins at once, from the bass entering');
+    assert(pull.act.step === 'flipper' && pull.act.bird === 'pulling', 'freeing as the cygnet starts to pull');
+    assert(phrases.slice(1).every((c, i) => Math.abs(c.when - (phrases[i].when + phrases[i].duration)) < 1e-3),
+      'each section begins as the last ends');
+    assert(release.offset === 159.47 && release.when >= pull.ctx && release.when - pull.ctx < 7.6,
+      'the release follows the phrase the pull began in');
   };
   const run = { sea, whale, rescue };
   for (const name of cases) await run[name]();

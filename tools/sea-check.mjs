@@ -183,8 +183,8 @@ try {
     const now = await page.evaluate(() => __game.story.current.whale?.step);
     if (now !== step) { step = now; if (['eye', 'line', 'heave', 'flipper'].includes(step)) await shot(step); }
     if (step === 'free' || step === 'gone') break;
-    if(netShot<3 && await page.evaluate(n=>{const net=__game.sealife.net;return n===0?net.lift>.55:n===1?net.slump>.12:net.slump>.99;},netShot))
-      await shot(['upper-net-lifting','upper-net-drifting','upper-net-clear'][netShot++]);
+    if(netShot<3 && await page.evaluate(n=>{const net=__game.sealife.net;return n===0?net.lift>.55:n===1?net.flight?.time>1.5:net.flight?.time>6||net.breathGone;},netShot))
+      await shot(['upper-net-lifting','upper-net-thrown','upper-net-clear'][netShot++]);
     if (!loopShown && step === 'flipper' && await page.evaluate(() => !!__game.story.current.whale.offered)) {
       await shot('flipper-held'); loopShown = true;
     }

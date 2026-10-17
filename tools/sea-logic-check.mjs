@@ -144,23 +144,49 @@ function coveredBlowhole(net, blowhole) {
   assert(net.breathNet.material.uniforms.uCell.value<net.sheet.material.uniforms.uCell.value*.6,'the upper net has a visibly tighter weave');
   assert.notEqual(net.sheet.material,net.breathNet.material,'the second net has its own material');
   assert.notEqual(net.sheet.material.uniforms.uStrand.value.getHex(),net.breathNet.material.uniforms.uStrand.value.getHex(),'the nets have different colours');
-  for(const [lift,slump] of [[.5,0],[1,0],[1,.3],[1,1]]) {
-    net.lift=lift;net.slump=slump;net.updraft=1;net.domeT=.35;net.domeStrength=1;net.snap=true;net.update(0,60);
-    assert.deepEqual(orange(),before,'the updraft, breath and drift cannot move the orange sheet, ropes or corks');
-    if(lift===1&&slump===0){
+  for(const lift of [.5,1]) {
+    net.lift=lift;net.updraft=1;net.domeT=.35;net.domeStrength=1;net.snap=true;net.update(0,60);
+    assert.deepEqual(orange(),before,'the updraft and breath cannot move the orange sheet, ropes or corks');
+    if(lift===1){
       const b=net.breathBounds;
       for(let i=b.i0;i<=b.i1;i++)for(let j=b.j0;j<=b.j1;j++)
         assert(net.breathPos.getY(i*28+j)>sealife.sleeper.blowhole.y+1.5,'every part of the upper net clears the crown');
     }
   }
-  assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net is carried completely aside');
-  net.lift=0;net.updraft=0;net.update(0,70);
+  // Thrown by its first full breath: cloth in the air, off over its back, down on the sea far off and sunk away.
+  net.thrown=true;
+  const skin={height:0,normal:new THREE.Vector3()}, blow=sealife.sleeper.blowhole.clone();
+  let stretch=0,clear=Infinity,rose=0,far=0,goneAt=null;
+  for(let i=0;i<60*60&&goneAt===null;i++){
+    net.update(1/60,60+i/60);
+    const f=net.flight;
+    if(net.breathGone){goneAt=i/60;break;}
+    if(i/60>4)assert(!coveredBlowhole(net,blow),`the upper net is off the blowhole and never falls back (${(i/60).toFixed(1)} s)`);
+    if(!f||net.breathSinking)continue;
+    for(let l=0;l<f.lengths.length;l++){
+      if(f.stiffness[l]<1)continue;
+      const a=f.links[l*2]*3,b=f.links[l*2+1]*3;
+      stretch=Math.max(stretch,Math.hypot(f.points[a]-f.points[b],f.points[a+1]-f.points[b+1],f.points[a+2]-f.points[b+2])/f.lengths[l]);
+    }
+    const centre=f.centre(new THREE.Vector3());
+    rose=Math.max(rose,centre.y-blow.y);far=Math.max(far,Math.hypot(centre.x-blow.x,centre.z-blow.z));
+    for(let k=0;k<f.wet.length;k++){
+      const h=sealife.sleeper.surfaceAt(f.points[k*3],f.points[k*3+2],skin).height;
+      if(h>-Infinity)clear=Math.min(clear,f.points[k*3+1]-h);
+    }
+  }
+  assert(rose>5,`its breath throws it well up into the air: ${rose.toFixed(1)} m over the blowhole`);
+  assert(far>30,`the breeze carries it far off: ${far.toFixed(0)} m`);
+  assert(stretch<1.1,`it never stretches like rubber: ${stretch.toFixed(3)}`);
+  assert(clear>0,`it never passes into the whale: ${clear.toFixed(2)} m clear`);
+  assert(goneAt!==null&&goneAt<50&&!net.breathNet.visible,`it has sunk away and is drawn no more: ${goneAt}`);
+  net.lift=0;net.updraft=0;net.update(0,130);
   assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net cannot fall back over the blowhole');
   const upper=[net.breathPos,net.breathNormals,net.breathAfloat,net.breathContact];
   const settled=upper.map(a=>({values:Array.from(a.array),version:a.version}));
-  for(let i=0;i<120;i++)net.update(1/60,70+i/60);
+  for(let i=0;i<120;i++)net.update(1/60,130+i/60);
   assert.deepEqual(upper.map(a=>({values:Array.from(a.array),version:a.version})),settled,
-    'a settled upper net keeps its geometry without uploading unchanged buffers; waves run in its shader');
+    'a sunk upper net keeps its geometry without uploading unchanged buffers');
   net.drape(chapter.whale.rest,chapter.whale.yaw,true);
   net.update(0,80);
   assert(coveredBlowhole(net,sealife.sleeper.blowhole),'restarting the encounter drapes the upper net again');
@@ -219,7 +245,7 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
   const transitions=[],steps=[],saves=[];
-  let last='',step='',phrases=[],blowholeEdge=0,eyeOpen=0,finClear=Infinity;
+  let last='',step='',rescues=[],blowholeEdge=0,eyeOpen=0,finClear=Infinity;
   const asked={},moved={};
   const actionable={}, invitations={};
   let openSamples=0, blockedSamples=0, loopClear=Infinity, tailBend=0, flukeEdge=0, railSamples=0;
@@ -248,7 +274,7 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
       assert(coveredBlowhole(sealife.net,w.whale.blowhole),'the blue-green net covers the blowhole before the updraft');
       blockedSamples++;
     }
-    if(w.step==='eye'&&sealife.net.slump>0.999&&i%Math.ceil(fps/10)===0){
+    if(w.step==='eye'&&(sealife.net.flight?.time>6||sealife.net.breathGone)&&i%Math.ceil(fps/10)===0){
       assert(!coveredBlowhole(sealife.net,w.whale.blowhole),'the separate net drifts clear of the blowhole');
       openSamples++;
     }
@@ -275,13 +301,11 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
     }
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
-    if(c.seaPhrase!==phrases.at(-1)){
-      phrases.push(c.seaPhrase);
-      // Each phrase begins as its act does: the net over the blowhole and the fold over its eye first lifting, her
-      // first pull on the line, the cygnet's pull; none as she takes the line.
-      const begun={1:w.step==='breath'&&w.progress<1,2:w.step==='eye'&&w.foldT<0,3:w.step==='heave'&&w.haul==='heaving'&&w.heaves===0,
-        4:w.step==='flipper'&&w.bird==='pulling'}[c.seaPhrase];
-      assert(begun??true,`phrase ${c.seaPhrase} begins as its act does: ${JSON.stringify({step:w.step,progress:w.progress,foldT:w.foldT,haul:w.haul,heaves:w.heaves,bird:w.bird})}`);
+    if(c.seaRescue!==rescues.at(-1)){
+      rescues.push(c.seaRescue);
+      // The bed as the net over the blowhole first lifts; the release once the cygnet starts pulling the last loop off.
+      const begun={rescue:w.step==='breath'&&w.progress<1&&sealife.net.lift>=.05,freeing:w.step==='flipper'&&w.bird==='pulling',gone:w.step==='gone'}[c.seaRescue];
+      assert(begun??true,`the recording hears '${c.seaRescue}' as it happens: ${JSON.stringify({step:w.step,bird:w.bird})}`);
     }
     // While the breath is asked, the blowhole is held well inside the frame, with room round it to circle.
     if(w.step==='breath'&&w.progress<1&&(c.coax||w.progress>0))blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
@@ -337,7 +361,7 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
   }
   assert(finClear>=1,`the cygnet keeps a metre of clear water from the flipper: ${finClear.toFixed(2)} m`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
-  assert.deepEqual(phrases,[-1,0,1,2,3,4,5],`the recording's phrases follow rest, each act and the release in order: ${phrases}`);
+  assert.deepEqual(rescues,['coming','rescue','freeing','gone'],`the recording hears the net lift, the cygnet's pull and the whale gone in order: ${rescues}`);
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
   assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
   for(const s of PLAYED)assert(invitations[s]<=0.7,`${s} invitation follows its actionable target promptly: ${invitations[s]} s`);
