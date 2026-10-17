@@ -272,6 +272,7 @@ export class Soundscape {
   /** When Home's quiet opening begins looping for the cygnet's ask, on the audio clock. */
   private homeAskAt: number | undefined;
   private gestureVoices: { midi: number; at: number; out: GainNode }[] = [];
+  private forestStroke = false;
   private reverbConvolver!: ConvolverNode;
   private readonly arrivalTransition = new ArrivalTransition();
   private noiseWork: Sliced<AudioBuffer> | null = null;
@@ -1423,8 +1424,10 @@ export class Soundscape {
     const gestures = musicalWind && !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
     const care = !!s.caringWind;
     const scale = care ? [62, 64, 69, 71, 74, 76] : forestChimes ? MOODS.wood.scale : mood.scale;
-    const velocity = care ? tuning.audio.careChimeLevel : 1;
-    const gusting = s.gust > tuning.pointer.minGust && gestures;
+    const velocity = care ? tuning.audio.careChimeLevel : forestChimes ? 10 ** (tuning.audio.forestChimeDb / 20) : 1;
+    const stroke = tuning.audio.forestChimeGust;
+    this.forestStroke = forestChimes && s.gust > (this.forestStroke ? stroke.off : stroke.on);
+    const gusting = (forestChimes ? this.forestStroke : s.gust > tuning.pointer.minGust) && gestures;
     const lifting = s.charge > tuning.pointer.minLift && gestures;
     const at = this.nextPulse();
     const interval = PULSE * (s.forestWind ? tuning.audio.forestChimePulses : tuning.audio.gesturePulses);

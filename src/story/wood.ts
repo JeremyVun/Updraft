@@ -164,6 +164,8 @@ export class WoodChapter implements Chapter {
     child.stepAshore(cast.boat);
     if (cygnet.seat === 'cradle') cast.carry.stow();
     else cygnet.rideIn('satchel');
+    // The storm's watch would carry ashore and the hood reads any watch as family in sight to call to.
+    cygnet.watch(null);
     child.walkTo(WOOD_LANDING.x, WOOD_LANDING.y - 14, false, () => this.to('first'), 1.4);
     /**
      * The first coal is already breathing in the litter before they are off the beach, close enough to the path
@@ -539,7 +541,7 @@ export class WoodChapter implements Chapter {
 
   private fright(): void {
     const { child: c, cygnet, carry } = this.cast;
-    if (!this.startled && this.t >= tuning.wood.frightThunderDelay) {
+    if (!this.startled && this.t >= tuning.wood.frightFlinchAfter) {
       this.startled = true;
       cygnet.mind.startle(1);
       cygnet.does('flinch');
@@ -1107,7 +1109,7 @@ export class WoodChapter implements Chapter {
     this.feared(this.fearAt);
     woodOwl.lookAt(this.childHead.copy(c.position).setY(c.position.y + 2.2));
     c.lookAt = this.fearAt;
-    cygnet.watch(this.fearAt);
+    cygnet.watch(this.fearAt, true);
     if (this.sideCoal?.lit) this.shapeReveal = Math.min(1, this.shapeReveal + dt / k.revealSeconds);
     // The eyes go from the fork into the outline when it leaps up: never two pairs at once.
     woodOwl.eyeshine = k.eyeshineDark * (1 - this.beast);
@@ -1123,7 +1125,7 @@ export class WoodChapter implements Chapter {
     // Once, before the player has done anything: a look down at the cygnet in her satchel, and it looks up at her.
     if (!thrown && since > k.glanceAfter && since < k.glanceAfter + k.glanceFor) {
       c.lookAt = cygnet.seating.shown.p;
-      cygnet.watch(this.childHead);
+      cygnet.watch(this.childHead, true);
     }
     // The flinch back when the antlers leap up the rock.
     const jolt = thrown ? this.now - this.throwLitAt : -1;
@@ -1173,7 +1175,7 @@ export class WoodChapter implements Chapter {
       const flying = owl.phase === 'leaving' ? owl.flightSeconds : 0;
       if (owl.phase === 'awake' || (owl.phase === 'leaving' && flying <= 0)) {
         c.lookAt = this.shapeEyes;
-        cygnet.watch(this.shapeEyes);
+        cygnet.watch(this.shapeEyes, true);
         // She tips her head back at it as it tips its head at her.
         c.tilt = owl.phase === 'awake' ? -0.6 * owl.head.z : c.tilt * Math.exp(-dt * 4);
       } else if (owl.phase === 'leaving' && owl.presence > 0.2) {
@@ -1181,7 +1183,7 @@ export class WoodChapter implements Chapter {
         // She tips her head back to it only so far: further, and her hood and fringe close over her face.
         const head = c.position.y + 2.2;
         c.lookAt = this.upAt.copy(owl.position).setY(head + (owl.position.y - head) * k.lookUpShare);
-        cygnet.watch(owl.position);
+        cygnet.watch(owl.position, true);
         // Round after it, body and all, as it comes over her.
         if (flying > k.turnAfter) c.faceToward(owl.position.x, owl.position.z, 1 - Math.exp(-dt * k.turnRate));
         if (!this.peeped && flying > k.peepAfter) { this.peeped = true; cygnet.does('peer', owl.position, k.peepFor); }
