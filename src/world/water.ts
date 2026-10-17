@@ -134,7 +134,9 @@ const SEA_EFFECT_SLOTS = ['HULL_COLLAR', 'LANTERN_GLINT', 'SEABED_DETAIL', 'SEA_
 /** A quality change fades the sea's effects over this many seconds, as the grass and the bloom change. */
 const SEA_EFFECT_FADE = 1;
 
+// The open water is a smooth gradient the fog lookup's radial slices would band, so its pixels take the mist exactly.
 const FRAG = /* glsl */ `
+#define FOG_LOOKUP 0
 ${ATMO_GLSL}
 ${WATER_ROOMS_GLSL}
 ${SURF_GLSL}
