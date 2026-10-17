@@ -164,6 +164,9 @@ export class DrownedChapter implements Chapter {
    */
   private heading = 0;
   private headingSpeed = 0;
+  /** The seat's height as the storm's lens rides it: the swell's heave smoothed out, so the lens keeps the sea's mean. */
+  private heave = 0;
+  private heaveSpeed = 0;
   private readonly lensAt = new THREE.Vector3();
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
     distance: tuning.drownedCamera.spireDistance,
@@ -522,9 +525,14 @@ export class DrownedChapter implements Chapter {
       const w = tuning.storm.lensTurn, off = Math.atan2(Math.sin(yaw - this.heading), Math.cos(yaw - this.heading));
       this.headingSpeed += (w * w * off - 2 * w * this.headingSpeed) * dt;
       this.heading += this.headingSpeed * dt;
+      const h = tuning.storm.heaveFollow;
+      this.heaveSpeed += (h * h * (this.cast.child.position.y - this.heave) - 2 * h * this.heaveSpeed) * dt;
+      this.heave += this.heaveSpeed * dt;
     } else {
       this.heading = boat.yaw;
       this.headingSpeed = 0;
+      this.heave = this.cast.child.position.y;
+      this.heaveSpeed = 0;
     }
     this.frame(dt);
   }
@@ -815,6 +823,8 @@ export class DrownedChapter implements Chapter {
     s.composition = undefined;
     s.smoothFit = undefined;
     s.clearance = undefined;
+    s.floorEase = undefined;
+    s.carryHeave = undefined;
     s.carry = true;
     this.subjects.primary.copy(this.cast.child.position).y += 1.2;
     this.hullFrame[0].copy(boat.position);
@@ -832,9 +842,11 @@ export class DrownedChapter implements Chapter {
       const bearing = this.heading + Math.PI + this.quarter * tuning.storm.cameraQuarter;
       s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
       const seat = this.cast.child.position;
-      s.target.set(seat.x + fx * tuning.storm.planeAhead, seat.y + 1.7 + Math.min(tuning.storm.planeLookUp, Math.max(0, p.position.y - seat.y) * 0.1), seat.z + fz * tuning.storm.planeAhead);
+      s.target.set(seat.x + fx * tuning.storm.planeAhead, this.heave + 1.7 + Math.min(tuning.storm.planeLookUp, Math.max(0, p.position.y - this.heave) * 0.1), seat.z + fz * tuning.storm.planeAhead);
       s.distance = 18;
       s.height = 3.6;
+      s.floorEase = tuning.storm.floorEase;
+      s.carryHeave = tuning.storm.heaveFollow;
       this.pace = 1;
       this.focus.copy(boat.position);
       return;
@@ -878,7 +890,9 @@ export class DrownedChapter implements Chapter {
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
     /** Low and close to the water, because the village only reads as drowned from a hand's breadth above it. */
     const seat = this.cast.child.position;
-    s.target.set(seat.x + fx * tuning.storm.lookAhead, seat.y + 0.9, seat.z + fz * tuning.storm.lookAhead);
+    s.target.set(seat.x + fx * tuning.storm.lookAhead, this.heave + 0.9, seat.z + fz * tuning.storm.lookAhead);
+    s.floorEase = tuning.storm.floorEase;
+    s.carryHeave = tuning.storm.heaveFollow;
     s.distance = 16;
     s.height = 2.8;
     this.pace = 0.4;
@@ -927,8 +941,12 @@ export class DrownedChapter implements Chapter {
     }
     const aim = Math.atan2(s.target.y - eyeY, s.distance);
     const lamp = Math.atan2(LIGHTHOUSE_LANTERN_Y - eyeY, Math.hypot(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ));
-    /** Never so far up that the hull drops out of the frame's foot, which would make the rig back off to keep it. */
-    const below = (p: THREE.Vector3) => Math.atan2(p.y - eyeY, Math.hypot(p.x - eyeX, p.z - eyeZ));
+    /**
+     * Never so far up that the hull drops out of the frame's foot in a trough, which would make the rig back off to keep
+     * it; measured at the swell's mean so the look does not nod with each wave.
+     */
+    const bob = this.cast.child.position.y - this.heave;
+    const below = (p: THREE.Vector3) => Math.atan2(p.y - bob - eyeY, Math.hypot(p.x - eyeX, p.z - eyeZ));
     let lowest = below(this.subjects.primary);
     for (const p of this.hullFrame) lowest = Math.min(lowest, below(p));
     const ceiling = Math.max(aim, Math.min(k.tilt, lowest + half - k.boatMargin));

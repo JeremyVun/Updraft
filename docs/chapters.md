@@ -616,8 +616,9 @@ About five to six minutes, nearly all of it the player's:
    lighthouse (`STORM_WAY`, 173 m to the beach) on the first air, the player's wind still filling the sail until the
    storm's comes up; the lens comes down off the cat's sill in one move to look along the water at the boat with the
    church and the lighthouse beyond, and holds that distance past the tower: passing under it the lantern may leave
-   the top of the frame, never the boat the bottom. The dusk deepens into night, the first stars come out over the
-   fog lying on the water, the sea roughens and the rain begins; the lighthouse's beam turns over the fog and the
+   the top of the frame, never the boat the bottom. It rides the swell's mean rather than each wave, so the boat
+   rises and falls in a steady frame. The dusk deepens into night, the first stars come out over the fog lying on
+   the water, the sea roughens and the rain begins; the lighthouse's beam turns over the fog and the
    boat, its horn calls, and as they pass it its light fails and goes out in frame (30 s out) while the fog rises
    round the tower and closes round them into the storm's night, lightning once the dark is established, the cygnet
    startled at the light going and nuzzling under her chin, its shaking in the rain, the paper plane taken off her

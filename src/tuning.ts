@@ -3448,17 +3448,23 @@ export const tuning = {
      * `offsetAtNave` and may stand `arcAtNave` off astern, so the lens sees her past the nave's roof. On a lens of
      * `zoom` it turns toward the tower only as far as brings it `margin` radians inside the frame's side, keeping her
      * `herMargin` inside the other, and looks up from the storm's own aim only as far as keeps the lamp `margin` inside
-     * the frame's top, never above `tilt` nor so far that the hull comes within `boatMargin` radians of the frame's
-     * foot: passing under the tower the lamp may leave the top, the boat never the bottom. From `holdFor` seconds after
+     * the frame's top, never above `tilt` nor so far that the hull, at the swell's mean, comes within `boatMargin`
+     * radians of the frame's foot (room for a trough): passing under the tower the lamp may leave the top, the boat
+     * never the bottom. From `holdFor` seconds after
      * the light is out it comes in over `letGoFor`
      * seconds to the storm's frame.
      */
     leaveFor: 9,
     lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 3.2, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
       arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.14, herMargin: 0.14, tilt: 0.26, pace: 0.6,
-      boatMargin: 0.1, holdFor: 1, letGoFor: 5 },
+      boatMargin: 0.16, holdFor: 1, letGoFor: 5 },
     /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
     lensTurn: 0.6,
+    /**
+     * How quickly it takes up the hull's rise and fall (critically damped, per second): slow enough that it rides the
+     * swell's mean, not each wave. Low over the water it eases onto its clearance over its last `floorEase` metres.
+     */
+    heaveFollow: 0.3, floorEase: 0.6,
     /** Seconds she takes turning round on the thwart from the cat to the way they go, as they cast off. */
     turnFromCat: 3,
     /** Seconds she holds the startled cygnet as the light goes out. */

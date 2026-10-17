@@ -66,6 +66,13 @@ export interface Shot {
    * wants to be seen by something small lowers it, and nothing else in the game changes.
    */
   clearance?: number;
+  /**
+   * Metres over the clearance in which the lens eases onto it rather than stopping dead there, for a shot that rides
+   * close to the water.
+   */
+  floorEase?: number;
+  /** Per second: how slowly the carry takes up its anchor's rise and fall (critically damped), riding a heaving hull. */
+  carryHeave?: number;
   /** Smooth authored changes of subject coverage instead of jumping to the fit. */
   smoothFit?: number;
   /** A longer lens: 2 halves the field of view. For a view that has to be taken from far off; eased in and out. */
@@ -133,6 +140,9 @@ export class CameraRig {
   private lastShot?: Shot;
   private readonly lastTarget = new THREE.Vector3();
   private readonly lastCarryAnchor = new THREE.Vector3();
+  private readonly anchorAt = new THREE.Vector3();
+  private anchorHeave = 0;
+  private anchorHeaveSpeed = 0;
   private readonly moved = new THREE.Vector3();
   /** The target's own travel, smoothed: a follow carries part of it so a walking subject does not stretch the shot. */
   private readonly following = new THREE.Vector3();
@@ -212,7 +222,7 @@ export class CameraRig {
     this.carrySource = shot.carryAnchor;
     this.lastShot = shot;
     this.lastTarget.copy(shot.target);
-    this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
+    this.lastCarryAnchor.copy(this.carriedAnchor(shot, Infinity));
     this.lift = 0;
     this.sceneryRise = 0;
     this.sceneryOffset.set(0, 0, 0); this.sceneryVelocity.set(0, 0, 0);
@@ -255,7 +265,7 @@ export class CameraRig {
       // It goes exactly where it is put; what it keeps is the eye before its breathing, as an eased shot keeps it.
       this.eye.copy(shot.eye).sub(breathe(time, shot.eye.distanceTo(shot.target), this.breath));
       this.look.copy(shot.target); this.lastTarget.copy(shot.target);
-      this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
+      this.lastCarryAnchor.copy(this.carriedAnchor(shot, Infinity));
       this.carrySource = shot.carryAnchor;
       this.turnSpeed = 0; this.direction.reset();
       this.eyeSpeed.set(0, 0, 0); this.lookSpeed.set(0, 0, 0); this.orbitSpeed.set(0, 0, 0);
@@ -271,12 +281,13 @@ export class CameraRig {
     }
     if (dt <= 0) return;
     const k = 1 - Math.exp(-dt * pace);
-    this.moved.subVectors(shot.carryAnchor ?? shot.target, shot.carryAnchor ? this.lastCarryAnchor : this.lastTarget);
+    const anchor = this.carriedAnchor(shot, dt);
+    this.moved.subVectors(anchor, shot.carryAnchor ? this.lastCarryAnchor : this.lastTarget);
     const travel = shot.carry || this.moved.length() > tuning.cinematography.maxCarrySpeed * dt ? 0 : 1 / dt;
     this.following.lerp(this.want.copy(this.moved).multiplyScalar(travel),
       1 - Math.exp(-dt / tuning.cinematography.followSmoothing));
     this.lastTarget.copy(shot.target);
-    this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
+    this.lastCarryAnchor.copy(anchor);
     // A new chapter's anchor is not motion to coast on. A boat running aground stops dead; the lens brakes.
     if (this.carrySource !== shot.carryAnchor) this.carried.set(0, 0, 0);
     const carries = shot.carry && this.carrySource === shot.carryAnchor
@@ -357,6 +368,18 @@ export class CameraRig {
     this.clear += ((shot.clearance ?? GROUND_CLEARANCE) - this.clear) * k;
     this.place(time, dt, shot);
     this.fitSubjects(shot, dt);
+  }
+
+  private carriedAnchor(shot: Shot, dt: number): THREE.Vector3 {
+    const at = this.anchorAt.copy(shot.carryAnchor ?? shot.target), w = shot.carryAnchor && shot.carryHeave;
+    if (!w || !Number.isFinite(dt)) {
+      this.anchorHeave = at.y;
+      this.anchorHeaveSpeed = 0;
+      return at;
+    }
+    this.anchorHeaveSpeed += (w * w * (at.y - this.anchorHeave) - 2 * w * this.anchorHeaveSpeed) * dt;
+    this.anchorHeave += this.anchorHeaveSpeed * dt;
+    return at.setY(this.anchorHeave);
   }
 
   /** Critically damped motion: a new point of interest builds speed, arrives softly and never rings. */
@@ -458,7 +481,9 @@ export class CameraRig {
   private place(time: number, dt: number, shot: Shot): void {
     const want = this.want.copy(this.eye).add(breathe(time, this.eye.distanceTo(this.look), this.breath));
     const clear = Math.max(heightAt(want.x, want.z), heightAt(want.x, want.z - 6), 0) + this.clear;
-    if (want.y < clear) want.y = clear;
+    const ease = shot.floorEase ?? 0;
+    if (ease > 0 && want.y < clear + ease) want.y = clear + ease * Math.exp((want.y - clear - ease) / ease);
+    else if (want.y < clear) want.y = clear;
     /**
      * Whatever else a shot asks for, the subject stays in sight. Ground in the way is answered by coming in
      * closer first and only then by rising, because a camera that solves every hill by climbing ends up looking
