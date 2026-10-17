@@ -672,7 +672,8 @@ warm heart in translucent golden veils, small and dim at rest, opening and brigh
 player's updraft lights one**: circles drawn near the waiting coal on screen stand the column on it
 (`WoodChapter.updraftTarget`, `input.anchor`) and `Embers.updraft` turns the charge into its breath; straight
 strokes build none. Light grows while it wakes (`Embers.illumination`), but only a fully lit coal moves the story.
-Burning coals flare with rising air; loose cinders answer any wind. After a few idle seconds the waiting coal
+Burning coals flare with rising air; loose cinders answer any wind. The trees take
+`tuning.wood.treePlayerSway` (0.6) of the player's wind over the breeze; the storm's push on them is unscaled. After a few idle seconds the waiting coal
 shows the updraft spiral wound from the litter under it. The child walks for as long as there is light
 (`tuning.wood.chainStep` between coals) and stops when it runs out; lit coals stay lit where they were earned.
 She waits `tuning.wood.waitShort` short of an unlit coal. The walking camera stands behind her,
@@ -694,8 +695,8 @@ flutters away low across the frame to her left, seen side on, before it climbs o
 looks round the bend and walks on, never to the trunk, while the camera comes back round behind her the way she
 came. Everything is in the same verbs: which coal, not a new mechanic.
 
-**The fright.** In a cleared glade the camera settles, then one close lightning flash and clap. The cygnet
-recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
+**The fright.** In a cleared glade the camera settles, then one close lightning flash and clap, the clap a quarter
+second after the flash (`tuning.wood.frightThunderDelay`; the bird flinches at the flash). The cygnet recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
 boulders under a tilted slab. Ambient lightning is suppressed for the whole chapter, so the fright has one cause,
 and it cannot repeat. The camera turns to the entrance; only then is the ember inside it seen. The player winds an
 updraft on it, revealing the frightened bird; the child crosses to a spot outside the rock, kneels and holds out a

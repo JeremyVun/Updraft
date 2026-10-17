@@ -79,11 +79,14 @@ updrafts and glider-lift answers schedule no chimes, and sounding tails fade ove
 `scripted`, `silence` and an engaged piano (`pianoActive`) also suppress them. Checkpoint restoration derives the same
 gate.
 
-- Audio and `PointerInput` share `pointer.minGust` and `pointer.minLift`, so the first gentle stroke after audio
-  starts can sound.
+- Forest stroke chimes answer deliberate strokes only (Jeremy, 2026-10-17): the stroke's wind must pass
+  `forestChimeGust.on` (7) to sound and stays answered until it drops under `off` (3.5), so a drifting cursor (under
+  about 4) never rings. Updrafts and the caring voice keep `pointer.minLift` and `pointer.minGust`.
 - Attacks sit on a 96-BPM grid with a minimum gap: `forestChimePulses`
-  (four, 1.25 s) in the forest. Both notes of a glider
+  (six, 1.875 s) in the forest, about one note per stroke. Both notes of a glider
   answer obey the gap and reserve it against gusts and updrafts.
+- Forest chimes sit `forestChimeDb` (−4 dB) under the other gesture chimes, beneath the owl, the cygnet and the
+  thunder; the caring voice keeps `careChimeLevel`.
 - **Forest chimes use the original low minor palette: the whole wood scale (MIDI 50–72), not filtered to the current
   chord.** Forest updrafts use D3–A3–D4–A4. These ring over the forest drone without tail filtering. Searching at
   the rescue ember uses the softer caring voice (`careChime*`).

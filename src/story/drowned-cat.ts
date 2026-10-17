@@ -563,8 +563,8 @@ export class StrandedCat {
     this.watching = true;
     const beat = this.now % 7;
     const fogging = this.cast.cat.unease > 0.05 && this.step === 'aboard';
-    if (fogging) cygnet.watch(beat < 4.5 ? this.darkAt : this.eye);
-    else cygnet.watch(beat > 5.4 && this.step === 'aboard' ? this.head : this.eye);
+    if (fogging) cygnet.watch(beat < 4.5 ? this.darkAt : this.eye, true);
+    else cygnet.watch(beat > 5.4 && this.step === 'aboard' ? this.head : this.eye, true);
   }
 
   /** The drawn gust's direction on screen: from the tub toward where it has to go. */

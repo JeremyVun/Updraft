@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
 import type { Shot } from '../camera';
-import { tuning } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WindField } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -108,6 +108,7 @@ uniform float uStorm;
 /** Phases the CPU advances at the storm's rate: uTime times a changing rate races whenever the storm eases. */
 uniform vec2 uLash;
 uniform vec2 uStormDir;
+uniform vec2 uBreeze;
 uniform float uPixel;
 /** Where this level of detail gives up: segments past x thin away between y and z metres, instead of popping. */
 uniform vec3 uDetail;
@@ -128,8 +129,9 @@ void rootTree() {
   gSeed = hash12(aTree.xz * 3.7);
   vec2 uv = domainUv(aTree.xz);
   vec4 w = insideUv(uv) ? texture(uWindTex, uv) : vec4(0.0);
+  vec2 air = insideUv(uv) ? mix(uBreeze, w.xy, ${glsl(tuning.wood.treePlayerSway)}) : vec2(0.0);
   float roll = sin(uTime * 0.7 - dot(aTree.xz, uStormDir) * 0.045 + gSeed * 5.0);
-  gPush = w.xy * 0.014 + uStormDir * (uStorm * (0.13 + 0.095 * roll) + w.z * 0.05);
+  gPush = air * 0.014 + uStormDir * (uStorm * (0.13 + 0.095 * roll) + w.z * ${glsl(0.05 * tuning.wood.treePlayerSway)});
 }
 
 vec3 place(vec3 p) {
@@ -725,6 +727,7 @@ export class DarkWood {
       uViewB: { value: new THREE.Vector3() },
       uViewClear: { value: 0 },
       uStormDir: { value: new THREE.Vector2(0.4, 0.92) },
+      uBreeze: { value: new THREE.Vector2() },
       uPixel: { value: 0.0008 },
       uLitterCell: { value: new THREE.Vector2() },
       uWay: { value: WAY.map((w) => new THREE.Vector2(w.x, w.y)) },
@@ -996,6 +999,7 @@ export class DarkWood {
     u.uLash.value.x += dt * (2.2 + this.storm * 4.5);
     u.uLash.value.y += dt * (1.1 + this.storm * 7.0);
     const breeze = this.field.breeze;
+    u.uBreeze.value.copy(breeze);
     if (breeze.lengthSq() > 1e-4) u.uStormDir.value.copy(breeze).normalize();
     const proj = (camera as THREE.PerspectiveCamera).projectionMatrix.elements[5];
     u.uPixel.value = 2 / (Math.max(proj, 0.1) * window.innerHeight);

@@ -224,7 +224,12 @@ export const tuning = {
     playerWindFilterRange: .8,
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
     /** Minimum spacing between attacks, including both notes of a glider answer. */
-    gesturePulses: 2, forestChimePulses: 4,
+    gesturePulses: 2, forestChimePulses: 6,
+    /**
+     * Forest chimes answer deliberate strokes only: the stroke's wind must pass `on` to sound and drop under `off` to
+     * stop, so a drifting cursor (under about 4) never rings. Their level sits under the owl, the cygnet and the thunder.
+     */
+    forestChimeGust: { on: 7, off: 3.5 }, forestChimeDb: -4,
     authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
     /** A cue raised while a call or Siri interrupts audio still plays if the interruption ends within this. */
     heldCueLife: 3,
@@ -1409,7 +1414,9 @@ export const tuning = {
     cameraFitResponse: 1.2,
     /** A nearby separation: the child and bird share the frame throughout. */
     shelterDistance: 12,
-    frightThunderDelay: 0.16,
+    /** The bird flinches at the flash; the clap lands a quarter second after (Jeremy: it was ~250 ms early). */
+    frightFlinchAfter: 0.16,
+    frightThunderDelay: 0.41,
     frightStrength: 1.45,
     frightCompose: 2.2,
     frightJumpAfter: 1.65,
@@ -1427,6 +1434,8 @@ export const tuning = {
     planeTugResponse: 9,
     planeFallSeconds: 1.8,
     planeEmberHold: 0.55,
+    /** How much of the player's wind the trees take over the prevailing breeze; the storm's own push is untouched. */
+    treePlayerSway: 0.6,
     planeTreeSway: 0.11,
     planeSwayRate: 0.7,
     planeIdleRock: 0.055,
