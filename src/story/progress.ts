@@ -74,8 +74,8 @@ export function hasFinished(): boolean {
   try {
     if (localStorage.getItem(FINISHED_KEY)) return true;
     // Journeys finished before the flag existed only have their completed save to show for it.
-    if (JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? 'null')?.point !== 'complete') return false;
-    localStorage.setItem(FINISHED_KEY, '1');
+    if (readProgress()?.point !== 'complete') return false;
+    try { localStorage.setItem(FINISHED_KEY, '1'); } catch { /* The completed save still proves the unlock. */ }
     return true;
   } catch {
     return false;

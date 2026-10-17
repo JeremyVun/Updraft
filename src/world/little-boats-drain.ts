@@ -389,7 +389,7 @@ export class LittleBoatsDrain {
   }
 
   /** A stroke pushing across the bath toward the stream tips it over; a stroke across the plug only rocks it in its hole. */
-  brush(camera: THREE.Camera, input: PointerInput, heroS: number, dt: number): void {
+  brush(camera: THREE.Camera, input: PointerInput): void {
     const k = tuning.littleBoats;
     const strength = Math.min(1, input.gust / 12);
     if (this.water > 1 - k.pourNeeded) {

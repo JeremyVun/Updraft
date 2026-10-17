@@ -527,7 +527,7 @@ export class MeadowChapter implements Chapter {
         }
         break;
       case 'crest':
-        this.updateCrest(dt, time);
+        this.updateCrest(dt);
         break;
       case 'down':
         this.updateDown(dt, time);
@@ -869,7 +869,7 @@ export class MeadowChapter implements Chapter {
    * stretches up out of the satchel, and the child stops and turns to look where it is looking. The haze thins,
    * and over the rise, below them, there is a pond with the cygnet's family resting on it.
    */
-  private updateCrest(dt: number, time: number): void {
+  private updateCrest(dt: number): void {
     const { child: c, cygnet, flock } = this.cast;
     const { answers, looks } = tuning.crest;
     this.far.set(flock.head.x, flock.head.y + 1.2, flock.head.z);
