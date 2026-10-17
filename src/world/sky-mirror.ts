@@ -7,7 +7,7 @@ import { mirrorMaterial, soapMaterial, soapWand, starLight, WAND_REACH } from '.
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { MIRROR_BOWL, MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_CONSTELLATION, MIRROR_LIGHT_PATH, MIRROR_BERTH, MIRROR_DECK, MIRROR_ENTRY_DECK, SKY_MIRROR, mirrorBed } from './sky-mirror-layout';
+import { MIRROR_BOWL, MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_CONSTELLATION, MIRROR_LIGHT_PATH, MIRROR_DECK, MIRROR_LAMPPOST, MIRROR_ENTRY_DECK, SKY_MIRROR, mirrorBed } from './sky-mirror-layout';
 import { REFLECTION_LAYER } from './water/reflection';
 
 const T = tuning.skyMirror;
@@ -117,6 +117,10 @@ export class SkyMirror {
   private readonly stroke = new THREE.Vector3();
   private readonly guideLights = new THREE.Vector4();
   private alive = 0;
+  /** Each returned star's slow breath this frame, 0..1, which the lines between them share. */
+  private readonly breaths: number[] = [];
+  private readonly lineLevels: number[] = [];
+  private readonly crossbarLevels: number[] = [];
   private readonly constellationLines: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
 
   private readonly constellationCrossbars: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
@@ -232,12 +236,13 @@ export class SkyMirror {
     }
     add(mergeGeometries(rampParts),0,0,0);rampParts.forEach(g=>g.dispose());
     // A lone lamppost comes into view along the curve, with no house or second red door.
-    add(new THREE.CylinderGeometry(0.075, 0.11, 5, 9), MIRROR_BERTH.x - 4, 2.2, MIRROR_BERTH.z - 1.05);
-    add(new THREE.BoxGeometry(0.76, 0.12, 0.62), MIRROR_BERTH.x - 4, 4.85, MIRROR_BERTH.z - 1.05);
-    add(new THREE.BoxGeometry(0.66, 0.10, 0.56), MIRROR_BERTH.x - 4, 4.12, MIRROR_BERTH.z - 1.05);
+    const {x:lx,z:lz}=MIRROR_LAMPPOST;
+    add(new THREE.CylinderGeometry(0.075, 0.11, 5, 9), lx, 2.2, lz);
+    add(new THREE.BoxGeometry(0.76, 0.12, 0.62), lx, 4.85, lz);
+    add(new THREE.BoxGeometry(0.66, 0.10, 0.56), lx, 4.12, lz);
     const lamp = new THREE.MeshBasicMaterial({ color: '#ffcb79' });
-    add(new THREE.BoxGeometry(0.42, 0.59, 0.35), MIRROR_BERTH.x - 4, 4.46, MIRROR_BERTH.z - 1.05, lamp);
-    for (const x of [-0.25, 0.25]) for (const z of [-0.2, 0.2]) add(new THREE.BoxGeometry(0.035, 0.7, 0.035), MIRROR_BERTH.x - 4 + x, 4.48, MIRROR_BERTH.z - 1.05 + z);
+    add(new THREE.BoxGeometry(0.42, 0.59, 0.35), lx, 4.46, lz, lamp);
+    for (const x of [-0.25, 0.25]) for (const z of [-0.2, 0.2]) add(new THREE.BoxGeometry(0.035, 0.7, 0.035), lx + x, 4.48, lz + z);
     this.reset(); this.group.visible=false;
   }
 
@@ -257,6 +262,7 @@ export class SkyMirror {
     this.forming=this.cooldown=this.lastCharge=0;
     this.alive=0; this.guideLights.set(0,0,0,0); this.constellationLines.forEach(line=>line.material.opacity=0);
     this.constellationCrossbars.forEach(line=>line.material.opacity=0);
+    this.lineLevels.fill(0); this.crossbarLevels.fill(0);
     this.hoop.position.set(MIRROR_BOWL.x+0.2,1.2,MIRROR_BOWL.z); this.hoop.rotation.set(-0.35,0,0.4);
     this.hoop.visible=true; this.film.visible=false;
     for (const s of this.stars) { s.state='fallen'; s.flight=0; s.floor.visible=true; s.light.visible=false; }
@@ -280,15 +286,18 @@ export class SkyMirror {
     const k=1-Math.exp(-dt*1.3);
     this.stars.forEach((s,i)=>this.guideLights.setComponent(i,
       THREE.MathUtils.lerp(this.guideLights.getComponent(i),s.state==='sky'?1:0,k)));
-    this.constellationLines.forEach((line,i)=>{
-      const lit=this.stars[i].state==='sky' && this.stars[(i+1)%this.stars.length].state==='sky';
-      line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,lit?0.38:0,k);
-    });
     const complete=this.progress===this.stars.length;
     this.alive=complete?Math.min(1,this.alive+dt/T.aliveIn):0;
-    this.constellationCrossbars.forEach(line=>{
-      line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,complete?0.38:0,k);
-    });
+    const alive=THREE.MathUtils.smoothstep(this.alive,0,1);
+    const breathe=(line:THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>,levels:number[],j:number,a:number,b:number,lit:boolean)=>{
+      levels[j]=THREE.MathUtils.lerp(levels[j]??0,lit?0.38:0,k);
+      const breath=((this.breaths[a]??0)+(this.breaths[b]??0))/2;
+      line.material.opacity=levels[j]*(1+alive*(T.aliveLine-1+T.aliveLinePulse*breath));
+    };
+    const n=this.stars.length;
+    this.constellationLines.forEach((line,i)=>
+      breathe(line,this.lineLevels,i,i,(i+1)%n,this.stars[i].state==='sky' && this.stars[(i+1)%n].state==='sky'));
+    this.constellationCrossbars.forEach((line,j)=>breathe(line,this.crossbarLevels,j,j,j+2,complete));
   }
 
   /** Called after the child's pose, so the prop stays in the actual mitten. */
@@ -483,6 +492,7 @@ export class SkyMirror {
       }
       if (s.state==='sky') {
         const breath=0.5-0.5*Math.cos(time*Math.PI*2/(T.alivePeriod*(1+i*0.09))+i*1.9);
+        this.breaths[i]=breath;
         const alive=THREE.MathUtils.smoothstep(this.alive,0,1);
         s.light.material.uniforms.uBright.value=1+alive*(T.aliveGlow-1+T.alivePulse*breath);
         s.light.scale.setScalar(1.8*(1+alive*T.aliveSwell*breath));

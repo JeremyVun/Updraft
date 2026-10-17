@@ -60,7 +60,7 @@ ${SWELL_GLSL}
 ${WATERLINE_GLSL}
 ${FORM_GLSL}
 uniform mat4 uHullFrame;
-uniform float uGlass;
+uniform vec2 uGlass;
 in vec3 vColor;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -179,10 +179,9 @@ void main() {
   col += uSunColor * rim * 0.12 * sun;
   col += alb * (emberLight(vWorld, N) + lampLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N) * ao);
   if (kind > ${glsl(KIND.transom + 0.5)}) {
-    /** The lantern's glass: dull amber by day, lit from within as the sun goes down and through the night. */
-    float lit = max(uNight, 1.0 - smoothstep(0.04, 0.28, uSunDir.y));
-    vec3 flame = vec3(1.9, 1.2, 0.55) * uGlass;
-    col = mix(col * 0.8 + uSunColor * sheen * 2.0, flame, lit);
+    /** The lantern's glass: dull amber by day, lit from within (uGlass.y) as the sun goes down and through the night. */
+    vec3 flame = vec3(1.9, 1.2, 0.55) * uGlass.x;
+    col = mix(col * 0.8 + uSunColor * sheen * 2.0, flame, uGlass.y);
   }
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;

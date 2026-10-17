@@ -278,11 +278,15 @@ for(let mask=0;mask<=MIRROR_STAR_MASK;mask++) {
   assert.deepEqual(f.cast.skyMirror.guideLights.toArray(),MIRROR_STARS.map((_,i)=>Number(!!(mask & (1<<i)))));
   assert.equal(f.cast.skyMirror.constellationLines.length,4);
   assert.equal(f.cast.skyMirror.constellationCrossbars.length,2);
-  for(const line of f.cast.skyMirror.constellationCrossbars)assert.equal(line.material.opacity,
-    mask===MIRROR_STAR_MASK?0.38:0,'both internal kite lines require the complete constellation');
+  // A complete kite is alive at once: its lines stronger, breathing with their stars.
+  const complete=mask===MIRROR_STAR_MASK, {aliveLine,aliveLinePulse}=tuning.skyMirror;
+  const shown=(opacity,joined)=>!joined?opacity===0:!complete?opacity===0.38
+    :opacity>=0.38*aliveLine-1e-6 && opacity<=0.38*(aliveLine+aliveLinePulse)+1e-6;
+  for(const line of f.cast.skyMirror.constellationCrossbars)assert(shown(line.material.opacity,complete),
+    'both internal kite lines require the complete constellation');
   f.cast.skyMirror.constellationLines.forEach((line,i)=>{
     const joined=!!(mask & (1<<i)) && !!(mask & (1<<((i+1)%MIRROR_STARS.length)));
-    assert.equal(line.material.opacity,joined?0.38:0,'kite edges join only returned endpoints, including the closing edge');
+    assert(shown(line.material.opacity,joined),'kite edges join only returned endpoints, including the closing edge');
   });
 
   if(!mask)assert(mirrorBed(f.cast.boat.position.x,f.cast.boat.position.z)<-2,'empty saves use the offshore entry mooring');

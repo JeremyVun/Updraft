@@ -31,7 +31,10 @@ tiller, a pail and a coil of rope. The laps are drawn in the shader and fade to 
 The sail is quilt panels until the birches, then the red scarf (`boat.scarfSail`).
 
 The lantern is dull by day and lit from sunset through the night; it lights the travellers, the sail (less) and
-glints in the water (`tuning.lantern`). The stairs' glow sits on this lantern.
+glints in the water (`tuning.lantern`). Home's afternoon has a sun as low as a sunset, so there it stays dark until
+the evening comes (`homeDaylight`): Jeremy (2026-10-17), "while the boat is docked at the jetty i noticed it's lamp
+was still on even though it was day time." The stairs' glow sits on this lantern, and over the cloud the kite's line
+is hitched round the post below it.
 
 Rulings: a little smaller than waist-deep, cute and rounded, wide planks, a thick white post with the lamp at the
 bow. Bigger tubs read "too big and unmanageable" for a dream. A pram bow "just looks weird". The top strake stays

@@ -500,13 +500,15 @@ gestures read.
   28.22, 33.58, 38.69, 41.36, 44.32, 52.76, 56.88, 63.7.
 - **Silence** from the lullaby's end through the frost, the tries, the unanswered call, the window and the feather on
   the quilt, until the player's stroke frees it; the wind, hearth, clock and foley carry on.
-- **The climb.** `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed", 174.2 s, C minor / A♭) in three parts back to
+- **The climb.** `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed", 174.2 s, C minor / A♭) in two parts back to
   back in the recording (`BRAVE_PARTS`), each from 30 ms before the attack after one of its clean rests: the climb
   theme 0–96.27 s as the feather is freed (its quiet opening carries the bird watching, hopping down and looking back);
-  the sparse commitment 96.27–112.11 at `catch`; the summit 112.11–153.18 at `summit`. The two-phrase coda after it is
-  unused. Jeremy (2026-10-16), verbatim: "the summit music needs to start like a second later and have a bit more of a
-  fade in too." Begun on its own, the summit part starts `summitDelay` (1 s) after the bird reaches the top and rises
-  over `summitFadeIn` (1.5 s); following on from the commitment it carries the recording on unbroken. When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
+  the sparse commitment 96.27–112.11 at `catch`. The summit has no music of its own: the section from 112.11 s and the
+  coda are unused. Jeremy (2026-10-17), verbatim, replacing his summit-part ruling of 2026-10-16: "when the cygnet
+  summits and undoes it's bandages, there seems to be some kind of very specific music clip that plays just for that.
+  I dont think that should happen. It should just keep playing the same music that it was already playing and just
+  fade out appropriately." Whatever is sounding as the bird reaches the top plays on: the commitment rings out at its
+  own rest at 112.11 s, or lets go as the bandage comes free (below). When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
   1.2 s) if one comes within `fogSeamWithin` (6 s), or else fades over `fogFade` (3 s), so the fog never carries the
   full theme into the bird's call (the rebuilt climb's prompt fog closes about 68.5 s in, 12 s short of a seam); otherwise it ends at 96.27 s and never runs into the sparse section. `BRAVE_SEAMS`: .84, 4.08, 6.13, 8.18,
   16.1, 24.02, 27.63, 49.96, 57.86, 65.69, 80.5, 92.67, 96.27, 104.18, 112.11, 126.67, 153.18, 157.15, 161.24 (there is
@@ -518,10 +520,10 @@ gestures read.
   And, verbatim: "it needs to fade to silence over like 3 seconds when the bandage comes free, so shift the fade out
   start back by like 1 second".
 
-  The unwinding keeps its music; `ribbonLead` (1 s) before the bandage comes free (`ribbon`) the climb part sounding
+  The unwinding keeps whatever music is still sounding; `ribbonLead` (1 s) before the bandage comes free (`ribbon`) the climb part sounding
   ends at its next seam at least `mirrorSeamSoonest` (0.3 s) ahead if one comes within `ribbonSeamWithin` (1.5 s),
   fading over up to `mirrorSeamRelease` (1.2 s) into it, or else fades over `ribbonFade` (3 s), and no part of the climb's recording
-  begins after it: a part waiting, or a summit part not yet begun, never plays. The music lets go as the bandage falls
+  begins after it: a part waiting never plays. The music lets go as the bandage falls
   away, so the bird faces the ribbon in silence before it leaps; wind and foley alone carry the turn, the circles, the
   leap and the tug until the curtains.
 - **The morning.** Jeremy (2026-10-16), verbatim, of a piece for the curtains opening and the cygnet gliding down:
@@ -549,9 +551,9 @@ gestures read.
   save is silent until the sea and decodes none of the three. Any start or music switched on past a gate stays silent
   until the next, except bedtime (the lullaby) and the freed feather (the climb theme); once the bandage is
   freed, until the curtains; past the curtains, until the sea. The QA start `?chapter=ribbon`, a step below the top
-  with the feather caught, plays the summit part a second after the bird reaches the top, the silence from the
-  bandage freed and the morning at the curtains.
-- **Cues.** Sleeping raises no phrases: the climb theme's entrance is the feather's sound, the summit part the bird's arrival at the top and the morning its flight. Landing adds no completion phrase.
+  with the feather caught, is past the commitment's gate, so it is silent through the top and the bandage until the
+  morning at the curtains.
+- **Cues.** Sleeping raises no phrases: the climb theme's entrance is the feather's sound, the commitment the catch and the morning its flight. Landing adds no completion phrase.
 - **Loading.** The wood and the crossing from it prefetch the lullaby, decoded at the wood's handoff; bedtime prefetches
   the climb, decoded from `asleep`; the freed feather prefetches the morning, decoded from `catch`, so it is in hand well
   before the curtains; the sea prefetches from the summit. Each buffer is released when its last part ends, or on
@@ -563,11 +565,10 @@ the arrival is asked for at 12.5, the lullaby plays 19.2–82.9, she lands at 29
 and is asleep at 84.7; the frost at 86.8 (no wait: 3.9 s after the lullaby), the tries at 85.9, 89.1 and 92.3, the
 call at 95.5, the feather offered at 106.5 and freed at 109.4, the background silent between. From the `feather` save
 through the rebuilt climb: the fog closes at +68.5 with no seam within 6 s, so the climb theme fades out by +71.5; the
-commitment at the catch, +81.5; the summit part at +97.4 as the commitment ends (top +95.2), unbroken. From
-`?chapter=ribbon` (`sleeping-music-browser-check.mjs ribbon`, prompt circles 2 s after the turn), measured from the
-release: the top at −20.0, the summit part from −19.0, rising in; the `ribbon` gate at −8.9, a second before the bandage
-comes free, where it fades out by −5.9 (125.09 s in); the turn at −6.6; the leap at −3.6, 2.3 s into the silence, the
-tug at −1.6, and the morning at the release, 5.9 s of silence before it. Then the 16.46 s seam at +5.5, the 23.62 s seam at +12.6, the landing (`waking`)
+commitment at the catch, +81.5, ringing out at its own rest at +97.3, two seconds after the top (+95.2); nothing begins
+there. From `?chapter=ribbon` (`sleeping-music-browser-check.mjs ribbon`, prompt circles 2 s after the turn), measured
+from the release: the top at −20.0, silent from there; the `ribbon` gate at −8.9, a second before the bandage comes
+free; the turn at −6.6; the leap at −3.6, the tug at −1.6, and the morning at the release. Then the 16.46 s seam at +5.5, the 23.62 s seam at +12.6, the landing (`waking`)
 at +12.7, her eyes open at +14.9 and she sits up from +16.3; boarding at +54.2 fades the morning out by +58.2, and the
 sea's recording begins 6.3 s into the passage, 2.3 s after the morning stops, the gates open. From `?chapter=sleeping` she sleeps 49.2 s in: the lullaby ends at its 52.76 s seam
 and the frost waits 3.2 s. `sleeping-music-check.mjs` prints the same timeline offline for main's former climb, the
@@ -774,7 +775,7 @@ the stairs song from the birches on (decoded when the crossing asks for it), the
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its end below the white (up to 10 s beside `clouds.ogg`'s decode); `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its end below the white (up to 10 s beside `clouds.ogg`'s decode); `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the commitment's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
 retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
 (`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
@@ -1037,8 +1038,7 @@ climb's gates, queueing, skips, the morning at the curtains and restores offline
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its slowed end falls in the storm) awaits his playtest.
 - Sleeping: Jeremy's review of the lullaby, the silence through the frost, the climb's parts and the morning in the
-  game, including whether the crest's rising wind masks the sparse commitment section, and whether the summit part's
-  1.5 s fade at the curtains sits right (a prompt player reaches them about 19 s into the 41 s part, with no seam near).
+  game, including whether the crest's rising wind masks the sparse commitment section.
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

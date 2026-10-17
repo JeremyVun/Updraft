@@ -119,11 +119,10 @@ export const tuning = {
      */
     fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
     /**
-     * The summit part, starting on its own, begins `summitDelay` after the bird reaches the top and rises over
-     * `summitFadeIn`. `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
+     * `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
      * `ribbonSeamWithin`, or fades over `ribbonFade`, and the music rests until the curtains.
      */
-    summitDelay: 1, summitFadeIn: 1.5, ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
+    ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
     /** Seconds Sleeping's morning takes to fade as the boat leaves for the sea. */
     sleepingDepartureFade: 4,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
@@ -350,6 +349,8 @@ export const tuning = {
     cottageTurn: -0.12,
     /** Seconds the child watches the family go before walking on: long enough for the V to grow small. */
     watchFlockFor: 13,
+    /** How quickly she turns to face them as they go (per second). */
+    watchTurn: 1.1,
     /** Her run down to the door, as a share of her usual running speed. */
     runHomePace: 0.815,
     /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
@@ -357,7 +358,7 @@ export const tuning = {
     /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
-    recogniseFor: 6,
+    recogniseFor: 5,
     lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.04,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
@@ -546,9 +547,10 @@ export const tuning = {
     starPulsePeriod: 6, starPulseDepth: 0.08,
     /**
      * Once the kite is complete its stars come alive: seconds to brighten, how much brighter they settle, and a slow
-     * breath (seconds, each star a little out of step) that lifts their light and swells them by these shares.
+     * breath (seconds, each star a little out of step) that lifts their light and swells them by these shares. The
+     * lines between them strengthen by `aliveLine` and breathe with the two stars they join by `aliveLinePulse`.
      */
-    aliveIn: 3, aliveGlow: 1.7, alivePeriod: 3.6, alivePulse: 0.9, aliveSwell: 0.45,
+    aliveIn: 3, aliveGlow: 1.95, alivePeriod: 3.6, alivePulse: 1.15, aliveSwell: 0.55, aliveLine: 1.35, aliveLinePulse: 0.45,
     channelLead: 4,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29,
@@ -1428,8 +1430,11 @@ export const tuning = {
     cameraLead: 0.36,
     cameraPace: 0.65,
     cameraFitResponse: 1.2,
-    /** A nearby separation: the child and bird share the frame throughout. */
-    shelterDistance: 12,
+    /**
+     * A nearby separation: the child and bird share the frame throughout. The view starts settling `frightComposeFrom`
+     * out while she walks on, and she stops at the flash, about `shelterDistance` from the shelter.
+     */
+    shelterDistance: 12, frightComposeFrom: 16,
     /** The bird flinches at the flash; the clap lands a quarter second after (Jeremy: it was ~250 ms early). */
     frightFlinchAfter: 0.16,
     frightThunderDelay: 0.41,
@@ -1905,6 +1910,11 @@ export const tuning = {
     snagTether: 4, freeFor: 3, freeLift: 0.15,
     /** A shorter tether keeps the kite beside the boat in the narrower departure views. */
     shoreKiteStringLength: 22,
+    /**
+     * The sky mirror's kite is wound a few turns round the lamppost, high and clear of the water, and stands off to the
+     * north on this much string, within every star-play view.
+     */
+    mirrorKite: { hitch: { radius: 0.105, turns: 4, height: 2.1 }, stringLength: 28, azimuth: 3.2 },
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
     stringLength: 34,
     /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */

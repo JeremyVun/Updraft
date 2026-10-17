@@ -170,6 +170,9 @@ function lightAngles(dusk: number, home: number): [number, number] {
   return [THREE.MathUtils.lerp(sunsetAzimuth, MOON.az, night), THREE.MathUtils.lerp(-2.5, MOON.el, night)];
 }
 
+/** How much of home's clear afternoon is in the light, 0..1: its sun is drawn low but it is still day. */
+export let homeDaylight = 0;
+
 /**
  * Sets sky, light and haze from how alive the world is (0 still, 1 living) and the time of day
  * (`dusk`: 0 golden afternoon, 1 sunset, 1.5 last light, 2 night), veiled by a passing `shower` (0..1)
@@ -188,6 +191,7 @@ export function applyPalette(life: number, dusk: number, shower = 0, storm = 0, 
     else p = mixInto(outMix, DUSK, NIGHT, THREE.MathUtils.smoothstep(dusk, 1.5, 2));
   }
   const homeDay = home * (1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, 1));
+  homeDaylight = homeDay;
   if (homeDay > 0) p = mixInto(outMix, p, HOME_DAY, homeDay);
   veil(p, shower);
   const night = THREE.MathUtils.smoothstep(dusk, 1.45, 1.95);

@@ -1,6 +1,6 @@
 // Sleeping's recordings, offline: `sleeping.ogg`'s end, `cygnet_brave.ogg`'s parts and `sleeping_morning.ogg`'s entry,
 // and every seam, on the decoded samples; the lullaby from bedtime, the frost waiting for its end (bounded), its early
-// end at a seam; the climb's parts starting at their gates (the summit, begun on its own, a second late and fading in),
+// end at a seam; the climb's two parts starting at their gates and nothing at the summit,
 // never overlapping, never cut but for the climb theme at its seam once the fog closes and the part sounding as the bird
 // frees its bandage, queued and skipped, joining unbroken; silence from there to the curtains; the morning from its
 // second phrase as the curtains open; restores; and the arrival, gestures, mute and silence through the
@@ -73,11 +73,11 @@ try {
     const end = clean(lullaby, LULLABY_END);
     check(LULLABY_SEAMS.at(-1) === LULLABY_END && end.rest < -44 && end.rise > 20,
       `the lullaby ends at its seam before the second half, the note from 60.8 s rung down to ${end.rest.toFixed(1)} dB and the next attack ${end.rise.toFixed(1)} dB up`);
-    check(BRAVE_PARTS.length === 3 && BRAVE_PARTS[0][0] === 0 && BRAVE_SEAMS.includes(BRAVE_PARTS.at(-1)[1])
+    check(BRAVE_PARTS.length === 2 && BRAVE_PARTS[0][0] === 0 && BRAVE_SEAMS.includes(BRAVE_PARTS.at(-1)[1])
       && BRAVE_PARTS.every((part, i) => !i || part[0] === BRAVE_PARTS[i - 1][1] && BRAVE_SEAMS.includes(part[0])),
-      'the climb\'s three parts lie back to back in the recording, each boundary a seam, the coda unused');
+      'the climb\'s two parts lie back to back in the recording, each boundary a seam, the summit and coda unused');
     const cuts = [...BRAVE_PARTS.slice(1).map(([from]) => from), BRAVE_PARTS.at(-1)[1]].map(from => ({ from, ...clean(brave, from) }));
-    check(cuts.every(cut => cut.rest < -38 && cut.rise > 18), `each part begins and the summit ends at one of the piece's clean rests (${JSON.stringify(cuts.map(c => [c.from, +c.rest.toFixed(1), +c.rise.toFixed(1)]))})`);
+    check(cuts.every(cut => cut.rest < -38 && cut.rise > 18), `each part begins and the commitment ends at one of the piece's clean rests (${JSON.stringify(cuts.map(c => [c.from, +c.rest.toFixed(1), +c.rise.toFixed(1)]))})`);
     const phrase = MORNING_SEAMS.find(at => at > MORNING_FROM), entry = clean(morning, phrase), lead = morning.db(MORNING_FROM, phrase - .03);
     check(MORNING_FROM === 11 && phrase === 12.02 && lead < -35 && entry.rise > 20,
       `the morning enters at 11 s in the rest (${lead.toFixed(1)} dB) before its second phrase's seam at ${phrase} s, the attack ${entry.rise.toFixed(1)} dB up`);
@@ -107,14 +107,6 @@ try {
     };
     const reference = await new OfflineAudioContext(2, RATE, RATE).decodeAudioData(await (await fetch('/assets/music/cygnet_brave.ogg')).arrayBuffer());
     const gain = 10 ** (A.recordedMusicDb.cygnetBrave / 20);
-    const envelope = (buffer, c, a, b) => {
-      let out = 0, ref = 0;
-      for (let ch = 0; ch < 2; ch++) {
-        const o = buffer.getChannelData(ch), r = reference.getChannelData(ch), shift = Math.round((c.offset - c.when) * RATE);
-        for (let i = Math.ceil((c.when + a) * RATE); i < Math.floor((c.when + b) * RATE); i++) { out += o[i] ** 2; ref += (gain * r[i + shift]) ** 2; }
-      }
-      return 10 * Math.log10((out + 1e-20) / (ref + 1e-20));
-    };
     const render = async (seconds, gate, { music: given } = {}) => {
       const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE), log = [];
       sources.set(ctx, log);
@@ -156,12 +148,11 @@ try {
       };
       return { gate, at, hold };
     };
-    const PART_NAMES = ['climb theme', 'commitment', 'summit'];
+    const PART_NAMES = ['climb theme', 'commitment'];
     const MORNING_LENGTH = morning.duration - MORNING_FROM, GIVE_WAY = Math.max(A.curtainsFade, A.mirrorSeamRelease);
     const LET_GO = Math.max(A.ribbonFade, A.ribbonSeamWithin), END_FADE = .4;
-    // Parts never overlap, play in order and at most once, start at their gate or as the part before ends (the summit,
-    // begun on its own, `summitDelay` after its gate), the latest reached and the rest passed over, and never from the
-    // bandage freed on; only the climb theme ends early, at its next seam once the fog has closed, and whatever
+    // Parts never overlap, play in order and at most once, start at their gate or as the part before ends, the latest
+    // reached and the rest passed over, and never from the bandage freed on; only the climb theme ends early, at its next seam once the fog has closed, and whatever
     // sounds as the bandage comes free, at its next seam within `ribbonSeamWithin` or over `ribbonFade` (with no
     // turn, as the curtains open, within `mirrorSeamRelease` or over `curtainsFade`).
     const partsHold = (name, run, at) => {
@@ -171,17 +162,8 @@ try {
       const stop = Math.min(at.ribbon ?? Infinity, at.glide);
       for (const [i, c] of parts.entries()) {
         const [from, to, gate] = BRAVE_PARTS[c.part], previous = parts[i - 1];
-        const joined = previous && BRAVE_PARTS[previous.part][1] === from
-          && near(previous.end - previous.when, BRAVE_PARTS[previous.part][1] - BRAVE_PARTS[previous.part][0], 1e-3) && at[gate] < previous.end - END_FADE;
-        const settles = gate === 'summit' && !joined;
-        const due = Math.max(at[gate] + (settles ? A.summitDelay : 0), previous?.end ?? -Infinity);
-        check(near(c.when, due), `${name}: the ${PART_NAMES[c.part]} begins at ${c.when.toFixed(2)} s, ${previous && previous.end > at[gate] + (settles ? A.summitDelay : 0) ? 'as the part before it ends' : settles ? `${A.summitDelay} s after its gate` : 'as its gate is reached'}`);
-        if (gate === 'summit') {
-          // Its level against the recording's own: a linear rise over `summitFadeIn`, or full from its first sample.
-          const level = (a, b) => envelope(run.buffer, c, a, b), rise = [level(.05, .35), level(.6, .9), level(A.summitFadeIn + .1, A.summitFadeIn + .9)];
-          check(settles ? rise[0] < -10 && rise[1] > -9 && rise[1] < -3 && Math.abs(rise[2]) < .5 : rise.every(v => Math.abs(v) < .5),
-            `${name}: the summit ${settles ? `rises over ${A.summitFadeIn} s` : 'carries the recording on unbroken'} (${rise.map(v => v.toFixed(1)).join(', ')} dB against the recording)`);
-        }
+        const due = Math.max(at[gate], previous?.end ?? -Infinity);
+        check(near(c.when, due), `${name}: the ${PART_NAMES[c.part]} begins at ${c.when.toFixed(2)} s, ${previous && previous.end > at[gate] ? 'as the part before it ends' : 'as its gate is reached'}`);
         const later = BRAVE_PARTS.findIndex((part, p) => p > c.part && at[part[2]] !== undefined && at[part[2]] <= c.when - STEP);
         check(later < 0, `${name}: the ${PART_NAMES[c.part]} is the latest part reached when it begins`);
         check(!(c.when >= stop), `${name}: the ${PART_NAMES[c.part]} does not begin once the bandage is freed`);
@@ -216,8 +198,7 @@ try {
       for (let p = 0; p < BRAVE_PARTS.length; p++) {
         if (played.has(p) || at[BRAVE_PARTS[p][2]] === undefined) continue;
         const waiting = parts.some(c => c.end > at[BRAVE_PARTS[p][2]] && c.when < stop);
-        const delayed = BRAVE_PARTS[p][2] === 'summit' && stop < at.summit + A.summitDelay + STEP;
-        check(parts.some(c => c.part > p) || stop >= at[BRAVE_PARTS[p][2]] && (waiting || delayed),
+        check(parts.some(c => c.part > p) || stop >= at[BRAVE_PARTS[p][2]] && waiting,
           `${name}: the ${PART_NAMES[p]} is passed over only for a later part or the bandage freed`);
       }
       return parts;
@@ -257,7 +238,7 @@ try {
       check(power(run.buffer, tune[0].end + .05, at.feather - .05) < -90, `${player.name}: silence from the lullaby's end until the feather`);
       const parts = partsHold(player.name, run, at);
       check(parts[0]?.part === 0 && near(parts[0].when, at.feather), `${player.name}: the climb theme enters with the freed feather`);
-      check(parts.at(-1).part === 2, `${player.name}: the summit is the climb's last part`);
+      check(parts.at(-1).part === 1, `${player.name}: the commitment is the climb's last part`);
       const dawn = morningHolds(player.name, run, at, parts);
       check(power(run.buffer, dawn.end + .05, seconds - .05) < -90, `${player.name}: no music after the morning`);
       check(run.music.lullaby === null, `${player.name}: the lullaby's recording is released after it ends`);
@@ -280,23 +261,12 @@ try {
     const morningSave = await restored('glide', { mist: 0, catch: 0, summit: 0, glide: 0 });
     check(morningSave.run.clips.length === 0 && morningSave.run.music.brave === null && morningSave.run.music.morning === null
       && power(morningSave.run.buffer, 0, 39.9) < -100, 'morning save: silence, and no recording is decoded');
-    // `?chapter=ribbon`: a step below the summit with the feather caught, so the summit part a second after the top,
-    // rising in; the bandage freed 12 s on, 3.56 s short of its 126.67 s seam, fades it, then silence until the
-    // curtains and the morning. Freed a second before that seam, it ends there.
+    // `?chapter=ribbon`: a step below the summit with the feather caught, past the commitment's gate, so silent through
+    // the top and the bandage until the curtains and the morning.
     const ribbon = await restored('catch', { summit: 3, ribbon: 15, glide: 30 }, 30 + MORNING_LENGTH + 5);
-    const ribbonParts = partsHold('ribbon start', ribbon.run, ribbon.at);
-    check(ribbonParts.map(c => c.part).join() === '2' && near(ribbonParts[0].when, 3 + A.summitDelay)
-      && near(ribbonParts[0].end, 15 + A.ribbonFade, STEP),
-      `ribbon start: the summit part ${A.summitDelay} s after the top, the commitment never, faded over ${A.ribbonFade} s as the bandage comes free`);
-    morningHolds('ribbon start', ribbon.run, ribbon.at, ribbonParts);
-    const seamTurn = 3 + A.summitDelay + 126.67 - 112.11 - 1;
-    const atSeam = await restored('catch', { summit: 3, ribbon: seamTurn, glide: 30 }, 30 + MORNING_LENGTH + 5);
-    const atSeamParts = partsHold('ribbon start, a seam near', atSeam.run, atSeam.at);
-    check(near(atSeamParts[0].end - atSeamParts[0].when, 126.67 - 112.11, STEP), 'ribbon start, a seam a second after the bandage is freed: the summit ends at it');
-    morningHolds('ribbon start, a seam near', atSeam.run, atSeam.at, atSeamParts);
-    const turnedFirst = await restored('catch', { summit: 3, ribbon: 3 + A.summitDelay / 2, glide: 10 }, 10 + MORNING_LENGTH + 5);
-    check(!turnedFirst.run.clips.some(c => c.track === 'brave' && c.end > c.when) && power(turnedFirst.run.buffer, 0, 9.9) < -100, 'the bandage freed before the summit part begins: it never does');
-    morningHolds('turned first', turnedFirst.run, turnedFirst.at, []);
+    check(!ribbon.run.clips.some(c => c.track === 'brave' && c.end > c.when) && power(ribbon.run.buffer, 0, 29.9) < -100,
+      'ribbon start: nothing plays for the summit or the bandage, silent until the curtains');
+    morningHolds('ribbon start', ribbon.run, ribbon.at, []);
     const atRibbon = await restored('ribbon', { ribbon: 0, glide: 8 }, 8 + MORNING_LENGTH + 5);
     check(!atRibbon.run.clips.some(c => c.track === 'brave') && power(atRibbon.run.buffer, 0, 7.9) < -100,
       'a start past the bandage freed: silent until the curtains');
@@ -305,30 +275,30 @@ try {
     check(late.clips.length === 1 && late.clips[0].part === 0 && near(late.clips[0].when, 5), 'music on after she falls asleep: no lullaby; the climb at the feather');
 
     // A quick climb: the fog cuts the theme at its next seam; the catch and the summit both come before it has ended, so
-    // the commitment is passed over and the summit follows the seam, rising in; with no ribbon gate the curtains
-    // open with no seam near, so the summit fades as the morning begins.
+    // the commitment follows the seam and nothing begins at the summit; with no ribbon gate the curtains open with no
+    // seam near, so the commitment fades as the morning begins.
     const quick = sleeper({ asleep: 0, free: 0, climb: { mist: 11, catch: 12, summit: 14, glide: 20 }, from: 'feather' });
     const decodedClimb = ctx => { const m = new SleepingMusic(ctx, ctx.destination); void m.prepare('cygnetBrave'); return m; };
     const skip = await render(20 + MORNING_LENGTH + 5, quick.gate, { music: decodedClimb });
     const skipParts = partsHold('quick', skip, quick.at);
-    check(skipParts.map(c => c.part).join() === '0,2' && near(skipParts[0].end, 16.1, .01) && near(skipParts[1].when, 16.1, .01)
+    check(skipParts.map(c => c.part).join() === '0,1' && near(skipParts[0].end, 16.1, .01) && near(skipParts[1].when, 16.1, .01)
       && near(skipParts[1].end, 20 + A.curtainsFade, STEP),
-      `quick: the climb theme stops at its 16.1 s seam, the summit follows at once, the commitment passed over, and the summit fades over ${A.curtainsFade} s as the curtains open`);
+      `quick: the climb theme stops at its 16.1 s seam, the commitment follows at once and fades over ${A.curtainsFade} s as the curtains open`);
     morningHolds('quick', skip, quick.at, skipParts);
-    // Gates each reached while the part before still plays carry the recording on unbroken until the bandage is freed,
-    // 1.17 s before the summit's 126.67 s seam: it ends there.
-    const turn = 126.67 - 1.17, curtains = 140;
+    // Gates each reached while the part before still plays carry the recording on unbroken, through the summit, until
+    // the bandage is freed 1.17 s before the commitment's 104.18 s seam: it ends there.
+    const turn = 104.18 - 1.17, curtains = 140;
     const steady = sleeper({ asleep: 0, free: 0, climb: { mist: 93, catch: 94, summit: 100, ribbon: turn, glide: curtains }, from: 'feather' });
     const whole = await render(curtains + MORNING_LENGTH + 5, steady.gate, { music: decodedClimb });
     const wholeParts = partsHold('steady', whole, steady.at);
     morningHolds('steady', whole, steady.at, wholeParts);
-    check(near(wholeParts.at(-1).end, 126.67, STEP), `steady: the summit ends at its 126.67 s seam after the bandage is freed (${wholeParts.at(-1).end.toFixed(2)} s)`);
+    check(near(wholeParts.at(-1).end, 104.18, STEP), `steady: the commitment ends at its 104.18 s seam after the bandage is freed (${wholeParts.at(-1).end.toFixed(2)} s)`);
     let error = 0, total = 0;
     for (let ch = 0; ch < 2; ch++) {
       const out = whole.buffer.getChannelData(ch), ref = reference.getChannelData(ch);
       for (let i = RATE; i < Math.floor((turn - 1) * RATE); i++) { error += (out[i] - gain * ref[i]) ** 2; total += (gain * ref[i]) ** 2; }
     }
-    check(wholeParts.length === 3 && error / total < 1e-4, `steady: each part joins the last where it ends, the recording unbroken until the turn (error ${(error / total).toExponential(1)})`);
+    check(wholeParts.length === 2 && error / total < 1e-4, `steady: each part joins the last where it ends, the recording unbroken until the turn (error ${(error / total).toExponential(1)})`);
 
     // Through the soundscape: the wood's handoff opens on the lullaby from its top at full level; the pad stays silent;
     // the climb's gestures play no chimes; music mute and silence; the frost's channel.
@@ -388,7 +358,7 @@ for (const { name, at, waited, lullaby, parts, morning } of result.tables) {
   console.log(`  lullaby ${f(lullaby.when)} → ${f(lullaby.end)}   asleep ${f(at.asleep)}   first try ${f(at.firstTry)}   frost ${f(at.frost)} (waited ${waited.toFixed(1)} s)   call ${f(at.call)}   offered ${f(at.offered)}   feather ${f(at.feather)}`);
   console.log(`  gates from the feather: mist ${f(at.mist - at.feather)}  catch ${f(at.catch - at.feather)}  summit ${f(at.summit - at.feather)}  ribbon ${f(at.ribbon - at.feather)}  curtains ${f(at.glide - at.feather)}`);
   console.log('  part           gate at   starts     ends   recording        silence before');
-  const names = ['climb theme', 'commitment', 'summit'], gates = ['feather', 'catch', 'summit'];
+  const names = ['climb theme', 'commitment'], gates = ['feather', 'catch'];
   let last = lullaby.end;
   for (const p of parts) {
     const from = p.offset, to = from + p.end - p.when;
