@@ -2770,6 +2770,11 @@ export const tuning = {
        * steadily between; and how much of its rise shows it risen in full.
        */
       far: 0.3, near: 0.6, risen: 0.6,
+      /**
+       * As the squall's night comes on, a thin haze lies over the mist: clear above `clear` metres (over every height
+       * the boat's lens reaches) and thickening `depth` metres down to the mist's full density.
+       */
+      squall: { clear: 8, depth: 100 },
     },
     /**
      * What she can make by herself on her way over the roofs: a hop from one surface to the next across at most

@@ -215,6 +215,11 @@ export const atmo = {
      * tower's middle (x, z), how far round that (z, metres, 0 nowhere) and how high it lies there (w, metres).
      */
     uSeaFogClear: { value: new THREE.Vector4(0, 0, 0, 1) },
+    /**
+     * In the squall a thin haze lies over the mist (x, 0 to 1): clear above y metres and thickening z metres down to the
+     * mist's full density, so far sightlines from the pitching boat haze evenly rather than cut along the mist's flat top.
+     */
+    uSeaFogStorm: { value: new THREE.Vector3(0, 0, 1) },
     /** The light of its body deep in the mist (rgb). */
     uSeaFogBody: { value: new THREE.Vector4() },
     /** The light of its top, where the sky lights it from above. */
@@ -390,6 +395,7 @@ uniform vec4 uSeaFogShape;
 uniform vec4 uSeaFogSides;
 uniform float uSeaFogRelief;
 uniform vec4 uSeaFogClear;
+uniform vec3 uSeaFogStorm;
 uniform vec4 uSeaFogBody;
 uniform vec3 uSeaFogTop;
 uniform vec4 uSeaFogCrest;
@@ -983,6 +989,18 @@ float mistWisp(vec3 ro, vec3 rd, float reach, vec3 centre, vec3 radius) {
     mistWispPrimitive((start - middle) / halfSpan));
 }
 
+// The squall's thin haze over the mist, clear above uSeaFogStorm.y and thickening uSeaFogStorm.z metres down to full:
+// its density along a sightline is a clamped line in distance, so its integral is exact.
+float mistSquallRamp(float u) {
+  return u <= 0.0 ? 0.0 : u < 1.0 ? 0.5 * u * u : u - 0.5;
+}
+
+float mistSquall(float eye, float rise, float reach) {
+  float start = (uSeaFogStorm.y - eye) / uSeaFogStorm.z, climb = -rise / uSeaFogStorm.z;
+  if (abs(climb) < 1e-6) return clamp(start, 0.0, 1.0) * reach;
+  return (mistSquallRamp(start + climb * reach) - mistSquallRamp(start)) / climb;
+}
+
 float mistOptical(vec3 ro, vec3 rd, float far) {
   vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), offset = ro.xz - uSeaFog.xy;
   float across = dot(offset, side), acrossSlope = dot(rd.xz, side);
@@ -1020,6 +1038,7 @@ float mistOptical(vec3 ro, vec3 rd, float far) {
     }
     optical += pass == 1 ? -part : part;
   }
+  if (uSeaFogStorm.x > 0.0) optical += uSeaFogStorm.x * mistSquall(ro.y, rd.y, reach);
   if (uSeaFogShape.z < 1.0) {
     vec3 localEye = vec3(across, ro.y, dot(offset, n));
     vec3 localRay = vec3(acrossSlope, rd.y, dot(rd.xz, n));

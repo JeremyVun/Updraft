@@ -163,6 +163,7 @@ export class DarkBank {
     u.uSeaFogShape.value.w = drawnAmount;
     if (amount <= 0) {
       u.uSeaFogCrest.value.w = 0;
+      u.uSeaFogStorm.value.x = 0;
       return;
     }
     const { far, near } = k;
@@ -179,6 +180,7 @@ export class DarkBank {
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);
     u.uSeaFogRelief.value = this.relief;
     u.uSeaFogClear.value.set(this.clearing.x, this.clearing.z, this.clearing.radius, this.clearing.floor);
+    u.uSeaFogStorm.value.set(this.storm, k.squall.clear, k.squall.depth);
 
     const taken = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) * here;
     const night = smooth(p, near + 0.05, 1) * here * (1 - this.storm);
