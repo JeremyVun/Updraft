@@ -27,6 +27,8 @@ const RING = 16384, RING_HOP = 480;
 const PARTIAL_FLOOR = 1e-3, MAX_PARTIALS = 160;
 /** A ring-out's last second, already at the take's silence, fades to nothing. */
 const RING_END = 1;
+/** A notch's Q: about 11 Hz wide at 215 Hz, clear of the semitones either side. */
+const NOTCH_Q = 20;
 /** A warm-bed phrase end goes over into the close when its chord and level match those leading into the close this well. */
 const SEAM_CHORD = 0.9, SEAM_LEAD = 0.85, SEAM_LEVEL = 3;
 
@@ -228,7 +230,18 @@ const pack = (file, audio) => {
 /** Where a cut that ends at its take's next phrase hands over, in seconds of the cut as retuned. */
 const handoverOf = cut => (cut.to - HANDOVER - cut.from) / 2 ** ((cut.cents ?? 0) / 1200);
 /** The take up to where the cut leaves it: its end, or just before the next phrase's attack. */
-const kept = cut => retune(slice(decode(cut.source), cut.from, cut.ringOut || cut.release ? cut.to - HANDOVER : cut.to), cut.cents ?? 0);
+const kept = cut => {
+  const to = cut.ringOut || cut.release ? cut.to - HANDOVER : cut.to;
+  const filters = [
+    ...cut.highpass ? [0.5412, 1.3066].map(q => `highpass=f=${cut.highpass}:width_type=q:width=${q}`) : [],
+    ...(cut.notch ?? []).map(hz => `bandreject=f=${hz}:width_type=q:width=${NOTCH_Q}`),
+  ];
+  if (!filters.length) return retune(slice(decode(cut.source), cut.from, to), cut.cents ?? 0);
+  // A second of pre-roll settles the filters before the cut begins.
+  const preRoll = Math.min(1, cut.from), audio = slice(decode(cut.source), cut.from - preRoll, to);
+  const filtered = split(run(['-f', 'f32le', '-ar', String(RATE), '-ac', '2', '-i', '-', '-af', filters.join(','), '-f', 'f32le', '-'], interleave(audio)).stdout);
+  return retune(filtered.map(ch => ch.slice(Math.round(preRoll * RATE))), cut.cents ?? 0);
+};
 const rung = new Map();
 function cutAudio(cut) {
   if (cut.ringOut) {
@@ -250,9 +263,9 @@ for (const beat of ['walk', 'after']) {
     + (loop ? `, loops ${looped.loopEnd}s → ${looped.loopStart}s in the file` : ''));
   if (close) {
     const seams = closeSeams(cut, loop, close), lead = loop.crossfade;
-    const tail = fade(slice(decode(cut.source), close.from - lead, Infinity), EDGE, close.fadeOut);
+    const tail = fade(slice(decode(cut.source), close.from - lead, close.to), EDGE, close.fadeOut);
     measured[beat] = { ...measured[beat], crossfade: lead, close: { ...pack(file, tail), entry: lead }, seams: seams.map(s => round(s.at, 4)) };
-    report.push(`  close: ${cut.source} ${close.from}–end (${round(length(tail) / RATE - lead, 2)}s), entered from ${seams.length} phrase ends: `
+    report.push(`  close: ${cut.source} ${close.from}–${close.to} (${round(length(tail) / RATE - lead, 2)}s), entered from ${seams.length} phrase ends: `
       + seams.map(s => `${round(cut.from + s.at, 2)} (chord ${s.chord.toFixed(2)}, lead ${s.lead.toFixed(2)}, ${s.level.toFixed(1)} dB)`).join(', '));
     const looping = seams.map(s => s.at).filter(at => at >= looped.loopStart);
     const waits = looping.map((at, i) => i ? at - looping[i - 1] : at - looped.loopStart + looped.loopEnd - looping.at(-1));

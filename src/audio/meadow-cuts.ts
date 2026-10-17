@@ -22,6 +22,10 @@ export interface MeadowCut {
   ringOut?: boolean;
   /** `to` is the attack of the take's next phrase: over this many seconds before it, the note ends as the take's phrases end. */
   release?: number;
+  /** Hz: a fourth-order Butterworth high-pass under the cut's lowest note, for a generation artefact beneath the instruments. */
+  highpass?: number;
+  /** Hz: narrow notches on an artefact's partials that rise above `highpass` and fall between the music's notes. */
+  notch?: number[];
 }
 
 /** The room reference every main section is levelled to (`docs/contracts/audio.md`, Room levels). */
@@ -30,9 +34,12 @@ export const MEADOW_REFERENCE_LUFS = -29;
 export const MEADOW_CUTS = {
   /** Landing to the stool: the sad opening, repeated with a rest between. */
   walk: { file: 'meadow-walk.ogg', rest: 3, cuts: [{ source: 'O', from: 0, to: 27.2 }] },
-  /** The bough's four calls, dark to bright. The first is held into the take's next phrase, so it is ended there. */
+  /**
+   * The bough's four calls, dark to bright. The first is held into the take's next phrase, so it is ended there; the
+   * finale's drone (below) is already rising under its last seconds.
+   */
   calls: { file: 'meadow-duet.ogg', cuts: [
-    { source: 'flute', from: 50.1, to: 57.84, release: 1.4, fadeOut: 0.3, cents: 20 },
+    { source: 'flute', from: 50.1, to: 57.84, release: 1.4, fadeOut: 0.3, cents: 20, highpass: 160 },
     { source: 'flute', from: 34.5, to: 42.1, cents: 24 },
     { source: 'flute', from: 0, to: 5.6 },
     { source: 'flute', from: 5.6, to: 13.3 },
@@ -58,18 +65,21 @@ export const MEADOW_CUTS = {
   ] },
   /**
    * The finale under the greening: a rising A♭-major arpeggio, then a long held close. `greenAt` (seconds in the
-   * source) pins the colour front; left out, it is the measured arrival at the top of the opening arpeggio.
+   * source) pins the colour front; left out, it is the measured arrival at the top of the opening arpeggio. Under the
+   * held close (from 1:53) the take swells a synth drone no instrument plays, 43.1 Hz with its harmonics, a sixth of
+   * the held C4. That C4 is the music's lowest note, and of the drone's partials only the fifth, 215.3 Hz, lies
+   * between them and above the high-pass.
    */
-  finale: { file: 'meadow-duet.ogg', cuts: [{ source: 'flute', from: 93.2, to: 124.0 }] as MeadowCut[], greenAt: undefined as number | undefined },
+  finale: { file: 'meadow-duet.ogg', cuts: [{ source: 'flute', from: 93.2, to: 124.0, highpass: 160, notch: [215.3] }] as MeadowCut[], greenAt: undefined as number | undefined },
   /**
    * From the duet to the boat: from 0:22.60 to 2:53.05, then round and round from 1:36.60 with no rest. The last
    * `crossfade` seconds before the loop's end carry the music leading into its start (equal power), so the native loop
-   * is seamless. Leaving, it goes over at a phrase end into `close`, the cadence the take ends on, which plays to the
-   * take's end; its last note is still sounding there, so it fades over `fadeOut`.
+   * is seamless. Leaving, it goes over at a phrase end into `close`, the cadence the take ends on, which stops at `to` as
+   * its last chord dies away, fading over `fadeOut`: after it the take has a low synth swell from generation, not music.
    */
   after: { file: 'meadow-after.ogg', cuts: [{ source: 'E', from: 22.6, to: 173.05, fadeOut: 0 }], loop: { from: 96.6, crossfade: 0.6 },
-    close: { from: 223.6, fadeOut: 2 } },
+    close: { from: 223.6, to: 230.8, fadeOut: 2 } },
 } satisfies Record<string, { file: string; cuts: MeadowCut[]; rest?: number; greenAt?: number; loop?: { from: number; crossfade: number };
-  close?: { from: number; fadeOut: number } }>;
+  close?: { from: number; to: number; fadeOut: number } }>;
 
 export type MeadowBeat = keyof typeof MEADOW_CUTS;

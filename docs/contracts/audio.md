@@ -270,7 +270,9 @@ tail fade is given), levels each to the room reference by measured loudness, and
   next call waits for it and for `phraseRest` after the answer began, and the finale follows the last by
   `finalRest`; the ring carries on, softly, under them. The first call is held into the flute take's next phrase, so it
   ends over its last 1.4 s (`release`) as the take's own seven phrase endings into silence do (their median level
-  curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Until the duet file is decoded the piano strings
+  curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Under the finale's held close the flute
+  take swells a synth drone no instrument plays (43.1 Hz with its partials, from 1:53), already rising under the first
+  call's end: both are high-passed at 160 Hz, under their lowest note (C4), and the finale notched at its 215.3 Hz partial. Until the duet file is decoded the piano strings
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
   (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
   answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
@@ -289,11 +291,12 @@ tail fade is given), levels each to the room reference by measured loudness, and
   at its next phrase end into the close (`seams`: the bed's recurring cadence, wherever its chord and level over the
   crossfade, and its chord over the second before, match the take's own lead into 3:43.60; mostly 3–12 s apart, the
   longest wait 23.8 s) it crossfades over 0.6 s, equal power, into 3:43.60 and plays the take's final cadence and soft
-  close to the end of the file (19.3 s; the last note still sounds there, so the last 2 s fade). The tool measures
+  close (7.2 s, to 3:50.80, its last 2 s faded as the chord dies away: from 3:50.8 the take swells into a low synth
+  rumble, 20–180 Hz, a generation artefact that is no part of the music). The tool measures
   each way in against the take's own continuation there. Birches' arrival handoff waits for that end
   (`meadowMusic.closesAt`, held like a once-played recording: no fade of its own), then rests `arrivalQuiet` and fades
-  in, so the two never sound together and the meadow is not cut. Typically the close ends about 20 s into the 47 s
-  crossing and Birches comes in at its approach (26 s); at worst about 42 s in, 5 s before landing. A start on the
+  in, so the two never sound together and the meadow is not cut. Typically the close ends about 8 s into the 47 s
+  crossing and Birches comes in at its approach (26 s); at worst about 31 s in, 16 s before landing. A start on the
   crossing itself has no bed and is quiet until Birches. `node tools/meadow-bed-render.mjs` renders the whole run
   from the duet's end to Birches through the game's sound (LISTEN, GONE and PUSH set the story's times).
 - `MeadowChapter.meadowMusic` names the part; `audio/meadow-music.ts` plays it. The shared pad is silent in the meadow
