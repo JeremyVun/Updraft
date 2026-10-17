@@ -214,7 +214,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
      swans have come round toward the sun, turning and tilting only as far as keeps them in the frame, until it is
      looking up past her at the sky they are going into. The bird sees them first and calls to them as the lens
      starts to go with them (Jeremy: "when the swans fly in, lets have the cygnet make a call"); she follows its look and her
-     feet go still.
+     feet go still. It calls once more as they pass nearest overhead, about 3 s later (Jeremy, 2026-10-17: "the cygnet
+     could make one more call as the swans fly past overhead").
    - *The boat.* Once the lens has come to rest over her shoulder into the sun, it holds there a few seconds
      (Jeremy: "hold that shot for maybe 5-7 seconds before the boat appears out of the clouds"); then the boat
      comes out of the foot of a tower of cumulus to the right of the sun (it has waited inside, hidden, since they

@@ -21,6 +21,7 @@ export class WorldFoley {
   private time = 0;
   private lastSplash = -Infinity;
   private lastSurface = -Infinity;
+  private nextLap = 0;
   private readonly clothSway = new WeakMap<THREE.Vector3, Sway>();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly nearby: THREE.Vector3[] = [];
@@ -29,6 +30,15 @@ export class WorldFoley {
   constructor(private readonly foley: Foley, private readonly camera: THREE.Camera) {}
 
   update(dt: number): void { this.time += dt; }
+
+  /** Still water lapping now and then at the drowned walls round the lens, the more the air has died; fainter from up high. */
+  lap(calm: number, active: boolean): void {
+    if (!active || calm < 0.05 || this.time < this.nextLap) return;
+    const { every, level } = tuning.audio.calmLap;
+    this.nextLap = this.time + MathUtils.lerp(every[0], every[1], Math.random());
+    const below = 1 - 0.7 * MathUtils.smoothstep(this.camera.position.y, 5, 15);
+    this.foley.material('water', level * calm * below * MathUtils.lerp(0.6, 1, Math.random()), MathUtils.lerp(-0.6, 0.6, Math.random()));
+  }
 
   /** Nearby laundry uses the same wind spring and flutter thresholds as the cloth shader. */
   cloth(points: readonly THREE.Vector3[], wind: WindField, dt: number, active: boolean): void {

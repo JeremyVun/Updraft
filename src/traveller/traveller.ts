@@ -396,6 +396,13 @@ export class Traveller {
     return strikes.filter((s) => this.ground(s.x, s.z) < heightAt(s.x, s.z) + 0.05);
   }
 
+  /** Heels that came down this frame on whatever she is walking on, for the sound of them. */
+  get steps(): readonly { x: number; z: number; heading: number }[] {
+    const strikes = this.motion.strikes;
+    if (strikes.length === 0 || this.riding || this.action?.kind === 'alight') return [];
+    return strikes;
+  }
+
   /** Heels that came down at the water's level, on the sky mirror's glass rather than its jetty. */
   get glassSteps(): readonly { x: number; z: number; heading: number }[] {
     const strikes = this.motion.strikes;

@@ -187,6 +187,9 @@ export class StairsChapter implements Chapter {
   private leg = 0;
   private skeinSent = false;
   private calledToThem = false;
+  /** The skein's nearest yet, flat, to the bird: once they are past overhead it calls after them once more. */
+  private skeinNearest = Infinity;
+  private calledAfterThem = false;
   private birdStop = 0;
   /** The furthest stop the bird has got to in the cloud; the child never goes past it. */
   private birdReached = 0;
@@ -599,6 +602,14 @@ export class StairsChapter implements Chapter {
         if (!this.calledToThem && this.withThem > 0.02) {
           this.calledToThem = true;
           k.call(true);
+        }
+        if (this.calledToThem && !this.calledAfterThem && flock.active) {
+          const near = Math.hypot(flock.head.x - k.position.x, flock.head.z - k.position.z);
+          if (near > this.skeinNearest) {
+            this.calledAfterThem = true;
+            k.call(true);
+          }
+          this.skeinNearest = Math.min(this.skeinNearest, near);
         }
         const over = this.comingFor > WATCHED_ON;
         if (flock.active) this.look2.copy(flock.head);

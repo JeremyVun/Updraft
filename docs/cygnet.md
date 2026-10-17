@@ -30,7 +30,7 @@ white birds. The family that comes for it at home is white, and by then the firs
 take off, which gives every attempt a shape a player can read.
 
 **Voice.** It is silent except in distress and when it calls to its family: the fall, the pond, hiding in the dark
-wood, the one unanswered call on the sleeping island, a questioning peep on the stairs, the call at home that is
+wood, the one unanswered call on the sleeping island, a questioning peep on the stairs, two calls to the swans passing over the cloud, the call at home that is
 answered, and now and then when it is left standing on its own feet while the child is still. In the satchel it calls
 to whatever the story tells it to watch, so every watch that is not its family is hushed (`Cygnet.watch(target, true)`). Every call is echoed
 by three small cream strokes above it (`fx/call-marks.ts`, `tuning.cygnetCalls`). Adult swans are other animals and

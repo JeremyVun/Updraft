@@ -387,8 +387,11 @@ to the seam at 36.93 s (`recordedMusicOnce.villageApproach`), fading over its la
 decoded samples: the bass enters at 36.96 s (an A2 attack, rising about 15 dB within 130 ms); over the 0.3 s before it
 the last note has rung down to about 14 dB under the opening's median level, and the seam sits 30 ms before the attack.
 It begins where the village's music begins: once the stairs' fog has waited out `clouds.ogg`, after the ordinary 3 s
-rest, from its first second at full level (`villageArrivalFadeIn` 0: the file opens on 0.2 s of silence and then its
-loudest note, which the ordinary fade-in would swallow). `?chapter=drowned` starts it with the chapter. It keeps its
+rest, from its first second, rising from silence to full level over its first 1.2 s (`recordedMusicOnce.villageApproach`
+`enterFrom` 0, `enterOver` 1.2; the handoff itself opens at once, `villageArrivalFadeIn` 0). The file opens on 0.2 s of
+silence and then its loudest note, about 10 dB over the notes after it; the entrance takes it to about 0.29 of full
+(−11 dB), level with them. Jeremy (2026-10-17): "arrival music could fade in a bit over 1 second since the first note
+of the piece is a bit loud". `?chapter=drowned` starts it with the chapter. It keeps its
 own audio clock from there: landing and the village's beats and phases never seek or restart it, music switched on
 later joins at its own time, and after the seam nothing plays. The rescue's quiet (`drownedQuiet`) lets it go early, for
 good, over `drowned.rescue.musicFade`, so the air dies in silence. Later starts and saves (`sail`, `roofs`,
@@ -398,10 +401,24 @@ After it there is no music through the rescue, the becalming, the fog, the run, 
 goodbye below. The generic pad stays silent throughout the village and the storm, so nothing fills the quiet. The
 sound effects stay: the bell's strikes (foley), the foghorn, the cat, the herons, the weather and the physical sounds.
 No musical cue marks the air dying: Jeremy (2026-10-15), "oh, yea the becalming tone needs to go doesn't it".
-The air itself falls nearly silent as it dies: Jeremy (2026-10-17), "When the becalming starts, I think the ambient
-wind sound needs to go more silent". Through the still beats (the air dying to the church, until the bell's breeze
-carries the boat) the story's `calm` eases to 1 at `calmEase` and back as the storm gathers; the ambient breeze falls
-by `calmBreeze` (about −26 dB) and the sea's wash by `calmSea` (−8 dB, quiet lapping). The player's own wind stays.
+The air goes quiet as it dies, but never empty: Jeremy (2026-10-17), "When the becalming starts, I think the ambient
+wind sound needs to go more silent", and later the same day, verbatim: "i think i made a mistake by asking for the
+drowned village scene ambient wind to be silenced. It's now completely silent. No footstep sounds, nothing. It feels a
+bit beyond spooky. I think we do need some ambient sound here, just not as loud as before i guess. Maybe some soft
+footstep noises for the cat and the child for this sequence? All i know is the total lack of ambient sound made the the
+scene feel empty and lacking." Through the still beats (the air dying to the church, until the bell's breeze carries
+the boat) the story's `calm` eases to 1 at `calmEase` and back as the storm gathers. The ambient breeze, already down
+with the world's wind, falls a further `calmBreeze` (0.7, about −10 dB) and the sea's wash `calmSea` (0.45, about
+−5 dB), and still water laps at the walls round the lens every 2.5–6 s (`calmLap`, the `water` material at up to 0.8,
+scaled by `calm`, panned at random, fainter as the lens rises from 5 to 15 m). Measured in the game from `?chapter=roofs`
+with no input, the bed while she waits at the tree sits about 6 dB over the silenced version (master about −58 dBFS
+against −64, the laps peaking near −43; the drift after the approach about −46 dBFS; the approach recording −28 to −38
+dBFS over each second), and so still under the air before the becalming, as asked. Her boots are heard wherever she walks in the village
+(`Chapter.underfoot`: slates, ridges, copings and the tree, and the belfry's boards from her climb in to the bell):
+`Foley.footstep`, a soft thump with a faint clack of slate, a hollow knock on boards, at `childStepDb` (0) and about
+6 dB over the bed at the run's lens distance. The cat's pads, landings and claws (`CatVoice`) and hers both fall
+off with the lens's distance from full within `tread.near` (6 m) to `tread.least` (0.35) at `tread.far` (40 m), so
+they carry as far as the lens follows them. The player's own wind stays.
 
 Measured with no input on the game clock (`tools/village-music-browser-check.mjs`, at 60 fps, the audio clock in step):
 from `?chapter=drowned` it starts with the chapter and ends at 36.9 s; the boat holds and the tub becomes the player's
@@ -443,7 +460,7 @@ and the piece ends at 47.1 s.
 `drowned-score.ts` (the earlier synthesised drift, fog, refuge, home, farewell and storm) remains for studies:
 `node tools/drowned-music-study.mjs [outDir]` renders it through the game's sound. `tools/village-music-check.mjs`
 checks both recordings' seams, starts, levels, ends, restores and the quiet between them offline;
-`tools/drowned-audio-regression-check.mjs` the rescue's quiet, the silent becalming and the storm without the goodbye.
+`tools/drowned-audio-regression-check.mjs` the rescue's quiet, the becalming without music and the storm without the goodbye.
 
 **Sky Mirror.** Jeremy's 2026-10-14 instruction: "mirror.ogg is confirmed for mirror chapter."
 The unchanged `assets/music/mirror.ogg` plays at native speed from the arrival handoff off the dolphin crossing through
@@ -804,7 +821,7 @@ the Meadow melody itself.
   continuity.
 - Special cases: Sleeping morning hands off explicitly to `sea` on departure, without a phrase wait: it fades over
   `sleepingDepartureFade` (4 s), rests `seaArrivalQuiet` (1 s) and the gates reopen over `seaArrivalFadeIn` (1 s), clear
-  before the recording begins at `seaMusicLead` (6.3 s), 2.3 s after the morning stops; sea → Mirror waits until the whale has gone; the stairs → Drowned is asked for in the stairs' fog and waits for `clouds.ogg` (below); the village's recording enters at full level, without a fade-in (`villageArrivalFadeIn`), and so does Sleeping's lullaby (`sleepingArrivalFadeIn`); Drowned requests Wood
+  before the recording begins at `seaMusicLead` (6.3 s), 2.3 s after the morning stops; sea → Mirror waits until the whale has gone; the stairs → Drowned is asked for in the stairs' fog and waits for `clouds.ogg` (below); the village's recording opens the handoff at once (`villageArrivalFadeIn` 0) and makes its own 1.2 s entrance, and Sleeping's lullaby enters at full level (`sleepingArrivalFadeIn`); Drowned requests Wood
   only after the lost-plane scene: out of the storm, silent by then, the wood's drone comes in over `forestMusicBlend` (4 s) with
   the gates open, tuned on D/A before it is audible; Mirror → Home is scheduled from the boat's leaving, the Mirror ending at a phrase seam
   (Homeward and Home above).
@@ -987,7 +1004,8 @@ After playtesting (2026-10-14):
   about 2 s; the high air above the cloud rises as the view opens. She walks to the edge and stops, and the haze lifts
   off the sun. `clouds.ogg` waits for that: `StairsAir.clear`, set `CLEARED` (4 s) into her look across the cloud
   (`awe`), about 4.6 s after the first `above` frame and 2.4 s after she stops. It begins from its first second at half
-  its level, rising to full over 1.75 s (`recordedMusicOnce.clouds`: `enterFrom`, `enterOver`), while the high air
+  its level, rising to full over 2.25 s (`recordedMusicOnce.clouds`: `enterFrom`, `enterOver`; Jeremy, 2026-10-17: "the
+  nest music could fade in over 0.5 seconds more"), while the high air
   settles to `highSettled` (0.5, about −6 dB) with time constant `settleFor` (2 s), its band sliding down to
   `highFar` 1400–3800 Hz and only `highFar.dry` (0.4) of it direct, the rest in the reverb: still there, far off,
   under the music. `cloudsMusicDelay` (0.5) moves the start relative to `clear`; below 0 it starts that far into the
