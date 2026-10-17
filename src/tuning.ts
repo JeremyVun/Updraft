@@ -629,6 +629,12 @@ export const tuning = {
     fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
     /** The stranded toy waits this far back from the water's edge, on the flat top of the bank. */
     toyBank: 3.2,
+    /**
+     * Where she kneels on the bank and where she sets the toy on the water, as shares of the stream's half-width out
+     * from its middle (the water meets the bank near 0.86), and how far she leans over to it, radians: low on the
+     * bank and close in, so she reaches down rather than pitching out over the water.
+     */
+    putDownFrom: 0.92, putDownAt: 0.76, putDownLean: 0.6,
     /** How far up from the beach toward the toy the child lets the cygnet down to walk with her. */
     setDownAt: 0.4,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
@@ -1840,8 +1846,11 @@ export const tuning = {
   },
   /** The kite over the far beach and the pinwheels along the walk: the child nobody has seen. */
   linesToys: {
-    /** The last bend reveals the little-boats departure marker, after the first two pools. */
-    boatKiteRevealAt: 85,
+    /**
+     * Snagged on the little boats' plug chain, it flies on this much string from the snag. Let go, it takes `freeFor`
+     * seconds to come round to its own string and post, climbing at first at `freeLift` radians a second.
+     */
+    snagTether: 4, freeFor: 3, freeLift: 0.15,
     /** A shorter tether keeps the kite beside the boat in the narrower departure views. */
     shoreKiteStringLength: 22,
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */

@@ -5,6 +5,7 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, BOATS_POOLS as POOLS, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
 import type { Coax } from '../fx/swirl';
+import type { KiteSnag } from '../world/kite';
 import type { Cast, Chapter } from './cast';
 
 type Beat =
@@ -93,10 +94,10 @@ export class LittleBoatsChapter implements Chapter {
     c.walkTo(landing.x, landing.z, false, () => c.walkTo(letDown.x, letDown.z, false, setDown, 0.35), 0.6);
     this.frame();
   }
-  /** The kite waits for the plug to come out, so the plug has the sky to itself. */
-  get departureKite(): boolean {
-    const room = this.cast.littleBoats;
-    return room.progress >= tuning.linesToys.boatKiteRevealAt && room.drain.pulled;
+  /** The kite is caught by its string on the plug's chain, and the updraft that pulls the plug sets it flying. */
+  get kiteSnag(): KiteSnag | null {
+    const drain = this.cast.littleBoats.drain;
+    return drain.pulled ? null : drain.kiteSnag;
   }
 
   get done(): boolean {
@@ -230,7 +231,7 @@ export class LittleBoatsChapter implements Chapter {
       if (this.beat === 'holdToy' && this.elapsed > 2.4) {
         this.to('carryToy');
         c.walkTo(
-          boatsX(3) + boatsWidth(3) * 0.99,
+          boatsX(3) + boatsWidth(3) * tuning.littleBoats.putDownFrom,
           L.startZ - 3,
           false,
           () => {
@@ -244,9 +245,9 @@ export class LittleBoatsChapter implements Chapter {
     } else if (this.beat === 'launch') {
       c.lookAt = room.focus;
       c.kneeling = 1;
-      c.lean = 1.4;
+      c.lean = tuning.littleBoats.putDownLean;
       if (!room.released) {
-        const x = boatsX(3) + boatsWidth(3) * 0.7;
+        const x = boatsX(3) + boatsWidth(3) * tuning.littleBoats.putDownAt;
         this.hand.set(x, boatsWaterHeight(x, L.startZ - 3, time) + tuning.littleBoats.toyDraft, L.startZ - 3);
         const y = this.hand.y,
           z = this.hand.z;

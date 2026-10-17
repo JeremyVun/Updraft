@@ -3,6 +3,7 @@ import type { DrownedScorePhase } from '../audio/drowned-score';
 import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
+import type { KiteSnag } from '../world/kite';
 import type { DrownedVillage } from '../world/drowned';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
@@ -137,6 +138,8 @@ export interface Chapter {
   readonly cloudDeck?: CloudDeckState;
   /** The departure kite tied to a moving boat's bow and flying ahead of it on a heading, while this chapter wants it. */
   readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
+  /** The departure kite caught short by its string on something in the water, until this chapter lets it go. */
+  readonly kiteSnag?: KiteSnag | null;
   /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
   readonly cameraCut?: number;
   /** Carry the actual view through a hidden move instead of snapping to its framing target. */
