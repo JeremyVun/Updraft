@@ -518,6 +518,24 @@ export class Foley {
     }
   }
 
+  /** A small boot coming down: on slates a soft thump with a faint clack of slate, on boards a hollow knock. */
+  footstep(surface: 'slate' | 'wood', amount: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined || amount < 0.01) return;
+    const at = now + 0.005;
+    const level = amount * 10 ** (tuning.audio.childStepDb / 20) * (0.75 + Math.random() * 0.25);
+    const colour = 0.9 + Math.random() * 0.2;
+    if (surface === 'wood') {
+      this.blip(at, 230 * colour, 140 * colour, 0.08, level * 0.04, pan, 'triangle', 0.04);
+      this.puff({ at, len: 0.03, level: level * 0.025, pan, type: 'bandpass', from: 1300 * colour, q: 1.3, attack: 0.002 });
+    } else {
+      this.blip(at, 160 * colour, 90, 0.08, level * 0.03, pan, 'sine', 0.03);
+      this.puff({ at, len: 0.05, level: level * 0.04, pan, type: 'lowpass', from: 650 * colour, attack: 0.002 });
+      if (Math.random() < 0.6) this.puff({ at: at + 0.01, len: 0.025, level: level * 0.035, pan, type: 'bandpass', from: 3000 * colour, q: 3.5, attack: 0.001 });
+      this.puff({ at: at + 0.03, len: 0.09, level: level * 0.015, pan, type: 'bandpass', from: 1800, to: 1000, q: 0.7, attack: 0.02 });
+    }
+  }
+
   /** A fine crystalline settling, then a low airy resonance as the warm refuge cools. */
   frost(cold:number):void {
     if(cold<.04)this.frostHeard=false;

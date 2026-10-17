@@ -3,7 +3,7 @@
 // plays its pass out once they have sailed and never begins after,
 // ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud and, on the landing
 // below the white, ends at its next phrase end or seam (`stairsSongEnding`), never starting again; `village_approach.ogg` starts from its top at the
-// village's handoff at full level, ends faded at its seam just before the bass, never restarts; then no music through
+// village's handoff, rising under its loud first note, ends faded at its seam just before the bass, never restarts; then no music through
 // the village and the storm, the shared pad silent; then `belfry.ogg` from the fourth ring, coming in slowly and playing
 // once into the storm, handing over sample-aligned to `belfry_ending.ogg` and its faded ritardando; the wood's drone at
 // `woodDroneDb`. Also the seams on the decoded samples, the starts and downloads, late joins after music mute, restores
@@ -261,7 +261,9 @@ try {
     check(same, 'the village beats, the rescue phases and landing never restart or seek it');
     {
       const at = v[0].when, ratio = (from, to) => Math.sqrt(power(handoff.buffer, at + from, at + to) / power(raw, from, to)) / gain;
-      check(Math.abs(ratio(.25, .45) - 1) < .03, `its first note is at full level (${tuning.audio.recordedMusicDb.villageApproach} dB): no fade-in swallows it (${ratio(.25, .45).toFixed(3)})`);
+      const rise = t => once.enterFrom + (1 - once.enterFrom) * Math.min(1, t / once.enterOver), first = ratio(.25, .45), risen = ratio(once.enterOver + .05, once.enterOver + 2);
+      check(first > rise(.25) - .02 && first < rise(.45) + .02 && Math.abs(risen - 1) < .03,
+        `its loud first note comes in under its entrance, from ${once.enterFrom} to full over ${once.enterOver} s (${first.toFixed(3)} at its first note, ${risen.toFixed(3)} after, at ${tuning.audio.recordedMusicDb.villageApproach} dB)`);
       check(Math.abs(ratio(10, 30) - 1) < .02, `and it stays there (${ratio(10, 30).toFixed(3)})`);
       check(ratio(once.end - .2, once.end - .02) < .4 && ratio(once.end - 1.2, once.end - .6) > .97, `it fades over its last ${once.fadeOut} s`);
     }

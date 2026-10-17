@@ -879,6 +879,11 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     else foley.rustle(h.amount, heardPan);
   }
   cygnet.heard.length = 0;
+  const underfoot = story.current.underfoot;
+  if (underfoot && child.visible && child.steps.length) {
+    const childPan = screenPan(rig.camera, child.position);
+    for (let i = 0; i < child.steps.length; i++) foley.footstep(underfoot, treadHeard(child.position), childPan);
+  }
   cat.update(dt);
   /** It lives in the birches and sees them off from the beach as they sail; the QA stage has its own. */
   if (story.name !== 'birches' && story.name !== 'toStairs' && story.name !== 'stage') squirrel.visible = false;
@@ -905,9 +910,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (cat.heard.length) {
     const catPan = screenPan(rig.camera, cat.position);
     const away = cat.position.distanceTo(rig.camera.position);
-    /** A mew carries across the water; the pads of its paws are only heard close to. */
+    /** A mew carries across the water; the pads of its paws are soft, but heard as far as the lens follows it. */
     const call = 1 - 0.75 * THREE.MathUtils.smoothstep(away, 8, 50);
-    const near = 1 - THREE.MathUtils.smoothstep(away, 2, 14);
+    const near = treadHeard(cat.position);
     for (const h of cat.heard) {
       if (h.kind === 'mew') catVoice.mew(catPan, call * h.amount, h.plea, h.length, h.voice);
       else if (h.kind === 'yowl') catVoice.yowl(catPan, call * h.amount, h.length);
@@ -1196,6 +1201,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 function prepareWorldAudio(dt: number): void {
   const heard = sound.running;
   worldFoley.update(dt);
+  worldFoley.lap(story.current.calm ?? 0, heard && story.name === 'drowned');
   birchesFoley.update(dt);
   const hearBirches = heard && story.name === 'birches';
   birchesFoley.step(child.position, child.footContact, birches.leafCoverAt(child.position.x, child.position.z),
@@ -1229,6 +1235,12 @@ function prepareWorldAudio(dt: number): void {
   }
   worldFoley.motion(door, 'door', door.group.position, door.doorOpening, dt, heard && story.name === 'lines');
   worldFoley.motion(shoreHaul, 'swing-creak', SHORE_PINWHEEL, shoreHaul.run * 0.25, dt, heard && story.name === 'lines');
+}
+
+/** How loud footfalls at `at` are heard from the lens: full close to, easing to `least` as far off as it follows a walker. */
+function treadHeard(at: THREE.Vector3): number {
+  const { near, far, least } = tuning.audio.tread;
+  return 1 - (1 - least) * THREE.MathUtils.smoothstep(at.distanceTo(rig.camera.position), near, far);
 }
 
 function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vector3, active: boolean): void {

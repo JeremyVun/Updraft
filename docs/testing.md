@@ -263,12 +263,12 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   first), a recording already over, a late join after music mute and silence.
   `village-music-check` renders Birches looping on its island, playing its pass out after sailing and ending at least
   `stairsSongRest` before the stairs song (faded or by itself), and the stairs song looping under the cloud and fading
-  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
-  level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
+  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top with its
+  1.2 s entrance under the loud first note as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
   rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at its start seam and
   its handover to `belfry_ending.ogg` (just before an attack, sample-aligned, no dip, faded to silence at its end),
   started on the fourth ring with its slow entrance, played through the storm's start into the ending's ritardando and
-  fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
+  fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the becalming without music and the silent storm.
   `sleeping-music-check` decodes `sleeping.ogg`, `cygnet_brave.ogg` and `sleeping_morning.ogg` and checks the
   lullaby's end, every seam, the climb's part boundaries and the morning's entry on the samples; the frost's bounded
   wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the summit begun on its own

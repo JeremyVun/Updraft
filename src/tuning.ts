@@ -85,7 +85,7 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     /** Sleeping's morning clears off the sea passage within its first `seaMusicLead` seconds, without a phrase wait. */
     seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
-    /** `village_approach.ogg` opens on 0.2 s of silence and then its loudest note, so it comes in at full level. */
+    /** `village_approach.ogg` makes its own entrance (`recordedMusicOnce.villageApproach`), so the handoff opens at once. */
     villageArrivalFadeIn: 0,
     /** Sleeping's lullaby opens on near-silence and a soft first note, so it too comes in at full level. */
     sleepingArrivalFadeIn: 0,
@@ -147,9 +147,12 @@ export const tuning = {
      */
     recordedMusicOnce: {
       stillDeparture: { end: 118, fadeOut: 4, holdsHandoff: false },
-      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 1.75, holdsHandoff: true },
-      /** To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. */
-      villageApproach: { end: 36.93, fadeOut: .5, holdsHandoff: false },
+      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 2.25, holdsHandoff: true },
+      /**
+       * To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. It rises
+       * from silence under its first note, the loudest of the opening, so that note sits with the ones after it.
+       */
+      villageApproach: { end: 36.93, fadeOut: .5, enterFrom: 0, enterOver: 1.2, holdsHandoff: false },
       /**
        * From just before the attack at 8.0 s, coming in slowly after the last bell. `belfry_ending.ogg` (46.0–54.05 s
        * slowing over its last 3 s, its fade baked in) takes over in the quiet before the attack at 50.275 s.
@@ -223,9 +226,11 @@ export const tuning = {
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
     /**
      * When the air dies (the drowned village's becalming) the ambient breeze falls this share of the way to silence and
-     * the sea's wash this share quieter, easing in and out at `calmEase` per second; the player's own wind stays.
+     * the sea's wash this share quieter, easing in and out at `calmEase` per second; the player's own wind stays. Still
+     * water laps at the walls round the lens every `calmLap.every` seconds, at `calmLap.level` once the air is dead.
      */
-    calmBreeze: 0.95, calmSea: 0.6, calmEase: 0.4,
+    calmBreeze: 0.7, calmSea: 0.45, calmEase: 0.4,
+    calmLap: { every: [2.5, 6], level: 0.8 },
     /**
      * The player's wind is heard by how fast the stroke crosses the screen, not the ground under it, so the same gesture
      * sounds alike over near ground and far sky: `strokeMost` of a full gust at most, approached as the stroke passes
@@ -271,6 +276,10 @@ export const tuning = {
     cygnetFullDistance: 30, flockDistance: 320,
     /** The cygnet's footfalls stay cute but sit under everything else. */
     cygnetStepDb: -6,
+    /** The child's boots on the drowned village's slates and the belfry's boards: soft, under the cat and the bell. */
+    childStepDb: 0,
+    /** Footfalls (hers and the cat's paws) at full level within `near` of the lens, easing to `least` by `far`. */
+    tread: { near: 6, far: 40, least: 0.35 },
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
     callSpace: 4,
     shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,

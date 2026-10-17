@@ -95,6 +95,10 @@ export class DrownedChapter implements Chapter {
     return (this.beat === 'drift' && this.sailingFrom >= 0 && this.now - this.sailingFrom >= rescue.sailFor - rescue.musicFade)
       || this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
   }
+  get underfoot(): 'slate' | 'wood' {
+    const step = this.church?.step;
+    return step === 'nest' || step === 'sea' || step === 'ring' ? 'wood' : 'slate';
+  }
   get departureKite(): boolean { return this.beat === 'church' || this.beat === 'gather'; }
   get bellsRung(): boolean {
     return this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after'
