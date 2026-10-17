@@ -64,12 +64,12 @@ export const MEADOW_CUTS = {
   /**
    * From the duet to the boat: from 0:22.60 to 2:53.05, then round and round from 1:36.60 with no rest. The last
    * `crossfade` seconds before the loop's end carry the music leading into its start (equal power), so the native loop
-   * is seamless. Leaving, it goes over at a phrase end into `close`, the cadence the take ends on, which plays to the
-   * take's end; its last note is still sounding there, so it fades over `fadeOut`.
+   * is seamless. Leaving, it goes over at a phrase end into `close`, the cadence the take ends on, which stops at `to` as
+   * its last chord dies away, fading over `fadeOut`: after it the take has a low synth swell from generation, not music.
    */
   after: { file: 'meadow-after.ogg', cuts: [{ source: 'E', from: 22.6, to: 173.05, fadeOut: 0 }], loop: { from: 96.6, crossfade: 0.6 },
-    close: { from: 223.6, fadeOut: 2 } },
+    close: { from: 223.6, to: 230.8, fadeOut: 2 } },
 } satisfies Record<string, { file: string; cuts: MeadowCut[]; rest?: number; greenAt?: number; loop?: { from: number; crossfade: number };
-  close?: { from: number; fadeOut: number } }>;
+  close?: { from: number; to: number; fadeOut: number } }>;
 
 export type MeadowBeat = keyof typeof MEADOW_CUTS;

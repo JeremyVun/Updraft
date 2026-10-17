@@ -289,11 +289,12 @@ tail fade is given), levels each to the room reference by measured loudness, and
   at its next phrase end into the close (`seams`: the bed's recurring cadence, wherever its chord and level over the
   crossfade, and its chord over the second before, match the take's own lead into 3:43.60; mostly 3–12 s apart, the
   longest wait 23.8 s) it crossfades over 0.6 s, equal power, into 3:43.60 and plays the take's final cadence and soft
-  close to the end of the file (19.3 s; the last note still sounds there, so the last 2 s fade). The tool measures
+  close (7.2 s, to 3:50.80, its last 2 s faded as the chord dies away: from 3:50.8 the take swells into a low synth
+  rumble, 20–180 Hz, a generation artefact that is no part of the music). The tool measures
   each way in against the take's own continuation there. Birches' arrival handoff waits for that end
   (`meadowMusic.closesAt`, held like a once-played recording: no fade of its own), then rests `arrivalQuiet` and fades
-  in, so the two never sound together and the meadow is not cut. Typically the close ends about 20 s into the 47 s
-  crossing and Birches comes in at its approach (26 s); at worst about 42 s in, 5 s before landing. A start on the
+  in, so the two never sound together and the meadow is not cut. Typically the close ends about 8 s into the 47 s
+  crossing and Birches comes in at its approach (26 s); at worst about 31 s in, 16 s before landing. A start on the
   crossing itself has no bed and is quiet until Birches. `node tools/meadow-bed-render.mjs` renders the whole run
   from the duet's end to Birches through the game's sound (LISTEN, GONE and PUSH set the story's times).
 - `MeadowChapter.meadowMusic` names the part; `audio/meadow-music.ts` plays it. The shared pad is silent in the meadow

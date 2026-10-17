@@ -250,9 +250,9 @@ for (const beat of ['walk', 'after']) {
     + (loop ? `, loops ${looped.loopEnd}s → ${looped.loopStart}s in the file` : ''));
   if (close) {
     const seams = closeSeams(cut, loop, close), lead = loop.crossfade;
-    const tail = fade(slice(decode(cut.source), close.from - lead, Infinity), EDGE, close.fadeOut);
+    const tail = fade(slice(decode(cut.source), close.from - lead, close.to), EDGE, close.fadeOut);
     measured[beat] = { ...measured[beat], crossfade: lead, close: { ...pack(file, tail), entry: lead }, seams: seams.map(s => round(s.at, 4)) };
-    report.push(`  close: ${cut.source} ${close.from}–end (${round(length(tail) / RATE - lead, 2)}s), entered from ${seams.length} phrase ends: `
+    report.push(`  close: ${cut.source} ${close.from}–${close.to} (${round(length(tail) / RATE - lead, 2)}s), entered from ${seams.length} phrase ends: `
       + seams.map(s => `${round(cut.from + s.at, 2)} (chord ${s.chord.toFixed(2)}, lead ${s.lead.toFixed(2)}, ${s.level.toFixed(1)} dB)`).join(', '));
     const looping = seams.map(s => s.at).filter(at => at >= looped.loopStart);
     const waits = looping.map((at, i) => i ? at - looping[i - 1] : at - looped.loopStart + looped.loopEnd - looping.at(-1));
