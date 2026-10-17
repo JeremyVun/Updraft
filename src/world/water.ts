@@ -147,6 +147,7 @@ ${MIRROR_LAYOUT_GLSL}
 ${MIRROR_RIPPLES_GLSL}
 ${GLAD_GLSL}
 uniform float uSkyMirrorAppearance;
+uniform float uSeaStars;
 // This small early exit shares one program for both states; the expensive effects keep their variants.
 uniform bool uLandSkip;
 uniform sampler2D uRipple;
@@ -558,8 +559,8 @@ void main() {
    * pixels across as the sun's glitter is drawn, each swelling and fading over seconds so the sea shimmers calmly.
    */
   vec3 starlight = vec3(0.0);
-  if (uStarlight > 0.0) {
-    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uStarlight;
+  if (uSeaStars > 0.0) {
+    float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uSeaStars;
     starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}, 1.0) * F * caught * ${glsl(tuning.water.starLight)};
   }
 
@@ -651,6 +652,7 @@ export class Water {
         uWaterWind: this.windWaves.uniform,
         uSwellSamples: Object.freeze({ value: 3 }),
         uSkyMirrorAppearance: { value: 1 },
+        uSeaStars: { value: 0 },
         uLandSkip: { value: false },
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
@@ -707,6 +709,15 @@ export class Water {
     SEA_EFFECT_SLOTS.forEach((name, i) => { choice[name] = shown.getComponent(i) > 0 || this.effectsWanted.getComponent(i) > 0; });
     select(this.mesh.material as THREE.ShaderMaterial, choice);
     this.seaReflection = !!choice.SEA_REFLECTION;
+  }
+
+  /**
+   * How much of the night sky's stars the sea catches: the air's starlight, or from the wood's shore to the sleeping
+   * island's morning, `skyStars` (as many as the sky itself shows), so the sea keeps them as long as the sky does.
+   */
+  catchStars(skyStars: number | null): void {
+    const starlight = atmo.uniforms.uStarlight.value;
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uSeaStars.value = skyStars === null ? starlight : Math.max(starlight, skyStars);
   }
 
   /** Advance the water independently of the air, once per simulation frame. */
