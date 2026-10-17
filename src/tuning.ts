@@ -1653,10 +1653,11 @@ export const tuning = {
        */
       flutterWait: 0.6, flutterFor: 0.75, flutterArc: 0.55, onTopFor: 1.1, hopDownFor: 0.6, hopDownArc: 0.3,
       /**
-       * Feathers it loses scrambling onto the top, `flutterShedAt` of the way through the flutter, as on the sleeping
-       * island's bank; `flutterFeatherSize` times a startle's, since the lens here stands further off.
+       * Feathers it loses as it beats up over the bole, `flutterShedAt` of the way through the flutter, as on the sleeping island's
+       * bank; `flutterFeatherSize` times a startle's, since the lens here stands further off. Over the bole she watches it
+       * come up after her, holding the lens on it until `featherWatch` s after it launches, at most `featherWait` s.
        */
-      flutterFeathers: 4, flutterShedAt: 0.85, flutterFeatherSize: 0.85,
+      flutterFeathers: 4, flutterShedAt: 0.5, flutterFeatherSize: 1.2, featherWatch: 1, featherWait: 0.9,
       /** How loud the leaves she lands in are, as a share of a heap thrown up. */
       landLeaves: 0.7,
     },

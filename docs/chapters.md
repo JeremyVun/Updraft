@@ -527,8 +527,9 @@ with strokes along its arc exactly as in the drowned village (`SwingCrossing`, `
 `tuning.birches.swing.ride`), and at the top of a forward swing that will carry her she lets go, flies over the bole and
 lands on her feet in the leaves beyond with a laugh. If the player stops she waits on the swing, the drawn push along its
 arc offered after 5 s. The squirrel watches from the swing tree's trunk and runs on along the bole's top ahead of them;
-the cygnet flutters up onto the bole, losing a few feathers at the worst of it as on the sleeping island's bank
-(`flutterFeathers`), and hops down after her. Her walk, her fetching and the plane all keep to her side
+the cygnet flutters up onto the bole, losing a few feathers as it beats up over it, as on the sleeping island's bank
+(`flutterFeathers`), and hops down after her; she looks back at it coming, holding the lens a moment (under a second,
+`featherWait`) so the feathers fall in the frame before it turns to the next tangle. Her walk, her fetching and the plane all keep to her side
 of it (`southOfFallen`, the plane's `playEdge`).
 
 **Music.** "The Red Door Opens" (`assets/music/red_door.ogg`) plays from the approach crossing through boarding and

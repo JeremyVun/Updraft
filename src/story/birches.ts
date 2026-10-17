@@ -94,6 +94,8 @@ export class BirchesChapter implements Chapter {
   private birdOver: BirdOver = 'none';
   private birdAt = 0;
   private birdShed = false;
+  /** When she was over the bole and off the swing's ground, or −1. */
+  private overAt = -1;
   private camera: THREE.PerspectiveCamera | null = null;
   private readonly edge = { back: new THREE.Vector2(), at: 0 };
   private readonly birdWatch = new THREE.Vector3();
@@ -565,6 +567,7 @@ export class BirchesChapter implements Chapter {
     const { child: c, cygnet: bird } = this.cast;
     this.to('swinging');
     this.leftSwingAt = -1;
+    this.overAt = -1;
     this.landedCheer = false;
     c.lookAt = null;
     c.stowPlane(true);
@@ -604,9 +607,20 @@ export class BirchesChapter implements Chapter {
       c.cheer();
     }
     if (phase === 'over') {
+      if (this.overAt < 0) this.overAt = this.now;
+      if (this.watchingBird()) return;
       c.stowPlane(false);
       this.resumeWalk();
     }
+  }
+
+  /** Over the bole, a moment looking back at the cygnet coming up after her, so its feathers fall in the frame. */
+  private watchingBird(): boolean {
+    const k = tuning.birches.swing;
+    const coming = this.birdOver === 'toBole' || (this.birdOver === 'up' && this.now - this.birdAt < k.featherWatch);
+    if (!coming || this.now - this.overAt > k.featherWait) return false;
+    this.cast.child.lookAt = this.cast.cygnet.position;
+    return true;
   }
 
   /** Its own way over once she is across: up to the bole's foot, a flutter up onto it, a look at her, and down the far side. */
