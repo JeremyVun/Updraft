@@ -1,8 +1,10 @@
 # Local checks
 
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
-`http://127.0.0.1:5230/` and take `BASE` for another server (use `npm run build:qa` then `npm run preview:qa`, or a worktree with its own
-server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). Browser
+`http://127.0.0.1:5230/` and take `BASE` for another server. The browser and audio groups need a dev server: several
+checks import `src/` modules, inspect unminified functions or intercept dev asset paths. Use a stable worktree with
+its own server for those groups. Use `npm run build:qa` then `npm run preview:qa` for the full playthrough and scene
+captures that do not import source modules: a dev server reloads on any `src` edit, including another session's. Browser
 captures share the GPU (`tools/lib/browser.mjs`, up to `GPU_SLOTS`, default 4, at once), since fixed steps make them
 independent of speed; tools that time real frames (`perf`, profiles, `start-check` and similar) take it alone and wait
 for running captures, so no capture distorts them.
@@ -34,21 +36,23 @@ or motion review.
 - `npm run check`: fast shader, parity, input, timing and engine mechanics, no browser.
 - `npm run check:mechanics`: the quick group plus chapter, camera, gesture and story mechanics (about five minutes).
 - `npm run check:browser`: shader backends, touch and viewport, chapter transitions, context loss, the start screen,
-  saves, frame scheduling and chapter views. Needs a running server.
+  saves, frame scheduling and chapter views. Needs a running dev server.
 - `npm run check:audio`: the offline audio and score checks, in headless Chrome against a running dev server, no GPU
   (`audio-interruption-check` and `music-transition-audit` run separately).
-- `npm run check:release`: mechanics, browser and audio, then the full playthrough. Allow at least an hour.
+- `npm run check:release`: mechanics, browser and audio, then the full playthrough, all using the same `BASE`.
+  It requires a stable dev server. For a release, the split below runs the long playthrough against a QA build.
+  Allow at least an hour for the full set.
 
 ## Before a release
 
 1. `npm run typecheck` and `npm run build`.
 2. Run `node tools/production-build-check.mjs` to verify production ignores game query overrides and excludes QA
-   modules. For the instrumented browser checks, run `npm run build:qa`, start `npm run preview:qa`, and run
-   `BASE=<preview> npm run check:release`. QA assets live in `dist-qa/`; `dist/` remains the production build.
-   Twenty-one of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`,
-   `stairs-fog` and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
-   frame loop by a name minification removes. Run those against a dev server in a worktree nobody is editing:
-   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the four.
+   modules. Then run `npm run check:mechanics`, `BASE=<dev server> npm run check:browser` and
+   `BASE=<dev server> npm run check:audio` against the same revision in a worktree nobody is editing.
+   Run `npm run build:qa`, start `npm run preview:qa`, then run
+   `BASE=<QA preview> node tools/playthrough.mjs /tmp/updraft-release-journey` for the full journey.
+   QA assets live in `dist-qa/`; `dist/` remains the production build. Do not point the combined `check:release`
+   group at the preview: built output does not serve the source modules and dev asset paths its probes require.
 3. Jeremy owns the parts no local tool covers: a listening pass through the whole journey (see
    `docs/contracts/audio.md`, Open) and physical-device checks on his iPad (touch robustness, Safari fullscreen,
    performance, warmth and battery).

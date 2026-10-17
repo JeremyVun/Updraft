@@ -20,11 +20,13 @@ route indices; malformed or unknown saves and unavailable storage never prevent 
 Every chapter has an entry checkpoint. The additional points:
 
 - Still island: `companion`, after the tree, the fall and the gather, the bird in the child's arms.
-- Washing (`lines`): `curtain-1` and `curtain-2` (opened curtains stay open), then `family`, which resumes on the far
-  shore with the doorway crossed. A reload during the camera crossing returns to the previous curtain.
+- Washing (`lines`): `curtain-1` and `curtain-2` (opened curtains stay open), plus `rotary` on the approach to the
+  rotary lines, which restores that encounter unopened. `family` resumes on the far shore with the doorway crossed.
+  A reload during the camera crossing returns to the previous curtain.
 - Little Boats: `pool-1` and `pool-2` with fleet progress; the travellers restore on the dry bank between swims and
   the gathered toys at rest.
-- Meadow: `piano` (leaving the piano) and `pond` (leaving the pond encounter).
+- Meadow: `piano` (leaving the piano), `echoes-1` and `echoes-2` (after each completed seed lift, preserving the
+  earned musical journey), and `pond` (leaving the pond encounter).
 - Birches: `squirrel<r>-scarf<t>` after each round of the squirrel's game found (`r`) and each tangle freed (`t`),
   with `-swing` once the optional swing is ridden; the payload holds route leg, swing count, dusk, freed tangles and
   rounds found. All four tangles restore the red sail; the squirrel resumes where that point has it (waiting at a
@@ -72,9 +74,13 @@ Revision 8 moves Mirror, home and their life regions together (`ONWARD_SEA`), pr
 Revision-7 whale and swim checkpoints stay where they are; older whale saves still receive revision 7's move once.
 Revision 9 shortens both sea legs. Whale and completed-swim checkpoints move with `WHALE_SHORTENING`; Mirror,
 home and their life regions move with `MIRROR_SHORTENING`. Earlier relocations still apply once where needed.
+Revision 10 moves Still and its local life regions with `STILL_SHIFT`; travellers and boat move for `island` and
+`toLines` saves. Revision 11 separates the door shore with `SHORE_SEPARATION`, moving its life regions, `toBoats`
+travellers and boat, and `lines`/`family` positions already on that shore. Older family positions on the original
+island are left for the chapter's restore to relocate.
 Revision 12 grows the birches and moves them: the child, bird and boat of `birches`, `toStairs` and older `drowned`
 saves lying on or just off the old island move with their band of it (`birchesAt`), so a save at a tangle resumes at
-its stop and one at the berth at the new berth.
+its stop and one at the berth at the new berth. The current geography revision is 12.
 
 Wing care is reconstructed from chapter and checkpoint by `src/story/wing-care.ts`: bare before the fall, wrapped from
 `companion` through Sleeping's `feather`, free from `morning` on. No checkpoint falls inside the treatment or the

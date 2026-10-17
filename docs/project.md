@@ -31,7 +31,8 @@ The vision and story: [journey.md](journey.md). Each room: [chapters.md](chapter
   behind it.
 - No failure states, no timers that solve a beat, nothing that can be lost for good.
 - Sound starts from Begin or Continue after a click, tap or key. The speaker button and M toggle it, and the choice
-  persists. All sound is generated with Web Audio; there are no sound files.
+  persists. Web Audio mixes recorded music with procedural ambience, instruments and physical sounds
+  ([contracts/audio.md](contracts/audio.md)).
 - Player-facing text drafts and Jeremy's choices on them are in [copy/](copy/). Gameplay has no instructional text;
   the start screen, chapter select, controls, recovery dialog and closing line do.
 - Out of scope, by Jeremy's ruling: keyboard-only play, a privacy notice and reduced-motion settings.

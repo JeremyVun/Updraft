@@ -35,13 +35,13 @@ const {mulberry32}=await import('../src/world/noise.ts');
 function fixture(fps=60) {
   Math.random=mulberry32(42);
   const air={x:0,z:0,energy:0,lift:0};
-  const wind={breeze:new THREE.Vector2(),sample(_x,_z,out){return Object.assign(out,air);},addSplat(){}};
+  const wind={calm:0,breeze:new THREE.Vector2(),sample(_x,_z,out){return Object.assign(out,air);},addSplat(){}};
   const child=new Traveller(wind),cygnet=new Cygnet(),flock=new SwanFlock(),boat=new Boat(wind),plane=new Glider(wind,[]);
   cygnet.mount=child;cygnet.visible=true;
   const carry=new Carry(child,cygnet);
   const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
-    sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,onCovers:SleepingIsland.prototype.onCovers,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},lift:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
+    sleeping:{dressing:{walker:null},hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,onCovers:SleepingIsland.prototype.onCovers,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},lift:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
   };
   let time=0;
   const rig=new CameraRig();rig.resize(Number(process.env.W??1600),Number(process.env.H??900));
@@ -52,10 +52,13 @@ function fixture(fps=60) {
     cygnet.update(dt,time,child.position,air);carry.after();
     if(chapter){
       if(!prepared){rig.cut(chapter.shot);prepared=true;}else rig.update(dt,time,chapter.shot,chapter.pace);
+      for (const [name,values] of [['camera position',camera.position.toArray()],['camera rotation',camera.quaternion.toArray()],['child',child.position.toArray()],['boat',boat.position.toArray()]])
+        assert(values.every(Number.isFinite), `${name} is non-finite at ${chapter.beat}, ${fps} fps, ${time}s`);
       const row=cameraMotion[chapter.beat]??={maxTurn:0,worstPrimary:0};
       if(previousRotation)row.maxTurn=Math.max(row.maxTurn,previousRotation.angleTo(camera.quaternion)/dt);
       previousRotation=camera.quaternion.clone();
       if(chapter.shot.subjects){const p=chapter.shot.subjects.primary.clone().project(camera),edge=Math.max(Math.abs(p.x),Math.abs(p.y));
+        assert(Number.isFinite(edge), `primary projection is non-finite at ${chapter.beat}`);
         if(edge>row.worstPrimary){row.worstPrimary=edge;row.at=chapter.t;row.screen=p.toArray();}}
     }
     const s=cast.sleeping,t=tuning.sleeping;

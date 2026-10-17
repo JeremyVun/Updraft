@@ -17,23 +17,25 @@ const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
  */
 function deploymentHeaders(): Plugin {
   let outDir = 'dist';
+  let analyticsUrl = '';
   return {
     name: 'updraft-deployment-headers',
     apply: 'build',
     configResolved(config) {
       outDir = resolve(config.root, config.build.outDir);
+      analyticsUrl = (config.env.VITE_ANALYTICS_URL ?? publicConfig.analyticsUrl ?? '').trim();
     },
     closeBundle() {
       const html = readFileSync(resolve(outDir, 'index.html'), 'utf8');
       const hashes = Array.from(html.matchAll(INLINE_SCRIPT), match =>
         `'sha256-${createHash('sha256').update(match[1], 'utf8').digest('base64')}'`);
-      const analyticsOrigin = new URL(process.env.VITE_ANALYTICS_URL ?? publicConfig.analyticsUrl).origin;
+      const analyticsOrigin = analyticsUrl ? new URL(analyticsUrl).origin : '';
       const csp = [
         `default-src 'self'`,
         `script-src 'self' ${hashes.join(' ')}`.trim(),
         `style-src 'self' 'unsafe-inline'`,
         `img-src 'self' data: blob:`,
-        `connect-src 'self' ${analyticsOrigin}`,
+        `connect-src 'self' ${analyticsOrigin}`.trim(),
         `frame-ancestors 'none'`,
         `base-uri 'none'`,
         `form-action 'none'`,

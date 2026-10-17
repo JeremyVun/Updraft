@@ -15,6 +15,90 @@ appearance and later bank-to-haze styling remain outside this patch.
 
 > ok great, whats the fix? can you fix it simply without causing a regression issue, and then check those frames again to ensure it's fixed?
 
+> cool, commit. Next i need you to help figure out if there's a cheap way to make the village fog look better
+
+## Cheap village-fog study — 2026-10-17
+
+The transition repair is committed as `4a2bf422`. The appearance study uses a detached worktree at that commit
+and QA-only Vite transforms under `/tmp/updraft-village-fog-study-pEuyC9/`. No village appearance changes have
+been applied to the main checkout. The analytic density, coverage, progression and clearing calculations stay
+unchanged in every prototype.
+
+### Smallest promising treatment
+
+1. Match the distant ordinary haze to the sky. Its existing `skyColor` call samples a slightly elevated direction
+   and multiplies the result by `(0.84, 0.87, 0.92)`. In the village, blend that direction toward the actual ray and
+   its multiplier toward one between 200 and 900 metres. This removes a separate dark sea/sky seam without
+   adding another sky evaluation or changing haze opacity. The prototype uses `uSeaFogShape.w`, so this does
+   not address the earlier arrival haze while the village mist is inactive.
+2. Replace the mist's constant colour with a brighter upper layer and cooler depth, a directional sun term, and
+   a gradual colour blend toward the horizon. The study estimates the visible mist point from the existing
+   top/front planes; the horizon blend spans 30–160 metres from the eye. It is an approximation to lighting,
+   not a new density integration. A first 140–650 m blend was too narrow on screen to improve the seam.
+3. Keep that horizon colour blend during closure. The first prototype weakened it by `1 - close * 0.75`, which
+   left a hard night edge. Removing that factor improves the fully closed and partially closed comparison;
+   the sky palette already supplies the darkening. Nearby fog remains dark.
+
+The optional fourth part adds two broad value-noise samples to the lighting. It gives some soft shading variation,
+especially above the fog at the belfry, but the main improvement comes from the light gradient and horizon match.
+The recommended first implementation is the treatment without noise. It adds no rendering pass, texture,
+geometry or marching loop. It retains the existing fog cache. Its performance measurement is recorded below.
+
+This still has the original flat density layer. Lighting makes it less like a uniform sheet; it does not give it
+the cloud chapter's rolling silhouette. Changing that shape would also change what the mist conceals and needs
+a separate full-route review. Do not restore the discarded expensive ray marcher as a shortcut.
+
+### Visual evidence and limits
+
+- `v3/results.json`: frozen, seeded frame 120 at the roofs, church, belfry, portrait belfry and closed belfry.
+  Each compares original, ordinary-haze match alone, lighting plus haze, and lighting plus haze with noise.
+  All five original → variants → original round trips are pixel-identical, with no browser errors.
+- The belfry's left background strip (`x=35..349`, `y=340..389`) has a maximum adjacent-row mean RGB step
+  of 11.314/255 originally, 4.639 for the ordinary-haze correction alone, and 1.583 for lighting plus haze.
+  Adding noise gives 1.584. This is a local seam measurement, not a general image-quality score.
+- Inspected the frozen comparisons and diagnostic camera offsets: two metres sideways with a 0.1 radian yaw,
+  and two metres above/below the original camera, at the roofs and belfry. These are still-image checks,
+  not a video motion review or a continuous gameplay/controller test.
+- `night/results.json`: an additional comparison at `fog=1` and `fog=.6` confirms the full horizon blend avoids
+  the first prototype's stronger night seam. `night/closed-8.png` and `night/closing-8.png` are that revision.
+  Daytime mode 7 is unchanged by this revision because `close=0` there.
+- `measured.json`: the half-float optical-depth channel is bit-identical for the lighting and noise variants
+  against original in all 1,146,880 texels of each roof, belfry and church main-camera fog cache. The shader's
+  density function is unchanged. This does not replace a gameplay review of how changed colour affects legibility.
+- The light-point estimate does not yet account for the side edges or church clearing when choosing its colour
+  sample. Before landing, review consecutive moving-camera frames, the advancing bank, all bell clearings,
+  reflections, closure and departure; verify cloud arrival and unaffected chapters against a separate build.
+  Mobile performance and full-frame cost remain separate from the local cache measurement.
+
+`build.mjs` contains the isolated shader transform, `lighting-prototype.glsl` the lighting helper,
+`study-v3.mjs` the five-view capture, and `night.mjs` the final closure-colour comparison. The QA build uses
+`envDir:false`. In a production patch, derive the study's hard-coded top/front constants from existing tuning,
+remove all study switches, and keep the density calculation unchanged.
+
+### Performance measurement
+
+`batches.json` and `batch-summary.json`: Apple M4 Pro, Chrome for Testing through ANGLE Metal, exclusive browser
+GPU gate. Each cell below is the median of six GPU-timed batches of 128 cache bakes, with balanced variant order
+and warm-up draws. Values are milliseconds per main-camera cache bake, not per complete game frame.
+
+| View | Original | Lighting | Lighting + noise | Added lighting cost |
+| --- | ---: | ---: | ---: | ---: |
+| Roofs | 0.561 | 0.582 | 0.662 | 0.021 |
+| Belfry | 0.444 | 0.470 | 0.540 | 0.026 |
+| Church | 0.534 | 0.604 | 0.742 | 0.070 |
+
+The no-noise treatment adds approximately 0.02–0.07 ms to these median bake measurements. Adding noise takes
+the total overhead to approximately 0.10–0.21 ms. This supports omitting the noise in a first implementation.
+The cache is 1280×896 with 64 depth slices; no extra pass or texture is added. The ordinary-haze correction
+outside the cache reuses the existing sky-colour call, but its full-frame cost was not separately measured.
+
+There are initial outliers (for example, two roof lighting batches at 0.925 and 0.949 ms); these are feasibility
+measurements, not a guaranteed timing budget. Initial whole-frame samples included variant compilation;
+individual-draw GPU queries produced strongly order-dependent timing ramps. Neither is used for the cost claim.
+The recorded wall-time fields measure submission and do not establish GPU completion on this browser; use the
+asynchronously retrieved GPU-query results. Reflection-camera cost and physical-device/mobile performance
+were not measured. All final measurement runs report no browser errors and identical optical-depth readbacks.
+
 ## Transition fix plan — 2026-10-17
 
 Preserve the existing bank shader, cloud appearance before descent, village route and reveal timing. Carry the

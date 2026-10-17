@@ -35,9 +35,20 @@ class Backdrop {
   private top = 0;
   private now = false;
   private current: HTMLImageElement | null = null;
+  private readonly frames = new Set<number>();
 
-  constructor() {
+  constructor(private readonly signal: AbortSignal) {
     this.root.append(el('div', 'chapters-mute'));
+  }
+
+  dispose(): void {
+    for (const frame of this.frames) cancelAnimationFrame(frame);
+    this.frames.clear();
+    for (const img of this.images.values()) img.removeAttribute('src');
+    this.images.clear();
+    this.current = null;
+    this.root.replaceChildren();
+    this.root.remove();
   }
 
   look(room: string, now = false): void {
@@ -59,6 +70,7 @@ class Backdrop {
     this.images.set(room, img);
     this.root.prepend(img);
     img.decode().then(() => {
+      if (this.signal.aborted) return;
       img.dataset.ready = '';
       if (this.room === room) this.reveal(img, this.now);
     }, () => {});
@@ -90,8 +102,12 @@ class Backdrop {
     void getComputedStyle(img).opacity;
     img.classList.add('shown');
     const whole = (): void => {
+      if (this.signal.aborted) return;
       if (getComputedStyle(img).opacity === '1') covered();
-      else if (img.classList.contains('shown')) requestAnimationFrame(whole);
+      else if (img.classList.contains('shown')) {
+        const frame = requestAnimationFrame(() => { this.frames.delete(frame); whole(); });
+        this.frames.add(frame);
+      }
     };
     whole();
   }
@@ -101,7 +117,9 @@ class Backdrop {
  * Only for players who have finished. Everything lives inside the veil and keeps its presses to itself,
  * because a click anywhere else on the veil begins the game.
  */
-export function offerChapters(veil: HTMLElement, begin: (start: string) => void): void {
+export function offerChapters(veil: HTMLElement, begin: (start: string) => void, signal: AbortSignal): void {
+  if (signal.aborted) return;
+  const options = { signal };
   const toggle = el('button', 'chapters-toggle', 'chapters');
   toggle.type = 'button';
   toggle.setAttribute('aria-expanded', 'false');
@@ -114,10 +132,17 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   back.type = 'button';
   panel.append(list, back);
   for (const node of [toggle, panel]) {
-    node.addEventListener('pointerdown', e => e.stopPropagation());
-    node.addEventListener('click', e => e.stopPropagation());
+    node.addEventListener('pointerdown', e => e.stopPropagation(), options);
+    node.addEventListener('click', e => e.stopPropagation(), options);
   }
-  const backdrop = new Backdrop();
+  const backdrop = new Backdrop(signal);
+  signal.addEventListener('abort', () => {
+    backdrop.dispose();
+    for (const img of list.querySelectorAll('img')) img.removeAttribute('src');
+    list.replaceChildren();
+    panel.remove();
+    toggle.remove();
+  }, { once: true });
   veil.insertBefore(backdrop.root, veil.querySelector('.veil-wind'));
   const titleRoom = (): string | undefined =>
     veil.classList.contains('painted') ? veil.querySelector<HTMLElement>('.veil-painting')?.dataset.room : undefined;
@@ -128,7 +153,7 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     const top = list.querySelector('.chapter')?.getBoundingClientRect().top ?? 0;
     backdrop.root.style.setProperty('--fold', `${Math.round(veil.clientHeight - Math.max(0, top))}px`);
   };
-  window.addEventListener('resize', fold);
+  window.addEventListener('resize', fold, options);
 
   const show = (start: string, now = false): void => {
     backdrop.look(paintingOf(start), now);
@@ -145,18 +170,18 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
       const img = el('img', 'chapter-still');
       img.alt = '';
       img.decoding = 'async';
-      img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+      img.addEventListener('load', () => img.classList.add('loaded'), { ...options, once: true });
       img.src = still.href;
       button.append(img, el('span', 'chapter-name', name));
-      button.addEventListener('click', () => pick(start));
+      button.addEventListener('click', () => pick(start), options);
       // A touch starts the room at once, so only a hovering pointer or the keyboard moves the painting.
       button.addEventListener('pointerenter', e => {
         if (e.pointerType !== 'touch') show(start);
-      });
+      }, options);
       button.addEventListener('focus', () => {
         if (!button.matches(':focus-visible')) return;
         show(start);
-      });
+      }, options);
       const item = el('li', '');
       item.append(button);
       list.append(item);
@@ -189,16 +214,16 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     begin(start);
   };
 
-  toggle.addEventListener('pointerenter', fill, { once: true });
-  toggle.addEventListener('focus', fill, { once: true });
-  toggle.addEventListener('click', open);
+  toggle.addEventListener('pointerenter', fill, { ...options, once: true });
+  toggle.addEventListener('focus', fill, { ...options, once: true });
+  toggle.addEventListener('click', open, options);
   // `back` stands where `chapters` was, so the second press of a double click must not close the list again.
-  back.addEventListener('click', e => { if (e.detail < 2) close(); });
+  back.addEventListener('click', e => { if (e.detail < 2) close(); }, options);
   panel.addEventListener('click', e => {
     if (e.target === panel || e.target === list) close();
-  });
+  }, options);
   panel.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !veil.classList.contains('chapter-chosen')) close();
-  });
+  }, options);
   veil.append(toggle, panel);
 }

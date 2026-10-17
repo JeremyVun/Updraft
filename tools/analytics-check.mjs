@@ -67,4 +67,22 @@ for (const testQa of [false,true]) {
   const {telemetry:privatePlay}=await load('telemetry-private.ts',source+'\n// '+testQa);
   assert.equal(privatePlay.enabled(),false);
 }
-console.log('Analytics transport failures, anonymous bounded payloads, event dedup, completed resumes and QA isolation passed.');
+globalThis.testQa=false;navigator.doNotTrack='0';location.search='';
+const chapterType=fs.readFileSync('src/story/journey.ts','utf8').match(/export type ChapterName =([\s\S]*?);/)[1];
+const chapters=[...chapterType.matchAll(/'([^']+)'/g)].map(m=>m[1]);
+const {telemetry:journey}=await load('telemetry-journey.ts',source+'\n// full journey');
+const enteredAt=recorded.length;
+journey.start(chapters[0],false);
+for(const chapter of chapters.slice(1))journey.chapter(chapter);
+journey.chapter('constructor');journey.chapter('unrecognised');
+assert.deepEqual(recorded.slice(enteredAt).filter(e=>e.t==='chapter_entered').map(e=>e.d.chapter),chapters);
+for(const direct of [false,true]){
+  const {telemetry:stairs}=await load('telemetry-stairs.ts',source+'\n// stairs '+direct);
+  if(direct)stairs.start('stairs',true);
+  else {stairs.start('birches',false);stairs.chapter('toStairs');stairs.chapter('stairs');}
+  for(let i=0;i<601;i++)stairs.frame(1000/60);
+  const from=recorded.length;
+  stairs.performance();stairs.failure('runtime',new TypeError());
+  assert.deepEqual(recorded.slice(from).map(e=>[e.t,e.d.chapter]),[['performance_sampled','stairs'],['game_failed','stairs']]);
+}
+console.log('Analytics transport, privacy, lifecycle, QA isolation, every chapter and stairs attribution passed.');

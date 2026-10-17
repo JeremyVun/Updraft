@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const quick = [
   'shader', 'water-texture', 'progress-schema', 'nearby', 'pointer-contact',
   'chapter-view', 'flock-audio', 'frame-time', 'wind-clock', 'wind-gesture-logic', 'quality',
-  'boot-cloth', 'analytics', 'stairs-haze',
+  'boot-cloth', 'analytics', 'analytics-config', 'stairs-haze',
 ];
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
@@ -21,7 +21,7 @@ const mechanics = [
   'plane-routing', 'plane-catch', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
-  'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start', 'start-disposal',
   'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'sea-music-browser', 'village-music-browser', 'petals-browser', 'journey-view', 'lines-arrival',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.

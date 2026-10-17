@@ -28,8 +28,10 @@ or 60 KiB; failed requests are dropped without delaying or interrupting play.
 
 ## Configuration
 
-Public defaults live in `src/public-config.ts`. Build-time `VITE_ANALYTICS_URL` overrides the host; an empty value
-disables analytics. Optional `VITE_ANALYTICS_KEY` supplies an ingest key if the service requires one; never commit it.
+Public defaults live in `src/public-config.ts`. Build-time `VITE_ANALYTICS_URL` is optional: omission uses the public
+default; an empty or whitespace-only value disables analytics. The build and runtime use the same resolved URL;
+disabled builds emit only `'self'` in CSP `connect-src`. Optional `VITE_ANALYTICS_KEY` supplies an ingest key if the
+service requires one; never commit it.
 The service currently accepts this project's events without a key, but it switches every project to keyed ingestion
 once any ingest key is configured, so keeping this static site anonymous beside keyed server clients would need a
 per-project public-ingest allowlist on the service. Read/operator credentials never go in the browser client.
@@ -40,7 +42,10 @@ Production ignores game query switches, including `shot` and `chapter`, so they 
 
 ## Checks
 
-- `node tools/analytics-check.mjs`: failures, payload privacy, lifecycle dedup and QA isolation, without a GPU.
+- `node tools/analytics-check.mjs`: failures, payload privacy, lifecycle dedup, QA isolation and every chapter,
+  including stairs entry, performance and failure attribution, without a GPU.
+- `node tools/analytics-config-check.mjs`: builds the real telemetry and deployment headers for default, disabled,
+  blank and custom URLs, then checks delivery and CSP together without network requests or a GPU.
 - `node tools/analytics-browser-check.mjs`: QA events from the real app accepted with HTTP 204, play continuing with
   analytics blocked, and no requests in default QA mode. `BASE` selects a build.
 

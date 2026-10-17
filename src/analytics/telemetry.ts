@@ -2,12 +2,13 @@ import { Analytics } from './client';
 import { publicConfig } from '../public-config';
 import { QA } from '../qa';
 import type { QualityLevelName } from '../gl/quality';
+import type { ChapterName } from '../story/journey';
 
 declare const __BUILD_ID__: string;
 type Dims = Record<string, string>;
 const q = new URLSearchParams(location.search);
 const optedOut = q.get('analytics') === '0' || navigator.doNotTrack === '1';
-const endpoint = import.meta.env.VITE_ANALYTICS_URL ?? publicConfig.analyticsUrl;
+const endpoint = (import.meta.env.VITE_ANALYTICS_URL ?? publicConfig.analyticsUrl ?? '').trim();
 /** No persistent identity, session ID, presence heartbeat, URLs, messages or gesture coordinates. */
 const client = new Analytics({
   endpoint: !optedOut && (!QA || q.get('analytics') === '1') ? endpoint : '',
@@ -17,7 +18,11 @@ const client = new Analytics({
 });
 const build = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'development';
 const environment = QA ? 'qa' : 'production';
-const chapters = new Set(['island','toLines','lines','toBoats','boats','toMeadow','meadow','toBirches','birches','drowned','toWood','wood','toSleeping','sleeping','toMirror','mirror','toHarbour','toHome','home','stage']);
+const chapters: Record<ChapterName, true> = {
+  island: true, toLines: true, lines: true, toBoats: true, boats: true, toMeadow: true, meadow: true,
+  toBirches: true, birches: true, toStairs: true, stairs: true, drowned: true, toWood: true, wood: true,
+  toSleeping: true, sleeping: true, toMirror: true, mirror: true, toHarbour: true, toHome: true, home: true, stage: true,
+};
 let chapter = 'loading', level = 'unknown', started = false, completed = false;
 let frames = 0, elapsed = 0, hitches = 0;
 const failures = new Set<string>();
@@ -33,12 +38,12 @@ export const telemetry = {
   start(name: string, resumed: boolean, finished = false): void {
     if (started) return;
     started = true; completed = finished;
-    chapter = chapters.has(name) ? name : 'unknown';
+    chapter = Object.hasOwn(chapters, name) ? name : 'unknown';
     count('game_started', { mode: resumed ? 'continued' : 'new' });
     count('chapter_entered');
   },
   chapter(name: string): void {
-    if (!started || name === chapter || !chapters.has(name)) return;
+    if (!started || name === chapter || !Object.hasOwn(chapters, name)) return;
     this.performance();
     chapter = name;
     count('chapter_entered');

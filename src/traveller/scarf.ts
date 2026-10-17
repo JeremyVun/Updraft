@@ -109,6 +109,7 @@ export class Scarf {
   /** The child's velocity over the ground, smoothed of the bob in their stride. */
   private readonly carried = new THREE.Vector3();
   private readonly gust = new THREE.Vector3();
+  private gustAngle = 0;
   private readonly lastAnchor = new THREE.Vector3();
   private anchored = false;
   private lastStep = STEP;
@@ -206,6 +207,7 @@ export class Scarf {
     this.lastAnchor.copy(anchor);
     this.carried.set(0, 0, 0);
     this.gust.set(0, 0, 0);
+    this.gustAngle = 0;
     this.anchored = true;
   }
 
@@ -247,18 +249,21 @@ export class Scarf {
     const catching = gx * gx + gz * gz > this.gust.x * this.gust.x + this.gust.z * this.gust.z;
     this.tmp.set(gx, 0, gz);
     this.gust.lerp(this.tmp, 1 - Math.exp(-span * (catching ? k.gustCatch : k.gustRelease)));
-    const felt = Math.hypot(this.gust.x, this.gust.z) * k.gustGain;
     const swell = 1 + k.breezeSwell * (0.6 * Math.sin(this.time * 0.63) + 0.4 * Math.sin(this.time * 1.37 + 2));
     const breeze = k.breeze * swell * (1 - still);
     const cos = Math.cos(facing);
     const sin = Math.sin(facing);
-    const takeover = Math.min(1, felt / k.gustTakeover);
     /**
-     * The way the gust blows in the child's frame, from straight behind round to their left; the cut is ahead and
-     * to their right, where the ends never lie.
+     * The gust in the child's frame. It can carry the ends out behind and round to either side, but one blowing the
+     * way they face only leaves them hanging back: thrown forward, they whirl round the front of the child.
      */
-    let gustAngle = Math.atan2(this.gust.x * cos - this.gust.z * sin, -(this.gust.x * sin + this.gust.z * cos));
-    if (gustAngle < -2.4) gustAngle += Math.PI * 2;
+    const gustLeft = this.gust.x * cos - this.gust.z * sin;
+    const gustBack = Math.max(0, -(this.gust.x * sin + this.gust.z * cos));
+    const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain, k.gustMost);
+    const takeover = Math.min(1, felt / k.gustTakeover);
+    /** Heavy wool comes round to a new way slowly, rather than cracking across behind the child as a gust veers. */
+    this.gustAngle += (Math.atan2(gustLeft, gustBack) - this.gustAngle) * (1 - Math.exp(-span * k.gustTurn));
+    const gustAngle = this.gustAngle;
     const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
     const steps = Math.max(1, Math.ceil(span / STEP - 1e-3));
     const h = span / steps;

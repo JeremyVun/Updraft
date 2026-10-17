@@ -1,11 +1,7 @@
 // Actual Drowned weather event, stale-event suppression, and accepted synthesis/timing contract.
-import fs from 'node:fs';
+import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
-import {registerHooks} from 'node:module';
-import {transformSync} from 'rolldown/utils';
 import {foghornProposal} from './lib/foghorn-proposal.mjs';
-registerHooks({resolve(s,c,n){return n(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)?s+'.ts':s,c);},
-  load(u,c,n){return u.endsWith('.ts')?{format:'module',shortCircuit:true,source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code}:n(u,c);}});
 globalThis.location={search:'?shot'};
 const {DrownedChapter}=await import('../src/story/drowned.ts');
 const {Soundscape}=await import('../src/audio/audio.ts');

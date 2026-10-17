@@ -18,6 +18,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.
 - How a frame is produced and kept smooth (boot, frame order, camera direction, readbacks, quality, post): `docs/engine.md`. Local release checks: `docs/testing.md`.
 - Rendering discontinuity audit, Jeremy's brief, transition evidence and coverage: `docs/rendering-audit.md`.
+- Codebase review, reproduced bugs, check failures and documentation drift (2026-10-17): `docs/code-review-2026-10-17.md`.
 - The loading veil: no freezing while shaders compile (Safari compiles each at first use) and a stage-and-percent line: `docs/backlog/boot-veil/`.
 
 ## Commands

@@ -16,14 +16,16 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
 - **The stairs in the clouds** ([stairs.md](stairs.md)): the sail over the cloud and the way down into the mist are
   being redone to Jeremy's 09-28 notes (a view of the whole cloud sea and a less straight course, clouds that don't
   read as snow, no boat popping in as the camera breaks through, the boat nearer the jetty, no cloud changing state
-  as it comes into range, no player wind needed while the pair enjoy the ride). Then the room needs a still and a
-  name for the chapter select.
+  as it comes into range, no player wind needed while the pair enjoy the ride). The chapter select already has its
+  still and the name "Cloud stairs".
 - **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a
-  second while the game boots (`start-check` fails); and whether the veil has outgrown itself. In design.
+  second while the game boots (`start-check` fails). Compilation scheduling, staged construction and the progress
+  line are implemented; the original phase 4, physical-device verification and 500 ms smoothness target remain open.
 - **More to do on the path** ([backlog/path-puzzles](backlog/path-puzzles/)): puzzles on the main path so players
   don't feel there is not enough to do. Choosing ideas room by room.
 - **Chapter select without a reload** ([backlog/chapter-select-in-place](backlog/chapter-select-in-place/)): a pick
-  starts the room at once, with sound, instead of reloading to the veil. Designed; ready to build.
+  starts the room at once, with sound, instead of reloading to the veil. The start path and its gates are built;
+  the remaining painting work and final review are tracked in the backlog plan.
 
 ## Open
 
