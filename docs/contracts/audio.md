@@ -951,8 +951,8 @@ After playtesting (2026-10-14):
 
 - Under the cloud the stairs song (`birches.ogg`) loops, begun from its top on the crossing's handoff (Birches, above;
   a stairs start under the cloud begins it on load). Each flight that docks raises
-  `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
-  completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
+  `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`). Jeremy (2026-10-17) removed the
+  completion phrase from the last flight: the knock and the stairs song carry it. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
 - In the white the stairs song fades over `stairsSongCloudFade` (3 s, a trial value awaiting Jeremy's listen) and
   never starts again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
   `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.

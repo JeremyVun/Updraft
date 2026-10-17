@@ -77,8 +77,8 @@ async function render(page, musicOnly) {
       };
       const update = tick => {
         const t = tick * step, list = [];
-        for (const at of T.knocks) if (Math.abs(t - at) < step / 2) list.push('flightHome', 'star');
-        if (Math.abs(t - T.third) < step / 2) list.push('flightHome', 'restored');
+        for (const at of T.knocks) if (Math.abs(t - at) < step / 2) list.push('flightHome');
+        if (Math.abs(t - T.third) < step / 2) list.push('flightHome');
         const onFoot = t < T.board, afloat = t >= T.board && t < T.down;
         air.phase = t < T.hesitate ? 'under' : t < T.emerge ? 'cloud' : t < T.board ? 'above' : t < T.fog ? 'sail' : 'fog';
         air.fog = air.phase === 'fog' ? S(T.fog, T.fog + 5, t) * (1 - S(T.fogPeak[1], T.down, t)) : 0;

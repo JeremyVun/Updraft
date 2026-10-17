@@ -18,7 +18,7 @@ import {
 } from '../world/stairs-layout';
 import type { Cast, Chapter } from './cast';
 import type { CheckpointPayload } from './checkpoint-data';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 import { OUT_OF_THE_WHITE, blend, frameVoyage, framingAt, type Framing } from './stairs-sail';
 import { Track } from './stairs-track';
 
@@ -322,7 +322,7 @@ export class StairsChapter implements Chapter {
     this.sBack = this.roundOut.project(LOOP_BACK.bottom);
     this.roundHome = new Track([onLanding(corner, corner.x1 - 0.2, 0), onLanding(corner, 0.2, -0.05), this.cornerSpot.clone()]);
     stairsDescent.down = false;
-    world.onDocked = (index) => this.docked(index);
+    world.onDocked = () => this.docked();
     world.ghostShown = 0;
     cygnet.mayFly = false;
     // Short careful steps: every tread of a household stair is a climb for something its size.
@@ -479,11 +479,10 @@ export class StairsChapter implements Chapter {
     this.to(n < LOOSE.length ? 'waiting' : 'climb');
   }
 
-  private docked(index: number): void {
+  private docked(): void {
     const { child, cygnet } = this.cast;
     child.decks = cygnet.decks = this.decks();
     cue('flightHome');
-    if (index === LOOSE[LOOSE.length - 1]) completeObjective(); else cue('star');
     if (cygnet.carried) cygnet.mind.perform('wag', 0.9);
     this.limit = this.reachable();
     this.to('climb');
