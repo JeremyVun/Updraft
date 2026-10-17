@@ -1477,8 +1477,16 @@ export const tuning = {
       inviteBowSpan: 5,
       inviteCircleRadius: 1.65,
       releaseSeconds: 2.6,
-      /** Seconds the whole freed scarf takes to be drawn in to the mast: about 135 m of wool, so the free end runs at up to 13 m/s. */
-      gatherSeconds: 16,
+      /**
+       * Seconds the whole freed scarf takes to be drawn in to the mast, from the moment the bow slips: about 135 m of
+       * wool, reeled like a tape measure. The share drawn goes as the time's share to the power `gatherPace`, eased at
+       * both ends, so it starts unhurried while the bow falls, gathers pace through the lengths behind her (the free end
+       * up to about 28 m/s) and comes to rest at the mast. The sail is woven from the wool as the last `1 − weaveFrom`
+       * of it arrives.
+       */
+      gatherSeconds: 10, gatherPace: 1.3, weaveFrom: 0.2,
+      /** How far the sail is woven when she sets off down to the boat, rather than watching its last stitches. */
+      walkOnWoven: 0.97,
       /** The tied lengths' spring to the wind (rad/s) and its damping ratio, over the air of ±`windSpan` rows. */
       windResponse: 2.2,
       windDamping: 0.9,
@@ -1644,6 +1652,11 @@ export const tuning = {
        * side (seconds, metres of arc), and its pause on top.
        */
       flutterWait: 0.6, flutterFor: 0.75, flutterArc: 0.55, onTopFor: 1.1, hopDownFor: 0.6, hopDownArc: 0.3,
+      /**
+       * Feathers it loses scrambling onto the top, `flutterShedAt` of the way through the flutter, as on the sleeping
+       * island's bank; `flutterFeatherSize` times a startle's, since the lens here stands further off.
+       */
+      flutterFeathers: 4, flutterShedAt: 0.85, flutterFeatherSize: 0.85,
       /** How loud the leaves she lands in are, as a share of a heap thrown up. */
       landLeaves: 0.7,
     },
@@ -1671,11 +1684,12 @@ export const tuning = {
       uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
        * Seconds without updraft on the right heap before the cygnet goes to stand at it, and by round before the drawn
-       * updraft turns over it: soon at the first heap, once the leaves of its dive are down, and never in round 3,
-       * where the updraft is learned and a drawn one over a single heap of three would give its hide away. Its loops
-       * are `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
+       * updraft turns over it: soon at the first heap, once the leaves of its dive are down; in round 3 as soon as it
+       * has settled, so the player sees the heaps are ready to play, and over all three at once (`inviteEvery`), since
+       * one drawn over a single heap of three would give its hide away. Its loops are `inviteRadius` of the heap's
+       * radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
        */
-      hintAfter: 7, inviteAfter: [4, 6, Infinity], inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 3,
+      hintAfter: 7, inviteAfter: [4, 6, 0.4], inviteEvery: [false, false, true], inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 3,
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
       /**
@@ -1700,7 +1714,7 @@ export const tuning = {
        * Freed at a tangle while it runs on to hide, she watches it go at least `seeOffFor` seconds, and sets off after it
        * once it has come down to the leaves beyond the rise, or after `seeOffMost` whatever it is doing.
        */
-      seeOffFor: 2.5, seeOffMost: 7,
+      seeOffFor: 2.5, seeOffMost: 4,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
       /**

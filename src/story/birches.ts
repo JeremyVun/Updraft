@@ -93,6 +93,7 @@ export class BirchesChapter implements Chapter {
   private landedCheer = false;
   private birdOver: BirdOver = 'none';
   private birdAt = 0;
+  private birdShed = false;
   private camera: THREE.PerspectiveCamera | null = null;
   private readonly edge = { back: new THREE.Vector2(), at: 0 };
   private readonly birdWatch = new THREE.Vector3();
@@ -292,6 +293,7 @@ export class BirchesChapter implements Chapter {
     const scarf = birches.scarf;
     const mast = boat.position.z < MAST_FROM ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
+    scarf.faced = this.beat === 'scarf';
     boat.scarfSail = scarf.woven;
     /** The first shot looks at her over the stern, and she steps off the bow behind the sail. */
     boat.sailGivesWay = this.beat === 'ashore' || this.beat === 'wonder' ? tuning.birches.landingGivesWay : tuning.sail.givesWay;
@@ -367,7 +369,7 @@ export class BirchesChapter implements Chapter {
         break;
       case 'unravelling':
         c.lookAt = boat.sailPoint(this.scarfMast);
-        if (scarf.finished) this.resumeWalk();
+        if (scarf.woven >= tuning.birches.scarf.walkOnWoven) this.resumeWalk();
         break;
       case 'gathering':
         /** Whatever the duet is doing, the walk goes on: this beat can never be the end of the room. */
@@ -629,10 +631,15 @@ export class BirchesChapter implements Chapter {
         bird.hopOnto(this.birdTop, Math.atan2(this.birdDown.x - this.birdTop.x, this.birdDown.z - this.birdTop.z), k.flutterFor + 0.12 * off, k.flutterArc);
         this.birdOver = 'up';
         this.birdAt = this.now;
+        this.birdShed = false;
         break;
       }
       case 'up':
         bird.watch(c.position);
+        if (!this.birdShed && since > (k.flutterFor + 0.12 * BIRD_FLUTTER_FROM) * k.flutterShedAt) {
+          this.birdShed = true;
+          bird.shed(k.flutterFeathers, k.flutterFeatherSize);
+        }
         if (since > k.flutterFor + 0.12 * BIRD_FLUTTER_FROM + k.onTopFor) {
           bird.bound(this.birdDown, 'hop', k.hopDownFor, k.hopDownArc);
           this.birdOver = 'down';
@@ -730,14 +737,17 @@ export class BirchesChapter implements Chapter {
     this.to('toRound');
     this.play = 'carry';
     child.stop();
-    child.lookAt = round === 0 || r.shuffle ? r.lastSeen : r.face;
+    /** Her hands go to her knees as she kneels to peer: the plane rides on her bag, clear of her body. */
+    child.stowPlane(true);
+    const face = this.squirrel.facing(round);
+    child.lookAt = round === 0 || r.shuffle ? r.lastSeen : face;
     const at = child.position, dx = r.stand.x - at.x, dz = r.stand.z - at.z, span = Math.hypot(dx, dz) || 1;
     const across = r.heaps.map((i) => BIRCH_PILES[i]).find((p) => {
       const t = THREE.MathUtils.clamp(((p.x - at.x) * dx + (p.z - at.z) * dz) / (span * span), 0, 1);
       return Math.hypot(at.x + dx * t - p.x, at.z + dz * t - p.z) < p.r + 0.5;
     });
     /** Body and head to the heaps she watches, not the way she walked in with her head turned back. */
-    const faceHeaps = () => child.faceToward(r.face.x, r.face.z, 1);
+    const faceHeaps = () => child.faceToward(face.x, face.z, 1);
     if (!across) { child.walkTo(r.stand.x, r.stand.z, false, faceHeaps, 0.5); return; }
     const side = Math.sign((across.x - at.x) * dz - (across.z - at.z) * dx) || 1;
     const by = this.tmp.set(-dz / span * side, 0, dx / span * side).multiplyScalar(across.r + 0.9).add(this.tmp2.set(across.x, 0, across.z));

@@ -174,7 +174,9 @@ export class BirchesSquirrel {
   private readonly face = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
   private readonly heapLook = new THREE.Vector3();
+  private readonly faced = new THREE.Vector3();
   private readonly asking: Coax = { at: new THREE.Vector3(), urgency: 0 };
+  private readonly alsoAsking: THREE.Vector3[] = [];
   private readonly lifts: number[] = [];
   private readonly land = new THREE.Vector3();
   private readonly takeOff = new THREE.Vector3();
@@ -199,6 +201,14 @@ export class BirchesSquirrel {
   get hideout(): { at: THREE.Vector3; heap: number; trunk: boolean } | null {
     const h = this.mode === 'hidden' ? this.hidden : null;
     return h && { at: h.at, heap: h.heap, trunk: h.trunk !== null };
+  }
+
+  /** What she faces at round `round`'s heaps: the heap it lies in, so she never kneels turned to the wrong one; the shuffle's middle heap. */
+  facing(round: number): THREE.Vector3 {
+    const r = ROUNDS[round], h = this.hidden;
+    if (r.shuffle || !h || h.round !== round || h.heap < 0) return r.face;
+    const p = BIRCH_PILES[r.heaps[h.heap]];
+    return this.faced.set(p.x, ground(p.x, p.z) + 0.5, p.z);
   }
 
   /** Hidden in round `round`, so she may come and look; in the first, it is seen going in. */
@@ -912,13 +922,20 @@ export class BirchesSquirrel {
         this.cast.birches.shiver(h.at.x, h.at.z, told ? k.tailTellStrength : k.tellStrength);
       }
     }
-    const pile = h.heap >= 0 ? BIRCH_PILES[ROUNDS[h.round].heaps[h.heap]] : null;
+    const heaps = ROUNDS[h.round].heaps, pile = h.heap >= 0 ? BIRCH_PILES[heaps[h.heap]] : null;
     const inviteAfter = k.inviteAfter[h.round];
     const asking = pile !== null && playing && this.cue.seeking && this.quiet >= inviteAfter;
     if (asking) {
-      this.asking.at.set(pile.x, h.at.y + k.inviteLift, pile.z);
-      this.asking.radius = pile.r * k.inviteRadius;
+      /** Over every heap of the round alike, from its first, where one drawn over the hide alone would give it away. */
+      const every = k.inviteEvery[h.round], first = every ? BIRCH_PILES[heaps[0]] : pile;
+      this.asking.at.set(first.x, (every ? ground(first.x, first.z) : h.at.y) + k.inviteLift, first.z);
+      this.asking.radius = first.r * k.inviteRadius;
       this.asking.urgency = THREE.MathUtils.smoothstep(this.quiet, inviteAfter, inviteAfter + k.inviteRamp);
+      if (every) heaps.slice(1).forEach((heap, i) => {
+        const p = BIRCH_PILES[heap];
+        (this.alsoAsking[i] ??= new THREE.Vector3()).set(p.x, ground(p.x, p.z) + k.inviteLift, p.z);
+      });
+      this.asking.also = every ? this.alsoAsking : undefined;
     }
     this.invitation = asking ? this.asking : null;
   }
@@ -1033,7 +1050,7 @@ export class BirchesSquirrel {
           this.answer(time);
         }
       }
-      if (time > this.lookUntil) c.lookAt = r.face;
+      if (time > this.lookUntil) c.lookAt = this.facing(round);
     }
     /** While it waits for her and shuffles, she stands watching it and the cygnet stands by her watching too. */
     const shuffling = (this.mode === 'waiting' || this.mode === 'shuffling') && this.cue.round === round && ROUNDS[round].shuffle;

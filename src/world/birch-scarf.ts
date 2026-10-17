@@ -223,6 +223,8 @@ export class BirchScarf {
     work: 0, release: 0, freed: false, impulse: 0, target: 0, brushAge: Infinity,
   }));
   active = -1;
+  /** She has come to the active tangle and stands facing it: only then is the gesture drawn for it. */
+  faced = false;
   /** Circling at the visible wrap stands the player's real updraft at the trunk. */
   get updraftTarget(): THREE.Vector3 | null {
     const snag = this.snags[this.active];
@@ -462,6 +464,11 @@ export class BirchScarf {
   }
 
   get completed(): number { return this.snags.filter(s => s.freed).length; }
+  /** How much of its length has been drawn in toward the mast. */
+  private get drawn(): number {
+    const k = tuning.birches.scarf;
+    return this.gathering > 0 ? smooth((this.gathering / k.gatherSeconds) ** k.gatherPace) : 0;
+  }
   get finished(): boolean { return this.woven >= 1; }
   get focus(): THREE.Vector3 | null { return this.snags[this.active]?.center ?? null; }
 
@@ -560,8 +567,8 @@ export class BirchScarf {
         if (s.release >= 1) s.freed = true;
       }
     }
-    if (this.completed === this.snags.length) this.gathering = Math.min(k.gatherSeconds, this.gathering + dt);
-    this.woven = smooth(Math.max(0, this.gathering / k.gatherSeconds - 0.45) / 0.55);
+    if (this.snags.every(s => s.work >= 1)) this.gathering = Math.min(k.gatherSeconds, this.gathering + dt);
+    this.woven = Math.min(1, smooth((this.drawn - k.weaveFrom) / (1 - k.weaveFrom)));
     this.mesh.visible = this.woven < 1;
     const step = Math.min(dt, .05);
     const spring = k.windResponse * k.windResponse * step, damping = Math.exp(-2 * k.windDamping * k.windResponse * step);
@@ -732,9 +739,8 @@ export class BirchScarf {
       frameTangent[o] = tx; frameTangent[o + 1] = ty; frameTangent[o + 2] = tz;
       frameSide[o] = sx / sl; frameSide[o + 1] = sy / sl; frameSide[o + 2] = sz / sl;
     }
-    const k = tuning.birches.scarf;
     // Drawn in, the strip keeps to the path it lay along and only its free end runs home, so no row ever jumps.
-    const drawn = this.gathering > 0 ? smooth(this.gathering / k.gatherSeconds) : 0;
+    const drawn = this.drawn;
     const uv = this.geometry.attributes.uv as THREE.BufferAttribute;
     if (drawn === 0 && this.drawnIn) {
       for (let i = 0; i < this.rows; i++) for (let j = 0; j < RING; j++) uv.array[(i * RING + j) * 2 + 1] = this.wound[i];

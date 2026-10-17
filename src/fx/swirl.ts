@@ -18,6 +18,8 @@ export interface Coax {
   bold?: number;
   /** How far above `at` its loops are laid, in their own heights: 0.8 unless given, clear of the ground under them. */
   lift?: number;
+  /** Further places the same loops turn over at once, in step with those at `at`, when any of several will do. */
+  also?: readonly THREE.Vector3[];
 }
 
 /** Lengths of ribbon in one column, and the radians of turn drawn before the next length is laid down. */
@@ -127,7 +129,11 @@ export class Swirl {
   readonly batch = new RibbonBatch(STRANDS.length * MAX_WISPS * 2, '#fff4dd', 1, false, tuning.invitation.lightFloor);
   private readonly trace = new Coil();
   private readonly ghost = new Coil();
-  private readonly ribbons = [...this.trace.strands, ...this.ghost.strands];
+  /** The invitation's columns at its `also` places; the ribbon batch holds two besides the first. */
+  private readonly echoes = [new Coil(), new Coil()];
+  private readonly columns = [this.ghost, ...this.echoes];
+  private echoing = 0;
+  private readonly ribbons = [...this.trace.strands, ...this.columns.flatMap((c) => c.strands)];
   private readonly onScreen = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly over = new THREE.Vector3();
@@ -239,6 +245,7 @@ export class Swirl {
     let winding = false;
     let want = 0;
     const yielded = this.handover * (1 - (coax?.keep ?? 0));
+    if (coax) this.echoing = Math.min(coax.also?.length ?? 0, this.echoes.length);
     if (coax && urgency > 0.001) {
       const period = T.coaxWind + T.coaxGap * (1 - 0.65 * urgency);
       this.cycle += dt;
@@ -248,9 +255,12 @@ export class Swirl {
       if (winding && yielded < 0.4) {
         const rad = (coax.radius ?? T.coaxRadius) * (0.9 + 0.2 * urgency);
         /** Stood almost clear of the ground, so the whole loop can be seen going round whatever stands there. */
+        const base = rad * this.over.y * (coax.lift ?? 0.8);
         while (this.slow - this.slowLaid >= LAY_TURN) {
           this.slowLaid += LAY_TURN;
-          this.ghost.lay(coax.at.x, coax.at.z, this.at(this.slowLaid), rad, rad * this.over.y * (coax.lift ?? 0.8), coax.at.y);
+          const off = this.at(this.slowLaid);
+          this.ghost.lay(coax.at.x, coax.at.z, off, rad, base, coax.at.y);
+          for (let i = 0; i < this.echoing; i++) this.echoes[i].lay(coax.also![i].x, coax.also![i].z, off, rad, base, coax.also![i].y);
         }
       } else this.slowLaid = this.slow;
       /** It comes in over a breath, holds while it winds, and blows out with its last loops still climbing. */
@@ -262,7 +272,9 @@ export class Swirl {
     }
     /** Eased rather than taken, so that a chapter dropping the invitation mid-loop lets go of it instead of cutting. */
     this.glow += (want - this.glow) * (1 - Math.exp(-dt * (want > this.glow ? 6 : 3)));
-    this.ghost.drift(dt, T.coaxHeight / T.coaxWind, winding ? 0.92 : 1.3, T.coaxWind);
-    this.ghost.build(this.glow * (1 - yielded), this.ghostPen);
+    this.columns.forEach((column, i) => {
+      column.drift(dt, T.coaxHeight / T.coaxWind, winding ? 0.92 : 1.3, T.coaxWind);
+      column.build(i <= this.echoing ? this.glow * (1 - yielded) : 0, this.ghostPen);
+    });
   }
 }
