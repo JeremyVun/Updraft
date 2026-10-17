@@ -74,7 +74,7 @@ interface End {
 
 const smooth = THREE.MathUtils.smoothstep;
 
-/** Steps no longer than this, so the ends swing alike at any frame rate. */
+/** Steps about this long, so the ends swing alike at any frame rate. */
 const STEP = 1 / 60;
 /** Faster than the child ever goes: a jump in the knot's position is a teleport, not a speed. */
 const MAX_CARRY = 15;
@@ -118,6 +118,7 @@ export class Scarf {
   private readonly lastAnchor = new THREE.Vector3();
   private anchored = false;
   private lastStep = STEP;
+  private steps = 1;
   private wave = 0;
   private time = 0;
 
@@ -276,7 +277,14 @@ export class Scarf {
     const toward = THREE.MathUtils.lerp(this.splay, Math.atan2(gustLeft, gustBack), takeover);
     this.gustAngle += (toward - this.gustAngle) * (1 - Math.exp(-span * k.gustTurn));
     const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
-    const steps = Math.max(1, Math.ceil(span / STEP - 1e-3));
+    /**
+     * As many steps as keep each near `STEP`, and the same number as last frame while that still does: at a frame
+     * time on the edge, a count flipping between one long step and two short ones pumps the ends into whirling.
+     */
+    if (span / this.steps > STEP * 1.25 || (this.steps > 1 && span / this.steps < STEP * 0.6)) {
+      this.steps = Math.max(1, Math.round(span / STEP));
+    }
+    const steps = this.steps;
     const h = span / steps;
     const soft = (SOFT * h) / STEP;
     let rate = 0;
