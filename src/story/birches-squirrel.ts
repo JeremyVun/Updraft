@@ -55,7 +55,7 @@ export interface SquirrelCue {
   gathered: boolean;
   /** They are going down to the boat or aboard. */
   leaving: boolean;
-  /** She is at a tangle, working it or counting there; on her way to the swing or on it. */
+  /** She is at a tangle, working it or watching it go from there; on her way to the swing or on it. */
   atTangle: boolean;
   atSwing: boolean;
   /** The lens has all but come to rest on the frame it was going to. */
@@ -78,7 +78,7 @@ type Mode = 'idle' | 'meeting' | 'going' | 'glancing' | 'choosing' | 'hiding' | 
 type ShuffleStep = 'dare' | 'dive' | 'rest' | 'burst' | 'bound' | 'burrow' | 'settle';
 
 /**
- * Its shuffle at a round with no counting: the heaps it goes through in order (the round's own indices), the first
+ * Its shuffle at a round it waits at in plain view: the heaps it goes through in order (the round's own indices), the first
  * dived into from where it sat; how many of the last moves are under the leaves; the move under way and its step.
  */
 interface Shuffle {
@@ -206,6 +206,11 @@ export class BirchesSquirrel {
     if (round === 0) return true;
     if (ROUNDS[round].shuffle) return this.rounds === round;
     return this.rounds === round && this.mode === 'hidden';
+  }
+
+  /** On its way to hide in round `round` and come to the leaves there, or under them already. */
+  goneToGround(round: number): boolean {
+    return this.rounds === round && (this.mode === 'hiding' || this.mode === 'hidden');
   }
 
   get leaping(): boolean {
@@ -510,7 +515,7 @@ export class BirchesSquirrel {
     });
   }
 
-  /** Sitting up in plain view at a round with no counting, nut in paws, waiting for her to come and watch. */
+  /** Sitting up in plain view at a shuffle round, nut in paws, waiting for her to come and watch. */
   private wait(round: number, put: boolean): void {
     const { at, yaw } = ROUNDS[round].shuffle!;
     this.mode = 'waiting';
@@ -1232,8 +1237,8 @@ export class BirchesSquirrel {
   /**
    * A low-weight look at it when it is worth one: on the log as they come, found and scolding her, running on ahead
    * of her to wait at the next tangle or the swing and waiting there as she comes, and at the goodbye. Never on its
-   * dash to hide (she is counting, and where it goes is the game), and never inside a tangle's or the swing's own
-   * frame. The depth blur keeps it sharp with her at the meeting, through a round, and at its perch while she works.
+   * dash to hide (where it goes is the game), and never inside a tangle's or the swing's own frame. The depth blur
+   * keeps it sharp with her at the meeting, through a round, at its perch while she works, and as she sees it off.
    */
   private glance(dt: number): void {
     const k = tuning.birches.squirrel;
@@ -1254,8 +1259,9 @@ export class BirchesSquirrel {
 
     const playing = this.hidden !== null && cue.round === this.hidden.round;
     const waiting = perched && this.mode === 'idle' && (cue.atTangle || cue.atSwing);
+    const seenOff = this.mode === 'going' && ROUND_OF[this.station] !== undefined && cue.atTangle;
     const shuffling = (this.mode === 'waiting' || this.mode === 'shuffling') && cue.round >= 0;
-    const sharp = (this.station === 'meeting' && cue.round >= 0) || playing || this.mode === 'flushed' || waiting || shuffling ? 1 : want;
+    const sharp = (this.station === 'meeting' && cue.round >= 0) || playing || this.mode === 'flushed' || waiting || seenOff || shuffling ? 1 : want;
     this.sharpness.weight += (sharp - this.sharpness.weight) * (1 - Math.exp(-dt * k.sharpIn));
     this.sharpness.at.copy(this.tracked);
   }

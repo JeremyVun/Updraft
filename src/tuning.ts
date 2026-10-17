@@ -1685,14 +1685,13 @@ export const tuning = {
       sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
       /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */
       kneel: 0.6, chaseReach: 2.5,
-      /** How much faster than its usual it runs on ahead to hide. */
-      dash: 2.4,
+      /** How much faster than its usual it runs on ahead to hide: under the leaves before she has walked into sight of them. */
+      dash: 4,
       /**
-       * Hide-and-seek at a freed tangle while it runs on to hide: she watches it go for `countAfter` seconds, covers
-       * her eyes and counts for `countFor`, nodding `countNod` numbers a second, then looks round for `lookRound`, or
-       * until it has gone to ground but no longer than `lookRoundMost`, her gaze sweeping `lookSweep` radians a second.
+       * Freed at a tangle while it runs on to hide, she watches it go at least `seeOffFor` seconds, and sets off after it
+       * once it has come down to the leaves beyond the rise, or after `seeOffMost` whatever it is doing.
        */
-      countAfter: 0.6, countFor: 6, countNod: 1.3, lookRound: 1.2, lookRoundMost: 3, lookSweep: 2.2,
+      seeOffFor: 2.5, seeOffMost: 7,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
       /**
@@ -1705,12 +1704,13 @@ export const tuning = {
       /** How far short of its hide a dash ends, so it goes in with one pounce (the creature bounds closer from further than about 0.9 m). */
       pounceFrom: 0.8,
       /**
-       * How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest; and how hard
-       * an updraft over a heap it is not in throws up that heap's top in the shuffle's round, where those heaps stand.
+       * How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest; one out of
+       * her sight barely, so no spray far up the ride marks the heap; and how hard an updraft over a heap it is not in
+       * throws up that heap's top in the shuffle's round, where those heaps stand.
        */
-      splash: 1, meetSplash: 1.3, emptySplash: 1.1,
+      splash: 0.25, meetSplash: 1.3, emptySplash: 1.1,
       /**
-       * The shuffle, at a round with no counting. It runs on ahead `shuffleRunOn` times its pace and sits up waiting.
+       * The shuffle, at a round it waits at in plain view. It runs on ahead `shuffleRunOn` times its pace and sits up waiting.
        * Once she has stood watching `shuffleLook` s and the lens has slowed below `framedBelow` m/s (or `shuffleLookMost`
        * s have gone), it sits up and chatters, and `shuffleDare` s later dives into a heap whose rim is within
        * `shuffleNear` m. In each heap it rests `shuffleRest` s by move, shorter each time. It bounds across at

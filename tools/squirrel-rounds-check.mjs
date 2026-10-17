@@ -409,7 +409,7 @@ const cased = {
   },
 
   /**
-   * Round 3 from the walk in: no counting; it waits sitting up in the frame; she stands and watches; it dives in, moves
+   * Round 3 from the walk in: no seeing off; it waits sitting up in the frame; she stands and watches; it dives in, moves
    * heap to heap (neighbours only, the last one or two under the leaves) and settles, never found on the way however
    * hard the heaps are blown; she and the cygnet follow it with their eyes; every heap and the squirrel stay in frame.
    */
@@ -444,7 +444,7 @@ const cased = {
     for (let i = 0; i < 600; i++) {
       const s = await sample();
       log.push(s);
-      assert.notEqual(s.beat, 'counting', 'she counted before round 3');
+      assert.notEqual(s.beat, 'seeingOff', 'she stood seeing it off before round 3');
       if (s.beat === 'round') break;
       /** Every heap blown hard, strokes then circles, while it waits, rests in a heap, and moves under the leaves. */
       const phase = s.mode === 'waiting' && log.filter((l) => l.mode === 'waiting').length > 10 ? 'waiting'

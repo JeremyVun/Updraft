@@ -141,7 +141,7 @@ export interface Round {
   /** Where it was last seen as the round begins: in the first, the log it dives from into the heap in plain sight. */
   lastSeen: THREE.Vector3;
   /**
-   * A round with no counting before it: it waits sitting up here in plain view, dives into one of the heaps while
+   * A round it does not run on ahead to: it waits sitting up here in plain view, dives into one of the heaps while
    * she watches, and shuffles from heap to heap before it settles.
    */
   shuffle?: { at: THREE.Vector3; yaw: number };
