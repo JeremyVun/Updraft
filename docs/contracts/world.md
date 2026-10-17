@@ -143,6 +143,9 @@ The player never sees the next island before it is time.
   a crossing its departure and destination, a room itself. Terrain and grass discard the rest, and their props
   leave both the scene and the reflection. Water retains the outgoing shore's contribution and eases it to deep
   sea over `tuning.water.departureFade` (6 s), because its offshore partition can still be visible at landing.
+  Where a room shown borders one that is not, the water yields the hidden room's border to the shown one and
+  blends across the line (`tuning.water.roomYield`, `roomBlend`), so a shelf running past it deepens instead of
+  stopping at an edge.
   Incoming water is enabled under the same full cover as its land. A room coming into view is covered
   in fog first and cleared after (`JourneyReveal`, `tuning.world.arrivalFogCover`/`arrivalFogClear`). The door
   shore is visible only from the washing and its outgoing crossing; the home jetty only from `toHarbour`.

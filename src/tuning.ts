@@ -2563,6 +2563,13 @@ export const tuning = {
   water: {
     /** Outgoing land can still own visible shallows; let their shading recede without a cut. */
     departureFade: 6,
+    /**
+     * How many metres of sea past its border a room going yields to a room shown, and over how many metres either
+     * side of the line between them the sea passes from one's showing to the other's: an island's shelf can run on
+     * past its room's border, and its shallows must deepen there rather than stop at a line.
+     */
+    roomYield: 50,
+    roomBlend: 35,
     /** Seconds for wind ripples to build and to settle after a gust. */
     windAttack: 0.6,
     windRelease: 2.8,
