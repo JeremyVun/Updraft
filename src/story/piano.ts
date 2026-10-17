@@ -5,6 +5,8 @@ import { piano } from '../world/piano';
 import { windBough } from '../world/wind-bough';
 import { MEADOW_CALLS, MEADOW_FINALE, type MeadowAnswer } from '../audio/meadow-duet';
 import type { Cast } from './cast';
+import { PAPER_NOSE } from '../glider/glider';
+import type { WindSample } from '../wind/field';
 
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
 /** A view as a shot gives it: what it looks at, the bearing it stands on from there, how far back and how high. */
@@ -24,6 +26,11 @@ const PASSING = 60;
 const PATIENCE = 22;
 /** How long they take to lower themselves onto the stool. */
 const SIT_FOR = 0.7;
+/**
+ * The share of its glide the paper spends sliding along its own line into or out of the fork: a quarter, because the
+ * curve that carries it there arrives at three times its last leg's length per share, so its speed never jumps.
+ */
+const SLIDE = 0.25;
 /** Seconds seated before the bough's first call. */
 const FIRST_CALL = 2;
 
@@ -70,11 +77,8 @@ export class PianoStop {
   /** The playing view the duet starts from and the walk's view its widening ends on. */
   private readonly rest = view();
   private readonly onward = view();
-  /**
-   * The paper plane gliding into the bough's fork as she comes to the piano, and back into her hand as she leaves:
-   * `straight` is the share of the way it slides along its own line at the fork's end.
-   */
-  private planeGlide: { to: 'fork' | 'hand'; start: number; length: number; straight: number } | null = null;
+  /** The paper plane gliding into the bough's fork as she comes to the piano, and back into her hand as she leaves. */
+  private planeGlide: { to: 'fork' | 'hand'; start: number; length: number } | null = null;
   /** Whose paper it is while it is stuck in the fork, so a restore past the stop hands it straight back. */
   private planeOwner: Cast | null = null;
   private readonly planeFrom = new THREE.Vector3();
@@ -90,6 +94,12 @@ export class PianoStop {
   private readonly planeForkTurn = new THREE.Quaternion();
   private readonly planeHerTurn = new THREE.Quaternion();
   private readonly planeRest = new THREE.Euler();
+  private readonly planeNose = new THREE.Vector3();
+  private readonly planeShake = new THREE.Quaternion();
+  private readonly shook = new THREE.Euler();
+  private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  /** How hard the wind is catching the paper in the fork, eased. */
+  private blown = 0;
   private readonly approachFrame = { primary: this.approachChild, secondary: piano.keys,
     margin: tuning.piano.approachMargin, extra: tuning.piano.approachExtra };
 
@@ -118,7 +128,7 @@ export class PianoStop {
   hold(dt: number, time: number, cast: Cast): boolean {
     this.now = time;
     const c = cast.child;
-    this.tendPlane(cast);
+    this.tendPlane(cast, dt);
     this.approachChild.copy(c.position).y += 1.2;
     piano.engaged = this.beat !== 'ahead' && this.beat !== 'done';
     // Ownership starts on approach, but music stays with the walk and the first look at the keys.
@@ -388,33 +398,65 @@ export class PianoStop {
     this.planeBack.set(0, 0, -2 * lead).applyEuler(this.planeRest).add(this.planeFork);
     const her = to === 'fork' ? this.planeFrom : cast.child.handPosition(this.planeHand);
     const way = her.distanceTo(this.planeBack) + 2 * lead;
-    this.planeGlide = { to, start: this.now, length: Math.max(tuning.piano.planeGlide, way / 8), straight: lead / way };
+    this.planeGlide = { to, start: this.now, length: Math.max(tuning.piano.planeGlide, way / 8) };
   }
 
-  private tendPlane({ plane, child }: Cast): void {
+  private tendPlane(cast: Cast, dt: number): void {
+    const { plane, child } = cast;
     const glide = this.planeGlide;
-    if (!glide) return;
+    if (!glide) {
+      if (!this.planeOwner) return;
+      windBough.planeRest(this.planeFork, this.planeRest);
+      this.planeTurn.setFromEuler(this.planeRest);
+      this.shake(cast, dt, this.planeFork, this.planeTurn, 1);
+      return;
+    }
     const k = THREE.MathUtils.smootherstep(this.now - glide.start, 0, glide.length);
     const toFork = glide.to === 'fork' ? k : 1 - k;
-    const carried = 1 - glide.straight;
+    const carried = 1 - SLIDE;
     const her = glide.to === 'fork' ? this.planeFrom : child.handPosition(this.planeHand);
     if (glide.to === 'fork') this.planeHerTurn.copy(this.planeFromTurn);
     else this.planeHerTurn.setFromEuler(this.planeRest.set(0, child.yaw, 0));
     let turn = 1;
-    if (toFork >= carried) this.planeAt.lerpVectors(this.planeLine, this.planeFork, (toFork - carried) / glide.straight);
+    if (toFork >= carried) this.planeAt.lerpVectors(this.planeLine, this.planeFork, (toFork - carried) / SLIDE);
     else {
       const u = toFork / carried;
       this.planeOver.copy(her).y = Math.max(her.y, piano.top) + tuning.piano.planeLift;
       bezier(her, this.planeOver, this.planeBack, this.planeLine, u, this.planeAt);
       turn = THREE.MathUtils.smoothstep(u, 0, 1);
     }
-    this.planeRest.setFromQuaternion(this.planeTurn.slerpQuaternions(this.planeHerTurn, this.planeForkTurn, turn));
-    plane.pin(this.planeAt, this.planeRest);
-    plane.visible = true;
-    plane.keptSmall = true;
+    this.planeTurn.slerpQuaternions(this.planeHerTurn, this.planeForkTurn, turn);
+    // It starts trembling as it sticks, and is still trembling as it pulls free.
+    this.shake(cast, dt, this.planeAt, this.planeTurn, THREE.MathUtils.smoothstep(toFork, 0.85, 1));
     if (k < 1) return;
     this.planeGlide = null;
     if (glide.to === 'hand') this.returnPlane({ plane, child });
+  }
+
+  /**
+   * Caught in the fork, the paper is never quite still: it rocks a little about its jammed nose, its tail and wing
+   * tips flutter, and more so when wind goes by, the player's or the bough's own breath. `caught` is how far into
+   * the fork it is.
+   */
+  private shake({ plane, wind }: Cast, dt: number, at: THREE.Vector3, turn: THREE.Quaternion, caught: number): void {
+    const t = tuning.windBough;
+    const air = wind.sample(at.x, at.z, this.air);
+    const blown = THREE.MathUtils.clamp(air.energy * t.planeGust, 0, 1);
+    this.blown += (blown - this.blown) * (1 - Math.exp(-dt * (blown > this.blown ? 8 : 1.5)));
+    const now = this.now, k = THREE.MathUtils.lerp(t.planeCalm, 1, this.blown) * caught;
+    const flutter = this.blown * caught;
+    const [pitch, yaw, roll] = t.planeTremble;
+    this.shook.set(
+      pitch * (k * 0.6 * Math.sin(now * 1.9) + flutter * 0.4 * Math.sin(now * 13.1)),
+      yaw * (k * 0.6 * Math.sin(now * 1.3 + 2) + flutter * 0.4 * Math.sin(now * 9.7 + 1)),
+      roll * (k * 0.5 * Math.sin(now * 2.3 + 4) + flutter * 0.5 * Math.sin(now * 16.9 + 3)),
+      'YXZ');
+    const nose = this.planeNose.copy(PAPER_NOSE).multiplyScalar(tuning.paperCarry.scale).applyQuaternion(turn).add(at);
+    turn.multiply(this.planeShake.setFromEuler(this.shook));
+    this.planeAt.copy(nose).sub(this.planeNose.copy(PAPER_NOSE).multiplyScalar(tuning.paperCarry.scale).applyQuaternion(turn));
+    plane.pin(this.planeAt, this.planeRest.setFromQuaternion(turn, 'YXZ'));
+    plane.visible = true;
+    plane.keptSmall = true;
   }
 
   private returnPlane({ plane, child }: Pick<Cast, 'plane' | 'child'>): void {

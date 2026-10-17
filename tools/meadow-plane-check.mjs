@@ -172,47 +172,63 @@ const lodged={};
   windBough.planeRest(at,turn);
   const points=placed(at,turn),gaps=pipes.map(pipe=>Math.min(...points.map(p=>clearOf(p,pipe))));
   assert(gaps.every(g=>g>0),`the paper is inside a pipe: ${gaps}`);
-  assert(gaps.every(g=>g<0.03),`the paper is not caught against both pipes: ${gaps}`);
+  // It rests a few centimetres off the wood, room for its tremble, which at the lens's distance is a pixel or two.
+  assert(Math.min(...gaps)<0.06&&Math.max(...gaps)<0.15,`the paper is not caught in the fork between the pipes: ${gaps}`);
   lodged.gaps=gaps.map(g=>+g.toFixed(3));
   // The case, the propped lid and the keys, in the piano's own units.
   const inverse=piano.group.matrix.clone().invert(),local=new THREE.Vector3();
   const inCase=p=>{local.copy(p).applyMatrix4(inverse);return Math.abs(local.x)<0.95&&local.y>-0.1&&local.y<2.05&&local.z>-0.6&&local.z<0.85;};
-  const fly=(from,to,hand)=>{
+  // In the strongest wind, so the paper trembles its most in the fork: it must stay clear of both pipes all the while.
+  const gale={sample:(x,z,out)=>Object.assign(out,{x:20,z:0,energy:1,lift:0})};
+  const fly=(from,to,hand,stay=0)=>{
     const stop=new PianoStop(),pinned={at:new THREE.Vector3(),rotation:new THREE.Euler()};
     const plane={position:from.clone(),group:{quaternion:new THREE.Quaternion()},visible:true,keptSmall:false,
       pin(a,r){pinned.at.copy(a);pinned.rotation.copy(r);this.position.copy(a);},hold(){}};
     const child={yaw:Math.PI,handPosition:out=>out.copy(hand)};
-    stop.now=0;stop.glidePlane(to,{plane,child});
-    let closest=Infinity,hit=0,lowest=Infinity;
-    for(let t=0;stop.planeGlide||t===0;t+=1/60){
-      stop.now=t;stop.tendPlane({plane,child});
-      const pts=placed(pinned.at,pinned.rotation),end=to==='fork'?stop.planeGlide===null:t<1/30;
+    const cast={plane,child,wind:gale};
+    stop.now=0;stop.glidePlane(to,cast);
+    let closest=Infinity,hit=0,lowest=Infinity,jump=0,trembled=0,left=Infinity;
+    const last=new THREE.Vector3(),before=new THREE.Vector3(),tip=new THREE.Vector3(),q=new THREE.Quaternion();
+    for(let t=0,f=0;t<30;t+=1/60,f++){
+      stop.now=t;stop.tendPlane(cast,1/60);
+      // The wing tip, which moves most, never changes speed at once: no pop on arrival, while it trembles, or as it leaves.
+      tip.set(1.15,0.16,-0.95).multiplyScalar(tuning.paperCarry.scale).applyQuaternion(q.setFromEuler(pinned.rotation)).add(pinned.at);
+      if(f>1&&pinned.at.distanceTo(at)<1)jump=Math.max(jump,tip.clone().sub(last).sub(last).add(before).length());before.copy(last);last.copy(tip);
+      const pts=placed(pinned.at,pinned.rotation);
       for(const p of pts){
         if(inCase(p))hit++;
         lowest=Math.min(lowest,p.y-heightAt(p.x,p.z));
-        if(!end)closest=Math.min(closest,...pipes.map(pipe=>clearOf(p,pipe)));
+        if(p.distanceTo(windBough.foot)<6)closest=Math.min(closest,...pipes.map(pipe=>clearOf(p,pipe)));
       }
-      if(t>30)break;
+      if(!stop.planeGlide){
+        if(to==='hand')break;
+        if(left===Infinity)left=t+stay;
+        trembled=Math.max(trembled,pinned.at.distanceTo(at));
+        if(t>left)break;
+      }
     }
-    return {closest,hit,lowest};
+    return {closest,hit,lowest,jump,trembled};
   };
   // From wherever she is on her way up when she notices the piano, and back to her hand at the stool and round its end.
   const ground=(x,z,up=1)=>new THREE.Vector3(x,heightAt(x,z)+up,z);
   const flights=[];
   for(const bearing of [-0.9,-0.5,-0.2,0,0.3,0.6])
     flights.push(['fork',ground(piano.stand.x+Math.sin(bearing)*24,piano.stand.z+Math.cos(bearing)*24),null]);
-  flights.push(['fork',ground(piano.stand.x,piano.stand.z),null]);
+  flights.push(['fork',ground(piano.stand.x,piano.stand.z),null,8]);
   for(const hand of [ground(piano.seat.x,piano.seat.z,1.1),ground(piano.stand.x,piano.stand.z),ground(piano.wayRound[0].x,piano.wayRound[0].z)])
     flights.push(['hand',at.clone(),hand]);
-  for(const [to,from,hand] of flights){
-    const r=fly(from,to,hand??new THREE.Vector3());
+  for(const [to,from,hand,stay] of flights){
+    const r=fly(from,to,hand??new THREE.Vector3(),stay);
+    assert(r.jump<0.01,`the paper's wing tip jerks by ${r.jump} m in a frame near the fork`);
+    if(stay)assert(r.trembled>0.003&&r.trembled<0.08,`a gale shakes the caught paper a little: ${r.trembled}`);
+    lodged.jump=Math.max(lodged.jump??0,+r.jump.toFixed(4));if(stay)lodged.trembled=+r.trembled.toFixed(3);
     assert.equal(r.hit,0,`the paper flies through the piano on its way ${to==='fork'?'in':'out'} from ${from.toArray().map(v=>v.toFixed(1))}`);
     assert(r.closest>0,`the paper passes through the bough on its way ${to==='fork'?'in':'out'}: ${r.closest}`);
     assert(r.lowest>0.05,`the paper skims through the ground: ${r.lowest}`);
     lodged.closest=Math.min(lodged.closest??Infinity,+r.closest.toFixed(3));
   }
 }
-console.log(`Lodged in the fork ${JSON.stringify(lodged.gaps)} m from the two pipes; nearest pass on the way in or out ${lodged.closest} m.`);
+console.log(`Lodged in the fork ${JSON.stringify(lodged.gaps)} m from the two pipes; nearest to a pipe in or out of it, trembling in a gale, ${lodged.closest} m; largest wing-tip jerk near it ${lodged.jump} m a frame²; a gale moves it ${lodged.trembled} m.`);
 console.log(JSON.stringify(results.filter(r=>r.walkingFps),null,2));
 console.log(`Strong-gust maximum gap ${Math.max(...results.filter(r=>r.gap).map(r=>r.gap))}; worst projected edge ${Math.max(...results.filter(r=>r.edge).map(r=>r.edge))}.`);
 console.log('PASS: paper caught in the bough\'s fork clear of case and pipes, wider flight and higher updrafts, 30/60/120fps, desktop/portrait child framing, return to view after gusts, continuous runaway recovery, free departure, pursuit detours.');

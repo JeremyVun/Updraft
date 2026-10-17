@@ -80,8 +80,11 @@ try {
   await shot('wind-call');
   assert((await state()).plane.visible&&!(await state()).plane.held,'the paper waits in the bough\'s fork, in view');
   assert.equal((await state()).expect,null,'piano input waits for the wind call');
+  // Wind during the call, kept inside it: a slow, shared GPU can otherwise stretch these strokes past the guide opening.
   await pointer((await state()).path,12);
-  await windOverKeys();
+  const callLeft=()=>page.evaluate(()=>{const s=__game.story.current.piano;return s.callEnds-s.now;});
+  if(await callLeft()>3)await windOverKeys();
+  assert.equal((await state()).expect,null,'the strokes stayed inside the call');
   assert.equal((await state()).matched,0,'following the guide during the call cannot answer it');
   assert.equal(pianoSounds(await state()),0,'wind during the call plays nothing');
   await page.waitForFunction(()=>window.__game?.piano.expect!==null&&window.__game?.story.current.piano.at==='seated',null,{timeout:120000});

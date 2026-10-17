@@ -70,6 +70,9 @@ export const PAPER_TRIANGLES: readonly (readonly [number, number, number])[][] =
   return [[nose, tail, left], [nose, right, tail], [nose, keel, tail], [nose, tail, keel]];
 })();
 
+/** The tip of its nose, in its own units. */
+export const PAPER_NOSE = new THREE.Vector3(...PAPER_TRIANGLES[0][0]);
+
 function paperPlane(): THREE.BufferGeometry {
   const tris = PAPER_TRIANGLES.flat();
   const pos = new Float32Array(tris.flat());
