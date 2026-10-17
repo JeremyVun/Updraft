@@ -770,10 +770,12 @@ export class BirchesChapter implements Chapter {
       const t = THREE.MathUtils.clamp(((p.x - at.x) * dx + (p.z - at.z) * dz) / (span * span), 0, 1);
       return Math.hypot(at.x + dx * t - p.x, at.z + dz * t - p.z) < p.r + 0.5;
     });
-    if (!across) { child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5); return; }
+    /** Body and head to the heaps she watches, not the way she walked in with her head turned back. */
+    const faceHeaps = () => child.faceToward(r.face.x, r.face.z, 1);
+    if (!across) { child.walkTo(r.stand.x, r.stand.z, false, faceHeaps, 0.5); return; }
     const side = Math.sign((across.x - at.x) * dz - (across.z - at.z) * dx) || 1;
     const by = this.tmp.set(-dz / span * side, 0, dx / span * side).multiplyScalar(across.r + 0.9).add(this.tmp2.set(across.x, 0, across.z));
-    child.walkTo(by.x, by.z, false, () => { if (this.beat === 'toRound') child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5); }, 0.8);
+    child.walkTo(by.x, by.z, false, () => { if (this.beat === 'toRound') child.walkTo(r.stand.x, r.stand.z, false, faceHeaps, 0.5); }, 0.8);
   }
 
   /** Found and off: after the third, the leap into the deepest leaves left; otherwise the walk goes on after it. */

@@ -2,7 +2,7 @@
 // across the right heap leave it standing and never find it, and circles over it find it in a few loops; wrong heaps
 // first (round 2's burst, round 3's stand and only lift their tops) with the right heap answering; heaps eroding each
 // on its own under circles; a child's random swipes taking nothing, then sloppy circles finding it (counted per
-// round); a stalled player through the hint and the drawn updraft; every heap held against strokes and circles until
+// round); a stalled player through the hint and the drawn updraft (none in round 3); every heap held against strokes and circles until
 // it is in, from the boat, at the meeting and before rounds 2 and 3 (and the drift and trunk fallbacks); free-play
 // heaps standing against strokes and taken by circles; round 3's shuffle (its plan, its frame, the heaps held through
 // it, her and the cygnet watching); the leap into a standing heap and through a bare hollow; resumed saves at every new
@@ -503,32 +503,43 @@ const cased = {
     });
   },
 
+  /**
+   * A stalled player in round 2: the cygnet's hint, then the drawn updraft over the right heap, and circles after it
+   * find it. In round 3 nothing is drawn: over one heap of three it would give the hide away.
+   */
   async stall() {
-    await load();
-    await jump(1);
-    await hideIn(0);
-    await page.evaluate(() => { __game.input.present = false; });
-    await page.mouse.move(W - 2, 2);
-    const began = await page.evaluate(() => __game.story.current.now);
-    const timeline = { hint: null, invitation: null };
-    for (let i = 0; i < 60; i++) {
-      const s = await page.evaluate(() => {
-        const g = __game, c = g.story.current, q = c.squirrel, h = q.hideout, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[h.heap]];
-        return { t: c.now, bird: Math.hypot(g.cygnet.position.x - p.x, g.cygnet.position.z - p.z), r: p.r, stay: g.cygnet.stay,
-          invitation: !!c.coax && g.swirl.glow > 0.2, rounds: q.rounds };
-      });
-      const t = s.t - began;
-      if (timeline.hint === null && s.stay && s.bird < s.r + 1.2) { timeline.hint = +t.toFixed(1); await page.screenshot({ path: `${out}-stall-hint.png` }); }
-      if (timeline.invitation === null && s.invitation) { timeline.invitation = +t.toFixed(1); await page.screenshot({ path: `${out}-stall-invitation.png` }); }
-      assert.ok(s.rounds === 1 && !(await found(1, 20)), 'the stalled round solved itself');
-      if (t > 30) break;
-      await page.waitForTimeout(500);
-    }
-    assert.ok(timeline.hint !== null && timeline.hint >= 6.5 && timeline.hint < 12, `the cygnet's hint: ${timeline.hint}`);
-    assert.ok(timeline.invitation !== null && timeline.invitation >= 11.5 && timeline.invitation < 15, `the drawn updraft: ${timeline.invitation}`);
+    const stallIn = async (round, seconds) => {
+      await load();
+      await jump(round);
+      if (round === 1) await hideIn(0);
+      await page.evaluate(() => { __game.input.present = false; });
+      await page.mouse.move(W - 2, 2);
+      const began = await page.evaluate(() => __game.story.current.now);
+      const timeline = { hint: null, invitation: null };
+      for (let i = 0; i < 80; i++) {
+        const s = await page.evaluate(() => {
+          const g = __game, c = g.story.current, q = c.squirrel, h = q.hideout, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[h.heap]];
+          return { t: c.now, bird: Math.hypot(g.cygnet.position.x - p.x, g.cygnet.position.z - p.z), r: p.r, stay: g.cygnet.stay,
+            invitation: !!c.coax && g.swirl.glow > 0.2, rounds: q.rounds };
+        });
+        const t = s.t - began;
+        if (timeline.hint === null && s.stay && s.bird < s.r + 1.2) { timeline.hint = +t.toFixed(1); await page.screenshot({ path: `${out}-stall${round + 1}-hint.png` }); }
+        if (timeline.invitation === null && s.invitation) { timeline.invitation = +t.toFixed(1); await page.screenshot({ path: `${out}-stall${round + 1}-invitation.png` }); }
+        assert.ok(s.rounds === round && !(await found(round, 20)), `the stalled round ${round + 1} solved itself`);
+        if (t > seconds) break;
+        await page.waitForTimeout(500);
+      }
+      assert.ok(timeline.hint !== null && timeline.hint >= 6.5 && timeline.hint < 12, `round ${round + 1}, the cygnet's hint: ${timeline.hint}`);
+      return timeline;
+    };
+    const two = await stallIn(1, 20);
+    const after = await page.evaluate(async () => (await import('/src/tuning.ts')).tuning.birches.squirrel.inviteAfter[1]);
+    assert.ok(two.invitation !== null && two.invitation >= after - 0.5 && two.invitation < after + 3, `the drawn updraft: ${two.invitation}`);
     const loops = await circleOver(0, 1);
     assert.ok(loops !== null, 'an updraft after the invitation did not find it');
-    return { ...timeline, loops };
+    const three = await stallIn(2, 25);
+    assert.ok(three.invitation === null, `round 3 drew an updraft over its hide at ${three.invitation} s`);
+    return { two: { ...two, loops }, three };
   },
 
   /**

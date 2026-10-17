@@ -908,11 +908,12 @@ export class BirchesSquirrel {
       }
     }
     const pile = h.heap >= 0 ? BIRCH_PILES[ROUNDS[h.round].heaps[h.heap]] : null;
-    const asking = pile !== null && playing && this.cue.seeking && this.quiet >= k.inviteAfter;
+    const inviteAfter = k.inviteAfter[h.round];
+    const asking = pile !== null && playing && this.cue.seeking && this.quiet >= inviteAfter;
     if (asking) {
       this.asking.at.set(pile.x, h.at.y + k.inviteLift, pile.z);
       this.asking.radius = pile.r * k.inviteRadius;
-      this.asking.urgency = THREE.MathUtils.smoothstep(this.quiet, k.inviteAfter, k.inviteAfter + k.inviteRamp);
+      this.asking.urgency = THREE.MathUtils.smoothstep(this.quiet, inviteAfter, inviteAfter + k.inviteRamp);
     }
     this.invitation = asking ? this.asking : null;
   }
