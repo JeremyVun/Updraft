@@ -104,7 +104,9 @@ void main() {
     float hang = aLocal.y * aLocal.y;
     p.xz += w * (belly * (0.014 + uStorm * 0.04) + hang * (0.05 + uStorm * 0.5));
     p.xz += hang * 0.03 * vec2(sin(uTime * 0.7 + aLocal.x * 9.0), cos(uTime * 0.55 + aLocal.x * 7.0));
-    p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
+    // The storm blends a fixed calm flap into a fixed storm flap; scaling the clock by it would jump the phase.
+    float flap = mix(sin(uTime * 2.2 + aLocal.x * 7.0), sin(uTime * 11.2 + aLocal.x * 7.0), uStorm);
+    p.y += belly * (flap * (0.03 + uStorm * 0.32) + length(w) * 0.02);
   } else if (aKind > ${ROPE - 0.5} && aKind < ${ROPE + 0.5}) {
     vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
     float belly = sin(aLocal.x * 3.14159);

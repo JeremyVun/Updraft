@@ -106,6 +106,10 @@ out float vSeed;
 out float vKind;
 out float vLife;
 
+vec3 tumbleAt(float spin) {
+  return vec3(sin(spin) * 0.9, cos(spin * 0.7) + 0.4, sin(spin * 1.3 + 2.0));
+}
+
 void main() {
   vec4 p = texture(uPos, aRef);
   vec4 v = texture(uVel, aRef);
@@ -113,8 +117,9 @@ void main() {
   float ground = max(texture(uHeightTex, domainUv(p.xz)).r, 0.0);
   float above = clamp((p.y - ground - 0.3) / 1.5, 0.0, 1.0);
   float speed = length(v.xyz);
-  float spin = uTime * (1.5 + seed * 3.0) * (0.3 + min(speed, 12.0) * 0.12) + seed * 40.0;
-  vec3 tumble = normalize(vec3(sin(spin) * 0.9, cos(spin * 0.7) + 0.4, sin(spin * 1.3 + 2.0)));
+  // Speed blends two fixed spins: scaling one clock by it would jump the phase whenever speed changed, late in a game.
+  float spin = uTime * (1.5 + seed * 3.0), turned = seed * 40.0;
+  vec3 tumble = normalize(mix(tumbleAt(spin * 0.3 + turned), tumbleAt(spin * 1.74 + turned), min(speed, 12.0) / 12.0) + vec3(0.0, 1e-3, 0.0));
   vec3 n = normalize(mix(vec3(0.0, 1.0, 0.0), tumble, above));
   vec3 t1 = normalize(cross(n, abs(n.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
   vec3 t2 = cross(n, t1);

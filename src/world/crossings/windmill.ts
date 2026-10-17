@@ -66,9 +66,11 @@ out float vKind;
 void main() {
   vec3 p = position;
   if (aKind > ${LINEN - 0.5} && aKind < ${LINEN + 0.5}) {
-    float t = uTime * (2.3 + uFlap * 3.0) + aPhase * 6.28;
-    p.z += aShake * (0.08 + 0.26 * uFlap) * (sin(t + p.x * 3.1) * 0.7 + sin(t * 1.7 + p.y * 5.3) * 0.3);
-    p.y -= aShake * aShake * 0.06 * (1.0 + sin(t * 0.6));
+    // The wind blends a fixed slow flap into a fixed fast one; scaling the clock by it would jump the phase.
+    float slow = uTime * 2.3 + aPhase * 6.28, fast = uTime * 5.3 + aPhase * 6.28;
+    float shake = mix(sin(slow + p.x * 3.1) * 0.7 + sin(slow * 1.7 + p.y * 5.3) * 0.3, sin(fast + p.x * 3.1) * 0.7 + sin(fast * 1.7 + p.y * 5.3) * 0.3, uFlap);
+    p.z += aShake * (0.08 + 0.26 * uFlap) * shake;
+    p.y -= aShake * aShake * 0.06 * (1.0 + mix(sin(slow * 0.6), sin(fast * 0.6), uFlap));
   }
   vec4 w = modelMatrix * vec4(p, 1.0);
   vWorld = w.xyz;
