@@ -2,6 +2,7 @@ import type { MirrorScorePhase } from './dream-score';
 import type { DrownedScorePhase } from './drowned-score';
 import type { SummitScorePhase } from './summit-score';
 import { RecordedScore, type RecordedMusic } from './recorded-score';
+import { stairsSongEnding } from './stairs-song-seams';
 import { StillPhrases } from './still-phrases';
 import type { MusicTrack } from './music-loading';
 import { HOME_JUMP_LEAD, homeEndingNext, homeEndingPosition } from '../story/home-ending';
@@ -348,8 +349,9 @@ export class Soundscape {
   /** The belfry's goodbye, played once from the fourth ring on into the storm; `belfryAt` is when it began. */
   private belfryScore: RecordedScore | null = null;
   private belfryAt: number | null = null;
-  /** Up in the white the stairs song has faded for good. */
+  /** Past the landing below the white the stairs song is ending or over, for good. */
   private stairsSongGone = false;
+  private stairsSongEndSet = false;
   private summitScore: RecordedScore | null = null;
   /** The audio-clock moment Home's recording was scheduled to begin, leaving the Mirror. */
   private homeFrom?: number;
@@ -1161,15 +1163,30 @@ export class Soundscape {
       this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
     }
     if (!this.birchesScore) this.birchesEndSet = false;
-    // The stairs song loops under the cloud; up in the white it fades for good, and silence holds until `clouds.ogg`.
+    // The stairs song loops under the cloud; on the landing below the white it ends for good at its next phrase end in
+    // reach, and silence holds until `clouds.ogg`.
     // A boat sped on by gusts can bring its entrance sooner than foreseen: it still waits out the rest.
     if (bg.music === 'birches' && bg.stairsSong && !this.stairsSongGone && !s.silence && !backgroundPaused
       && (this.stairsScore || !this.musicMuted && now >= this.birchesHeard + tuning.audio.stairsSongRest)) {
       this.stairsScore ??= this.takeRecordedScore('stairs');
       this.stairsScore.update('under', 10 ** (tuning.audio.recordedMusicDb.stairs / 20) * (1 - piano));
+    } else if (this.stairsScore && this.stairsSongGone && (s.stairsAir?.phase === 'cloud' || s.stairsAir?.phase === 'under')
+      && bg.music === 'birches' && !s.silence && !backgroundPaused) {
+      if (!this.stairsSongEndSet) {
+        this.stairsSongEndSet = true;
+        const at = this.stairsScore.position(now);
+        if (at === undefined) { this.stairsScore.stop(0); this.stairsScore = null; }
+        else {
+          const ending = stairsSongEnding(at, this.stairsScore.duration);
+          this.stairsScore.finishAt(now + ending.at, ending.release);
+        }
+      } else if (this.stairsScore.silentFrom(now) <= now) {
+        this.stairsScore.stop(0); this.stairsScore = null;
+      }
     } else if (this.stairsScore) {
-      this.stairsScore.stop(s.silence ? .12 : this.stairsSongGone ? tuning.audio.stairsSongCloudFade : 1.8); this.stairsScore = null;
+      this.stairsScore.stop(s.silence ? .12 : 1.8); this.stairsScore = null;
     }
+    if (!this.stairsScore) this.stairsSongEndSet = false;
     // Once she stands at the top with the haze lifted off the sun, `clouds.ogg` plays once on its own clock; the
     // village's music waits for its end. No hush or fog thinning: the recording carries its own dynamics.
     const stairsMusic = !!s.stairsAir && bg.music === 'birches';

@@ -1,8 +1,8 @@
 // Birches' play-out, the stairs song, the village's approach and the quiet after it, rendered offline through the production
 // soundscape: Birches (`red_door.ogg`) goes round on its island, resting between passes and coming in again as on arrival,
 // plays its pass out once they have sailed and never begins after,
-// ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud, fading over
-// `stairsSongCloudFade` in the white and never starting again; `village_approach.ogg` starts from its top at the
+// ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud and, on the landing
+// below the white, ends at its next phrase end or seam (`stairsSongEnding`), never starting again; `village_approach.ogg` starts from its top at the
 // village's handoff at full level, ends faded at its seam just before the bass, never restarts; then no music through
 // the village and the storm, the shared pad silent; then `belfry.ogg` from the fourth ring, coming in slowly and playing
 // once into the storm, handing over sample-aligned to `belfry_ending.ogg` and its faded ritardando; the wood's drone at
@@ -180,19 +180,59 @@ try {
         `a boat sped on by gusts: the song still begins ${rest} s after the birches end (${song[0]?.when} s)`);
     }
     {
-      // Up into the white (past the song's quiet first seconds): its fade, then never again, even if a frame says it is
-      // under the cloud.
-      const UP = 10;
-      let gone = null, restarted = false;
-      const white = await render(UP + 5, t => stairs(t < UP || (t >= UP + 2 && t < UP + 2.5) ? 'under' : 'cloud'), { watch: (t, sound) => {
-        if (t >= UP && gone === null && !sound.stairsScore) gone = t;
-        if (t > UP) restarted ||= !!sound.stairsScore || sound.preparedScore?.track === 'stairs';
-      } });
-      const fade = tuning.audio.stairsSongCloudFade, song = white.starts.filter(s => s.track === 'stairs');
-      check(gone === UP && !restarted && song.length === 1 && song[0].offset === 0 && song[0].node.loop,
-        'the stairs song loops under the cloud from its top; going up into the white stops it for good');
-      check(power(white.buffer, UP - 1, UP) > 1e-7 && power(white.buffer, UP + fade / 2 - .1, UP + fade / 2) < power(white.buffer, UP - .5, UP) / 2
-        && power(white.buffer, UP + fade + .02, UP + 5) === 0, `over a ${fade} s fade`);
+      // The stairs song's seams on the decoded samples, as the Mirror's and Sleeping's are measured: 30 ms before an
+      // attack out of a rest at least 5 dB under the median, not rising into it, the attack's loudest 50 ms at least 9 dB
+      // over it, nothing begun by the seam itself; phrase ends at least 14 dB under, and over the second before at least 5 dB under.
+      const { STAIRS_SONG_SEAMS, STAIRS_SONG_PHRASE_ENDS } = await productionModule('/src/audio/stairs-song-seams.ts');
+      const ctx = new OfflineAudioContext(2, RATE, RATE);
+      const score = new RecordedScore(ctx, ctx.destination, 'stairs');
+      await score.ready;
+      const raw = score.buffer;
+      score.stop(0);
+      const level = (a, b) => db(power(raw, a, b));
+      const frames = [];
+      for (let t = 0; t + .05 < raw.duration; t += .05) frames.push(level(t, t + .05));
+      const sounding = frames.filter(v => v > -80).sort((a, b) => a - b), median = sounding[sounding.length >> 1];
+      const failing = STAIRS_SONG_SEAMS.filter(at => {
+        const attack = at + .03, rest = level(attack - .3, attack);
+        let peak = -Infinity;
+        for (let x = attack; x < attack + .3; x += .01) peak = Math.max(peak, level(x, x + .05));
+        const early = Math.min(level(at - .03, at) - rest, level(at - .03, at) + 43);
+        return !(median - rest >= 5 && level(attack - .6, attack - .3) - rest >= -3 && peak - rest >= 9 && early < 3);
+      });
+      check(!failing.length && STAIRS_SONG_SEAMS.every((at, i) => !i || at - STAIRS_SONG_SEAMS[i - 1] >= 2),
+        `the stairs song's ${STAIRS_SONG_SEAMS.length} seams are each 30 ms before an attack out of a rest (${failing})`);
+      const shallow = STAIRS_SONG_PHRASE_ENDS.filter(at => !STAIRS_SONG_SEAMS.includes(at)
+        || (at < 1 ? level(raw.duration - 1.5, raw.duration) > median - 14
+          : level(at - .3, at + .03) > median - 14 || level(at - 1.05, at) > median - 5));
+      check(!shallow.length, `its phrase ends are seams 14 dB under the median, quiet for over a second, the first the piece's own ending (${shallow})`);
+    }
+    {
+      // On the landing below the white the song ends at its next phrase end within reach, or its next seam, or over one
+      // long fade, and never begins again, even if a frame says it is under the cloud.
+      const { stairsSongEnding } = await productionModule('/src/audio/stairs-song-seams.ts');
+      const UP = 4, level = 10 ** (tuning.audio.recordedMusicDb.stairs / 20);
+      for (const [from, kind] of [[52 - UP, 'phrase end'], [114.5 - UP, 'seam'], [41.5 - UP, 'long fade'], [-UP, 'seam']]) {
+        let gone = null, restarted = false;
+        const setup = from < 0 ? () => {} : sound => {
+          sound.stairsScore = new RecordedScore(sound.ctx, sound.ctx.destination, 'stairs');
+          sound.stairsScore.update('under', level, from);
+        };
+        const SECONDS = UP + tuning.audio.stairsSongSeamWithin + 2;
+        const white = await render(SECONDS, t => stairs(t < UP || (t >= UP + 2 && t < UP + 2.5) ? 'under' : 'cloud'), { setup, watch: (t, sound) => {
+          if (t >= UP && gone === null && !sound.stairsScore) gone = t;
+          if (t > UP) restarted ||= !!sound.stairsScore?.source && gone !== null || sound.preparedScore?.track === 'stairs';
+        } });
+        const song = from < 0 ? white.starts.filter(s => s.track === 'stairs') : [{ when: 0, offset: from }];
+        const position = UP - song[0].when + song[0].offset, ending = stairsSongEnding(position, 224.0726);
+        const end = UP + ending.at, found = position + ending.at;
+        const named = ending.release === ending.at && ending.at === tuning.audio.stairsSongSeamWithin ? 'long fade'
+          : ending.release <= tuning.audio.mirrorSeamRelease + 1e-6 ? 'phrase end' : 'seam';
+        check(named === kind && song.length === 1 && !restarted && gone !== null && gone <= end + STEP + 1e-6,
+          `landing ${position.toFixed(2)} s into the song: it ends ${ending.at.toFixed(2)} s on (${kind}, ${found.toFixed(2)} s in the song), never begun again`);
+        check(power(white.buffer, Math.max(UP, end - ending.release - .3), Math.max(UP + .3, end - ending.release)) > 1e-7
+          && power(white.buffer, end + .02, SECONDS) === 0, `  sounding at full level until its ${ending.release.toFixed(2)} s release into ${end.toFixed(2)} s, silent after`);
+      }
     }
 
     // The handoff from the stairs' fog, clouds.ogg already over (its hold is `clouds-music-check`): the ordinary fade and
