@@ -1056,15 +1056,37 @@ float mistOptical(vec3 ro, vec3 rd, float far) {
   return max(0.0, optical);
 }
 
+/**
+ * The light where a sightline first gets well into the mist: its lit top over a cooler depth, brighter toward the sun;
+ * far off it takes the sky's colour, so the fog sea meets the sky without an edge.
+ */
+vec3 seaMistLight(vec3 ro, vec3 rd, float far, float top, vec3 body) {
+  float softness = ${glsl(tuning.drowned.fog.mistSoftness)}, high = top + softness * 0.5;
+  // Measured to the middle of its soft top: from an eye in that softness a level sightline runs on into the distance.
+  float front = smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)}
+    + ${glsl(tuning.drowned.fog.mistFrontSoftness * 0.5)};
+  float along = dot(ro.xz - uSeaFog.xy, uSeaFog.zw), slope = dot(rd.xz, uSeaFog.zw);
+  float start = 0.0;
+  if (ro.y > top && rd.y < -0.00001) start = (top - ro.y) / rd.y;
+  else if (ro.y > top) start = far;
+  if (along > front && slope < -0.00001) start = max(start, (front - along) / slope);
+  float reach = min(far, start + 12.0);
+  vec3 p = ro + rd * reach;
+  float light = 0.2 + 0.65 * smoothstep(top - softness, high, p.y);
+  vec3 colour = mix(body * vec3(0.84, 0.88, 0.98), uSeaFogTop, light * (1.0 - uSeaFogShape.z * 0.7));
+  colour += uSeaFogCrest.rgb * (0.035 + 0.22 * pow(max(0.0, dot(rd, uSunDir)), 3.0)) * (1.0 - uSeaFogShape.z);
+  vec3 horizon = skyColor(normalize(vec3(rd.x, max(rd.y, 0.0), rd.z)));
+  return mix(colour, horizon, smoothstep(30.0, 160.0, reach));
+}
+
 vec4 seaMist(vec3 ro, vec3 rd, float far, bool lighting) {
   float optical = mistOptical(ro, rd, far);
   float alpha = (1.0 - exp(-optical * ${glsl(tuning.drowned.fog.mistDensity)})) * uSeaFogShape.w;
   vec3 body = mix(uSeaFogBody.rgb, vec3(dot(uSeaFogBody.rgb, vec3(0.2126, 0.7152, 0.0722))), ${glsl(tuning.drowned.fog.mistNeutral)});
-  vec3 colour = mix(body, uSeaFogTop, 0.35 * (1.0 - uSeaFogShape.z));
-  colour += uSeaFogCrest.rgb * ${glsl(tuning.drowned.fog.mistSun)} * (1.0 - uSeaFogShape.z);
+  float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
+  vec3 colour = alpha > 0.0 ? seaMistLight(ro, rd, far, top, body) : body;
   if (lighting && alpha > 0.0) {
     float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(far, 200.0), ${glsl(tuning.drowned.fog.lanternReach)});
-    float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
     float buried = smoothstep(0.0, 1.0, seaFogLevel(uLantern.xz, top) - uLantern.y);
     glow *= exp(-max(0.0, distance(ro, uLantern.xyz) - 5.0) * 0.12 * buried);
     colour += vec3(1.0, 0.7, 0.35) * glow * uLantern.w * 0.12;
@@ -1155,7 +1177,10 @@ vec4 fogOf(vec3 wpos, float landscape) {
   veil *= 1.0 - uVeilLift * (1.0 - uMirrorPass) * (1.0 - exp(-max(wpos.y - ${glsl(SEA_MIST.liftFrom)}, 0.0) / ${glsl(SEA_MIST.liftScale)}))
     * (1.0 - smoothstep(${glsl(SEA_MIST.liftNear)}, ${glsl(SEA_MIST.liftFar)}, dist));
   float amt = 1.0 - exp(-fogDistance * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
-  vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
+  // Over the village's fog sea the far haze turns to the sky it lies against, so the two share one horizon.
+  float horizonMatch = smoothstep(200.0, 900.0, fogDistance) * uSeaFogShape.w;
+  vec3 hazeDirection = normalize(mix(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z), rd, horizonMatch));
+  vec3 fogCol = skyColor(hazeDirection) * mix(vec3(0.84, 0.87, 0.92), vec3(1.0), horizonMatch);
   float arriving = journeyVeilAt(wpos);
   float hidden = 0.0;
   if (uIslandVeilAmount > 0.0) {
