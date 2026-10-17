@@ -140,8 +140,10 @@ for(const fps of [30,60,120]) {
     for(let i=0;i<fps*.5;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
     assert(r.unhook>.2&&r.unhook<.4,`${where}: a brief gesture works the snag without freeing it`);
     assert(r.snagPull>.9,'the cloth answers by pulling taut');
-    for(let i=0;i<fps;i++)pair.update(1/fps,wind);
-    assert(r.snagPull<.04,'tension relaxes when the player stops');
+    let recoil=0;
+    for(let i=0;i<fps*1.5;i++){pair.update(1/fps,wind);recoil=Math.min(recoil,r.snagPull);}
+    assert(recoil<-.05,'the stretched cloth springs back past where it hung');
+    assert(Math.abs(r.snagPull)<.04,'tension relaxes when the player stops');
     const held=r.unhook;
     for(let i=0;i<fps*2;i++)pair.update(1/fps,wind);
     assert.equal(r.unhook,held,'pausing keeps progress without an idle release');

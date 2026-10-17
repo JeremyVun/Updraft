@@ -39,7 +39,9 @@ for (const progress of [0, .25, .75, .99]) {
   assert.equal(caught.uSnag.value, 1);
 }
 far.unhook = 1;
-for (let i = 0; i < 30; i++) rig.update(1 / 60, camera);
-assert(caught.uSnag.value < .02, 'the freed corner returns promptly to the hanging sheet');
+let swing = 1;
+for (let i = 0; i < 120; i++) { rig.update(1 / 60, camera); swing = Math.min(swing, caught.uSnag.value); }
+assert(swing < -.1, 'the freed corner springs back past where it hangs');
+assert(Math.abs(caught.uSnag.value) < .02, 'the freed corner settles into the hanging sheet');
 rotaryWashing.reset();
 console.log('PASS: closed and restored rotary cloth stays local before the Lines chapter updates.');

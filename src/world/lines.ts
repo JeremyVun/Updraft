@@ -114,8 +114,13 @@ void main() {
   /** The harder it blows the more it shakes: a slow breathing in a breeze, a shiver running down it in a gust. */
   float flutter = smoothstep(${glsl(tuning.washing.flutterFrom)}, ${glsl(tuning.washing.flutterFull)}, speed);
   float run = clamp(dot(vec3(w.x, 0.0, w.y), along) * 0.3, -1.0, 1.0);
-  float phase = uTime * (3.2 + aShape.z + 7.0 * flutter) + position.x * 6.5 * run - hang * (4.0 + 5.0 * flutter) + aShape.w;
-  float ripple = sin(phase) + 0.45 * flutter * sin(phase * 2.3 + hang * 9.0);
+  // Each keeps a steady pace and the wind fades between them: a pace scaled by the wind multiplies the clock by
+  // every change in it, and late in a game a gust spins the ripple through many turns a frame.
+  float offset = position.x * 6.5 * run + aShape.w;
+  float breathe = sin(uTime * (${glsl(tuning.washing.breatheRate)} + aShape.z) + offset - hang * 4.0);
+  float shiverPhase = uTime * (${glsl(tuning.washing.shiverRate)} + aShape.z) + offset - hang * 9.0;
+  float shiver = sin(shiverPhase) + ${glsl(tuning.washing.shiverOvertone)} * sin(shiverPhase * 2.3 + hang * 9.0);
+  float ripple = mix(breathe, shiver, flutter);
   float shake = mix(${glsl(tuning.washing.rippleQuiet)}, ${glsl(tuning.washing.rippleFull)}, flutter);
   swing = clamp(swing + ripple * shake * (0.3 + swing), 0.0, 1.05);
 
