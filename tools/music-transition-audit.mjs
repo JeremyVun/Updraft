@@ -136,10 +136,11 @@ try {
         :{...baseState,music:'birches',stairsSong:true,hush:.35,stairsAir:air(t<SAIL.white?'under':'cloud')};
       sound.birchesScore=new RecordedScore(ctx,sound.backgroundDry,'birches');
       sound.birchesScore.update('return',10**(tuning.audio.recordedMusicDb.birches/20),from);
-      let birches=sound.birchesScore,decided=null,endsAt=null;
+      let birches=sound.birchesScore,decided=null,endsAt=null,songEnd=null;
       const step=async t=>{sound.update(STEP,state(t));
         for(const score of [sound.preparedScore,sound.birchesScore,sound.stairsScore])await score?.ready;
-        if(birches.finishing&&decided===null){decided=t;endsAt=birches.endsAt;}};
+        if(birches.finishing&&decided===null){decided=t;endsAt=birches.endsAt;}
+        if(sound.stairsScore?.finishing&&songEnd===null)songEnd=sound.stairsScore.endsAt;};
       await step(0);let pause=ctx.suspend(STEP);const rendering=ctx.startRendering();
       for(let tick=1;tick<SAIL.end/STEP;tick++){await pause;await step(tick*STEP);if(tick+1<SAIL.end/STEP)pause=ctx.suspend((tick+1)*STEP);await ctx.resume();}
       const buffer=await rendering;AudioBufferSourceNode.prototype.start=native;
@@ -147,7 +148,7 @@ try {
       const ends=endsAt??b.when+238.893-b.offset,fade=tuning.audio.birchesSailFade;
       const report={birchesAtPushOff:from,birchesFadeFrom:decided===null?null:+Math.max(decided,ends-fade).toFixed(2),birchesEnds:+ends.toFixed(2),
         stairsSongStarts:song[0]?.when,quietGap:song[0]?+(song[0].when-ends).toFixed(2):null,landing:SAIL.landing,
-        songBeforeLanding:song[0]?+(SAIL.landing-song[0].when).toFixed(2):null,white:SAIL.white,songFadesOver:tuning.audio.stairsSongCloudFade,
+        songBeforeLanding:song[0]?+(SAIL.landing-song[0].when).toFixed(2):null,white:SAIL.white,songEndsAfterWhite:songEnd===null?null:+(songEnd-SAIL.white).toFixed(2),
         handoffReady:SAIL.ready,songOffset:song[0]?.offset,songStarts:song.length};
       return {report,...encodeAudio(buffer)};
     },{SAIL,from});

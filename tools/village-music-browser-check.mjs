@@ -12,7 +12,7 @@
 // `sail` (`?chapter=birches`, about 2 minutes) jumps to the last stretch of the birches with every tangle done, then
 // leaves the game alone through the push-off, the crossing and the stairs landing, skips the stairs' puzzle and climbs
 // into the white; it reports, from the push-off, when the birches recording fades and ends, the quiet, the stairs song's
-// start against the landing, and its fade in the white.
+// start against the landing, and its ending below the white.
 // Usage: node tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]. Vite on 5230, or BASE.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
@@ -224,7 +224,7 @@ try {
     await page.evaluate(() => __game.story.current.restoreCheckpoint('flight-3', [3]));
     await after('white', 6);
     const r = await page.evaluate(() => ({ sources: villageWatch.sources, events: villageWatch.events,
-      rest: __game.tuning.audio.stairsSongRest, fade: __game.tuning.audio.birchesSailFade, cloudFade: __game.tuning.audio.stairsSongCloudFade }));
+      rest: __game.tuning.audio.stairsSongRest, fade: __game.tuning.audio.birchesSailFade, within: __game.tuning.audio.stairsSongSeamWithin }));
     const event = name => r.events.find(e => e.name === name), push = event('push');
     const birches = r.sources.filter(s => s.track === 'birches'), song = r.sources.filter(s => s.track === 'stairs');
     assert.equal(birches.length, 1, 'sail: the birches recording plays one pass, never begun again');
@@ -236,11 +236,11 @@ try {
       request: at(event('request').clock), stairsSongStarts: at(t.clock), landing: at(event('stairs').clock),
       quietGap: +(t.clock - b.ended.clock).toFixed(1), quietGapAudioClock: +(t.ctx - b.ended.ctx).toFixed(2),
       songBeforeLanding: +(event('stairs').clock - t.clock).toFixed(1), white: at(white.clock),
-      songEnds: at(t.ended.clock), songFadeAudioClock: +(t.ended.ctx - white.ctx).toFixed(2), songOffset: t.offset };
+      songEnds: at(t.ended.clock), songEndAfterWhiteAudioClock: +(t.ended.ctx - white.ctx).toFixed(2), songOffset: t.offset };
     console.log(JSON.stringify({ sail: report }, null, 2));
     assert(t.offset < .01 && t.clock < event('stairs').clock, 'sail: the stairs song begins from its top on the crossing\'s handoff');
     assert(t.ctx - b.ended.ctx >= r.rest - .1, `sail: the birches end at least ${r.rest} s before the stairs song`);
-    assert(t.ended.ctx - white.ctx <= r.cloudFade + .1 && t.ended.ctx > white.ctx, `sail: up in the white the song fades over ${r.cloudFade} s`);
+    assert(t.ended.ctx - white.ctx <= r.within + .1 && t.ended.ctx > white.ctx, `sail: below the white the song ends within ${r.within} s`);
     assert(r.sources.every(s => s === b || s === t), `sail: no other music: ${JSON.stringify(r.sources)}`);
   };
   const run = { drowned, cloud, belfry, storm, sail };

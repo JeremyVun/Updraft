@@ -35,8 +35,8 @@ For Jeremy's eye, ear or hands:
 - The child's pigtails, the hood's side line and the open bag flap, seen in a level from the play camera in motion
   ([child.md](child.md)).
 - The birches: a playthrough of the squirrel's hide-and-seek; Red Door's level on the island, its fade and the quiet
-  sea before the stairs song, and the stairs song's 3 s fade into the white (`birchesSailFade`, `stairsSongRest`,
-  `stairsSongCloudFade`; [contracts/audio.md](contracts/audio.md)). The island grew and gained a squirrel, heaps
+  sea before the stairs song, and the stairs song's ending at a phrase end below the white (`birchesSailFade`,
+  `stairsSongRest`, `stairsSongEndFade`; [contracts/audio.md](contracts/audio.md)). The island grew and gained a squirrel, heaps
   and loose leaves; its cost is for his profiling session.
 - A playthrough on the iPad for performance: smoothness on Auto, heat and battery. It also settles whether the
   child's bone texture moves before the frame's passes ([engine.md](engine.md), Open).

@@ -165,8 +165,12 @@ export const tuning = {
      * fades over `birchesSailFade` to end then.
      */
     birchesSailFade: 5, stairsSongRest: 10,
-    /** Going up into the white, the stairs song fades over this long. */
-    stairsSongCloudFade: 3,
+    /**
+     * On the landing below the white (`StairsAir` leaving `under`) the stairs song ends at its next phrase end within
+     * `stairsSongSeamWithin`, before she follows the bird up into the white; else at its next seam, faded into over up
+     * to `stairsSongEndFade` (`stairsSongEnding`).
+     */
+    stairsSongSeamWithin: 10, stairsSongEndFade: 2.5,
     /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
     woodDroneDb: 0,
     /** Seconds after the view clears round her at the top (`StairsAir.clear`) that `clouds.ogg` begins; below 0 starts it that far in. */

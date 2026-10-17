@@ -762,7 +762,7 @@ the stairs song from the birches on (decoded when the crossing asks for it), the
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its fade in the white; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its end below the white (up to 10 s beside `clouds.ogg`'s decode); `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
 retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
 (`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
@@ -953,8 +953,22 @@ After playtesting (2026-10-14):
   a stairs start under the cloud begins it on load). Each flight that docks raises
   `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
   completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
-- In the white the stairs song fades over `stairsSongCloudFade` (3 s, a trial value awaiting Jeremy's listen) and
-  never starts again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
+- On the landing below the white, where she steps aside and the bird goes up first (`StairsAir` leaves `under` at
+  `hesitate`), the stairs song ends at its next natural stopping point and never starts again in this room; there
+  is no music through the white and the loop. Jeremy (2026-10-17): "The way the music cuts out leading to the
+  penrose stairs isn't very good. Any ideas? a longer fade? Leverage the existing technique in other parts of the
+  game that tries to find the next natural stopping point in the music?" The seams are measured on the decoded
+  samples as `MIRROR_SEAMS` were (`STAIRS_SONG_SEAMS` in `stairs-song-seams.ts`); those whose rest lies at least
+  14 dB under the median, the second before it at least 5 dB under, close a phrase (`STAIRS_SONG_PHRASE_ENDS`; 0.69 is the first
+  note after the loop, so stopping there lets the piece's own ending ring out). `stairsSongEnding` takes the next
+  phrase end within `stairsSongSeamWithin` (10 s) and lets it ring out, held only to its last `mirrorSeamRelease`
+  (1.2 s); with none, the next seam, the figure under way faded into its rest over up to `stairsSongEndFade`
+  (2.5 s); with neither (only in the 15.6 s without a seam from 39.83 s), one 10 s fade. Seams nearer than
+  `mirrorSeamSoonest` are passed over. With no input, the bird goes first 3.4 s after the landing, she follows it up
+  at 10.8 s and is in the white at 13.8 s, so the song is always over before she climbs into the white. Over the
+  song's 224 s, the landing falls in reach of a phrase end 38% of the time, of a seam 59%, neither 3%; the song is
+  silent a median 3.5 s after the landing, at most 10 s. The puzzle's length decides where in the song she lands,
+  so a quick or slow player only changes which ending is heard. The wind is close and muffled and climbs with
   `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.
 - Out on top, on the first `above` frame, the wind's last gust sweeps past and away and the white's wind dies within
   about 2 s; the high air above the cloud rises as the view opens. She walks to the edge and stops, and the haze lifts
@@ -981,7 +995,7 @@ After playtesting (2026-10-14):
   handoff as it was. Once out on top only the fog brings the sea back.
   Outside the room every level multiplier is exactly 1.
 
-Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.stairs`, `recordedMusicDb.clouds`, `stairsSongCloudFade`. `node tools/clouds-music-check.mjs` checks the
+Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.stairs`, `recordedMusicDb.clouds`, `stairsSongSeamWithin`, `stairsSongEndFade`. `node tools/clouds-music-check.mjs` checks the
 recording's start, entrance, end, hold and gates offline; `node tools/stairs-audio-proposal.mjs [outDir]` renders the
 room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloom and sail) remains for studies.
 
@@ -991,7 +1005,7 @@ room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloo
 the list and the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs`
 covers start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's
 preparation and the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score
-sections. `node tools/village-music-check.mjs` covers the Birches play-out and its end before the stairs song, the stairs song's fade in the white, the village's
+sections. `node tools/village-music-check.mjs` covers the Birches play-out and its end before the stairs song, the stairs song's seams and its ending below the white, the village's
 recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
 tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]` measures them in the real game (`sail`: the
 birches' push-off to the stairs and up into the white). `node tools/music-transition-audit.mjs` also renders that sail
@@ -1006,7 +1020,7 @@ climb's gates, queueing, skips, the morning at the curtains and restores offline
 - The stairs: the sail's air over the cloud awaits Jeremy's listen in the game, and the moment `clouds.ogg` starts
   (on `clear`) and the settled high air await his playtest (`cloudsMusicDelay`, `highSettled`).
 - Birches and the stairs song: Red Door's level, its rest and entrance going round, the sail's fade and quiet (`birchesSailFade`, `stairsSongRest`) and
-  the stairs song's 3 s fade into the white (`stairsSongCloudFade`) await his listen.
+  the stairs song's ending at a phrase end or seam below the white (`stairsSongSeamWithin`, `stairsSongEndFade`) await his listen.
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its slowed end falls in the storm) awaits his playtest.

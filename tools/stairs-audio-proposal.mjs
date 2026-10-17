@@ -26,7 +26,7 @@ const CLOUDS_FROM = T.clear + .5, CLOUDS_END = CLOUDS_FROM + 208.3;
 
 const SEGMENTS = [
   ['Under the cloud: the puzzle, the stairs song, flights knocking home', 0, T.hesitate],
-  ['At the edge: the child stops, the bird goes up first; the stairs song fades over 3 s', T.hesitate, T.follow],
+  ['At the edge: the child stops, the bird goes up first; the stairs song ends at its next phrase end or seam', T.hesitate, T.follow],
   ['In the white, lower half', T.follow, (T.follow + T.emerge) / 2],
   ['In the white, upper half', (T.follow + T.emerge) / 2, T.emerge],
   ['Out on top: the last gust, the cloud wind dying, the high air', T.emerge, T.clear],
@@ -181,7 +181,7 @@ function cueSheet(report) {
     [0, 'Under the cloud. The stairs song (birches.ogg) from its top; the player pushes the loose flights (gusts).'],
     ...T.knocks.map((t, i) => [t, `Flight ${i + 1} knocks home: a soft wooden tok, a smaller tk as it settles, a puff of cloud.`]),
     [T.third, 'Flight 3 knocks home, with the shared completion phrase (`restored`, unchanged).'],
-    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The stairs song fades over 3 s; the wind in the cloud is heard faintly from above.'],
+    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The stairs song ends at its next phrase end or seam within 10 s; the wind in the cloud is heard faintly from above.'],
     [T.follow, 'The child follows into the white. No music: a close, muffled wind that buffets, and a moan that rises with the climb.'],
     [(T.follow + T.emerge) / 2, 'Halfway up: the buffets come quicker and harder, the moan climbs, the sea has gone.'],
     [T.emerge, 'Out on top. The last of the wind sweeps past and away as clouds.ogg begins at half its level, reaching full in under two seconds.'],

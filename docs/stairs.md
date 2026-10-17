@@ -334,8 +334,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
   coverage and continuity on the GPU, including the pocket of clearer air round the boat.
 - **Sound**: `src/audio/stairs-sound.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed); the stairs song
   (`birches.ogg`, "A Question, Then a Gentle Answer") comes in from its top on the sail's arrival handoff, at least
-  10 s after the birches' "The Red Door Opens" has ended, and loops under the cloud; it fades over 3 s as they go up
-  into the white (`stairsSongCloudFade`, a trial), and silence holds through the white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
+  10 s after the birches' "The Red Door Opens" has ended, and loops under the cloud; on the landing below the white
+  it ends at its next phrase end or seam within 10 s, before she follows the bird up (`stairsSongEnding`), and
+  silence holds through the white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
   measured timeline are in `docs/contracts/audio.md`); rendered with `tools/stairs-audio-proposal.mjs`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`
