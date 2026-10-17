@@ -10,25 +10,27 @@
 // screen and how much of it shows buried tail in.
 // Usage: BASE=http://127.0.0.1:5244/ node tools/squirrel-rounds-check.mjs [right updraft wrong answer apart random shuffle plans stall early flat free leap bare resume frames]
 // W/H set the viewport (default 1600x900; frames also takes 390x844 portrait); OUT prefixes the stills; SCALE sets
-// the squirrel's size at runtime; EXCLUSIVE=1 takes the GPU alone (circles are drawn by the wall clock, so a shared GPU slows
-// the game and costs loops); ROUND=2 or 3 runs only that round of `wrong`, EARLY=toBirches or birches only that
+// the squirrel's size at runtime; gestures and waits run on game time,
+// so a shared GPU slows a run without changing it; ROUND=2 or 3 runs only that round of `wrong`, EARLY=toBirches or birches only that
 // start of `early`, FLAT=blown, drift or trunk only that kind of `flat`.
 // Cases run in one browser in the order given; split them across calls to stay under a tool's time limit.
 import { openBrowser } from './lib/browser.mjs';
+import { gameTime } from './lib/game-time.mjs';
 import assert from 'node:assert/strict';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600), H = Number(process.env.H ?? 900);
 const out = process.env.OUT ?? '/tmp/updraft-squirrel-rounds';
 const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['right', 'updraft', 'wrong', 'answer', 'apart', 'random', 'shuffle', 'plans', 'stall', 'early', 'flat', 'free', 'leap', 'bare', 'resume', 'frames'];
-const { browser, close } = await openBrowser({ exclusive: process.env.EXCLUSIVE === '1' });
+const { browser, close } = await openBrowser();
 const errors = [];
 const results = {};
-let page;
+let page, game;
 
 async function load(query = '', chapter = 'birches') {
   page?.close();
   page = await browser.newPage({ viewport: { width: W, height: H } });
+  game = gameTime(page);
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text()); });
   await page.goto(`${base}?shot=1&chapter=${chapter}${query}`);
@@ -41,7 +43,7 @@ async function load(query = '', chapter = 'birches') {
     window.__screen = (p) => { const v = p.clone().project(__game.rig.camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; };
   });
   if (process.env.SCALE) await page.evaluate((scale) => { __game.squirrel.scale = scale; }, Number(process.env.SCALE));
-  await page.waitForTimeout(3000);
+  await game.wait(3000);
 }
 
 const state = () => page.evaluate(() => {
@@ -72,7 +74,7 @@ async function jump(round, patch = null) {
   await until(() => __game.story.current.beat === 'round' && __game.story.current.squirrel.hideout, null, 60000)
     .catch(async (e) => { throw new Error(`round ${round + 1} never began: ${JSON.stringify(await state())} ${e.message}`); });
   await page.evaluate(() => __game.rig.cut(__game.story.current.shot));
-  await page.waitForTimeout(800);
+  await game.wait(800);
 }
 
 /** Every tell the squirrel gives from now on, by the story's clock. */
@@ -103,9 +105,10 @@ async function stroke([a, b], ms = 380, lift = true) {
   const steps = Math.max(8, Math.round(ms / 16));
   if (lift) await page.evaluate(() => { __game.input.present = false; });
   await page.mouse.move(a[0] * W, a[1] * H);
+  const at = await game.start();
   for (let i = 1; i <= steps; i++) {
     await page.mouse.move((a[0] + (b[0] - a[0]) * i / steps) * W, (a[1] + (b[1] - a[1]) * i / steps) * H);
-    await page.waitForTimeout(ms / steps);
+    await at(i * ms / steps);
   }
 }
 
@@ -138,10 +141,11 @@ async function circleRing(ring, round, loops, { shot = null, shotAt = 2, perLoop
   let drawn = 0;
   await page.mouse.move(ring[0][0] * W, ring[0][1] * H);
   for (; drawn < loops; drawn++) {
+    const at = await game.start();
     for (let i = 1; i <= 24; i++) {
       const [x, y] = ring[i % 24];
       await page.mouse.move(x * W, y * H);
-      await page.waitForTimeout(perLoop * 1000 / 24);
+      await at(i * perLoop * 1000 / 24);
     }
     if (shot && drawn + 1 === shotAt) await page.screenshot({ path: `${out}-${shot}.png` });
     if (round >= 0 && (await found(round, 20))) return drawn + 1;
@@ -173,10 +177,7 @@ const pileOnScreen = (heap) => page.evaluate((heap) => {
 
 /** Flushed out of its hide in this round (it is counted found once it has scolded her and set off). */
 const found = async (round, ms = 1500) => {
-  try {
-    await until((round) => { const q = __game.story.current.squirrel; return q.rounds > round || (q.mode === 'flushed' && __game.story.current.round === round); }, round, ms);
-    return true;
-  } catch { return false; }
+  return game.within((round) => { const q = __game.story.current.squirrel; return q.rounds > round || (q.mode === 'flushed' && __game.story.current.round === round); }, round, ms);
 };
 
 /** Found: the walk goes on (or the leap begins), and the squirrel is off along its way. */
@@ -200,8 +201,8 @@ const cased = {
       const { hide } = await state();
       const heap = Math.max(0, hide.heap), before = await depthsOf();
       const line = await acrossHeap(heap, 1.8);
-      for (let i = 0; i < 3; i++) { await stroke(i % 2 ? [line[1], line[0]] : line, 260); await page.waitForTimeout(600); }
-      await page.waitForTimeout(1500);
+      for (let i = 0; i < 3; i++) { await stroke(i % 2 ? [line[1], line[0]] : line, 260); await game.wait(600); }
+      await game.wait(1500);
       const stroked = await depthsOf();
       assert.ok(!(await found(round, 50)), `round ${round + 1}: strokes across the right heap found it`);
       assert.ok(stroked[heap] >= before[heap] * 0.85, `round ${round + 1}: strokes took the right heap: ${JSON.stringify({ before, stroked })}`);
@@ -232,7 +233,7 @@ const cased = {
       if (round === 2) for (const heap of [2]) {
         const before = await depthsOf();
         const loops = await circleOver(heap, round, 2, null, { shot: 'updraft-wrong-lifted', shotAt: 2 });
-        await page.waitForTimeout(1500);
+        await game.wait(1500);
         const after = await depthsOf();
         wrongs.push({ heap, found: loops !== null, before: before[heap], after: after[heap] });
       }
@@ -265,10 +266,10 @@ const cased = {
           if (heap === right) continue;
           const before = await depthsOf();
           const loops = await circleOver(heap, round, 3);
-          await page.waitForTimeout(1500);
+          await game.wait(1500);
           const after = await depthsOf();
           wrongs.push({ heap, found: loops !== null || (await found(round, 50)), before: before[heap], after: after[heap] });
-          await page.waitForTimeout(2000);
+          await game.wait(2000);
         }
         assert.ok(wrongs.every((w) => !w.found), `round ${round + 1}: a wrong heap found it: ${JSON.stringify(wrongs)}`);
         if (round === 1) assert.ok(wrongs.every((w) => w.after < w.before * 0.5), `round 2: a wrong heap did not burst apart: ${JSON.stringify(wrongs)}`);
@@ -306,9 +307,9 @@ const cased = {
           const to = [0.05 + rand() * 0.9, 0.3 + rand() * 0.6];
           await stroke([at, to], 150 + rand() * 450, false);
           at = to;
-          await page.waitForTimeout(rand() * 700);
+          await game.wait(rand() * 700);
         }
-        await page.waitForTimeout(1500);
+        await game.wait(1500);
         const after = await depthsOf();
         assert.ok(!(await found(round, 50)), `seed ${start}, round ${round + 1}: random swipes found it`);
         assert.ok(after.every((d, i) => d >= before[i] * 0.85), `seed ${start}, round ${round + 1}: random swipes took a heap: ${JSON.stringify({ before, after })}`);
@@ -346,11 +347,11 @@ const cased = {
       await load();
       await jump(2);
       await hideIn(heap);
-      await page.waitForTimeout(1500);
+      await game.wait(1500);
       const before = await depthsOf();
       if (rows.length === 0) {
         for (const h of [0, 1, 2]) await stroke(await acrossHeap(h, 1.8), 260);
-        await page.waitForTimeout(2000);
+        await game.wait(2000);
         const stroked = await depthsOf();
         assert.ok(stroked.every((d, i) => d >= before[i] * 0.9), `strokes took a heap: ${JSON.stringify({ before, stroked })}`);
       }
@@ -363,7 +364,7 @@ const cased = {
         });
       }, { heap, toward });
       const loops = await circleRing(ring, 2, 6);
-      await page.waitForTimeout(3000);
+      await game.wait(3000);
       const circled = await depthsOf();
       const others = [0, 1, 2].filter((i) => i !== heap);
       rows.push({ heap, toward, loops, before, circled });
@@ -383,7 +384,7 @@ const cased = {
       await hideIn(0);
       await watchTells();
       await page.evaluate(() => { __game.story.current.squirrel.nextTell = Infinity; });
-      await page.waitForTimeout(1800);
+      await game.wait(1800);
       const [a, b] = await acrossHeap(1), [rx] = await heapOnScreen(0);
       const began = await page.evaluate(() => __game.story.current.now);
       await page.evaluate(() => { window.__told.length = 0; });
@@ -391,7 +392,7 @@ const cased = {
       /** How far from its heap she is looking, a few times a second while it answers. */
       const looks = [];
       for (let i = 0; i < 9; i++) {
-        await page.waitForTimeout(200);
+        await game.wait(200);
         looks.push(await page.evaluate(() => { const g = __game, h = g.story.current.squirrel.hideout, l = g.child.lookAt; return l && h ? +Math.hypot(l.x - h.at.x, l.z - h.at.z).toFixed(1) : null; }));
       }
       const r = await page.evaluate(() => {
@@ -454,13 +455,13 @@ const cased = {
         for (const heap of heaps) { const at = await pileOnScreen(heap); if (at) await stroke([at.a, at.b], 220); }
         if (phase !== 'burrowing') for (const heap of heaps) { const at = await pileOnScreen(heap); if (at) await circleRing(at.ring, -1, 2); }
         else { const at = await page.evaluate(() => window.__screen(__game.story.current.squirrel.tracked.clone())); await circleRing(screenRing(at, 0.08), -1, 1); }
-        await page.waitForTimeout(1200);
+        await game.wait(1200);
         const after = await depthsOf(heaps), still = await page.evaluate(() => __game.story.current.squirrel.wentIn < 2);
         s.held = { phase, before, after, still };
         /** Once it has settled the heap it is in is free to go, so only blows that ended before then are judged. */
         if (still) assert.ok(after.every((d, i) => d >= before[i] * 0.85), `the heaps did not hold through the shuffle: ${JSON.stringify(s.held)}`);
       }
-      await page.waitForTimeout(100);
+      await game.wait(100);
     }
     const shuffling = log.filter((l) => l.mode === 'shuffling');
     const plan = shuffling.find((l) => l.order)?.order;
@@ -522,7 +523,7 @@ const cased = {
       if (timeline.invitation === null && s.invitation) { timeline.invitation = +t.toFixed(1); await page.screenshot({ path: `${out}-stall-invitation.png` }); }
       assert.ok(s.rounds === 1 && !(await found(1, 20)), 'the stalled round solved itself');
       if (t > 30) break;
-      await page.waitForTimeout(500);
+      await game.wait(500);
     }
     assert.ok(timeline.hint !== null && timeline.hint >= 6.5 && timeline.hint < 12, `the cygnet's hint: ${timeline.hint}`);
     assert.ok(timeline.invitation !== null && timeline.invitation >= 11.5 && timeline.invitation < 15, `the drawn updraft: ${timeline.invitation}`);
@@ -552,7 +553,7 @@ const cased = {
             g.child.stop(); g.child.place(r.stand.x, r.stand.z + 6, Math.PI); g.glider.hold(g.child);
             c.update(0, c.now); g.rig.cut(c.shot);
           }, round);
-          await page.waitForTimeout(2500);
+          await game.wait(2500);
           const read = () => page.evaluate((round) => __game.birches.depthAt(__sq.ROUNDS[round].hides).then((d) => d.map((v) => +v.toFixed(2))), round);
           before = await read();
           for (let pass = 0; pass < 4; pass++) {
@@ -570,7 +571,7 @@ const cased = {
             if (at) { await circleRing(at.ring, -1, 3); circled++; }
           }
           assert.ok(circled > 0, `round ${round + 1}: no heap on screen to circle before it was in`);
-          await page.waitForTimeout(3000);
+          await game.wait(3000);
           after = await read();
           await page.evaluate(() => { const c = __game.story.current; delete c.updateWalk; delete c.frame; });
         }
@@ -608,7 +609,7 @@ const cased = {
     const { hide } = await state();
     const wrong = hide.heap === 0 ? 1 : 0;
     await circleOver(wrong, 2, 3);
-    await page.waitForTimeout(1500);
+    await game.wait(1500);
     assert.ok((await circleOver(Math.max(0, hide.heap), 2)) !== null, 'round 3 not found');
     await until(() => __game.story.current.beat === 'leap', null, 10000);
     const began = await page.evaluate(() => __game.story.current.now);
@@ -624,7 +625,7 @@ const cased = {
     await until(() => __game.child.action?.kind === 'leap', null, 15000);
     await page.screenshot({ path: `${out}-leap-run.png` });
     await until(() => __game.child.action?.kind === 'leap' && __game.child.sitting, null, 5000);
-    await page.waitForTimeout(400);
+    await game.wait(400);
     await page.screenshot({ path: `${out}-leap-landed.png` });
     await until(() => __game.child.action === null && __game.child.sitting, null, 5000);
     await page.screenshot({ path: `${out}-leap-sitting.png` });
@@ -646,7 +647,7 @@ const cased = {
     await until(() => __game.story.current.beat === 'leap', null, 10000);
     const began = await page.evaluate(() => __game.story.current.now);
     await until(() => __game.story.current.squirrel.leap === 'kicking', null, 5000);
-    await page.waitForTimeout(1200);
+    await game.wait(1200);
     await page.screenshot({ path: `${out}-bare-kicking.png` });
     await until(() => __game.story.current.beat === 'walk', null, 20000);
     return { run: +((await page.evaluate(() => __game.story.current.now)) - began).toFixed(1) };
@@ -667,7 +668,7 @@ const cased = {
         const st = await page.evaluate(() => ({ name: __game.story.name, wentIn: __game.story.current.squirrel?.wentIn ?? -1 }));
         if (st.name === 'birches' && st.wentIn >= 0) break;
         const at = await pileOnScreen(0);
-        if (!at) { await page.waitForTimeout(400); continue; }
+        if (!at) { await game.wait(400); continue; }
         if (n % 2) await circleRing(at.ring, -1, 2);
         else await stroke(n % 4 ? [at.b, at.a] : [at.a, at.b], 220);
         blown++;
@@ -698,10 +699,10 @@ const cased = {
         if (!at || reach.far >= reach.reach || rows.some((r) => r.heap === heap)) continue;
         const before = (await depthsOf([heap]))[0];
         for (let i = 0; i < 3; i++) await stroke(i % 2 ? [at.b, at.a] : [at.a, at.b], 220);
-        await page.waitForTimeout(1500);
+        await game.wait(1500);
         const stroked = (await depthsOf([heap]))[0];
         await circleRing(at.ring, -1, 4);
-        await page.waitForTimeout(2000);
+        await game.wait(2000);
         const circled = (await depthsOf([heap]))[0];
         rows.push({ heap, from: `round ${round + 1}`, before, stroked, circled });
         assert.ok(stroked >= before * 0.85, `free heap ${heap} went to strokes: ${JSON.stringify(rows)}`);
@@ -757,7 +758,7 @@ const cased = {
       }, { point, data });
       await page.goto(`${base}?shot=1&progress=1`);
       await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
-      await page.waitForTimeout(1500);
+      await game.wait(1500);
       const s = await page.evaluate(() => {
         const c = __game.story.current;
         return { chapter: __game.story.name, rounds: c.squirrel?.rounds, station: c.squirrel?.station, mode: c.squirrel?.mode, visible: __game.squirrel.visible };
@@ -777,7 +778,7 @@ const cased = {
     for (const round of [0, 1, 2]) {
       await jump(round);
       await page.evaluate(() => { const q = __game.story.current.squirrel; q.lying = () => {}; q.seek = () => {}; __game.cygnet.errand = null; });
-      await page.waitForTimeout(3500);
+      await game.wait(3500);
       const row = await page.evaluate(async () => {
         const g = __game, c = g.story.current, s = g.squirrel, cam = g.rig.camera, r = __sq.ROUNDS[c.round];
         const mul = (e, x, y, z) => [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]];
@@ -831,7 +832,7 @@ const cased = {
           heapsIn: r.heaps.map((i) => inFrame(window.__screen(r.hides[0].clone().set(__sq.BIRCH_PILES[i].x, r.hides[0].y, __sq.BIRCH_PILES[i].z)))),
           lens: +cam.position.distanceTo(r.stand).toFixed(1) };
       });
-      await page.waitForTimeout(300);
+      await game.wait(300);
       await page.screenshot({ path: `${out}-frame-${round + 1}-${W}x${H}.png` });
       rows.push({ round: round + 1, ...row });
       assert.ok(row.tailInPx.every((n) => n <= 6), `round ${round + 1}: buried tail in, it shows ${row.tailInPx} px`);
