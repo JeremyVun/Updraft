@@ -329,7 +329,8 @@ never takes colour back (`world/music-growth.ts`). After each answer the camera 
 stays there (`tuning.piano.steps`, each a share of the way from the playing view to the walk's view of her), and the
 finale is the last and largest step: on its arrival the cygnet climbs out onto the keys and walks them, each footfall
 a soft recorded C, A♭ or E♭ of the finale's chord under the flute, while the camera opens the rest of the way to the
-walk's view (about 16 m above her and 41 m back, 26 m over the ground below it) over `finaleEase` seconds, low
+walk's view (about 15 m above her and 34 m back, 26 m over the ground below it; nearer than the walk's view before the
+piano, `tuning.meadowPlane.cameraAwake*`) over `finaleEase` seconds, low
 enough that grass, flowers and hills keep their detail. The final front crosses at `finaleSpeed`, pouring down off
 her knoll across the slopes that face her, and the grey hold is released only once the front covers it. She walks
 round the piano's far end from the bough (`Piano.wayRound`), never through it. Competing wind
@@ -347,8 +348,12 @@ updraft (the spiral invitation shows it) whose column draws the down off them, r
 sinks back: unwound it hangs over the heads, and once it is all up the column carries it out over the top to drift
 away over the island, away from the lens and off the pond's side. She stands and watches it go: the lens lifts its
 gaze after the cloud and holds on it as it thins, keeping her and the cygnet at the foot of the frame, and comes back
-to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). A final listening pause introduces the real swan
-call before the child gathers the cygnet and approaches the pond crest. Neither play makes a note; ambient wind and idle time complete neither.
+to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). The lens comes down in front of the pair as they
+walk on together toward it, the hill they came from behind them, and holds them there for a final listening pause
+(`cameraListenBearing`): the real swan call comes from beyond the frame, the cygnet's head comes up and she turns
+toward it, then gathers the cygnet into the satchel. She walks on past the lens, which turns after her and comes round
+behind her as she starts down (`departure*`); the pond and the family come into the edge of the frame as she reaches
+the crest, and once she stops there the lens turns from her onto the water (`tuning.crest.revealFor`). Neither play makes a note; ambient wind and idle time complete neither.
 `world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`;
 `?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
 walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.

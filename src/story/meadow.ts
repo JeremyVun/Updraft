@@ -50,7 +50,6 @@ const POND_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z);
 const RAFT_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z + 5);
 /** How far out the bugling carries, so it is heard on the walk well before the rise. */
 const HEARD_FROM = 150;
-const UP = new THREE.Vector3(0, 1, 0);
 /**
  * The bank, coming at the pond from (x, z): the last dry ground before the water, and then `standOff` back from
  * it, which is where somebody stands to look at what is on the water.
@@ -1147,8 +1146,9 @@ export class MeadowChapter implements Chapter {
     const fz = c.z + (p.z - c.z) * pw - 3;
     const ground = Math.max(c.y, 0);
     s.target.set(fx, ground + 3 + (this.cast.plane.held ? 0 : Math.min(guide.cameraRise, Math.max(0, p.y - ground - 6) * 0.35)), fz);
-    s.distance = guide.cameraBack;
-    s.height = 13;
+    const awake = this.piano.at !== 'ahead' && !this.crestDone;
+    s.distance = awake ? guide.cameraAwakeBack : guide.cameraBack;
+    s.height = awake ? guide.cameraAwakeUp : guide.cameraUp;
     this.cameraChild.copy(c).y += 1.2;
     this.framing.secondary.copy(this.cast.plane.held ? this.cameraChild : p);
     s.subjects = this.framing;
@@ -1199,13 +1199,9 @@ export class MeadowChapter implements Chapter {
     s.eye = this.eyeAt.set(x, Math.max(ground, heightAt(x, z)) + up, z);
     s.clearance = 2;
     s.subjects = water ? this.pondFraming : this.descentFraming;
+    // Stopped on the crest, she has the water in front of her; the lens turns from her onto it, unhurried.
+    if (!water) s.target.lerp(this.song.departLook(c, s.target, this.tmp), 1 - THREE.MathUtils.smootherstep(this.now - this.revealedAt, 0, view.revealFor));
     this.gazeAfterFlock(portrait);
-    // Walked onto the crest with the water held out of the frame, the lens comes round onto it unhurried.
-    const held = this.song.pondTurn * (1 - THREE.MathUtils.smoothstep(this.now - this.revealedAt, 0, view.revealFor));
-    if (held) {
-      s.target.sub(c).applyAxisAngle(UP, held).add(c);
-      s.eye.sub(c).applyAxisAngle(UP, held).add(c);
-    }
     this.pace = this.beat === 'crest' ? 1 : 0.9;
     this.focus.copy(c);
   }
