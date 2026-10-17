@@ -429,30 +429,33 @@ export const tuning = {
     liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
     down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
     hoverHeight: 3, afterlift: 6, afterFade: 5, drift: 3.6, driftGather: 6, driftSpread: .3, driftTurn: .35,
-    driftRise: 0.3, downFade: 27, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
-    inviteAfter: 5, arrivalRest: 3, seedRest: 28, listenFor: 5.5, familyAfter: 2,
+    driftRise: 0.3, downFade: 19, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
+    inviteAfter: 5, arrivalRest: 3, seedRest: 21, listenFor: 5.5, familyAfter: 2,
     /**
-     * On to the crest the lens is turned round her away from the water, by up to `crestPondTurn` radians, so the pond
-     * stays this far outside the frame (`crestPondMargin`, in half-widths) until the crest shows it.
+     * On to the crest the listening view gives way to the crest's over her first `departureWalk` metres, the lens
+     * turning after her from where it stood for her first `departureHold` before it follows her down, its gaze
+     * drawn `departureLead` of the way from her toward the water; stopped on the crest, it turns the rest of the way.
      */
-    departureWalk: 16, crestPondMargin: 1.12, crestPondTurn: 1.2,
+    departureWalk: 16, departureHold: 8, departureLead: .45,
     /**
      * The play's camera: looking down on the flower bed from close behind her (`Bed`, aimed `cameraBedAim` of the
      * way from her to it), then round to the seed heads (`Seed`: from beyond them at `cameraSeedBearing`, the
      * bearing of the lens from her as `atan2(x, z)`, looking back over the heads to the shaded slope and the sky
      * away from the sun; rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold`
-     * metres), then the listening rise (plain names), each blended in as she walks. Coming to a stand the walk's view
-     * gives way to it over her last `approach` metres (`seedApproach` for the seeds, whose view is so far round),
-     * followed at `cameraArrivePace`, and over her last `cameraSettleFrom` metres its aim moves from her onto the
-     * play, whose heads it fits into the frame over `cameraSettleFor` seconds once she stands; leaving a play it
-     * waits where it watched for her first `cameraSetOff`.
+     * metres), then the listening rise (plain names: at the bearing `cameraListenBearing`, west of her and a little
+     * ahead, so she walks toward the lens, hears the call from off the side of the frame and the pond stays out of
+     * it), each blended in as she walks. Coming to a stand the walk's view gives way to it over her last `approach`
+     * metres (`seedApproach` for the seeds, whose view is so far round), followed at `cameraArrivePace`, and over
+     * her last `cameraSettleFrom` metres its aim moves from her onto the play, whose heads it fits into the frame
+     * over `cameraSettleFor` seconds once she stands; leaving a play it waits where it watched for her first
+     * `cameraSetOff`.
      */
     cameraBedBack: 13, cameraBedUp: 7.5, cameraBedAim: .15, cameraPortraitBedBack: 18, cameraPortraitBedUp: 9,
     cameraSetOff: 8, cameraSettleFrom: 10, cameraSettleFor: 4,
     cameraSeedBearing: 2.36, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedBearing: 2.74, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 2.5, cameraSeedHold: 6,
-    cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5, cameraArrivePace: 0.35,
-    cameraTurnFrom: -722, cameraTurnTo: -776, cameraSecondSide: .65,
+    cameraBack: 10, cameraUp: 2, cameraPortraitBack: 13, cameraPortraitUp: 3, cameraPace: 0.5, cameraArrivePace: 0.35,
+    cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: 4.19,
     /**
      * She watches the released down go (`seedRest` seconds from its release until she walks on): `watchFrom` seconds
      * after the release the lens starts to lift its gaze after the cloud (aimed `watchTop` of the way from its heart
@@ -493,8 +496,10 @@ export const tuning = {
     returnSpeed: 5, turnRate: 2.5, turnWidth: 8, outwardSpeed: 30,
     height: 28, heightBrake: 18, riseSpeed: 24,
     chaseFrom: 10, chaseNear: 5, retargetEvery: 0.6,
-    cameraLead: 6, cameraRise: 6, cameraBack: 44, cameraExtra: 22,
+    cameraLead: 6, cameraRise: 6, cameraBack: 44, cameraUp: 13, cameraExtra: 22,
     cameraMargin: 0.78, cameraPace: 0.8,
+    /** From the duet on to the crest the walk's view stands nearer her: the duet's last step ends on it. */
+    cameraAwakeBack: 37, cameraAwakeUp: 11.5,
   },
   /**
    * The top of the meadow's landing bank: the camera's look round from the climb's profile onto her line to the piano
@@ -1087,8 +1092,8 @@ export const tuning = {
     edgeUp: 5.2,
     edgeOut: 0.6,
     edgeLook: 1.6,
-    /** Seconds the lens takes at the crest to come round onto the water from where the walk there held it. */
-    revealFor: 8,
+    /** Seconds the lens takes, once she stops on the crest, to turn from her onto the water she has come to. */
+    revealFor: 6,
     gaze: 0.9,
     gazeFor: 6,
     gazeKeep: 0.8,
@@ -1278,7 +1283,7 @@ export const tuning = {
      * up. `stepPace` is how closely the lens follows while it moves (`stepSettle` seconds longer for it to arrive).
      * The final wave crosses the island at `finaleSpeed`, pouring down the slopes that face her while the view opens.
      */
-    steps: [0.14, 0.28, 0.41, 0.54],
+    steps: [0.2, 0.4, 0.6, 0.76],
     stepAfter: 0.6,
     stepEase: 6,
     stepSettle: 2,

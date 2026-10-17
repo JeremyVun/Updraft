@@ -5,20 +5,10 @@ import type { Cast } from './cast';
 import { meadowEchoes as garden } from '../world/meadow-echoes';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { POND, POND_LEVEL } from '../world/heightfield';
 
 type Beat = 'ahead' | 'approach' | 'settle' | 'play' | 'follow' | 'listen' | 'gather' | 'done';
 const PLAY_MARGIN = .8;
 const LENS = new THREE.PerspectiveCamera();
-const POND_LENS = new THREE.PerspectiveCamera();
-/** The pond's shore and a swan's height over it, which the walk to the crest keeps out of the frame. */
-const RIM = Array.from({ length: 32 }, (_, i) => {
-  const a = i * Math.PI / 8;
-  return new THREE.Vector3(POND.x + Math.cos(a) * POND.rx, POND_LEVEL + (i < 16 ? 0 : 1.2), POND.z + Math.sin(a) * POND.rz);
-});
-const SEEN = new THREE.Vector3();
-const POND_AT = new THREE.Vector3(POND.x, POND_LEVEL, POND.z);
-const UP = new THREE.Vector3(0, 1, 0);
 const ORIGIN = new THREE.Vector3();
 
 export class MeadowSong {
@@ -30,17 +20,12 @@ export class MeadowSong {
   private tending = false;
   private lastCuriosity = 0;
   leaving = false;
-  /** How far round her, away from the water, the walk to the crest last held the lens (radians about the vertical). */
-  pondTurn = 0;
   private readonly childAt = new THREE.Vector3();
   private readonly center = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
   private readonly curiosity = new THREE.Vector3();
   private readonly exitEye = new THREE.Vector3();
   private readonly exitLook = new THREE.Vector3();
-  private readonly exitAt = new THREE.Vector3();
-  private readonly leaveLook = new THREE.Vector3();
-  private readonly leaveEye = new THREE.Vector3();
   /** How far the gaze had gone after the down when she walked on. */
   private watchedTo = 0;
   private readonly placedEye = new THREE.Vector3();
@@ -87,7 +72,6 @@ export class MeadowSong {
     this.index = Math.max(0, Math.min(2, completed));
     this.mix = this.since = this.now = 0;
     this.leaving = this.tending = false;
-    this.pondTurn = 0;
     this.beat = finished ? 'done' : 'ahead';
   }
 
@@ -200,7 +184,7 @@ export class MeadowSong {
     const bed = 1 - turn, seeds = turn * (1 - onward), listen = turn * onward;
     const pick = (a: number, b: number, d: number) => a * bed + b * seeds + d * listen;
     const bearing = pick(Math.atan2(portrait ? -.15 : -.5, 1), portrait ? t.cameraPortraitSeedBearing : t.cameraSeedBearing,
-      Math.atan2(t.cameraSecondSide, 1));
+      t.cameraListenBearing);
     this.side.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.target.copy(this.childAt).lerp(this.aimAt, THREE.MathUtils.lerp(.4, this.index === 1 ? t.cameraSeedAim : t.cameraBedAim, settled));
     shot.from = this.side;
@@ -251,7 +235,7 @@ export class MeadowSong {
     this.frameSubjects.margin = PLAY_MARGIN;
     if (this.index === 2) {
       this.exitLook.copy(shot.target).sub(c);
-      this.exitEye.copy(this.exitLook).addScaledVector(this.side, shot.distance).y += shot.height;
+      this.exitEye.copy(LENS.position);
     }
     const watch = this.watching;
     if (watch > 0) this.watch(shot, cast, watch, portrait);
@@ -306,8 +290,8 @@ export class MeadowSong {
   /** The lens as it last stood, which the watch tests its turns of the gaze from. */
   seenFrom(camera: THREE.PerspectiveCamera): void {
     LENS.position.copy(camera.position);
-    for (const lens of [LENS, POND_LENS]) if (lens.fov !== camera.fov || lens.aspect !== camera.aspect) {
-      lens.fov = camera.fov; lens.aspect = camera.aspect; lens.updateProjectionMatrix();
+    if (LENS.fov !== camera.fov || LENS.aspect !== camera.aspect) {
+      LENS.fov = camera.fov; LENS.aspect = camera.aspect; LENS.updateProjectionMatrix();
     }
   }
 
@@ -335,44 +319,25 @@ export class MeadowSong {
   }
 
   /**
-   * On to the crest the listening view gives way to the crest's as she walks, but it is turned round her away from
-   * the water as far as keeps the pond out of the frame: the family on it is the crest's to show.
+   * On to the crest she walks on past the lens, which stays where it watched her listen and turns after her, then
+   * comes round behind her as she goes down, its gaze drawn a little ahead of her toward where she is going: the
+   * water comes into the edge of the frame as she reaches the top.
    */
   depart(shot: Shot, cast: Cast): number {
-    const c = cast.child.position, stand = garden.stands[2];
-    const walked = THREE.MathUtils.smootherstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, tuning.meadowEchoes.departureWalk);
-    shot.target.lerp(this.exitAt.copy(c).add(this.exitLook), 1 - walked);
-    shot.eye!.lerp(this.exitAt.copy(c).add(this.exitEye), 1 - walked);
-    this.leaveLook.copy(shot.target).sub(c); this.leaveEye.copy(shot.eye!).sub(c);
-    const [yaw] = aim(this.exitEye, this.exitLook), [pond] = aim(c, POND_AT);
-    const away = Math.sign(Math.atan2(Math.sin(yaw - pond), Math.cos(yaw - pond))) || 1;
-    const turned = (k: number) => {
-      shot.target.copy(this.leaveLook).applyAxisAngle(UP, away * k).add(c);
-      shot.eye!.copy(this.leaveEye).applyAxisAngle(UP, away * k).add(c);
-      return hidesPond(shot.eye!, shot.target);
-    };
-    const most = tuning.meadowEchoes.crestPondTurn;
-    this.pondTurn = 0;
-    if (!turned(0)) {
-      let low = 0, high = most;
-      if (turned(most)) for (let i = 0; i < 10; i++) { const mid = (low + high) / 2; if (turned(mid)) high = mid; else low = mid; }
-      turned(high);
-      this.pondTurn = away * high;
-    }
+    const t = tuning.meadowEchoes, c = cast.child.position, stand = garden.stands[2];
+    const gone = Math.hypot(c.x - stand.x, c.z - stand.z);
+    shot.target.copy(this.departLook(c, shot.target, this.aimAt));
+    shot.eye!.lerp(this.exitEye, 1 - THREE.MathUtils.smootherstep(gone, t.departureHold, t.departureWalk));
     shot.composition = 'hold'; shot.smoothFit = 2;
-    return THREE.MathUtils.lerp(tuning.meadowEchoes.cameraPace, .9, walked);
+    return THREE.MathUtils.lerp(t.cameraPace, .9, THREE.MathUtils.smootherstep(gone, 0, t.departureWalk));
   }
-}
 
-function hidesPond(eye: THREE.Vector3, at: THREE.Vector3): boolean {
-  POND_LENS.position.copy(eye);
-  POND_LENS.lookAt(at);
-  POND_LENS.updateMatrixWorld();
-  const edge = tuning.meadowEchoes.crestPondMargin;
-  return RIM.every(p => {
-    const q = SEEN.copy(p).project(POND_LENS);
-    return q.z >= 1 || Math.abs(q.x) > edge || Math.abs(q.y) > edge;
-  });
+  /** Where the lens looks as she walks on from listening: at her, drawn `departureLead` of the way to `ahead` as she goes. */
+  departLook(c: THREE.Vector3, ahead: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    const t = tuning.meadowEchoes, stand = garden.stands[2];
+    const walked = THREE.MathUtils.smootherstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, t.departureWalk);
+    return out.copy(c).add(this.exitLook).lerp(ahead, walked * t.departureLead);
+  }
 }
 
 /** The bearing and elevation of a point as seen from an eye. */
