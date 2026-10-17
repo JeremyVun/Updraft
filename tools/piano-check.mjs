@@ -27,7 +27,7 @@ try {
   await page.evaluate(()=>__game.sound.start());
   const state=()=>page.evaluate(()=>{
     const g=__game,p=g.piano,s=g.story.current.piano;
-    // The guide in the order it is followed: always from its low-keys end.
+    // The guide in the order it is traced, from its ringed start.
     const path=Array.from({length:25},(_,i)=>{const v=p.guideAlong(i/24,p.keys.clone()).project(g.rig.camera);return [(v.x+1)*innerWidth/2,(1-v.y)*innerHeight/2]});
     const plane=g.glider.position.clone().project(g.rig.camera);
     return {time:s.now,beat:s.at,phrase:s.phrase,matched:p.matched,expect:p.expect&&{index:p.expect.index,tilt:p.expect.tilt},progress:p.gesture.progress,
@@ -78,7 +78,7 @@ try {
   assert.equal(pianoSounds(await state()),0,'no note when she sits: the bough opens the duet');
   await waitSeconds(1.4);
   await shot('wind-call');
-  assert((await state()).plane.visible&&!(await state()).plane.held,'the paper waits on the music desk, in view');
+  assert((await state()).plane.visible&&!(await state()).plane.held,'the paper waits in the bough\'s fork, in view');
   assert.equal((await state()).expect,null,'piano input waits for the wind call');
   await pointer((await state()).path,12);
   await windOverKeys();
@@ -90,7 +90,7 @@ try {
   {
     const s=await state();
     assert(Math.abs(s.plane.screen[0])<1&&Math.abs(s.plane.screen[1])<1&&s.plane.screen[2]<1,'the paper plane is in frame at the invitation');
-    assert(s.path[0][0]<s.path.at(-1)[0],'the guide runs left to right');
+    assert(s.path[0][0]<s.path.at(-1)[0],'the first guide sweeps to the right');
   }
   // Left alone, the bough says the call once more, softer, and then waits; idle wind never answers.
   const said=(await state()).bough.length;
@@ -111,7 +111,7 @@ try {
     await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:90000});
     const before=await state();
     const trace=before.path;
-    for(const [x,y] of [trace[0],trace.at(-1)])assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
+    for(const [x,y] of trace)assert(x>4&&x<viewport.width-4&&y>4&&y<viewport.height-4,'guide must fit in view');
     const points=Array.from({length:81},(_,i)=>{const f=i/80*(trace.length-1),k=Math.min(trace.length-2,Math.floor(f)),u=f-k;
       return [trace[k][0]+(trace[k+1][0]-trace[k][0])*u,trace[k][1]+(trace[k+1][1]-trace[k][1])*u+(n===0?18:0)];});
     const startedAt=Date.now();
@@ -128,7 +128,7 @@ try {
     const reply=await page.evaluate(async i=>{const {MEADOW_ANSWERS}=await import('/src/audio/meadow-duet.ts');const a=MEADOW_ANSWERS[i];return {clip:a.clip.duration,end:a.end,onsets:a.notes.map(x=>x.at)};},n);
     const sounded=s.duet.filter(d=>d.what===`answer ${n+1}`);
     assert.equal(sounded.length,1,`answer ${n+1} sounds once, as one recording`);
-    const hands=s.notes.filter(x=>x.src==='answer').slice(-reply.onsets.length);
+    const hands=s.notes.slice(-reply.onsets.length);
     const offsets=hands.map(x=>x.t-hands[0].t),expected=reply.onsets.map(t=>t-reply.onsets[0]);
     const drift=Math.max(...offsets.map((t,i)=>Math.abs(t-expected[i])));
     assert(drift<0.05,`her hands follow answer ${n+1}'s own onsets whatever the stroke (${drift.toFixed(3)} s)`);
@@ -149,7 +149,7 @@ try {
       assert.equal((await state()).notes.length,s.notes.length,'wind between answers plays nothing');
       await page.waitForFunction(k=>__game.windBough.log.length>k,next,{timeout:60000});
       const call=(await state()).bough.at(-1);
-      assert(call.at>=s.notes.filter(x=>x.src==='answer').at(-1).t,'the next call waits for her answer');
+      assert(call.at>=s.notes.at(-1).t,'the next call waits for her answer');
     }
   }
   console.log('ANSWERS',JSON.stringify(report.answers));
@@ -159,20 +159,20 @@ try {
     const due=finale.at+(await page.evaluate(()=>__game.tuning.windBough.inhale))+(await page.evaluate(async()=>(await import('/src/audio/meadow-duet.ts')).MEADOW_FINALE.greenAt));
     assert(finale.finale&&Math.abs(s.roseFrom-due)<0.05,`the greening starts on the finale's arrival (${s.roseFrom} vs ${due})`);
     assert(s.duet.some(d=>d.what==='finale'),'the flute finale sounded');
-    const last=s.notes.filter(x=>x.src==='answer').at(-1);
-    assert(finale.at>last.t,'the finale waits for her last answer');
+    assert(finale.at>s.notes.at(-1).t,'the finale waits for her last answer');
     report.greening={roseFrom:s.roseFrom,due,finaleAt:finale.at};
   }
+  const answered=(await state()).notes.length,inSatchel=()=>page.evaluate(()=>__game.cygnet.seat==='satchel');
   assert((await state()).waiting[2]>0,'far ground stays grey at the start of the final wave');
-  await shot('wave-start');await waitSeconds(5);await shot('cygnet-keys');await waitSeconds(3);await shot('wave-wide');
+  await shot('wave-start');assert(await inSatchel(),'the cygnet hears the finale from the satchel');
+  await waitSeconds(5);await shot('cygnet-satchel');assert(await inSatchel(),'the cygnet stays in the satchel');
+  await waitSeconds(3);await shot('wave-wide');
   for(const p of (await state()).subjects)assert(Math.abs(p[0])<0.94&&Math.abs(p[1])<0.94&&p[2]<1,'child and piano remain in the finale frame');
   await page.waitForFunction(()=>__game.story.current.piano.at==='done',null,{timeout:90000});
   await shot('done');
   {
-    const s=await state(),steps=s.notes.filter(x=>x.src==='bird');
-    assert.equal(steps.length,6,'six footfalls on the keys');
-    assert(steps.every(x=>[60,68,75].includes(x.midi)),'the cygnet sounds only the finale chord: C, A♭, E♭');
-    report.steps=steps;
+    const s=await state();
+    assert.equal(s.notes.length,answered,'nothing plays the keys under the finale: the flute carries it alone');
     assert(s.plane.visible&&s.plane.held,'the paper is back in her hand');
   }
   assert.equal((await state()).matched,4);
@@ -184,7 +184,7 @@ try {
   await waitSeconds(3);
   assert(await page.evaluate(()=>__game.child.moving||!__game.glider.held),'the walk resumes after the piano');
   assert.equal(report.errors.length,0,report.errors.join('\n'));
-  console.log('Piano passed: bough opens, one softer repeat, four answers at their own tempo, idle and wind silent, finale cue, chord-tone steps, paper in view.');
+  console.log('Piano passed: bough opens, one softer repeat, four answers at their own tempo, idle and wind silent, finale cue with the cygnet in the satchel and the keys still, paper in view.');
 } finally {
   fs.writeFileSync(`${prefix}-report.json`,JSON.stringify(report,null,2));
   try{await stopReview?.();}finally{

@@ -1,6 +1,6 @@
 // Render this checkout's meadow music through the game's sound, from the walk's last stretch through her sitting, the
-// four calls, each answer played once the guide is followed (`traceSeconds` after the call ends), the finale with the
-// cygnet's steps, and the warm bed after it.
+// four calls, each answer played once the guide is followed (`traceSeconds` after the call ends), the finale, and
+// the warm bed after it.
 // Usage: [BASE=http://127.0.0.1:5230/] node tools/meadow-duet-render.mjs [out.wav] [traceSeconds]. Music only;
 // WORLD=1 keeps the wind; DEBUG=1 prints progress.
 // The timeline follows the duet's own waits (`tuning.windBough`, `tuning.piano`); a player's pauses are not modelled.
@@ -22,7 +22,7 @@ try {
   const result = await session.page.evaluate(async ({ trace, world }) => {
     const { tuning } = await productionModule('/src/tuning.ts');
     const { meadowMusic } = await productionModule('/src/audio/meadow-music.ts');
-    const { MEADOW_CALLS, MEADOW_FINALE, MEADOW_STEPS } = await productionModule('/src/audio/meadow-duet.ts');
+    const { MEADOW_CALLS, MEADOW_FINALE } = await productionModule('/src/audio/meadow-duet.ts');
     // Steps of eight render quanta, so every suspend falls on a quantum boundary.
     const rate = 48000, fps = rate / 1024, inhale = tuning.windBough.inhale, walkFor = 14;
     // The story's waits, in seconds from the start of the render.
@@ -40,9 +40,6 @@ try {
     }
     events.push({ at: bough + inhale + MEADOW_FINALE.startAt, run: () => meadowMusic.duet(MEADOW_FINALE.clip, 0, 'finale', 0) });
     marks.push({ what: 'finale', at: bough + inhale + MEADOW_FINALE.startAt }, { what: 'greening', at: bough + inhale + MEADOW_FINALE.greenAt });
-    // The cygnet's six footfalls along the keys from the arrival, as `Piano.walkKeys` spaces them.
-    [0, 1, 2, 0, 1, 2].forEach((step, i) => events.push({ at: bough + inhale + MEADOW_FINALE.greenAt + (i + 0.5) / 6 * tuning.piano.walkKeys,
-      run: () => meadowMusic.duet(MEADOW_STEPS[step], 0, 'step', tuning.meadowMusic.stepDb) }));
     const after = bough + inhale + MEADOW_FINALE.duration + tuning.piano.completionRest;
     marks.push({ what: 'warm bed', at: after });
     const seconds = Math.ceil(after + 30), ticks = Math.floor(seconds * fps) - 2;

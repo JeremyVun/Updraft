@@ -38,15 +38,25 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
-function hollowBough(points: number[][], radius: number): THREE.BufferGeometry {
-  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+/** Its two pipes, in its own units from its foot: the bough to the mouth, and the limb that forks off low down. */
+export const BOUGH_PIPES = [
+  { points: [[0,-.4,0],[-.35,.7,-.12],[-.22,1.85,-.2],[.2,3,-.05],[.75,3.85,.3],[.8,4.15,.9]], radius: .27 },
+  { points: [[-.26,.8,-.1],[-.85,1.35,-.16],[-1.1,2.25,.05],[-.94,2.9,.45]], radius: .16 },
+] as const;
+
+/** A pipe's outer radius `t` of the way along it: narrower in the middle and flaring open at the end. */
+export function boughRadius(radius: number, t: number): number {
+  return radius * (1 + .9 * THREE.MathUtils.smoothstep(t, .78, 1)) * (1 - .25 * Math.sin(t * Math.PI));
+}
+
+function hollowBough(points: readonly (readonly number[])[], radius: number): THREE.BufferGeometry {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
   const steps = 48, sides = 20, frames = curve.computeFrenetFrames(steps, false);
   const positions: number[] = [], colours: number[] = [], indices: number[] = [];
   const outer = new THREE.Color('#918169'), inner = new THREE.Color('#504332'), rim = new THREE.Color('#c7b797');
   for (let wall = 0; wall < 2; wall++) for (let i = 0; i <= steps; i++) {
     const t = i / steps, centre = curve.getPointAt(t);
-    const flare = 1 + .9 * THREE.MathUtils.smoothstep(t, .78, 1);
-    const r = radius * flare * (1 - .25 * Math.sin(t * Math.PI)) - wall * radius * .25;
+    const r = boughRadius(radius, t) - wall * radius * .25;
     const colour = (wall ? inner : outer).clone().lerp(rim, THREE.MathUtils.smoothstep(t, .94, 1) * .75);
     for (let j = 0; j <= sides; j++) {
       const a = j / sides * Math.PI * 2;
@@ -76,6 +86,8 @@ function hollowBough(points: number[][], radius: number): THREE.BufferGeometry {
 
 export class WindBough {
   readonly group = new THREE.Group();
+  /** Where its pipes stand from, which `BOUGH_PIPES` are measured from. */
+  readonly foot = new THREE.Vector3();
   readonly mouth = new THREE.Vector3();
   readonly crown = new THREE.Vector3();
   readonly log: { at: number; finale: boolean; duration: number; trimDb: number }[] = [];
@@ -96,10 +108,8 @@ export class WindBough {
   constructor() {
     const t = tuning.windBough, x = PLACE.x + t.offset[0], z = PLACE.z + t.offset[1];
     const foot = heightAt(x, z);
-    const shape = mergeGeometries([
-      hollowBough([[0,-.4,0],[-.35,.7,-.12],[-.22,1.85,-.2],[.2,3,-.05],[.75,3.85,.3],[.8,4.15,.9]], .27),
-      hollowBough([[-.26,.8,-.1],[-.85,1.35,-.16],[-1.1,2.25,.05],[-.94,2.9,.45]], .16),
-    ]);
+    this.foot.set(x, foot, z);
+    const shape = mergeGeometries(BOUGH_PIPES.map(pipe => hollowBough(pipe.points, pipe.radius)));
     const material = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms }, vertexShader: VERT,
       fragmentShader: FRAG, side: THREE.DoubleSide });
     const body = new THREE.Mesh(shape, material);
@@ -115,6 +125,16 @@ export class WindBough {
     this.mouth.set(x + .8, foot + 4.1, z + .9);
     this.crown.copy(this.mouth).y += .4;
     this.ribbons.mesh.visible = false;
+  }
+
+  /**
+   * Where the paper plane sticks while she plays: flown nose first into the fork, its wings caught against both
+   * pipes. `tools/meadow-plane-check.mjs` measures it against the pipes' own surfaces.
+   */
+  planeRest(at: THREE.Vector3, rotation: THREE.Euler): void {
+    const { planeAt: [x, y, z], planeTurn: [pitch, yaw, roll] } = tuning.windBough;
+    at.set(x, y, z).add(this.foot);
+    rotation.set(pitch, yaw, roll, 'YXZ');
   }
 
   play(phrase: WindPhrase, time: number, finale = false, trimDb = 0): number {

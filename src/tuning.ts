@@ -1187,16 +1187,16 @@ export const tuning = {
   windBough: {
     offset: [3.5, -1.2], inhale: 1.2, answerAfter: .65, finalRest: 1.4,
     ribbonAlpha: .3, ribbonWidth: .045,
+    /**
+     * The paper plane stuck in the fork while she plays: where it sits from the bough's foot (metres) and how it is
+     * turned (pitch, yaw, roll), found by flying it nose first into the fork until both wings catch.
+     */
+    planeAt: [-0.605, 2.016, 0.152], planeTurn: [0.6, 3.6, 0.25],
   },
   /** The meadow's recordings (`audio/meadow-music.ts`); cuts and measured gains live in `audio/meadow-cuts.ts`. */
   meadowMusic: {
     /** Trims (dB) on the gains that level each part to the room reference. */
     walkDb: 0, callDb: 0, answerDb: 0, finaleDb: 0, afterDb: 0,
-    /**
-     * The cygnet's steps under the finale sit `stepDb` under the answers, so the flute leads; `stepVelocity` is their
-     * strike on the piano's own strings until the recording is decoded.
-     */
-    stepDb: -10, stepVelocity: 0.12,
     /** With no answer begun this long after a call, the bough says it once more, `callAgainDb` softer, and then waits. */
     callAgainAfter: 25, callAgainDb: -4,
     /** The warm bed swells in over this long when it begins, after the finale has rung down. */
@@ -1211,20 +1211,27 @@ export const tuning = {
     place: [-18, -678],
     initialRadius: 15, initialSoft: 4,
     /**
-     * The guide is the hit target: a straight line `guideSpan` keyboard-widths long (`guidePortraitSpan` times that on a
-     * tall screen), `guideAhead` piano units in front of the stool and `guideOver` metres over the piano's foot, so it
-     * lies against the land; its ends rise or fall `guideTilt` metres with the answer's melody. A stroke within
-     * `guideTolerance` screen heights of it counts.
+     * The guide is the hit target, traced on screen above the piano: `guideWidth` screen heights across, or on a tall
+     * screen `guidePortraitWidth` of its width, centred over the piano but `guideMargin` screen heights inside the
+     * frame's sides, with its lowest point `guideAbove` screen heights over the lid and its highest no more than
+     * `guideCeiling` over the middle of the view. A finger within `guideTolerance` of half its width traces it (about
+     * a tenth of the screen's height on a wide screen), and `guideEnough` of it plays the answer; the drawn trace
+     * catches up with the finger at `guideCatchUp` per second.
      */
-    guideSpan: 2.4, guidePortraitSpan: 1.8, guideAhead: 2.6, guideOver: 0.55, guideTilt: 0.22, guideTolerance: 0.08,
-    /** The guide is drawn this much bolder than the other invitations, because busy sunlit grass swallows a fine line. */
-    guideWeight: 2,
+    guideWidth: 0.5, guidePortraitWidth: 0.66, guideMargin: 0.06, guideAbove: 0.07, guideCeiling: 0.4,
+    guideTolerance: 0.44, guideEnough: 0.9, guideCatchUp: 14,
+    /**
+     * The guide is drawn `guideWeight` times bolder than the other invitations, so it reads against a bright sky, but
+     * no thicker than `guideBoldest` of its own width.
+     */
+    guideWeight: 2.4, guideBoldest: 0.08,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
     /**
-     * The paper plane waits on the music desk's ledge while she plays (piano units: across, up, out), leaning back
-     * `planeLean` radians; it glides there over at least `planeGlide` seconds and back into her hand as she gets up.
+     * The paper plane glides into the bough's fork (`windBough.planeAt`) over at least `planeGlide` seconds as she
+     * comes to the piano, and back into her hand as she gets up: carried up `planeLift` metres over her or the lid,
+     * and sliding the last `planeLead` metres into the fork, and the first out of it, along its own line.
      */
-    planeRest: [0.4, 1.06, 0.47], planeTurn: 0, planeLean: 1.15, planeRoll: 0, planeGlide: 1.2,
+    planeGlide: 1.2, planeLift: 3, planeLead: 2.5,
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
@@ -1235,10 +1242,6 @@ export const tuning = {
     /** How far a key dips as it sounds, and how long it takes to come back up. */
     dip: 0.045,
     dipRelease: 0.3,
-    /** The cygnet on the keys: how long it takes to walk them, and how far along them it starts and finishes. */
-    walkKeys: 6.5,
-    walkFrom: 0.46,
-    walkTo: 0.95,
     /** How far the room's music pulls back while they are sitting at it: all the way, so the tune is heard alone. */
     hush: 1,
     /** Fade from sitting through the first key, reaching silence before the demonstration phrase. */

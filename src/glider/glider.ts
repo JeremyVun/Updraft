@@ -60,13 +60,18 @@ void main() {
   gl_FragColor = vec4(0.04, 0.08, 0.1, uOpacity * (1.0 - smoothstep(0.2, 1.0, r)));
 }`;
 
+/** The folded paper's triangles, in its own units before it is scaled: both wings, and the keel folded under them. */
+export const PAPER_TRIANGLES: readonly (readonly [number, number, number])[][] = (() => {
+  const nose = [0, 0, 1.5] as const;
+  const tail = [0, 0.02, -0.95] as const;
+  const left = [-1.15, 0.16, -0.95] as const;
+  const right = [1.15, 0.16, -0.95] as const;
+  const keel = [0, -0.34, -0.8] as const;
+  return [[nose, tail, left], [nose, right, tail], [nose, keel, tail], [nose, tail, keel]];
+})();
+
 function paperPlane(): THREE.BufferGeometry {
-  const nose = [0, 0, 1.5];
-  const tail = [0, 0.02, -0.95];
-  const left = [-1.15, 0.16, -0.95];
-  const right = [1.15, 0.16, -0.95];
-  const keel = [0, -0.34, -0.8];
-  const tris = [nose, tail, left, nose, right, tail, nose, keel, tail, nose, tail, keel];
+  const tris = PAPER_TRIANGLES.flat();
   const pos = new Float32Array(tris.flat());
   const paper = new Float32Array(tris.flatMap(([x, y, z]) => [0.5 + x * 0.4 + (y < -0.1 ? 0.3 : 0), 0.5 + z * 0.4]));
   const geo = new THREE.BufferGeometry();

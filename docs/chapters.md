@@ -307,14 +307,17 @@ joining the patch of colour on the near knoll where a piano stands (`PLACE`, `tu
 seen through a shallow saddle. The rest stays grey under the waiting region (`life.regions.waiting`,
 `uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
-**The piano is the key; music brings colour.** The plane leads the child to the piano and glides ahead of her onto
-its music desk, where it waits in view until she gets up and it comes back to her hand. She sits; the piano is
-silent, and only her hands and the cygnet's feet ever move its keys. The hollow wooden bough beside it opens the duet
+**The piano is the key; music brings colour.** The plane leads the child to the piano and glides ahead of her, nose
+first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there with its wings
+caught against both (`tuning.windBough.planeAt`), in view until she gets up and it comes back out to her hand. She
+sits; the piano is silent, and only her hands ever move its keys. The bough opens the duet
 on the breeze, a recorded flute phrase; the child turns to listen. Its call finishes before the guide appears for the
-player's reply: a straight line low over the grass in front of her, drawn bold in a dark halo so it reads against the
-land, always from its ringed low-keys end on the left to the high keys on the right, tilted gently with the rise or
-fall of her answer's melody (`tuning.piano.guide*`). A broad stroke near it in its direction counts and effort is
-kept across strokes; followed far enough, it plays her recorded answer whole, at its own tempo, while her hands and
+player's reply: a simple shape to trace with a finger, drawn bold in a dark halo above the piano and centred across
+the view, starting from a ringed end. Each phrase has its own: a sweep to the right, a sweep back to the left, an
+arc, and a wave (`world/piano-stroke.ts`); the straight sweeps rise gently with her answer's melody
+(`tuning.piano.guide*`). Whatever of it a finger or cursor passes close by is traced, at any speed and with a wobble,
+and the drawn trace follows it; effort is
+kept across strokes; traced far enough, it plays her recorded answer whole, at its own tempo, while her hands and
 the dipping keys follow its onsets, and its last notes ring on in the room under the bough's next call. Stroke speed
 changes nothing. With no answer begun `callAgainAfter` (25 s) after a
 call, the bough says it once more, `callAgainDb` softer; after that only the guide invites, and nothing times out.
@@ -324,11 +327,11 @@ loose eddies wakes the ground to
 finale, whose arpeggio's arrival sends colour across the whole island; it is the reward, with no completion phrase.
 The cuts are one table, `audio/meadow-cuts.ts`; `node tools/meadow-music-cuts.mjs` makes the files and measures
 onsets, melody, tilts and the greening cue into `audio/meadow-cuts-measured.ts`, which `audio/meadow-duet.ts`
-turns into calls, answers, steps and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
+turns into calls, answers and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera eases a step up and out from her and
 stays there (`tuning.piano.steps`, each a share of the way from the playing view to the walk's view of her), and the
-finale is the last and largest step: on its arrival the cygnet climbs out onto the keys and walks them, each footfall
-a soft recorded C, A♭ or E♭ of the finale's chord under the flute, while the camera opens the rest of the way to the
+finale is the last and largest step: the flute plays it alone, the cygnet listening from the satchel and looking
+about as the colour pours out, while the camera opens the rest of the way to the
 walk's view (about 15 m above her and 34 m back, 26 m over the ground below it; nearer than the walk's view before the
 piano, `tuning.meadowPlane.cameraAwake*`) over `finaleEase` seconds, low
 enough that grass, flowers and hills keep their detail. The final front crosses at `finaleSpeed`, pouring down off

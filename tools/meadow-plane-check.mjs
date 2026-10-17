@@ -148,6 +148,71 @@ for(const portrait of [false,true]){
   }
  }
 }
+// At the piano the paper flies nose first into the bough's fork and sticks there, its wings caught against both pipes,
+// then comes back out to her hand; on the way it passes through neither the piano's case nor the bough.
+const lodged={};
+{
+  const {piano}=await import('../src/world/piano.ts');
+  const {windBough,BOUGH_PIPES,boughRadius}=await import('../src/world/wind-bough.ts');
+  const {PAPER_TRIANGLES}=await import('../src/glider/glider.ts');
+  const {PianoStop}=await import('../src/story/piano.ts');
+  // The pipes' outer surfaces, as the bough builds them (its wall bulges by up to 5% round each ring).
+  const pipes=BOUGH_PIPES.map(({points,radius})=>{
+    const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p).add(windBough.foot)));
+    return Array.from({length:193},(_,i)=>({p:curve.getPointAt(i/192),r:boughRadius(radius,i/192)*1.05}));
+  });
+  const line=new THREE.Line3(),near=new THREE.Vector3();
+  const clearOf=(p,pipe)=>{let best=Infinity;for(let i=0;i<pipe.length-1;i++){line.set(pipe[i].p,pipe[i+1].p);const u=line.closestPointToPointParameter(p,true);
+    best=Math.min(best,p.distanceTo(line.at(u,near))-(pipe[i].r+(pipe[i+1].r-pipe[i].r)*u));}return best;};
+  const paper=[];
+  for(const [a,b,c] of PAPER_TRIANGLES)for(let i=0;i<=8;i++)for(let j=0;j<=8-i;j++){const u=i/8,v=j/8,w=1-u-v;
+    paper.push(new THREE.Vector3(...a).multiplyScalar(w).addScaledVector(new THREE.Vector3(...b),u).addScaledVector(new THREE.Vector3(...c),v).multiplyScalar(tuning.paperCarry.scale));}
+  const placed=(at,rotation)=>{const q=new THREE.Quaternion().setFromEuler(rotation);return paper.map(p=>p.clone().applyQuaternion(q).add(at));};
+  const at=new THREE.Vector3(),turn=new THREE.Euler();
+  windBough.planeRest(at,turn);
+  const points=placed(at,turn),gaps=pipes.map(pipe=>Math.min(...points.map(p=>clearOf(p,pipe))));
+  assert(gaps.every(g=>g>0),`the paper is inside a pipe: ${gaps}`);
+  assert(gaps.every(g=>g<0.03),`the paper is not caught against both pipes: ${gaps}`);
+  lodged.gaps=gaps.map(g=>+g.toFixed(3));
+  // The case, the propped lid and the keys, in the piano's own units.
+  const inverse=piano.group.matrix.clone().invert(),local=new THREE.Vector3();
+  const inCase=p=>{local.copy(p).applyMatrix4(inverse);return Math.abs(local.x)<0.95&&local.y>-0.1&&local.y<2.05&&local.z>-0.6&&local.z<0.85;};
+  const fly=(from,to,hand)=>{
+    const stop=new PianoStop(),pinned={at:new THREE.Vector3(),rotation:new THREE.Euler()};
+    const plane={position:from.clone(),group:{quaternion:new THREE.Quaternion()},visible:true,keptSmall:false,
+      pin(a,r){pinned.at.copy(a);pinned.rotation.copy(r);this.position.copy(a);},hold(){}};
+    const child={yaw:Math.PI,handPosition:out=>out.copy(hand)};
+    stop.now=0;stop.glidePlane(to,{plane,child});
+    let closest=Infinity,hit=0,lowest=Infinity;
+    for(let t=0;stop.planeGlide||t===0;t+=1/60){
+      stop.now=t;stop.tendPlane({plane,child});
+      const pts=placed(pinned.at,pinned.rotation),end=to==='fork'?stop.planeGlide===null:t<1/30;
+      for(const p of pts){
+        if(inCase(p))hit++;
+        lowest=Math.min(lowest,p.y-heightAt(p.x,p.z));
+        if(!end)closest=Math.min(closest,...pipes.map(pipe=>clearOf(p,pipe)));
+      }
+      if(t>30)break;
+    }
+    return {closest,hit,lowest};
+  };
+  // From wherever she is on her way up when she notices the piano, and back to her hand at the stool and round its end.
+  const ground=(x,z,up=1)=>new THREE.Vector3(x,heightAt(x,z)+up,z);
+  const flights=[];
+  for(const bearing of [-0.9,-0.5,-0.2,0,0.3,0.6])
+    flights.push(['fork',ground(piano.stand.x+Math.sin(bearing)*24,piano.stand.z+Math.cos(bearing)*24),null]);
+  flights.push(['fork',ground(piano.stand.x,piano.stand.z),null]);
+  for(const hand of [ground(piano.seat.x,piano.seat.z,1.1),ground(piano.stand.x,piano.stand.z),ground(piano.wayRound[0].x,piano.wayRound[0].z)])
+    flights.push(['hand',at.clone(),hand]);
+  for(const [to,from,hand] of flights){
+    const r=fly(from,to,hand??new THREE.Vector3());
+    assert.equal(r.hit,0,`the paper flies through the piano on its way ${to==='fork'?'in':'out'} from ${from.toArray().map(v=>v.toFixed(1))}`);
+    assert(r.closest>0,`the paper passes through the bough on its way ${to==='fork'?'in':'out'}: ${r.closest}`);
+    assert(r.lowest>0.05,`the paper skims through the ground: ${r.lowest}`);
+    lodged.closest=Math.min(lodged.closest??Infinity,+r.closest.toFixed(3));
+  }
+}
+console.log(`Lodged in the fork ${JSON.stringify(lodged.gaps)} m from the two pipes; nearest pass on the way in or out ${lodged.closest} m.`);
 console.log(JSON.stringify(results.filter(r=>r.walkingFps),null,2));
 console.log(`Strong-gust maximum gap ${Math.max(...results.filter(r=>r.gap).map(r=>r.gap))}; worst projected edge ${Math.max(...results.filter(r=>r.edge).map(r=>r.edge))}.`);
-console.log('PASS: wider flight and higher updrafts, 30/60/120fps, desktop/portrait child framing, return to view after gusts, continuous runaway recovery, free departure, pursuit detours.');
+console.log('PASS: paper caught in the bough\'s fork clear of case and pipes, wider flight and higher updrafts, 30/60/120fps, desktop/portrait child framing, return to view after gusts, continuous runaway recovery, free departure, pursuit detours.');

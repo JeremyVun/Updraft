@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PianoStrings } from '../audio/audio';
 import type { AudioOut } from '../creatures/voices';
-import { MEADOW_STEPS, type MeadowAnswer } from '../audio/meadow-duet';
+import type { MeadowAnswer } from '../audio/meadow-duet';
 import { meadowMusic } from '../audio/meadow-music';
 import { KeyLine } from '../fx/keyline';
 import { NoteTraces } from '../fx/notetraces';
@@ -14,12 +14,12 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
 import type { PointerInput } from '../input/pointer';
-import { PianoStroke } from './piano-stroke';
+import { guideShape, PianoStroke } from './piano-stroke';
 
 /**
  * An upright piano standing in the meadow grass with nobody at it. It is another piece of home the dream has left in
  * the wrong place. It sounds only in the duet: her answers to the bough, which the player's wind starts along the
- * guide, and the cygnet's steps on its keys under the finale.
+ * guide.
  */
 
 /**
@@ -264,17 +264,11 @@ function keysGeometry(): THREE.BufferGeometry {
   return mergeGeometries(parts);
 }
 
-type Source = 'answer' | 'bird';
-
 interface Scheduled {
   at: number;
   midi: number;
-  /** The key that goes down, which for the cygnet is the one under its foot. */
   key: number;
   velocity: number;
-  source: Source;
-  /** Which of the cygnet's recorded steps it is. */
-  step: number;
   /** An answer note to sound on the piano's own strings, because its recording could not play. */
   voiced: boolean;
   active: boolean;
@@ -284,13 +278,12 @@ export interface NoteLog {
   t: number;
   midi: number;
   key: number;
-  src: Source;
   recorded: boolean;
 }
 
 const QUEUE = 48;
-/** The cygnet's footfalls, as indices into its recorded steps: two rising A♭-major arpeggios, C, A♭, E♭. */
-const FOOTFALLS = [0, 1, 2, 0, 1, 2];
+/** The top of the propped lid, in piano units. */
+const LID_TOP = TOP + 0.43;
 
 export class Piano {
   readonly group = new THREE.Group();
@@ -301,6 +294,8 @@ export class Piano {
   /** Her way round the end away from the bough and out behind the case, leaving the stool. */
   readonly wayRound = [new THREE.Vector3(), new THREE.Vector3()] as const;
   readonly yaw = YAW;
+  /** How high its propped lid reaches, in the world. */
+  readonly top: number;
   /** The last few notes it has played, for tuning it by eye when nobody can listen. */
   readonly log: NoteLog[] = [];
 
@@ -317,12 +312,19 @@ export class Piano {
   readonly wave = new PianoWave();
   private readonly back = new THREE.Vector2();
   private readonly keyAt = new THREE.Vector3();
-  private readonly guideA = new THREE.Vector3();
-  private readonly guideB = new THREE.Vector3();
+  private readonly onScreen = new THREE.Vector2();
+  private readonly pointerFrom = new THREE.Vector2();
+  private readonly pointerTo = new THREE.Vector2();
+  private readonly shapeAt = new THREE.Vector2();
+  private readonly lid = new THREE.Vector3();
+  private camera: THREE.PerspectiveCamera | null = null;
+  /** Where the guide sits on screen this frame, in screen heights from the middle: its middle and half its width. */
+  private readonly guideMid = new THREE.Vector2();
+  private guideHalf = 0.3;
+  /** How far the drawn trace has caught up with the finger. */
+  private shownProgress = 0;
   private now = 0;
   private out: AudioOut | null = null;
-  /** On a tall screen the scene is small, so the guide reaches further across it. */
-  private portrait = false;
   /**
    * The answer the player's wind can start: while this is set, following the guide far enough plays it, whole and at
    * its own tempo, and `matched` counts it.
@@ -334,7 +336,6 @@ export class Piano {
   private playing: MeadowAnswer | null = null;
   readonly gesture = new PianoStroke();
   engaged = false;
-  finale = false;
   performedAt = -1000;
   performedKey = 0.5;
   /** When the answer she last played has rung down, on the story clock. */
@@ -344,6 +345,7 @@ export class Piano {
   set expect(answer: MeadowAnswer | null) {
     this.expected = answer;
     if (answer) this.shape = answer;
+    if (answer) this.shownProgress = 0;
     this.gesture.reset();
   }
 
@@ -375,6 +377,7 @@ export class Piano {
 
     this.local(0, KEY_Y + 0.03, KEY_BACK + KEY_LEN * 0.5, this.keys);
     /** The way up the hill behind the case, which is where every note goes. */
+    this.top = this.local(0, LID_TOP, 0, this.lid).y;
     this.local(0, 0, -1, this.keyAt);
     this.back.set(this.keyAt.x - this.group.position.x, this.keyAt.z - this.group.position.z).normalize();
     /** The lift is a fact about how the child's own pose sits, so it is added in world units, after the scale. */
@@ -383,7 +386,7 @@ export class Piano {
     this.local(-1.5, 0, 1.3, this.wayRound[0]);
     this.local(-1.5, 0, -0.9, this.wayRound[1]);
     for (let i = 0; i < QUEUE; i++) {
-      this.queue.push({ at: 0, midi: 60, key: 0, velocity: 0, source: 'answer', step: -1, voiced: false, active: false });
+      this.queue.push({ at: 0, midi: 60, key: 0, velocity: 0, voiced: false, active: false });
     }
   }
 
@@ -396,82 +399,76 @@ export class Piano {
     return { x: this.group.position.x, z: this.group.position.z + 0.45, radius: 1.5 * SCALE };
   }
 
-  /**
-   * The cygnet walking the keys from `from` to `to` (shares of the keyboard) over `seconds` from `at`: each footfall
-   * presses the key under it and sounds the next of its recorded steps, softly, under the bough's finale.
-   */
-  walkKeys(from: number, to: number, seconds: number, at = this.now): void {
-    FOOTFALLS.forEach((step, i) => {
-      const along = (i + 0.5) / FOOTFALLS.length;
-      const key = Math.round(THREE.MathUtils.clamp(from + (to - from) * along, 0, 1) * (KEY_COUNT - 1));
-      this.schedule(at + along * seconds, MEADOW_STEPS[step].midi, key, tuning.meadowMusic.stepVelocity, 'bird', step);
-    });
-  }
-
-  /** A point standing on the keys, `t` from the bottom note to the top, for something small enough to walk them. */
+  /** A point just over the keys, `t` from the bottom note to the top, where her hands play. */
   alongKeys(t: number, out: THREE.Vector3): THREE.Vector3 {
     return this.local(THREE.MathUtils.clamp(t - 0.5, -0.5, 0.5) * (WIDTH - 0.12), KEY_Y + 0.05, KEY_BACK + KEY_LEN * 0.6, out);
   }
 
   /**
-   * The guide, a straight line low over the grass in front of her and wider than the piano, so it reads against the
-   * land; `t` runs from its low-keys end to its high-keys end, where it rises or falls with the answer's melody.
+   * The guide on screen, in screen heights from the middle (x to the right, y up): centred over the piano just above
+   * its lid, and kept inside the frame. `t` runs from where the trace starts to its end.
    */
+  guideOnScreen(t: number, out: THREE.Vector2): THREE.Vector2 {
+    guideShape(this.shape?.index ?? 0, t, this.shape?.tilt ?? 0, out);
+    return out.multiplyScalar(this.guideHalf).add(this.guideMid);
+  }
+
+  /** The same point in the world, at the piano's distance, for drawing. */
   guideAlong(t: number, out: THREE.Vector3): THREE.Vector3 {
+    const camera = this.camera;
+    if (!camera) return out.copy(this.keys);
+    this.guideOnScreen(t, this.onScreen);
+    out.set(this.onScreen.x * 2 / camera.aspect, this.onScreen.y * 2, 0.5).unproject(camera).sub(camera.position).normalize();
+    return out.multiplyScalar(camera.position.distanceTo(this.keys)).add(camera.position);
+  }
+
+  /** Lays the guide out for the view as it is this frame. */
+  private placeGuide(camera: THREE.PerspectiveCamera): void {
     const g = tuning.piano;
-    this.local((t - 0.5) * (WIDTH - 0.12) * g.guideSpan * (this.portrait ? g.guidePortraitSpan : 1), 0, STOOL_Z + g.guideAhead, out);
-    out.y = this.group.position.y + g.guideOver + (t - 0.5) * 2 * (this.shape?.tilt ?? 0) * g.guideTilt;
-    return out;
-  }
-
-  /** Which way something walking the keys faces: along them, toward the top of the keyboard. */
-  get alongYaw(): number {
-    return YAW + Math.PI / 2;
-  }
-
-  /** Where the paper plane waits while she plays: on the music desk's ledge, leaning back like sheet music. */
-  planeRest(at: THREE.Vector3, rotation: THREE.Euler): void {
-    const [x, y, z] = tuning.piano.planeRest;
-    this.local(x, y, z, at);
-    rotation.set(-tuning.piano.planeLean, YAW + tuning.piano.planeTurn, tuning.piano.planeRoll, 'YXZ');
+    this.camera = camera;
+    this.guideHalf = Math.min(g.guideWidth, camera.aspect * g.guidePortraitWidth) / 2;
+    this.local(0, LID_TOP, 0, this.lid).project(camera);
+    let low = 0, high = 0;
+    for (let i = 0; i <= 16; i++) {
+      const y = guideShape(this.shape?.index ?? 0, i / 16, this.shape?.tilt ?? 0, this.shapeAt).y * this.guideHalf;
+      low = Math.min(low, y);
+      high = Math.max(high, y);
+    }
+    const above = this.lid.y / 2 + g.guideAbove - low;
+    const side = Math.max(0, camera.aspect / 2 - this.guideHalf - g.guideMargin);
+    this.guideMid.set(THREE.MathUtils.clamp(this.lid.x * camera.aspect / 2, -side, side), Math.min(above, g.guideCeiling - high));
+    this.gesture.lay((t, out) => this.guideOnScreen(t, out));
   }
 
   update(dt: number, time: number, camera: THREE.Camera, wind: WindField, out: AudioOut | null, input: PointerInput | null = null, life: LifeField | null = null): void {
     this.now = time;
     this.out = out;
-    this.portrait = camera instanceof THREE.PerspectiveCamera && camera.aspect < 1;
     this.strings.setOutput(out);
     this.group.visible = camera.position.distanceTo(this.keys) < 240;
     if (!this.group.visible) return;
     this.traces.update(dt, wind, life);
-    if (this.engaged && input) this.answer(input, camera);
+    if (camera instanceof THREE.PerspectiveCamera) this.placeGuide(camera);
+    if (this.engaged && input) this.answer(input);
     this.fire();
-    this.line.update(dt, time, this.path, camera, this.expect ? 1 : 0, this.gesture.progress);
+    this.shownProgress += (this.gesture.progress - this.shownProgress) * (1 - Math.exp(-dt * tuning.piano.guideCatchUp));
+    this.line.update(dt, time, this.path, camera, !!this.expect, this.shownProgress);
 
     const fade = dt / tuning.piano.dipRelease;
     for (let i = 0; i < KEY_COUNT; i++) this.dip[i] = Math.max(0, this.dip[i] - fade);
   }
 
   /**
-   * The player's wind along the guide, from its low-keys end: a broad stroke near it counts, effort is kept across
-   * strokes, and following it far enough plays her answer. Nothing but the pointer's own motion moves it.
+   * The player's finger or cursor along the guide, from its ringed start: whatever of it passes close by is traced,
+   * effort is kept across strokes, and tracing it far enough plays her answer. Nothing but the pointer's own motion
+   * moves it.
    */
-  private answer(input: PointerInput, camera: THREE.Camera): void {
-    const reply = this.expect;
+  private answer(input: PointerInput): void {
+    const reply = this.expect, aspect = this.camera?.aspect ?? 1;
     if (!reply || !input.present || input.muted || input.ndc.equals(input.prevNdc)) return;
-    this.guideAlong(0, this.guideA).project(camera);
-    this.guideAlong(1, this.guideB).project(camera);
-    if (this.guideA.z > 1 || this.guideB.z > 1) return;
-    const aspect = camera instanceof THREE.PerspectiveCamera ? camera.aspect : 1;
-    const ax = this.guideA.x * aspect * 0.5, ay = this.guideA.y * 0.5;
-    const dx = (this.guideB.x - this.guideA.x) * aspect * 0.5, dy = (this.guideB.y - this.guideA.y) * 0.5;
-    const length2 = dx * dx + dy * dy;
-    if (length2 < 0.0001) return;
-    const px = input.prevNdc.x * aspect * 0.5 - ax, py = input.prevNdc.y * 0.5 - ay;
-    const qx = input.ndc.x * aspect * 0.5 - ax, qy = input.ndc.y * 0.5 - ay;
-    const previous = (px * dx + py * dy) / length2, current = (qx * dx + qy * dy) / length2;
-    const distance = Math.max(Math.abs(px * dy - py * dx), Math.abs(qx * dy - qy * dx)) / Math.sqrt(length2);
-    if (this.gesture.step(previous, current, distance, tuning.piano.guideTolerance) < 1) return;
+    this.pointerFrom.set(input.prevNdc.x * aspect * 0.5, input.prevNdc.y * 0.5);
+    this.pointerTo.set(input.ndc.x * aspect * 0.5, input.ndc.y * 0.5);
+    const tolerance = tuning.piano.guideTolerance * this.guideHalf;
+    if (this.gesture.follow(this.pointerFrom, this.pointerTo, tolerance) < tuning.piano.guideEnough) return;
     this.matched++;
     this.expect = null;
     this.perform(reply);
@@ -482,15 +479,15 @@ export class Piano {
     const recorded = !!this.out && meadowMusic.duet(reply.clip, 0, `answer ${reply.index + 1}`, tuning.meadowMusic.answerDb);
     this.playing = reply;
     for (const note of reply.notes) {
-      this.schedule(this.now + note.at, note.midi, note.midi - LOW_MIDI, tuning.piano.answerVelocity, 'answer', -1, !recorded);
+      this.schedule(this.now + note.at, note.midi, note.midi - LOW_MIDI, tuning.piano.answerVelocity, !recorded);
     }
     this.answerEnds = this.now + reply.end;
   }
 
-  private schedule(at: number, midi: number, key: number, velocity: number, source: Source, step = -1, voiced = false): void {
+  private schedule(at: number, midi: number, key: number, velocity: number, voiced: boolean): void {
     for (const slot of this.queue) {
       if (slot.active) continue;
-      Object.assign(slot, { at, midi, key, velocity: Math.min(1, velocity), source, step, voiced, active: true });
+      Object.assign(slot, { at, midi, key, velocity: Math.min(1, velocity), voiced, active: true });
       return;
     }
   }
@@ -503,25 +500,20 @@ export class Piano {
     }
   }
 
-  private play({ midi, key, velocity, source, step, voiced }: Scheduled): void {
-    if (key >= 0 && key < KEY_COUNT) this.dip[key] = 1;
-    // The cygnet's steps are recorded too; either voice falls back on the strings until the recording is decoded.
-    const recorded = source === 'bird'
-      ? !!this.out && meadowMusic.duet(MEADOW_STEPS[step], 0, `step ${midi}`, tuning.meadowMusic.stepDb)
-      : !voiced;
-    if (key >= 0 && key < KEY_COUNT && (source === 'answer' || this.finale)) {
+  /** A note of her answer: its key goes down and a trace lifts off it; the strings sound it only if the recording could not. */
+  private play({ midi, key, velocity, voiced }: Scheduled): void {
+    if (key >= 0 && key < KEY_COUNT) {
+      this.dip[key] = 1;
       const notes = this.playing?.notes;
       const low = notes ? Math.min(...notes.map(n => n.midi)) : 0, high = notes ? Math.max(...notes.map(n => n.midi)) : 0;
-      const pitch = source === 'answer' && notes ? (midi - low) / Math.max(1, high - low) : key / (KEY_COUNT - 1);
+      const pitch = notes ? (midi - low) / Math.max(1, high - low) : key / (KEY_COUNT - 1);
       this.traces.spawn(this.alongKeys(key / (KEY_COUNT - 1), this.keyAt), this.back, pitch,
         THREE.MathUtils.clamp(velocity * 2, 0.25, 1), true);
     }
-    if (source === 'answer') {
-      this.performedAt = this.now;
-      this.performedKey = key / (KEY_COUNT - 1);
-    }
-    if (!recorded) this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, tuning.piano.loudness);
-    this.log.push({ t: Math.round(this.now * 100) / 100, midi, key, src: source, recorded });
+    this.performedAt = this.now;
+    this.performedKey = key / (KEY_COUNT - 1);
+    if (voiced) this.strings.note(midi, velocity, (KEYBOARD[key]?.x ?? 0) * 0.5, tuning.piano.loudness);
+    this.log.push({ t: Math.round(this.now * 100) / 100, midi, key, recorded: !voiced });
     if (this.log.length > 90) this.log.shift();
   }
 }

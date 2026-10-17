@@ -1,5 +1,6 @@
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 globalThis.location={search:'?shot'};
 globalThis.window={innerWidth:1600,innerHeight:900,matchMedia:()=>({matches:false})};
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
@@ -23,7 +24,9 @@ for(const fps of [30,60,120]){
   assert.equal(piano.expect,null,'the call must finish before the piano can accept an answer');
   assert.equal(piano.matched,0);assert.deepEqual(wakes,[],'calls cannot restore the meadow');
   until(()=>!!piano.expect);
-  piano.gesture.step(0,.25,0,tuning.piano.guideTolerance);
+  piano.gesture.lay((t,out)=>out.set(-.3+.6*t,0));
+  piano.gesture.follow(new THREE.Vector2(-.3,0),new THREE.Vector2(-.15,0),tuning.piano.guideTolerance*.3);
+  assert(piano.gesture.progress>.2&&piano.gesture.progress<.3,'a stroke along part of the guide traces that part');
   const partial=piano.gesture.progress;
   const count=windBough.log.length;
   until(()=>time>stop.sayAt+2);
@@ -58,8 +61,6 @@ for(const fps of [30,60,120]){
     assert(answer.end>answer.notes.at(-1).at&&answer.end<=answer.clip.duration,'its take hands over after its last note, within its cut');
     assert(Math.abs(answer.tilt)<=1,'the guide tilts gently');
   }
-  const {MEADOW_STEPS}=await import('../src/audio/meadow-duet.ts');
-  assert.deepEqual(MEADOW_STEPS.map(s=>s.midi%12),[0,8,3],'the cygnet steps on C, A♭ and E♭');
   for(const {call} of MEADOW_CALLS)assert(call.startAt<=0&&call.startAt>=-tuning.windBough.inhale&&call.duration>2,'each call starts within the inhale');
   assert(MEADOW_FINALE.greenAt>0&&MEADOW_FINALE.greenAt<MEADOW_FINALE.duration,'the greening falls inside the finale');
   const part=Object.getOwnPropertyDescriptor(MeadowChapter.prototype,'meadowMusic').get;
@@ -98,5 +99,41 @@ for(const fps of [30,60,120]){
   for(let i=0;i<60*120;i++){time+=1/60;stop.now=time;stop.duet(time,cast);}
   assert.deepEqual(windBough.log.map(l=>l.trimDb),[0,tuning.meadowMusic.callAgainDb],'one call, one softer repeat, then silence');
   assert(Math.abs(windBough.log[1].at-windBough.log[0].at-(MEADOW_CALLS[0].call.duration+tuning.windBough.inhale+tuning.windBough.answerAfter+tuning.meadowMusic.callAgainAfter))<.05,'the repeat comes callAgainAfter after the reply opens');
-  console.log('PASS: recorded answers, steps, calls and their one repeat, finale cue, the meadow music parts and what is fetched ahead.');
+  console.log('PASS: recorded answers, calls and their one repeat, finale cue, the meadow music parts and what is fetched ahead.');
+}
+
+{
+  // Each phrase's guide is traced by a child's finger: wobbly, fast or slow, in one stroke or several; never by a leap.
+  const {PianoStroke,guideShape}=await import('../src/world/piano-stroke.ts');
+  const half=.3,tol=tuning.piano.guideTolerance*half,place=(phrase)=>(t,out)=>guideShape(phrase,t,1,out).multiplyScalar(half);
+  const trace=(stroke,phrase,from,to,points,wobble)=>{
+    const a=new THREE.Vector2(),b=new THREE.Vector2();
+    for(let i=0;i<=points;i++){
+      const t=from+(to-from)*i/points;place(phrase)(t,b);b.y+=Math.sin(i*1.7)*wobble;
+      if(i)stroke.follow(a,b,tol);a.copy(b);
+    }
+    return stroke.progress;
+  };
+  const xs=[0,1,2,3].map(p=>[0,1].map(t=>guideShape(p,t,1,new THREE.Vector2()).x));
+  assert(xs[0][0]<xs[0][1]&&xs[1][0]>xs[1][1]&&xs[2][0]<xs[2][1]&&xs[3][0]>xs[3][1],'the sweeps run both ways');
+  for(let phrase=0;phrase<4;phrase++){
+    for(const [points,wobble] of [[60,.03],[6,.02],[200,.06]]){
+      const s=new PianoStroke();s.lay(place(phrase));
+      assert(trace(s,phrase,.02,.97,points,wobble)>=tuning.piano.guideEnough,`phrase ${phrase+1}: a ${points}-sample stroke wobbling ${wobble} traces it`);
+    }
+    const kept=new PianoStroke();kept.lay(place(phrase));
+    trace(kept,phrase,0,.5,30,.02);const half=kept.progress;
+    assert(half>.4&&half<.6,'half a stroke traces half');
+    assert(trace(kept,phrase,.45,1,30,.02)>=tuning.piano.guideEnough,'a second stroke carries on from where the first stopped');
+    const leap=new PianoStroke();leap.lay(place(phrase));
+    trace(leap,phrase,0,.2,10,0);leap.follow(new THREE.Vector2(0,.4),place(phrase)(1,new THREE.Vector2()),tol);
+    assert(leap.progress<.6,'leaping to the far end traces nothing past where the finger left the guide');
+    const backwards=new PianoStroke();backwards.lay(place(phrase));
+    assert(trace(backwards,phrase,1,0,60,0)<.35,'tracing from the far end does not count');
+    const away=new PianoStroke();away.lay(place(phrase));
+    const off=new THREE.Vector2(),on=new THREE.Vector2();
+    for(let i=0;i<=40;i++){place(phrase)(i/40,on);on.y+=tol*1.6;if(i)away.follow(off,on,tol);off.copy(on);}
+    assert.equal(away.progress,0,'a stroke well clear of the guide traces nothing');
+  }
+  console.log('PASS: four guide shapes, traced with a wobble at any speed and across strokes; leaps, reversals and misses do not count.');
 }

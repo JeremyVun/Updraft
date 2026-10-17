@@ -31,10 +31,10 @@ for(const [w,h] of [[1280,800],[390,844]])for(const bearing of [-1.1,0,1.1]){
 }
 console.log('Piano approach keeps the walking child visible from three directions in landscape and portrait.');
 // Every frame the story puts the walk's own view of her into the shot before the piano frames it.
-const desk=new THREE.Vector3();piano.planeRest(desk,new THREE.Euler());
+const paper=new THREE.Vector3();windBough.planeRest(paper,new THREE.Euler());
 const walkView=shot=>{
- const c=piano.seat,{cameraLead,cameraBack}=tuning.meadowPlane,pw=Math.min(.25,cameraLead/Math.max(Math.hypot(desk.x-c.x,desk.z-c.z),1));
- shot.target.set(c.x+(desk.x-c.x)*pw,Math.max(c.y,0)+3,c.z+(desk.z-c.z)*pw-3);
+ const c=piano.seat,{cameraLead,cameraBack}=tuning.meadowPlane,pw=Math.min(.25,cameraLead/Math.max(Math.hypot(paper.x-c.x,paper.z-c.z),1));
+ shot.target.set(c.x+(paper.x-c.x)*pw,Math.max(c.y,0)+3,c.z+(paper.z-c.z)*pw-3);
  shot.from=undefined;shot.distance=cameraBack;shot.height=13;shot.fitWidth=false;
  return shot;
 };

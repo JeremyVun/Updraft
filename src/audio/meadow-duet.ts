@@ -44,6 +44,3 @@ export const MEADOW_FINALE: WindPhrase & { readonly greenAt: number } = (() => {
   const finale = phrase(MEADOW_MEASURED.finale);
   return { ...finale, greenAt: finale.startAt + MEADOW_MEASURED.finale.greenAt };
 })();
-
-/** The cygnet's footfalls on the keys: single recorded notes of the finale's chord, low to high. */
-export const MEADOW_STEPS: readonly (DuetClip & { readonly midi: number })[] = MEADOW_MEASURED.steps;
