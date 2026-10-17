@@ -12,6 +12,7 @@ Keep only the latest selected painting in each orientation, except an explicitly
 - `src/paintings/`: native-size WebP derivatives, quality 94 with `-m 6 -sharp_yuv`.
 - `src/chapter-select/stills/`: matching 400x250 landscape tiles, quality 90.
 - `assets/promo/updraft-chapter-collage-share.jpg`: the twelve current portraits in story order, without UI; rebuild with `node tools/chapter-collage.mjs`.
+- `docs/images/updraft-chapters.jpg`: the same collage 3000 wide for the repository README; rebuild with `node tools/chapter-collage.mjs docs/images/updraft-chapters.jpg 3000` whenever a painting changes.
 
 Landscape masters are 1672x941; portraits vary slightly around 852x1846. These are native generator outputs.
 Jeremy handles any later upscale; preserve these original PNGs. The manifest's `file` and `prompt` paths are

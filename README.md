@@ -13,7 +13,7 @@ A wordless journey home, played with nothing but the movement of your hand.
 
 Play it in your browser at [updraft.jeremyvun.com](https://updraft.jeremyvun.com).
 
-![Twelve painted rooms from the journey, from a grey winter shore to a jetty at home.](docs/images/updraft-chapters.jpg)
+![Twelve painted rooms from the journey, from a grey autumn shore through a storm-lit drowned village and a whale caught in a net to a jetty at home.](docs/images/updraft-chapters.jpg)
 
 ![Eight scenes from the game: the child walking towards sheets on a washing line, toy sailboats on a stream, a piano spreading colour across a grey island, a golden birch wood, staircases floating in a lilac sky, a red-sailed boat passing a drowned village, a fireplace glowing in a field at night, and still water mirroring sunset clouds.](docs/images/updraft-screenshots.jpg)
 
@@ -23,7 +23,8 @@ Play it in your browser at [updraft.jeremyvun.com](https://updraft.jeremyvun.com
 - Trace circles to raise an updraft.
 
 Play with sound on: the music responds to the wind. Progress saves at checkpoints in your browser, so choose
-**Continue** when you come back.
+**Continue** when you come back. Once you have finished the journey, **chapters** on the title screen takes you back
+to any room.
 
 ## License
 
