@@ -2584,9 +2584,9 @@ export const tuning = {
     darken: 0.07,
     /** Height of the small chop a gust lays over the swell, in world units. */
     chop: 0.12,
-    /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
-    stars: 0.11,
-    starLight: 5,
+    /** How many of the night sky's stars the sea catches, and how brightly each shines at the height of its slow swell. */
+    stars: 0.045,
+    starLight: 3,
   },
   lantern: {
     /** How brightly the boat's lantern lights what is round it at full dark, and how the light falls away with distance. */

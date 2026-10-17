@@ -205,23 +205,25 @@ float caustics(vec2 p, vec2 warp, Footprint fp) {
 /**
  * Sun glints too small to resolve: world-space cells that flash briefly, as many as the glitter lobe allows.
  * Cells never shrink below a few pixels and two sizes blend, so the sparkle twinkles instead of crawling.
+ * Steady (1) glints swell and fade over seconds instead, as starlight does on the sea.
  */
-float glintCells(vec2 xz, float cell, float density) {
+float glintCells(vec2 xz, float cell, float density, float steady) {
   vec2 p = xz / cell;
   vec2 id = floor(p);
   float h = hash12(id + cell * 17.3);
   vec2 centre = vec2(hash12(id + 3.1), hash12(id + 8.7)) * 0.5 + 0.25;
   float spot = (1.0 - smoothstep(0.0, 0.3, length(fract(p) - centre)));
-  float life = fract(uTime * (0.8 + 1.2 * h) + h * 23.0);
+  float life = fract(uTime * mix(0.8 + 1.2 * h, 0.15 + 0.2 * h, steady) + h * 23.0);
   float flash = smoothstep(0.0, 0.06, life) * (1.0 - smoothstep(0.06, 0.32, life));
-  return spot * flash * step(1.0 - density, fract(h * 91.7));
+  float swell = sin(3.14159 * life);
+  return spot * mix(flash, swell * swell, steady) * step(1.0 - density, fract(h * 91.7));
 }
 
-float glints(vec2 xz, float footprint, float density) {
+float glints(vec2 xz, float footprint, float density, float steady) {
   float level = log2(max(footprint * 8.0, 0.1));
   float l0 = floor(level);
   float f = level - l0;
-  return mix(glintCells(xz, exp2(l0), density), glintCells(xz, exp2(l0 + 1.0), density), f);
+  return mix(glintCells(xz, exp2(l0), density, steady), glintCells(xz, exp2(l0 + 1.0), density, steady), f);
 }
 
 /** Short-lived whitecaps, stretched along the wind and carried a little way by it; storm is the chance per cell. */
@@ -547,18 +549,18 @@ void main() {
   float crisp = (1.0 - smoothstep(0.1, 0.7, footprint));
   // Outside the glitter lobe 1.0 - glitter rounds to 1, so every glint cell is exactly dark.
   float sparkle = 0.0;
-  if (glitter > 1e-9) sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
+  if (glitter > 1e-9) sparkle = glints(xz, footprint, glitter, 0.0) * vis * (8.0 + 10.0 * crisp);
   vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh * (1.0 + 2.0 * glad);
 
   /**
    * The stars on the water. The sky's own field is far finer than a pixel of sea, so reflecting it would boil
-   * into noise; the sea catches it instead as the facets that happen to point at one, flashing in world-space
-   * cells a few pixels across, which is how the sun's glitter is drawn too.
+   * into noise; the sea catches it instead as the facets that happen to point at one, in world-space cells a few
+   * pixels across as the sun's glitter is drawn, each swelling and fading over seconds so the sea shimmers calmly.
    */
   vec3 starlight = vec3(0.0);
   if (uStarlight > 0.0) {
     float caught = smoothstep(0.02, 0.3, R.y) * (1.0 - 0.75 * rough) * uStarlight;
-    starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}) * F * caught * ${glsl(tuning.water.starLight)};
+    starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}, 1.0) * F * caught * ${glsl(tuning.water.starLight)};
   }
 
   vec3 col = mix(body, refl, F) + sun + starlight + glad * uSunColor * 0.04;
