@@ -127,3 +127,53 @@ for (const fps of [30, 60, 120]) {
 }
 assert(Math.max(...gustReports) / Math.min(...gustReports) < 1.2,
   'higher frame rates must not amplify the tail whip');
+
+// The sky mirror's kite is wound round the lamppost and flies steady in the still air over the flat: in a dead calm,
+// the island breeze and a long player gust, its string never comes down to the water.
+{
+  const { Boat } = await import('../src/traveller/boat.ts');
+  const { lanternFlame } = await import('../src/traveller/boat/parts.ts');
+  const still = { x: 0, z: 0, energy: 0, lift: 0 };
+  for (const [label, air] of [['calm', still], ['breeze', { x: 2.4, z: -.8, energy: 0, lift: 0 }], ['gust', { x: 22, z: 8, energy: 1.4, lift: 2 }]]) {
+    const kites = new DepartureKites({ calm: 0, sample: (x, z, out) => Object.assign(out, air) });
+    const kite = kites.markers.mirror;
+    camera.position.copy(kite.tieOff).add(new THREE.Vector3(-20, 6, 18));
+    camera.lookAt(kite.tieOff); camera.updateMatrixWorld();
+    let lowest = Infinity, lowestKite = Infinity;
+    for (let frame = 0; frame < 60 * 40; frame++) {
+      kites.update(1 / 60, frame / 60, camera, { name: 'mirror', current: {} });
+      if (frame < 60 * 5) continue;
+      lowest = Math.min(lowest, ...kite.cordPoints.map(p => p.y));
+      lowestKite = Math.min(lowestKite, kite.position.y);
+    }
+    console.log(`mirror ${label}: string ${lowest.toFixed(2)} m at its lowest, kite ${lowestKite.toFixed(2)} m`);
+    assert(lowest > 0.15, `the mirror kite's string stays out of the water in ${label}`);
+    assert(lowestKite > 5, `the mirror kite flies, not hangs, in ${label}`);
+  }
+
+  // Over the cloud the tow line is hitched round the stem post below the lantern and leaves it clear of the glass,
+  // whichever way the kite stands from the bow.
+  const boat = new Boat(wind);
+  boat.group.position.set(0, 0, 0); boat.group.rotation.set(0, 0.4, 0); boat.group.updateMatrixWorld(true);
+  const at = new THREE.Vector3(), axis = new THREE.Vector3();
+  boat.stemHitch(at, axis);
+  // The lantern in the hull's own frame: its base plate under the glass up to the ring on its cap.
+  const flame = lanternFlame(), toHull = boat.group.matrixWorld.clone().invert();
+  const box = new THREE.Box3(new THREE.Vector3(-.14, flame.y - .18, flame.z - .14), new THREE.Vector3(.14, flame.y + .36, flame.z + .14));
+  const kites = new DepartureKites(wind), kite = kites.markers.stairs;
+  let nearest = Infinity;
+  for (const heading of [0.4, 0.4 + Math.PI / 2, 0.4 - Math.PI / 2, 0.4 + 0.8, 0.4 - 0.8]) {
+    for (let frame = 0; frame < 60 * 20; frame++) {
+      camera.position.copy(at).add(new THREE.Vector3(8, 4, -8)); camera.lookAt(at); camera.updateMatrixWorld();
+      kites.update(1 / 60, frame / 60, camera, { name: 'stairs', current: { kiteTow: { at, heading, axis } } });
+      const [a, b] = kite.cordPoints;
+      for (let i = 0; i <= 20; i++) {
+        const p = a.clone().lerp(b, i / 20).applyMatrix4(toHull);
+        assert(!box.containsPoint(p), `the tow line clears the lantern (heading ${heading.toFixed(2)})`);
+        nearest = Math.min(nearest, box.distanceToPoint(p));
+      }
+    }
+  }
+  assert(kite.leavesFrom.distanceTo(at) < .12 && at.clone().applyMatrix4(toHull).y < box.min.y - .1, 'the tow line leaves from the stem post below the lantern');
+  console.log(`stairs tow: line ${(nearest * 100).toFixed(0)} cm clear of the lantern at its nearest`);
+}

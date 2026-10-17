@@ -719,12 +719,16 @@ flutters away low across the frame to her left, seen side on, before it climbs o
 looks round the bend and walks on, never to the trunk, while the camera comes back round behind her the way she
 came. Everything is in the same verbs: which coal, not a new mechanic.
 
-**The fright.** In a cleared glade the camera settles, then one close lightning flash and clap, the clap a quarter
-second after the flash (`tuning.wood.frightThunderDelay`; the bird flinches at the flash). The cygnet recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
+**The fright.** In a cleared glade the camera settles while she walks on, and she stops only at the flash: one close
+lightning flash and clap, the clap a quarter second after the flash (`tuning.wood.frightThunderDelay`; the bird flinches at the flash). The cygnet recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
 boulders under a tilted slab. Ambient lightning is suppressed for the whole chapter, so the fright has one cause,
 and it cannot repeat. The camera turns to the entrance; only then is the ember inside it seen. The player winds an
 updraft on it, revealing the frightened bird; the child crosses to a spot outside the rock, kneels and holds out a
 still hand, and after a moment it walks out to her. No completion jingle. She carries on with it at her chest.
+The view starts settling `frightComposeFrom` out from the shelter and she stops at the flash about `shelterDistance`
+from it, so her stopping never gives the fright away. Jeremy (2026-10-17): "the child stops walking a bit too soon
+before the thunder and lightning happen for the fright scene, which kind of "signals" to the player that something is
+going to happen."
 
 **The paper.** The last ember reveals the sodden plane caught in an exposed fork above her reach, rocking in the
 branch's sway. Strokes across it (the sweep invitation) slip it along the fork, keeping progress between strokes;
@@ -908,7 +912,11 @@ above the far jetty as a slightly crooked kite, its outline drawn as neighbourin
 once all four are up; each star lights a stretch of broken reflection across the deep channel. The last joins them
 and the empty boat comes round the deep outer channel (never over the flat) to the far jetty while the camera
 holds the sky view. The child gathers the cygnet, walks up that jetty's ramp and boards. The departure kite flies over the far
-jetty throughout.
+jetty throughout, its string wound a few turns round the jetty's lamppost about two metres up, and it flies steady
+in the still air (`tuning.linesToys.mirrorKite`, `steady`), so the string never comes down to the water. Jeremy
+(2026-10-17): "The kite string dips into the water. I assume it'd be difficult to have it lay ontop of the water, so
+maybe we can just have the kite sort of wrapped around the lamp post a bit and flying so that we sidestep that whole
+issue?"
 
 Rulings: no passive solution (the answer never appears while the player does nothing). No clouds on the ground or
 moon prop: keep the whole surface an open mirror. The paper stays visible throughout. Four stars (three ended the
@@ -935,8 +943,11 @@ they should pulse slowly, not just blink in and out really fast." Their cores an
 so camera movement must not make the almost edge-on lights flash; `sky-mirror-star-check.mjs` checks constant-light
 camera movement at normal and Ultra render scales separately from the intended pulse. Once the kite is complete
 its stars brighten over three seconds and then breathe, each slowly and a little out of step with the others, so the
-finished constellation looks alive (`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror
-chapter, it'd be cool if they shined a bit brighter and started pulsing like they were more alive."
+finished constellation looks alive, and the lines between them strengthen and breathe with the two stars each joins
+(`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror chapter, it'd be cool if they shined
+a bit brighter and started pulsing like they were more alive." And (2026-10-17): "when all the stars are completed,
+the effect where they brighten and pulse could be a touch more pronounced. Maybe the lines between them could be a
+touch more pronounced and pulse as well?"
 
 Departure correction, 2026-10-10. Jeremy's brief:
 
@@ -984,14 +995,21 @@ the closing line the ending is scripted to the music (`HOME_ENDING`): at the ans
 phrase to a fixed place in the recording, and the ending is timed from that (`docs/contracts/audio.md`, Homeward and Home). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and
-goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence.
+goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence, and
+turns herself round to face them as they go (`watchTurn`), watching them out of sight face on. Jeremy (2026-10-17):
+"When the child is watching the flock fly away, she's facing sideways with her head turned. She should be facing the
+flock as they fly away."
 
 **The drawing.** She walks on over the brow with the plane still folded and stops where the whole cottage clears
 the grass below (`tuning.homeReveal.stopAfter`). House first: a moment looking at it, the plane into both hands,
 then the physical unfold. The paper is the glider, plain white ruled paper, until it opens; the crayon drawing
 arrives as it flattens (hills and wall, house, sun, the little plane), and the recognition motif starts when
 sheet and real house are both in frame (`Chapter.afterCamera` checks the rendered view). The drawing is held
-(`recogniseFor`), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
+open (`recogniseFor`, 5 s; Jeremy, 2026-10-17: "Very surgical change to take away 1 second from the paper plane being
+open. Don't change any other timings in the sequence."; and, keeping the pan to the moon its length: "ok, then add a
+second somewhere after the paper plane reveal, maybe the camera pan up and the child running down the hill intot he
+house", so her run to the door (`runHomePace`) and the pan to the house (`homePanFor`) each take a second longer and
+she goes in at the same moment of the music), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
 `releaseFor` the island's own breeze takes it into the sunset. The camera looks over her shoulder at the sheet and the house, with the real low sun above and left
 of the cottage as in the drawing.
 

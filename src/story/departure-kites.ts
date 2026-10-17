@@ -7,13 +7,16 @@ import { BIRCHES_BERTH } from '../world/birches';
 import { CLOUD_BERTH, KITE_TIE, TOP } from '../world/stairs-layout';
 import { WOOD_BERTH } from '../world/wood';
 import { SLEEP_BERTH } from '../world/sleeping';
-import { MIRROR_BERTH, MIRROR_DECK } from '../world/sky-mirror-layout';
+import { MIRROR_BERTH, MIRROR_LAMPPOST } from '../world/sky-mirror-layout';
 import { BOAT_BERTH } from './island';
 import { LINES_BERTH } from './lines';
 import { SHORE_PILING } from '../world/shore-pulley';
 import { NAVE_BERTH } from '../world/drowned-way';
 import { FAR_SHORE } from './meadow';
 import type { Journey, ChapterName } from './journey';
+
+/** A few turns round the boat's white stem post, under the lantern. */
+const STEM_HITCH = { radius: 0.095, turns: 3 };
 
 /** One familiar paper diamond at each departure, never at the arrival beach. */
 export class DepartureKites {
@@ -34,12 +37,13 @@ export class DepartureKites {
       meadow: new Kite(wind, FAR_SHORE, { offset: [-9, 0], stringLength: tuning.linesToys.shoreKiteStringLength }),
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Flies over the boat waiting on the cloud, tied off on the top landing's rail.
-      stairs: new Kite(wind, CLOUD_BERTH, { offset: [KITE_TIE.x - CLOUD_BERTH.x, KITE_TIE.z - CLOUD_BERTH.z], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
+      stairs: new Kite(wind, CLOUD_BERTH, { offset: [KITE_TIE.x - CLOUD_BERTH.x, KITE_TIE.z - CLOUD_BERTH.z], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail', hitch: STEM_HITCH }),
       drowned: new Kite(wind, NAVE_BERTH, { offset: [-0.6, -1.7], floating: true, azimuth: 2.8 }),
       wood: new Kite(wind, WOOD_BERTH, { offset: [-8, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       sleeping: new Kite(wind, SLEEP_BERTH, { offset: [2, 4], stringLength: tuning.linesToys.shoreKiteStringLength }),
-      // Tie off on the landing stage and start north of it in the near-still air, within the star-play views.
-      mirror: new Kite(wind, MIRROR_BERTH, { offset: [-15, -0.65], ground: MIRROR_DECK.height, azimuth: 2.35 }),
+      // Wound round the far jetty's lamppost, flying steady over the still flat, within the star-play views.
+      mirror: new Kite(wind, MIRROR_BERTH, { offset: [MIRROR_LAMPPOST.x - MIRROR_BERTH.x, MIRROR_LAMPPOST.z - MIRROR_BERTH.z], ground: 0,
+        ...tuning.linesToys.mirrorKite, steady: true, water: 0 }),
     };
     for (const [name, kite] of Object.entries(this.markers)) kite.group.name = `departure-kite-${name}`;
   }
@@ -58,6 +62,8 @@ export class DepartureKites {
     const tow = story.name === 'stairs' ? story.current.kiteTow ?? null : null;
     this.markers.stairs.follow = tow?.at ?? null;
     this.markers.stairs.ahead = tow?.heading ?? null;
+    this.markers.stairs.hitched = !!tow;
+    this.markers.stairs.hitchAxis = tow?.axis ?? null;
     this.markers.boats.snag = story.name === 'boats' ? story.current.kiteSnag ?? null : null;
     for (const [name, kite] of Object.entries(this.markers)) {
       const enabled = name === story.name ? story.current.departureKite !== false

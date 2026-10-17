@@ -141,7 +141,7 @@ export interface Chapter {
   /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
   readonly cloudDeck?: CloudDeckState;
   /** The departure kite tied to a moving boat's bow and flying ahead of it on a heading, while this chapter wants it. */
-  readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
+  readonly kiteTow?: { at: THREE.Vector3; heading: number; axis: THREE.Vector3 } | null;
   /** The departure kite caught short by its string on something in the water, until this chapter lets it go. */
   readonly kiteSnag?: KiteSnag | null;
   /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */

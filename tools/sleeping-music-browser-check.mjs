@@ -5,8 +5,8 @@
 //          parts against the beats; the morning from the curtains, and the sea. Saves the feather and morning
 //          checkpoints for the restores.
 // `sleeping`  `?chapter=sleeping`: the lullaby from load and the frost's wait.
-// `ribbon`  `?chapter=ribbon`, the summit's circles: the summit part a second after the top, rising in, let go as the
-//          bandage comes free, silence through the turn to the ribbon, the leap and the tug, then the curtains, the morning's entry and its
+// `ribbon`  `?chapter=ribbon`, the summit's circles: nothing begins at the top or as the bandage comes free, silence
+//          through the unwinding, the turn to the ribbon, the leap and the tug, then the curtains, the morning's entry and its
 //          next seams against the glide, the waking and the child sitting up, and its fade as the boat leaves for the sea.
 // `feather`, `morning`  those saves continued: the climb theme from its top as the climb resumes; silence until the sea.
 // Usage: node tools/sleeping-music-browser-check.mjs [climb sleeping ribbon feather morning]; `climb` before the
@@ -110,7 +110,7 @@ try {
       const { MORNING_FROM, MORNING_SEAMS } = await import('/src/audio/sleeping-music.ts'), A = __game.tuning.audio;
       return { ...sleepWatch, loud: undefined, loudness: sleepWatch.loud, MORNING_FROM, MORNING_SEAMS,
         giveWay: Math.max(A.curtainsFade, A.mirrorSeamRelease), letGo: Math.max(A.ribbonFade, A.ribbonSeamWithin),
-        summitDelay: A.summitDelay, departureFade: A.sleepingDepartureFade, seaLead: A.seaMusicLead };
+        departureFade: A.sleepingDepartureFade, seaLead: A.seaMusicLead };
     });
     const quiet = (from, to) => Math.max(-200, ...w.loudness.filter(([t]) => t >= from && t <= to).map(([, v]) => v));
     return { w, quiet, errors, requests };
@@ -260,15 +260,12 @@ try {
       const at = morning.when + seam - morning.offset;
       console.log(`  morning seam ${seam.toFixed(2)} s sounds at audio ${at.toFixed(2)}   (+${(at - released.ctx).toFixed(2)} s from the release)`);
     }
-    const unbound = when(w, 'gate', 'ribbon'), leap = when(w, 'beat', 'reachRibbon'), summit = when(w, 'gate', 'summit');
-    const end = ribbonHolds(w, parts, quiet), part = parts[0];
-    const seamed = Math.abs(part.offset + part.end - part.when - 126.67) < .02;
-    console.log(`  summit part begins +${(part.when - summit.ctx).toFixed(2)} s after the top, ends ${seamed ? 'at its 126.67 s seam' : 'in a fade'} +${(part.end - unbound.ctx).toFixed(2)} s after the ribbon gate (${(part.offset + part.end - part.when).toFixed(2)} s in the recording);`
-      + ` silence ${(leap.ctx - end).toFixed(2)} s before the leap, ${(released.ctx - end).toFixed(2)} s before the curtains`);
+    const leap = when(w, 'beat', 'reachRibbon'), summit = when(w, 'gate', 'summit');
+    const end = ribbonHolds(w, parts, quiet), silent = quiet(summit.ctx, released.ctx - .1);
+    console.log(`  silence from the top (${silent.toFixed(1)} dBFS), ${(leap.ctx - summit.ctx).toFixed(2)} s before the leap, ${(released.ctx - summit.ctx).toFixed(2)} s before the curtains`);
     departureHolds(w);
     console.log(`  requests: ${requests.join(', ')}`);
-    assert(parts.length === 1 && Math.abs(part.offset - 112.11) < 1e-3 && Math.abs(part.when - summit.ctx - w.summitDelay) < .2,
-      `the summit part ${w.summitDelay} s after the bird reaches the top`);
+    assert(parts.length === 0 && end === when(w, 'gate', 'ribbon').ctx && silent < -90, 'nothing plays for the summit or the bandage');
     curtainsHold(w, parts);
     assert(requests.includes('sleeping_morning.ogg'), 'the morning is loaded');
     assert.deepEqual(errs, [], 'no console errors');

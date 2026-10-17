@@ -321,8 +321,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
   the bank's front `FOG_BANK`. The boat waits hidden in the foot of the nearest tower a little right of the sun
   (`harbour`) from the moment they come out on top, and once the swans are on their way into the sun (`BOAT_SETS_OFF`) sails
-  out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
-  draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
+  out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` hitches the kite's line three turns round the white
+  stem post under the lantern (`Boat.stemHitch`), where it leaves clear of the glass whichever way the kite stands
+  (Jeremy, 2026-10-17: "The kite line is sticking into and out of the boat lantern, it should be more properly
+  attached to the boat."; `kite-logic-check.mjs`), and under sail the kite draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
   round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). Only while
   it is perched does `lookOut` direct her hands; `Carry` keeps them supporting it after boarding and on its return.
   The bank is an analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the

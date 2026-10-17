@@ -352,14 +352,18 @@ export class WoodChapter implements Chapter {
         break;
       case 'walk':
         this.follow();
-        if (!this.bolted && this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < tuning.wood.shelterDistance) this.bolt();
+        if (!this.bolted && this.leg >= 2 && Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) < tuning.wood.frightComposeFrom) this.bolt();
         break;
-      case 'compose':
-        if (this.t >= tuning.wood.frightCompose && this.viewReady) {
+      case 'compose': {
+        // She walks on into the glade while the view settles and stops only at the flash, so nothing gives it away.
+        const there = !c.moving || Math.hypot(c.position.x - HIDING.x, c.position.z - HIDING.z) <= tuning.wood.shelterDistance;
+        if (there && this.t >= tuning.wood.frightCompose && this.viewReady) {
+          c.stop();
           this.to('fright');
           this.stormStrike = { heading: Math.atan2(HIDING.x - c.position.x, HIDING.z - c.position.z) };
         }
         break;
+      }
       case 'fright':
         this.fright();
         break;
@@ -481,12 +485,10 @@ export class WoodChapter implements Chapter {
 
   /** One close strike causes the escape. The child never chooses to put the bird down. */
   private bolt(): void {
-    const { child: c } = this.cast;
     if (this.bolted) return;
     this.to('compose');
     this.bolted = true;
     this.hush = 1;
-    c.stop();
     if (!this.hearth) this.layHearth();
     // Leave the path lights where the player found them; the camera turns toward the refuge.
     this.ahead = null;

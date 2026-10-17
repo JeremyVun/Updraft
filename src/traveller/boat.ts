@@ -3,12 +3,13 @@ import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { atmo } from '../world/atmosphere';
+import { homeDaylight } from '../world/palette';
 import { FOAM, Marks } from '../fx/sealife/marks';
 import { heightAt } from '../world/island';
 import { type Swell, swellAt, swellUniforms } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
-import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale, gunwaleHalf, stationU } from './boat/form';
+import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale, gunwaleHalf, keel, rake, stationU } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 import { hullLid, waterlineUniforms } from './boat/waterline';
@@ -21,6 +22,8 @@ import { hullLid, waterlineUniforms } from './boat/waterline';
 const PUSH_OFF_SPEED = 1.4;
 /** How far ahead of the hull's centre the forefoot finds the bottom. */
 const FOREFOOT = 2.2;
+/** How far up the stem post, from its foot to the gunwale, a line is hitched: clear below the lantern. */
+const STEM_HITCH = 0.94;
 const PUSH_OFF_TURN = 0.55;
 const PUSH_OFF_UNTIL = 0.7;
 const PUSH_OFF_LONGEST = 8;
@@ -105,8 +108,8 @@ export class Boat {
   /** The world as the hull sees it, for the shade its own sides cast inside it. */
   private readonly hullFrame = new THREE.Matrix4();
   private readonly flame = lanternFlame();
-  /** How bright the lantern's glass is this moment, 1 at full. */
-  private readonly glass = { value: 1 };
+  /** How bright the lantern's glass is this moment, 1 at full, and how lit it is. */
+  private readonly glass = { value: new THREE.Vector2(1, 0) };
   private readonly pennantMat: THREE.ShaderMaterial;
   /** The air the pennant streams in, in the hull's own frame, and how far out it lifts. */
   private readonly pennantAir = new THREE.Vector2();
@@ -300,6 +303,15 @@ export class Boat {
       ax: this.position.x, az: this.position.z, bx: this.position.x, bz: this.position.z,
       vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
       radius: k.brushWindRadius, energy: Math.min(0.65, input.gust / k.brushEnergyScale), lift: 0, swirl: 0 });
+  }
+
+  /** Where a line is hitched round the white stem post, below its lantern, and the way the post runs up. */
+  stemHitch(at: THREE.Vector3, axis: THREE.Vector3): void {
+    this.group.updateMatrixWorld(true);
+    const foot = rake(at.set(0, keel(1), BOW_Z));
+    const along = rake(axis.set(0, gunwale(1), BOW_Z)).sub(foot);
+    at.addScaledVector(along, STEM_HITCH).applyMatrix4(this.group.matrixWorld);
+    axis.normalize().transformDirection(this.group.matrixWorld);
   }
 
   /** The visible hull's ends, so landmark framing keeps the whole boat within the screen. */
@@ -632,15 +644,19 @@ export class Boat {
     return this.sea.height;
   }
 
-  /** The lantern lights what is round it from when its glass does: as the sun goes down and through the night. */
+  /**
+   * The lantern lights what is round it from when its glass does: as the sun goes down and through the night, but never
+   * in home's afternoon, whose sun is as low as a sunset.
+   */
   private light(time: number): void {
     const u = atmo.uniforms;
-    const lit = this.group.visible ? Math.max(u.uNight.value, 1 - THREE.MathUtils.smoothstep(u.uSunDir.value.y, 0.04, 0.28)) : 0;
+    const sunset = (1 - THREE.MathUtils.smoothstep(u.uSunDir.value.y, 0.04, 0.28)) * (1 - homeDaylight);
+    const lit = Math.max(u.uNight.value, sunset);
     // Incommensurate slow waves wander without a beat, so the flame breathes rather than blinks.
     const gutter = 0.5 + 0.25 * Math.sin(time * 2.3) + 0.15 * Math.sin(time * 5.1 + 1.7) + 0.1 * Math.sin(time * 8.7 + 0.4);
-    this.glass.value = 1 - tuning.lantern.glassFlicker * gutter;
+    this.glass.value.set(1 - tuning.lantern.glassFlicker * gutter, lit);
     const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
-    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - this.lanternHidden) * (1 - tuning.lantern.flicker * gutter));
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * (this.group.visible ? lit : 0) * (1 - this.lanternHidden) * (1 - tuning.lantern.flicker * gutter));
     this.lanternHidden = 0;
   }
 
