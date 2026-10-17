@@ -111,6 +111,9 @@ export class Scarf {
   private readonly gust = new THREE.Vector3();
   /** The way the ends stream between them, in the child's frame: round from their own splay toward a gust's way. */
   private gustAngle: number;
+  /** Set while the child sits in a boat, where every stroke the player draws is near her. */
+  aboard = false;
+  private aboardShare = 0;
   private readonly splay: number;
   private readonly lastAnchor = new THREE.Vector3();
   private anchored = false;
@@ -263,7 +266,8 @@ export class Scarf {
      */
     const gustLeft = this.gust.x * cos - this.gust.z * sin;
     const gustBack = Math.max(0, -(this.gust.x * sin + this.gust.z * cos));
-    const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain, k.gustMost);
+    this.aboardShare += (+this.aboard - this.aboardShare) * (1 - Math.exp(-span));
+    const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain * THREE.MathUtils.lerp(1, k.gustAboard, this.aboardShare), k.gustMost);
     const takeover = Math.min(1, felt / k.gustTakeover);
     /**
      * Heavy wool comes round to a new way slowly, rather than cracking across behind the child as a gust veers. It

@@ -11,8 +11,10 @@
 //        TOUCH=1 emulates a coarse primary pointer; it does not emulate GPU performance.
 //        VIDEO=1 records <prefix>.webm of the whole session (headless screencast, lower quality than shots)
 // Prints stats (`window.__stats`) at the end and writes <prefix>-console.log on errors.
+// Waits and gestures run on game time, so a shared GPU slows a capture without changing what it plays.
 // Shares the GPU with other captures; timing checks wait for it to themselves. ANGLE can override the platform's normal backend for comparisons.
 import { openBrowser } from './lib/browser.mjs';
+import { gameTime } from './lib/game-time.mjs';
 import fs from 'node:fs';
 
 const [prefix, stepsJson = '[{"shot":"still"}]'] = process.argv.slice(2);
@@ -41,8 +43,9 @@ try {
   await page.goto(`${base}?shot=1${process.env.QUERY ? '&' + process.env.QUERY : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
   const px = ([x, y]) => [x * width, y * height];
+  const game = gameTime(page);
   for (const s of steps) {
-    if (s.wait) await page.waitForTimeout(s.wait);
+    if (s.wait) await game.wait(s.wait);
     if (s.move) await page.mouse.move(...px(s.move));
     if (s.down) await page.mouse.down();
     if (s.up) await page.mouse.up();
@@ -52,6 +55,7 @@ try {
       const n = Math.max(2, Math.round(ms / 8));
       const seg = pts.length - 1;
       await page.mouse.move(...pts[0]);
+      const at = await game.start();
       for (let i = 1; i <= n; i++) {
         const f = (i / n) * seg;
         const k = Math.min(seg - 1, Math.floor(f));
@@ -59,22 +63,23 @@ try {
         const [ax, ay] = pts[k];
         const [bx, by] = pts[k + 1];
         await page.mouse.move(ax + (bx - ax) * t, ay + (by - ay) * t);
-        await page.waitForTimeout(ms / n);
+        await at((i * ms) / n);
       }
     }
     if (s.circle) {
-      const end = Date.now() + (s.seconds ?? 40) * 1000;
+      const end = ((await game.frame()) ?? 0) + (s.seconds ?? 40) * 60;
       const r = s.radius ?? 0.05;
       let a = 0;
       for (;;) {
         const [cx, cy] = px(await page.evaluate(s.circle));
+        const at = await game.start();
         for (let i = 0; i < 24; i++) {
           a += (Math.PI * 2) / 24;
           await page.mouse.move(cx + Math.cos(a) * r * height, cy + Math.sin(a) * r * height);
-          await page.waitForTimeout(28);
+          await at((i + 1) * 28);
         }
         if (s.until && (await page.evaluate(s.until))) break;
-        if (Date.now() > end) throw new Error(`circling never got there: ${s.until}`);
+        if (((await game.frame()) ?? 0) > end) throw new Error(`circling never got there: ${s.until}`);
       }
     }
     if (s.eval) console.log(JSON.stringify(await page.evaluate(s.eval)));
@@ -86,7 +91,7 @@ try {
       for (let i = 1; i <= (s.n ?? 4); i++) {
         await page.screenshot({ path: `${prefix}-${s.burst}-${i}.png` });
         console.log(`${prefix}-${s.burst}-${i}.png`);
-        await page.waitForTimeout(s.every ?? 120);
+        await game.wait(s.every ?? 120);
       }
     }
   }

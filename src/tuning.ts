@@ -874,9 +874,9 @@ export const tuning = {
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, never more than `gustMost`, and one felt at `gustTakeover` units per second or more
-     * carries them its own way, turning toward a new way at `gustTurn` (per second).
+     * carries them its own way, turning toward a new way at `gustTurn` (per second). In a boat they feel `gustAboard` of it.
      */
-    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2,
+    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2, gustAboard: 0.5,
     /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
     drag: 3.2,
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
