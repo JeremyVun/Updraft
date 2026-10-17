@@ -209,7 +209,7 @@ export const tuning = {
     /** After the rescue the opening begins again from its first chord, rising out of silence over this long. */
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
-    playerWindEase: .5, playerWindDb: -6, grassRustleDb: -9,
+    playerWindEase: .5, playerWindDb: -6, grassRustleDb: -12,
     /**
      * On Sleeping's night hill the player's wind is this many dB louder, and the night wind gives way under it: by this
      * share at most, reached at this share of a full gust.
@@ -2490,7 +2490,7 @@ export const tuning = {
   },
   petals: {
     /** Share of the 8192 petals alive on the still island, and in the short pasture past z = -600. */
-    stillIslandShare: 0.49,
+    stillIslandShare: 0.44,
     pastureShare: 0.12,
     /** Wind speeds between which a bare gust, with no updraft, starts to lift resting petals. */
     liftFrom: 9,

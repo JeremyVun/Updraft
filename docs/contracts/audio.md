@@ -91,7 +91,7 @@ gate.
   the harmony at their scheduled onset, including across chord and loop boundaries, and incompatible held notes fade
   over 300 ms at chord changes.
 - Player gust, whistle and updraft noise use `playerWindDb` (−6 dB); grass rustle has its own
-  `grassRustleDb` (−9 dB). These apply in every room and ease off as a stroke strengthens (`playerWindEase`: about −1 dB at half strength,
+  `grassRustleDb` (−12 dB). These apply in every room and ease off as a stroke strengthens (`playerWindEase`: about −1 dB at half strength,
   −6 dB at full); their filter sweeps are scaled by `playerWindFilterRange`. The trim leaves the weather floor,
   ambient breeze, sea and rain unchanged.
 - Sleeping's night wind has its own noise voice, filter and slow pan (`nightGain`, `nightWhistleGain`, `nightPan`),
