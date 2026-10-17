@@ -18,6 +18,10 @@ const BLOW = 4;
 /** How fast each kind settles into the air around it (per second), and how strongly it falls. */
 const DRAG = [1.5, 0.15, 0.9, 1.1, BLOWN.drag];
 const GRAVITY = [0.4, 9.8, 6.5, 0.3, BLOWN.fall];
+/** Fragments fainter than this are discarded. */
+const FAINTEST = 0.003;
+/** Sides of the polygon each particle is drawn on, round the disc its fragments are kept in. */
+const SIDES = 16;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -25,6 +29,8 @@ in vec4 iA;
 in vec4 iB;
 in vec4 iC;
 in vec4 iD;
+/** This corner of the polygon on the square a particle seen whole is drawn on. */
+in vec2 corner;
 out vec2 vQ;
 out vec3 vWorld;
 out float vKind;
@@ -35,9 +41,33 @@ out vec3 vRight;
 out vec3 vUp;
 out float vSide;
 out vec3 vBlow;
+/** The haze and the cloud's shadow where it is, worked out at its corners: neither changes across a puff. */
+out vec4 vFog;
+out float vSun;
+/**
+ * How far out across its disc a particle can be seen: past it every fragment would be fainter than FAINTEST however
+ * its noise falls, so the polygon is drawn only that far. Its kind is k, its opacity alpha.
+ */
+float reach(float k, float alpha) {
+  if (alpha < ${glsl(FAINTEST)}) return 0.0;
+  float faint = ${glsl(FAINTEST)} / alpha;
+  // Mist is at most (1 - r)^1.3 of its opacity, a blow's puff 0.55 + 0.45 (1 - r^2), a far puff nothing past 0.95.
+  if (k < 0.5) return 1.0 - pow(faint, ${glsl(1 / 1.3)});
+  if (k > 3.5) return faint > 0.55 ? sqrt(max(1.0 - (faint - 0.55) / 0.45, 0.0)) : 1.0;
+  if (k > 2.5) return 0.95;
+  return 1.0;
+}
 void main() {
   vec3 p = iA.xyz;
   float size = iA.w;
+  float shown = reach(iB.w, iC.x);
+  if (shown <= 0.0) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  // Seen whole, it keeps its square, so its edge pixels take the samples they always did; cut, its edge is fainter
+  // than any pixel shows, and a hair over so rounding never cuts a fragment that is kept.
+  vec2 disc = shown < 1.0 ? position.xy * (shown + 0.002) : corner;
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
   vec3 along = up;
@@ -63,7 +93,7 @@ void main() {
       stretch = 1.0 + speed * 0.03 / size;
     }
   }
-  vec2 q = position.xy;
+  vec2 q = disc;
   if (iB.w < 0.5) {
     float a = iC.y * 6.2832;
     q = mat2(cos(a), -sin(a), sin(a), cos(a)) * (q * vec2(1.0, 0.7 + 0.5 * fract(iC.y * 5.7)));
@@ -73,8 +103,10 @@ void main() {
   vUp = up;
   vSide = iC.w;
   vBlow = iD.xyz;
-  vQ = position.xy;
+  vQ = disc;
   vWorld = world;
+  vFog = fogOf(world);
+  vSun = cloudShadow(world.xz);
   vKind = iB.w;
   vAlpha = iC.x;
   vSeed = iC.y;
@@ -99,20 +131,27 @@ in vec3 vUp;
 in float vSide;
 /** Of a blow's puff: how far out across its column it was thrown (0 the middle .. 1 its edge), how high, how glad. */
 in vec3 vBlow;
+in vec4 vFog;
+in float vSun;
 void main() {
   float r = length(vQ);
   if (r > 1.0) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   float toSun = max(dot(-V, uSunDir), 0.0);
-  float sun = cloudShadow(vWorld.xz);
+  float sun = vSun;
   vec3 sky = uSkyAmbient * 1.25 + uGroundBounce * 0.4;
   vec3 col;
   float a;
   float additive;
+  // Down at the water it thins away.
+  float low = smoothstep(-0.05, 0.3, vWorld.y);
   if (vKind < 0.5) {
     vec2 w = vQ * 1.6 + vSeed * 31.0;
-    float wisp = vnoise(w + uTime * 0.2) * 0.55 + vnoise(w * 2.3 - uTime * 0.3) * 0.3 + vnoise(w * 5.1) * 0.15;
+    float wisp = vnoise(w + uTime * 0.2) * 0.55;
     float torn = vAge * 0.55;
+    // Its finer wisps add under 0.45: where even that would leave it too faint to see, it is not drawn.
+    if (pow(1.0 - r, 1.3) * smoothstep(0.3 + torn, 0.75 + torn, wisp + 0.8 - r * 0.45) * vAlpha * low < ${glsl(FAINTEST)}) discard;
+    wisp += vnoise(w * 2.3 - uTime * 0.3) * 0.3 + vnoise(w * 5.1) * 0.15;
     a = pow(1.0 - r, 1.3) * smoothstep(0.3 + torn, 0.75 + torn, wisp + 0.35 - r * 0.45) * vAlpha;
     float glow = min(pow(toSun, 12.0) * 1.8 + pow(toSun, 4.0) * 0.8, 1.2) * (0.7 + 0.6 * fract(vSeed * 7.3));
     col = mistShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
@@ -120,11 +159,15 @@ void main() {
   } else if (vKind > 3.5) {
     float glad = vBlow.z;
     vec2 w = vQ * 1.3 + vSeed * 23.0;
-    float lumps = vnoise(w + uTime * 0.2) * 0.55 + vnoise(w * 2.5 - uTime * 0.3) * 0.3 + vnoise(w * 5.3 + uTime * 0.1) * 0.15;
+    float lumps = vnoise(w + uTime * 0.2) * 0.55;
+    float fray = vAge * 1.1;
+    // Its finer lumps add under 0.45, and the clump is thickest where they add none.
+    if ((1.0 - smoothstep(0.6, 0.92, r + (lumps - 0.5) * 0.7)) * (0.55 + 0.45 * (1.0 - r * r))
+      * smoothstep(fray, fray + 0.3, lumps + 0.6) * vAlpha * low < ${glsl(FAINTEST)}) discard;
+    lumps += vnoise(w * 2.5 - uTime * 0.3) * 0.3 + vnoise(w * 5.3 + uTime * 0.1) * 0.15;
     // Each puff a small soft clump with a lumpy edge, thin enough that the sky shows through where few overlap; torn
     // into wisps as it thins.
     float clump = 1.0 - smoothstep(0.6, 0.92, r + (lumps - 0.5) * 0.7);
-    float fray = vAge * 1.1;
     a = clump * (0.55 + 0.45 * (1.0 - r * r)) * smoothstep(fray, fray + 0.3, lumps + 0.15) * vAlpha;
     // Lit as one column rather than puff by puff, or it is a heap of cotton balls: its side where the puff was thrown.
     float side = vSide * 6.2832;
@@ -182,10 +225,9 @@ void main() {
     col = vec3(0.92, 0.9, 0.84) * (sky + uSunColor * (0.45 + pow(toSun, 4.0) * 2.5) * sun);
     additive = 0.25;
   }
-  a *= smoothstep(-0.05, 0.3, vWorld.y);
-  if (a < 0.003) discard;
-  vec4 fog = fogOf(vWorld);
-  col = mix(col, fog.rgb, fog.a);
+  a *= low;
+  if (a < ${glsl(FAINTEST)}) discard;
+  col = mix(col, vFog.rgb, vFog.a);
   gl_FragColor = vec4(col * a, a * (1.0 - additive));
 }`;
 
@@ -223,9 +265,14 @@ export class Spray {
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
   constructor(private readonly wind: WindField) {
-    const quad = new THREE.PlaneGeometry(2, 2);
-    this.geo.index = quad.index;
-    this.geo.setAttribute('position', quad.attributes.position);
+    const rim = 1 / Math.cos(Math.PI / SIDES);
+    const corners = Array.from({ length: SIDES }, (_, i) => [Math.cos((i / SIDES) * Math.PI * 2) * rim, Math.sin((i / SIDES) * Math.PI * 2) * rim, 0]);
+    this.geo.setIndex(Array.from({ length: SIDES - 2 }, (_, i) => [0, i + 1, i + 2]).flat());
+    this.geo.setAttribute('position', new THREE.Float32BufferAttribute(corners.flat(), 3));
+    // A quarter of the corners each to one corner of the square, in turn round it: the fan is then that square's two
+    // triangles and degenerate slivers.
+    const square = [[1, 1], [-1, 1], [-1, -1], [1, -1]];
+    this.geo.setAttribute('corner', new THREE.Float32BufferAttribute(corners.flatMap((_, i) => square[Math.floor((i * 4) / SIDES)]), 2));
     const attr = () => new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage);
     this.a = attr();
     this.b = attr();
