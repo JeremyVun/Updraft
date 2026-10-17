@@ -1584,11 +1584,13 @@ export const tuning = {
     burySoil: 0.12,
     /**
      * The swing over the fallen birch (`story/birches.ts`), pumped as the drowned village's (`crossings.swing`); `ride`
-     * is what differs here. She stops `stopShort` metres off the bole and looks along it for `lookFor` seconds before
-     * she turns to the swing, and her feet clear its top by `clear` when she lets go over it.
+     * is what differs here: a good stroke with the seat's way asks `push` radians more swing and each swing out or back
+     * takes up to `perSwing`, so three well-timed single strokes carry her over the bole (she needs about 1 rad), below
+     * `most`. She stops `stopShort` metres off the bole and looks along it for `lookFor` seconds before she turns to
+     * the swing, and her feet clear its top by `clear` when she lets go over it.
      */
     swing: {
-      ride: { most: 1.05 },
+      ride: { push: 0.36, perSwing: 0.32, most: 1.2 },
       stopShort: 1.5, lookFor: 2.4, clear: 0.4,
       /**
        * Its lens: three-quarters on from the south-east and low, into the sun, `distance` back and `height` up from a

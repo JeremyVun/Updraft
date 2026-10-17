@@ -12,7 +12,8 @@ export class ScarfInvitation {
   readonly strokes = this.gesture.strokes;
   private readonly center = new THREE.Vector3();
   private readonly toward = new THREE.Vector3();
-  private readonly winding: Coax = { at: new THREE.Vector3(), urgency: 0, radius: tuning.birches.scarf.inviteCircleRadius };
+  /** Laid round the wrap itself, where circling frees it, rather than stood above it. */
+  private readonly winding: Coax = { at: new THREE.Vector3(), urgency: 0, radius: tuning.birches.scarf.inviteCircleRadius, lift: 0 };
   coax: Coax | null = null;
   private key = -1;
   private elapsed = 0;
