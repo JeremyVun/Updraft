@@ -1708,6 +1708,10 @@ export const tuning = {
     /** The felt wind at which the cloth begins to shake rather than breathe, and at which it shakes hardest. */
     flutterFrom: 4,
     flutterFull: 15,
+    /** The pace of the breathing and of the shiver (radians a second), and how much of a quicker flutter rides the shiver. */
+    breatheRate: 3.2,
+    shiverRate: 10.2,
+    shiverOvertone: 0.45,
     /** How much of the swing the ripple is, breathing in a breeze and shivering in a gust. */
     rippleQuiet: 0.03,
     rippleFull: 0.075,
@@ -1723,8 +1727,13 @@ export const tuning = {
     catchAngle: 0.22, catchRate: 4, settleSeconds: 1.4, revealPause: 1.4,
     brushRadius: 0.055, brushFrom: 0.35, airMemory: 0.25, strokeGain: 1.6,
     unhookRate: 0.6, snagBrushRadius: 0.11, snagGustFull: 1.2, snagLiftFrom: 0.08, snagLiftRadius: 3.5,
-    snagTighten: 8, snagRelax: 5, snagTug: 0.35, snagShiverRate: 15,
-    releaseRate: 9, snagInviteSpan: 3,
+    /**
+     * The caught sheet stretches on a spring (rad/s, share of critical damping) so it yanks, gives and springs back;
+     * `snagTug` m at full stretch, lifting `snagLift` of that, the taut strip to the pole thinning by `snagThin`.
+     * Freed, the corner swings back on its own spring past where it hangs.
+     */
+    snagStretchRate: 9, snagStretchDamping: 0.3, snagTug: 1, snagLift: 0.6, snagThin: 1.5, snagShiverRate: 15,
+    releaseSpring: 8, releaseDamping: 0.35, snagInviteSpan: 3,
     creakTravel: 0.16, creakLevel: 0.4,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,

@@ -35,11 +35,13 @@ void main() {
   world.xz += (breeze * 0.18 + drag) * hang * hang;
   world.xz += normalize(radial) * ripple * hang;
   world.y += (length(breeze) * 0.04 + abs(uSpin) * 0.2) * hang * hang;
-  float tug = uSnag * uSnagPull * hang * hang * smoothstep(0.25, 0.85, uv.x)
-    * ${glsl(K.snagTug)} * (1.0 + 0.2 * sin(uTime * ${glsl(K.snagShiverRate)} - hang * 4.0));
+  float caught = clamp(uSnag, 0.0, 1.0);
+  float taut = max(uSnagPull, 0.0);
+  float tug = caught * uSnagPull * hang * hang * smoothstep(0.25, 0.85, uv.x)
+    * ${glsl(K.snagTug)} * (1.0 + 0.2 * taut * sin(uTime * ${glsl(K.snagShiverRate)} - hang * 4.0));
   world.xz += normalize(uCentre.xz - uSnagAt.xz) * tug;
-  world.y += sin(hang * 3.141593) * tug * 0.4;
-  float hooked = smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x) * uSnag;
+  world.y += sin(hang * 3.141593) * tug * ${glsl(K.snagLift)};
+  float hooked = pow(smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x), 1.0 + ${glsl(K.snagThin)} * taut * caught) * uSnag;
   world.xyz = mix(world.xyz, uSnagAt, hooked);
   vWorld = world.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
@@ -68,6 +70,7 @@ class FrameRig {
   private readonly projected = new THREE.Vector3();
   private readonly tangent = new THREE.Vector3();
   private readonly snag = { value: 1 };
+  private snagRate = 0;
   private readonly snagPull = { value: 0 };
   private readonly snagAt = { value: new THREE.Vector3() };
   private elapsed = 0;
@@ -163,7 +166,11 @@ class FrameRig {
 
   update(dt: number, camera: THREE.Camera): void {
     const r = this.frame;
-    this.snag.value += ((r.unhook < 1 ? 1 : 0) - this.snag.value) * (1 - Math.exp(-dt * K.releaseRate));
+    const spring = K.releaseSpring;
+    this.snagRate += (spring * spring * ((r.unhook < 1 ? 1 : 0) - this.snag.value) - 2 * K.releaseDamping * spring * this.snagRate) * dt;
+    this.snag.value += this.snagRate * dt;
+    // Caught again it settles onto the pole rather than past it.
+    if (this.snag.value > 1) { this.snag.value = 1; this.snagRate = 0; }
     this.snagAt.value.copy(r.snagPoint);
     this.snagPull.value = r.snagPull;
     this.rotor.rotation.y = r.angle;
