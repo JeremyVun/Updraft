@@ -221,8 +221,11 @@ const STUMP_TOP = lifted(STUMP, 4.12);
 const T2_STOP = { x: SCARF_SNAGS[1].stopX, z: SCARF_SNAGS[1].stopZ };
 /** The broken birch's south-west face, toward the second tangle's lens in both orientations. */
 const STUMP_FRONT = birchesAt(-13, -1135);
-/** The broken birch's top, where it sits through the second tangle, and the ground round it. */
-export const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.5 ? STUMP_TOP.y : ground(x, z));
+/**
+ * The broken birch's top, where it sits through the second tangle, and the ground round it. The top ends inside the
+ * bark (0.47 m out): a way up the trunk that counted its bark as the top leapt up there and climbed down to start.
+ */
+export const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.4 ? STUMP_TOP.y : ground(x, z));
 /** The birch standing behind the slipped loop, beyond the fallen one, in that tangle's view. */
 const BEHIND_SLIP = birchesAt(0.8, -1171.6);
 /**

@@ -16,6 +16,8 @@ export interface Coax {
   keep?: number;
   /** How much bolder than usual its loops are drawn on screen. */
   bold?: number;
+  /** How far above `at` its loops are laid, in their own heights: 0.8 unless given, clear of the ground under them. */
+  lift?: number;
 }
 
 /** Lengths of ribbon in one column, and the radians of turn drawn before the next length is laid down. */
@@ -248,7 +250,7 @@ export class Swirl {
         /** Stood almost clear of the ground, so the whole loop can be seen going round whatever stands there. */
         while (this.slow - this.slowLaid >= LAY_TURN) {
           this.slowLaid += LAY_TURN;
-          this.ghost.lay(coax.at.x, coax.at.z, this.at(this.slowLaid), rad, rad * this.over.y * 0.8, coax.at.y);
+          this.ghost.lay(coax.at.x, coax.at.z, this.at(this.slowLaid), rad, rad * this.over.y * (coax.lift ?? 0.8), coax.at.y);
         }
       } else this.slowLaid = this.slow;
       /** It comes in over a breath, holds while it winds, and blows out with its last loops still climbing. */
