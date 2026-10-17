@@ -11,7 +11,6 @@ import type { Water } from './water';
 /** Two places joined by one ordinary door. Neither shore is visible around its frame. */
 export const DOOR_EXIT = new THREE.Vector3(DOOR_SHORE.x, heightAt(DOOR_SHORE.x, DOOR_SHORE.z + 9) - 0.1, DOOR_SHORE.z + 9);
 export const DOOR_SHIFT = DOOR_EXIT.clone().sub(door.group.position);
-const THRESHOLD_NORMAL = new THREE.Vector3(0, 0, -1);
 export const doorway = {
   crossed: false, travelling: false,
   eye: new THREE.Vector3(), look: new THREE.Vector3(),
@@ -26,9 +25,9 @@ export class DoorwayView {
   readonly target: THREE.WebGLRenderTarget;
   private readonly camera = new THREE.PerspectiveCamera();
   private readonly size = new THREE.Vector2();
-  private readonly plane = new THREE.Plane();
-  private readonly clip = new THREE.Vector4();
-  private readonly q = new THREE.Vector4();
+  private readonly clipFrom = new THREE.Matrix4();
+  private readonly ontoSill = new THREE.Matrix4();
+  private readonly far = new THREE.Vector3();
   private readonly waterAt = new THREE.Vector3();
   private readonly actorOffsets: { at: THREE.Vector3; offset: THREE.Vector3 }[] = [];
   /** Objects hidden for the pass being drawn; the passes run one after another, never nested. */
@@ -113,6 +112,31 @@ export class DoorwayView {
     try { draw(); } finally { for (const o of hidden) o.visible = true; hidden.length = 0; }
   }
 
+  /**
+   * Draws the far shore from an eye that may sit lower than the camera, looking through the threshold. Points on the
+   * threshold land where the camera sees them, so whatever straddles it stays whole, while from the clearing the
+   * view goes on over the grass to the sea. Depth starts at the threshold, keeping the destination behind it.
+   */
+  private throughThreshold(view: THREE.PerspectiveCamera, cam: THREE.PerspectiveCamera): void {
+    const k = tuning.linesPassage, sill = DOOR_EXIT.z;
+    const clip = this.clipFrom.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    const weight = THREE.MathUtils.smoothstep(view.position.z - door.group.position.z, k.portalNear, k.portalFar);
+    cam.position.y = THREE.MathUtils.lerp(cam.position.y, DOOR_EXIT.y + k.portalEye, weight);
+    cam.updateMatrixWorld(true);
+    const { x, y, z } = cam.position, depth = z - sill;
+    this.ontoSill.set(
+      depth, 0, -x, x * sill,
+      0, depth, -y, y * sill,
+      0, 0, -sill, z * sill,
+      0, 0, -1, z).multiplyScalar(1 / depth);
+    const e = clip.multiply(this.ontoSill).elements;
+    const far = cam.getWorldDirection(this.far).multiplyScalar(5000).add(cam.position);
+    const range = 1.98 * (e[3] * far.x + e[7] * far.y + e[11] * far.z + e[15]) / (sill - far.z);
+    e[2] = -e[3]; e[6] = -e[7]; e[10] = -range - e[11]; e[14] = range * sill - e[15];
+    cam.projectionMatrix.multiplyMatrices(clip, cam.matrixWorld);
+    cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+  }
+
   render(view: THREE.PerspectiveCamera, active: boolean, concealShore: boolean, draw: () => void): void {
     this.surface.visible = active && !doorway.crossed && door.opened;
     // A full-screen multisampled target is tens of megabytes; it is reallocated if the door is shown again.
@@ -147,14 +171,7 @@ export class DoorwayView {
       if (this.target.width !== w || this.target.height !== h) this.target.setSize(w, h);
       const cam = this.camera;
       cam.copy(view); cam.position.add(DOOR_SHIFT); cam.updateMatrixWorld(true);
-      // Oblique near clipping keeps the destination behind its own threshold.
-      this.plane.setFromNormalAndCoplanarPoint(THRESHOLD_NORMAL, DOOR_EXIT).applyMatrix4(cam.matrixWorldInverse);
-      this.clip.set(this.plane.normal.x, this.plane.normal.y, this.plane.normal.z, this.plane.constant);
-      const e = cam.projectionMatrix.elements;
-      this.q.set((Math.sign(this.clip.x) + e[8]) / e[0], (Math.sign(this.clip.y) + e[9]) / e[5], -1, (1 + e[10]) / e[14]);
-      this.clip.multiplyScalar(2 / this.clip.dot(this.q));
-      e[2] = this.clip.x; e[6] = this.clip.y; e[10] = this.clip.z + 1; e[14] = this.clip.w;
-      cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+      this.throughThreshold(view, cam);
       const prev = r.getRenderTarget();
       const waterMat = this.water.mesh.material as THREE.ShaderMaterial;
       const mirror = waterMat.uniforms.uMirrorOn.value;

@@ -1784,6 +1784,12 @@ export const tuning = {
     revealFill: 2.8, revealHold: 4.5,
     doorApproach: 5.5, doorCross: 7, shorePause: 4,
     portalScale: 0.75,
+    /**
+     * From the clearing the open door shows the far shore as if from `portalEye` m above its sill, low enough to see
+     * over the grass to the sea; it becomes the camera's own view as the camera comes from `portalFar` to
+     * `portalNear` m of the threshold.
+     */
+    portalEye: 3, portalFar: 12, portalNear: 2,
     walkDistance: 16, walkHeight: 1.4,
     curtainDistance: 17, curtainHeight: 0.9,
     crestHeight: 6.8, familyDistance: 15, familyHeight: 1.2, familyZoom: 0.95,
