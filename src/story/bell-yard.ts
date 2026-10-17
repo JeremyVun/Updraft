@@ -4,7 +4,7 @@ import type { Deck } from '../world/decks';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { tuning } from '../tuning';
-import { Belfry, BELFRY, faceOut } from '../world/belfry';
+import { Belfry, BELFRY, BELFRY_LEDGE, faceOut } from '../world/belfry';
 import { BELL_SOUNDS, Bell, BellWaves } from '../world/crossings/bell';
 import { IvyFace } from '../world/ivy-face';
 import { Kittens } from '../creatures/cat/kittens';
@@ -103,7 +103,7 @@ export class BellYard {
     this.ivy = new IvyFace({
       from: foot, to: this.belfry.sill(FACE, 0), out,
       roof: (across) => THREE.MathUtils.lerp(RIDGE, EAVE, Math.min(1, Math.abs(across) / (NAVE.depth / 2 + OVERHANG))),
-      spread: 1.45,
+      spread: 1.45, ledge: BELFRY_LEDGE,
     });
     this.climb = new Climb(cast.child, { wall: foot, out, holds: this.ivy.holds, sill: this.belfry.sill(FACE, 0), depth: BELFRY.wall });
     const scenery = yardMesh((add) => this.tower(add));

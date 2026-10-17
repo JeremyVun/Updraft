@@ -24,6 +24,9 @@ export const BELFRY = {
 } as const;
 
 export type Face = 'south' | 'east' | 'north' | 'west';
+/** The stone ledge outside under each arch: half its width and how far it stands out from the wall, its top flush with the sill. */
+export const BELFRY_LEDGE = { half: BELFRY.arch.width / 2 + 0.35, out: 0.19 } as const;
+
 const TURN: Record<Face, number> = { south: 0, east: Math.PI / 2, north: Math.PI, west: -Math.PI / 2 };
 export const FACES = Object.keys(TURN) as Face[];
 const INNER = BELFRY.half - BELFRY.wall;
@@ -363,7 +366,8 @@ export class Belfry {
       for (const side of [-1, 1]) {
         add(new THREE.BoxGeometry(0.34, 0.16, wall + 0.14).translate(side * (a.width / 2 + 0.1), sill + a.spring - 0.06, INNER + wall / 2), DRESSING, STONE, turn);
       }
-      add(new THREE.BoxGeometry(a.width + 0.7, 0.18, 0.3).translate(0, sill - 0.09, half + 0.04), DRESSING, STONE, turn);
+      // From the wall's face out: under the arch its top would lie in the plane of the sill and flicker against it.
+      add(new THREE.BoxGeometry(2 * BELFRY_LEDGE.half, 0.18, BELFRY_LEDGE.out).translate(0, sill - 0.09, half + BELFRY_LEDGE.out / 2), DRESSING, STONE, turn);
       add(new THREE.BoxGeometry(2 * half - 1.1, 0.12, 0.2).translate(0, BELFRY.top - 0.5, half + 0.06), DRESSING, STONE, turn);
     }
     for (const sx of [-1, 1]) {

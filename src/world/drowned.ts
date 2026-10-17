@@ -17,7 +17,7 @@ import { Windmill } from './crossings/windmill';
 import { MillSpiral } from './crossings/mill-spiral';
 import { WashSheet } from './crossings/wash-sheet';
 import { DarkBank } from './drowned-dark';
-import { BELFRY_FOOT, Belfry, BELFRY, faceOut } from './belfry';
+import { BELFRY_FOOT, BELFRY_LEDGE, Belfry, BELFRY, faceOut } from './belfry';
 import { Bell, BellWaves } from './crossings/bell';
 import type { CrossingCast } from './crossings/tree-crossing';
 import { IvyFace } from './ivy-face';
@@ -1543,7 +1543,7 @@ export class DrownedVillage {
     this.cameraObstacles.push(millBounds());
     this.tub = new WashTub(wind);
     this.ivy = new IvyFace({ from: IVY_FOOT, to: IVY_SILL, out: faceOut('west'), spread: 1.45, opening: BELFRY.arch.width / 2 + 0.2,
-      roof: (across) => roofUnder(NAVE, IVY_FOOT.x - 0.05, IVY_FOOT.z + across) ?? eaveAt(NAVE) });
+      ledge: BELFRY_LEDGE, roof: (across) => roofUnder(NAVE, IVY_FOOT.x - 0.05, IVY_FOOT.z + across) ?? eaveAt(NAVE) });
     this.bellWaves = new BellWaves(this.belfry.centre, tuning.drowned.fog.level, BELFRY.half + 0.5);
     this.kittens.lay(this.belfry.nest());
     this.kittens.nestle();
