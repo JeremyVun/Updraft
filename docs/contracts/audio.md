@@ -270,7 +270,9 @@ tail fade is given), levels each to the room reference by measured loudness, and
   next call waits for it and for `phraseRest` after the answer began, and the finale follows the last by
   `finalRest`; the ring carries on, softly, under them. The first call is held into the flute take's next phrase, so it
   ends over its last 1.4 s (`release`) as the take's own seven phrase endings into silence do (their median level
-  curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Until the duet file is decoded the piano strings
+  curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Under the finale's held close the flute
+  take swells a synth drone no instrument plays (43.1 Hz with its partials, from 1:53), already rising under the first
+  call's end: both are high-passed at 160 Hz, under their lowest note (C4), and the finale notched at its 215.3 Hz partial. Until the duet file is decoded the piano strings
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
   (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
   answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
