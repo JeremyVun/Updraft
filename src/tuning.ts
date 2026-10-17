@@ -1200,9 +1200,14 @@ export const tuning = {
     ribbonAlpha: .3, ribbonWidth: .045,
     /**
      * The paper plane stuck in the fork while she plays: where it sits from the bough's foot (metres) and how it is
-     * turned (pitch, yaw, roll), found by flying it nose first into the fork until both wings catch.
+     * turned (pitch, yaw, roll), nose jammed down between the pipes and tail up, three-quarters on to the lens; found
+     * by sliding it nose first into the fork until it catches, clear of the pipes through its whole tremble.
+     * It trembles about its nose by up to `planeTremble` (pitch, yaw, roll, radians) in full wind, `planeCalm` of
+     * that in still air, and all of it once the wind's energy there (the player's gusts and the bough's own breath,
+     * which reaches the fork) times `planeGust` comes to 1.
      */
-    planeAt: [-0.605, 2.016, 0.152], planeTurn: [0.6, 3.6, 0.25],
+    planeAt: [-0.545, 1.991, 0.32], planeTurn: [1.035, -2.793, -0.571],
+    planeTremble: [0.045, 0.035, 0.08], planeCalm: 0.25, planeGust: 1,
   },
   /** The meadow's recordings (`audio/meadow-music.ts`); cuts and measured gains live in `audio/meadow-cuts.ts`. */
   meadowMusic: {
@@ -1242,7 +1247,7 @@ export const tuning = {
      * comes to the piano, and back into her hand as she gets up: carried up `planeLift` metres over her or the lid,
      * and sliding the last `planeLead` metres into the fork, and the first out of it, along its own line.
      */
-    planeGlide: 1.2, planeLift: 3, planeLead: 2.5,
+    planeGlide: 1.2, planeLift: 3, planeLead: 1.5,
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],

@@ -307,8 +307,10 @@ seen through a shallow saddle. The rest stays grey under the waiting region (`li
 `uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
 **The piano is the key; music brings colour.** The plane leads the child to the piano and glides ahead of her, nose
-first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there with its wings
-caught against both (`tuning.windBough.planeAt`), in view until she gets up and it comes back out to her hand. She
+first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there nose down
+between them, tail up and a little askew, turned three-quarters to the lens so its fold reads (`tuning.windBough.planeAt`).
+It is never quite still: it rocks about its nose and its tail and wing tips flutter, more when the player's wind or the
+bough's own breath goes by (`planeTremble`). It stays in view until she gets up and it comes back out to her hand. She
 sits; the piano is silent, and only her hands ever move its keys. The bough opens the duet
 on the breeze, a recorded flute phrase; the child turns to listen. Its call finishes before the guide appears for the
 player's reply: a simple shape to trace with a finger, drawn bold in a dark halo above the piano and centred across
