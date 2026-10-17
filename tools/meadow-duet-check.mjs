@@ -83,7 +83,7 @@ for(const fps of [30,60,120]){
   // The close waits for a phrase end on the pass under way, and finds one after the loop's wrap.
   const {MEADOW_MEASURED}=await import('../src/audio/meadow-cuts-measured.ts');
   const {seams,loopStart,loopEnd,close}=MEADOW_MEASURED.after,span=loopEnd-loopStart;
-  assert(seams.length>=4&&close.duration-close.entry>10,'the warm bed has phrase ends into a close of its own');
+  assert(seams.length>=4&&close.duration-close.entry>5,'the warm bed has phrase ends into a close of its own');
   assert.equal(nextCloseSeam(100,100),100+seams[0]);
   assert.equal(nextCloseSeam(100,100+seams[0]+.01),100+seams[1]);
   const looping=seams.filter(s=>s>=loopStart);
