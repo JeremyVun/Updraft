@@ -13,7 +13,7 @@ import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
 import { BOATS_CHORDS } from './little-boats-score';
 import type { SeaScorePhase } from './sea-score';
-import { SeaMusic } from './sea-music';
+import { SeaMusic, type SeaRescue } from './sea-music';
 import type { SleepingScorePhase } from './sleeping-score';
 import { SleepingMusic, type SleepingGate } from './sleeping-music';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
@@ -113,9 +113,9 @@ export interface SoundState {
   /** The bell's fourth ring has sounded, or a save is past it. */
   bellsRung?: boolean;
   seaScore?: SeaScorePhase;
-  /** The open sea's recording: seconds into it on the passage clock, and the rescue phrase reached (`SeaMusic`). */
+  /** The open sea's recording: seconds into it on the passage clock, and where the rescue is (`SeaMusic`). */
   seaMusicTime?: number;
-  seaPhrase?: number;
+  seaRescue?: SeaRescue;
   /** How far into one of its calls the whale is, 0..1, so the recording can make room under its voice. */
   whaleCalling?: number;
   sleepingScore?: SleepingScorePhase;
@@ -1130,7 +1130,7 @@ export class Soundscape {
     if (s.seaMusicTime === undefined || s.silence) {
       this.seaMusic?.stop(s.silence ? .12 : 1.8); this.seaMusic = null;
     } else if (bg.music === 'sea' && bg.seaScore && !backgroundPaused && this.seaMusic) {
-      this.seaMusic.update(s.seaMusicTime, s.seaPhrase ?? -1,
+      this.seaMusic.update(s.seaMusicTime, s.seaRescue ?? 'coming',
         10 ** ((tuning.audio.recordedMusicDb.sea + tuning.audio.whaleCallRoomDb * (s.whaleCalling ?? 0)) / 20) * (1 - piano));
     }
     // Sleeping's recordings carry their own dynamics: no hush. Arriving it is bedtime; leaving, past the curtains.

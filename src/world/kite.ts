@@ -123,6 +123,8 @@ const TAIL_POINTS = 16;
 const TAIL_LENGTH = 9;
 const FLOAT_SCALE = 0.32;
 const CORD_POINTS = 18;
+/** Points along the turns of string hitched round a post. */
+const HITCH_POINTS = 40;
 /** Snagged, the cord point where it is caught: the rest run on up to the kite. */
 const SNAG_POINT = 12;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -218,7 +220,7 @@ export class Kite {
   private readonly anchor = new THREE.Vector3();
   private readonly sail = new THREE.Group();
   private readonly cord = new Cord(CORD_POINTS);
-  private readonly cordPoints: THREE.Vector3[] = [];
+  readonly cordPoints: THREE.Vector3[] = [];
   private readonly tailBatch = new RibbonBatch(TAIL_POINTS, '#f0e7d4', 0.95);
   private readonly ribbon: Ribbon;
   private readonly ribbons: Ribbon[];
@@ -255,6 +257,16 @@ export class Kite {
   /** Tied to something that moves (the bow of a boat) instead of its post, and flying ahead of it on this heading. */
   follow: THREE.Vector3 | null = null;
   ahead: number | null = null;
+  /** Whether the string is hitched round its post this frame, and the way up that post when it leans (a boat's stem). */
+  hitched = true;
+  hitchAxis: THREE.Vector3 | null = null;
+  /** A few turns of string round the post it is tied to, rising to where the string leaves for the kite. */
+  private readonly hitch: { radius: number; turns: number; drop: number; cord: Cord; points: THREE.Vector3[] } | null;
+  /** Where the string leaves its tie for the kite: the anchor, or the side of the hitched post facing the kite. */
+  private readonly leaves = new THREE.Vector3();
+  get leavesFrom(): THREE.Vector3 { return this.leaves; }
+  /** Steady in its own dream air: it holds its height when the wind drops instead of sinking. */
+  private readonly steady: boolean;
   /** Caught short on a snag instead of flying on its string from the post; the slack lies on the water between. */
   snag: KiteSnag | null = null;
   /** Where it flies from this frame: the snag, or its post. */
@@ -270,7 +282,14 @@ export class Kite {
   constructor(
     private readonly wind: WindField,
     berth: { x: number; z: number },
-    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail'; floating?: boolean } = {},
+    options: {
+      offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail'; floating?: boolean;
+      /** Hitched round a standing post this far above `ground` instead of tied to driftwood; `follow` sets it on a boat. */
+      hitch?: { radius: number; turns: number; height?: number };
+      steady?: boolean;
+      /** Water the string lies on rather than passing through, if it ever sags that low. */
+      water?: number;
+    } = {},
   ) {
     /** The original Lines tie-off is the default; each shore can put its post on dry ground. */
     this.stringLength = options.stringLength ?? tuning.linesToys.stringLength;
@@ -280,12 +299,17 @@ export class Kite {
     const x = berth.x + dx;
     const z = berth.z + dz;
     const ground = options.ground ?? Math.max(heightAt(x, z), 0);
-    this.anchor.set(x, ground + (options.tiedTo === 'rail' ? 0.95 : 1.05), z);
+    this.anchor.set(x, ground + (options.hitch?.height ?? (options.tiedTo === 'rail' ? 0.95 : 1.05)), z);
+    this.steady = options.steady ?? false;
+    this.water = options.water ?? -Infinity;
 
     const drift = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG });
     const post = new THREE.CylinderGeometry(0.075, 0.095, 1.3, 6).rotateZ(0.16).translate(x, ground + 0.52, z);
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
-    if (options.tiedTo !== 'rail' && !this.floating) this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
+    if (options.tiedTo !== 'rail' && !options.hitch && !this.floating) this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
+    this.hitch = options.hitch ? { ...options.hitch, drop: options.hitch.turns * 0.028, cord: new Cord(HITCH_POINTS, 0.016),
+      points: Array.from({ length: HITCH_POINTS }, () => new THREE.Vector3()) } : null;
+    if (this.hitch) this.group.add(this.hitch.cord.mesh);
 
     // A kite a few paces from the lens fills the frame, so the sail and its sticks give way early; the small one
     // floating on the water only within a pace or two. The range is a uniform so every kite's paper is one program.
@@ -391,7 +415,7 @@ export class Kite {
      * Gust energy is the pull you feel in the string: it climbs on it, overshoots and settles back. And in a
      * real calm nothing is holding it up at all, so it sinks and hangs on whatever breeze is left.
      */
-    const holding = 0.4 + 0.6 * THREE.MathUtils.smoothstep(speed, 0.05, 0.5);
+    const holding = this.steady ? 1 : 0.4 + 0.6 * THREE.MathUtils.smoothstep(speed, 0.05, 0.5);
     const want = (k.flyAngle + 0.1 * strength + Math.min(0.26, air.energy * k.gustClimb + air.lift * 0.08)) * holding + Math.cos(this.phase * 2) * swing * 0.18;
     this.elevVel += (want - this.elev) * k.climbSpring * dt;
     this.elevVel *= Math.exp(-dt * k.climbDamping);
@@ -413,7 +437,29 @@ export class Kite {
       this.settle(air.x, air.z);
     }
     this.streamTail(dt, time, air, speed);
+    this.hitchTurns();
     this.runCord(time, span, speed);
+  }
+
+  /** The turns round the post, winding up it to the side the kite pulls toward, where the string leaves. */
+  private hitchTurns(): void {
+    const h = this.hitch;
+    if (h) h.cord.mesh.visible = this.hitched;
+    if (!h || !this.hitched) { this.leaves.copy(this.anchor); return; }
+    const axis = this.hitchAxis ?? UP;
+    const out = this.a.subVectors(this.position, this.anchor);
+    out.addScaledVector(axis, -out.dot(axis));
+    if (out.lengthSq() < 1e-8) out.set(1, 0, 0).addScaledVector(axis, -axis.x);
+    out.normalize();
+    const round = this.b.crossVectors(axis, out);
+    for (let i = 0; i < HITCH_POINTS; i++) {
+      const u = i / (HITCH_POINTS - 1);
+      const turn = (u - 1) * h.turns * Math.PI * 2;
+      h.points[i].copy(this.anchor).addScaledVector(axis, (u - 1) * h.drop)
+        .addScaledVector(out, Math.cos(turn) * h.radius).addScaledVector(round, Math.sin(turn) * h.radius);
+    }
+    h.cord.update(h.points);
+    this.leaves.copy(h.points[HITCH_POINTS - 1]);
   }
 
   /** Comes off the snag where it is: its own string takes over from the kite's place, so nothing jumps. */
@@ -584,7 +630,7 @@ export class Kite {
     this.b.copy(this.sail.localToWorld(this.c.set(0, 0.05, -0.12)));
     const shiver = Math.min(0.09, speed * 0.008);
     const line = this.snag ? tuning.linesToys.snagTether : this.stringLength;
-    this.hangCord(this.cordPoints, 0, CORD_POINTS - 1, this.anchor, this.b, line - span, time, shiver);
+    this.hangCord(this.cordPoints, 0, CORD_POINTS - 1, this.leaves, this.b, line - span, time, shiver);
     if (this.freed < 1) {
       const tether = tuning.linesToys.snagTether;
       const ashore = this.stringLength - tether - this.anchor.distanceTo(this.via);

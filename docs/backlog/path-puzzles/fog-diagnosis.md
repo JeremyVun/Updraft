@@ -1,7 +1,7 @@
 # Village fog diagnosis — 2026-10-17
 
-Diagnosis followed by a verified, scoped fix for the abrupt cloud-to-village handoff. The separate village mist
-appearance and later bank-to-haze styling remain outside this patch.
+Diagnosis followed by a verified, scoped fix for the abrupt cloud-to-village handoff, then the village mist's
+light and horizon treatment (below). The arrival's bank-to-haze styling remains open.
 
 ## Jeremy's brief (verbatim)
 
@@ -17,71 +17,47 @@ appearance and later bank-to-haze styling remain outside this patch.
 
 > cool, commit. Next i need you to help figure out if there's a cheap way to make the village fog look better
 
-> how can i play and test each version?
+## Village mist light and horizon — landed 2026-10-17
 
-> /handoff another agent to continue the work
+Jeremy, after playing the whole game (verbatim): "The issues with the fog haze are still there on the horizon. Just
+doesn't look good. [screenshot] I can see the issue when she's walking to the first tree challenge."
 
-## Continuation handoff — 2026-10-17
+His screenshot (`?chapter=roofs`, about 15 s in) showed the mist as one flat grey-lilac slab with a ruler-straight
+top along the horizon. The camera there stands at 4.8 m, inside the mist's soft top (its middle at 3.9 m, its upper
+edge at 5.3 m). From inside that softness a level sightline runs on through thin mist to the horizon, so the fog
+turns opaque exactly at the horizon; with one constant colour that differs from the sky's horizon, the meeting is a
+hard line. The same line shows from the belfry, where the eye is far above the top.
 
-The transition fix is committed and verified; the village appearance work remains an isolated, playable study.
-Jeremy has been given the comparison and has not yet selected an appearance treatment. Continue from his
-feedback; do not treat the recommendation as his approval to land or deploy it. The current recommendation
-is **Light + horizon**, without noise. No deployment has been requested.
+The study's light-plus-horizon treatment (mode 7, no noise) is now the shipping mist, in `seaMistLight`
+(`src/world/atmosphere.ts`), with one correction:
 
-Read `docs/journey.md`, `docs/roadmap.md`, this document, and the path-puzzles design/final review. Follow
-the project AGENTS.md and backlog-item skill. A successor must also read Jeremy's actual user turns in the
-previous transcript, not rely solely on this handoff. Visual work requires Astra or Opus; no subagents unless
-Jeremy requests them. Coordinate through disk with `coord note`/`coord status`. Never read actual `.env`
-files; isolated Vite builds here use `envDir:false`.
+- The colour is taken where a sightline reaches the middle of the soft top (or the front, if the eye is ahead of it),
+  12 m in. Measuring to the upper edge, as the study did, put an eye inside the softness at "already in it", so the
+  roofs view kept its line; measured to the middle, level sightlines from that eye reach the horizon colour.
+- Its lit top over a cooler depth, a forward sun term, and from 30 to 160 m along the sightline a blend into the
+  sky's colour toward that bearing, kept through closure and night.
+- In the village (`uSeaFogShape.w`), ordinary distance haze turns toward the sky's own colour along the ray between
+  200 and 900 m, so the far roofs fade into the same horizon.
 
-### Current state and files
+The density integration, coverage, progression, clearing and what the mist hides are unchanged (`drowned-mist-check`,
+`drowned-fog-motion-check`). No pass, texture or loop is added; the noise variant was left out, since it was not
+visible at play distances and doubled the added bake cost. While the mist is away (`uSeaFogShape.w = 0`, including
+the whole cloud arrival) every expression reduces to the previous one.
 
-- Main checkout: `/Users/jeremy/projects/updraft`. Transition commit: `4a2bf422`,
-  **Preserve fog and camera continuity through the village descent**. Main has subsequent work from other
-  sessions; the study deliberately remains pinned to this commit.
-- This session's uncommitted repository work is this diagnosis/study document. At handoff,
-  `docs/code-review-2026-10-17.md` is also dirty from another session; leave it alone.
-- Study directory: `/tmp/updraft-village-fog-study-pEuyC9`. `base/` is the detached baseline worktree;
-  `build.mjs` applies QA-only source transforms and writes `site/`. No appearance edits are in main game code.
-- `play-controls.js` supplies the isolated Fog test panel. Version values: original `0`, horizon only `6`,
-  light + horizon `7`, light + horizon + noise `5`. Ignore earlier experimental modes 1–4.
-- `build.mjs` now includes the final night horizon correction; the older `v3/` daytime captures predate that
-  integration. `night/closed-8.png` and `night/closing-8.png` show the corrected night treatment.
-- Server: `http://127.0.0.1:5350`, Python PID **96060** when checked at handoff, exec session **73081**.
-  It is intentionally left running for Jeremy. Check the listener before restarting; do not launch a duplicate.
-  The exact restart command and playable URL are below. All owned automated browsers are closed.
-- Rebuild: `node /tmp/updraft-village-fog-study-pEuyC9/build.mjs`. The build uses the main checkout's
-  installed Vite and the detached base sources; inspect dependencies and source hashes before changing the base.
+Evidence (`/tmp/polish2-fog/`): `before/` and `after/` are the same game frames from a separate build of
+`f6c55d6f` and this change, at the roofs walk (frames 360–960), `fog=0.3`, `0.6`, `1`, the belfry, the church, the
+storm (300, 900) and the roofs in portrait. Skies match to within 0.2/255 at identical frames; the roofs horizon
+step that read 193→150 across one row now grades from the sky through a pale horizon band into the blue depth over
+about 40 rows. Consecutive-frame changes across the horizon band match the original's (no added flicker), and the
+cache shows no blockiness at the horizon.
 
-### Verification and next work
-
-- The committed transition repair was checked from the unchanged cloud checkpoint, including every
-  handoff frame in landscape and portrait, with separate baseline captures. Details and evidence are below.
-- Appearance study: five seeded frozen views, camera-offset stills, closure-colour comparisons, unchanged
-  optical-depth readbacks, and batched GPU timings. These do **not** constitute a full moving gameplay review.
-- Playable UI: `play-check.mjs` / `play-check.json` pass normal-speed Begin, all four in-place switches,
-  advancing frames, a pointer gesture, and a belfry restart retaining mode 7; browser errors are empty.
-  Its first run had an incorrect assertion expecting story beat `belfry`; the actual containing beat is
-  `church`. Corrected assertion checks that beat and the elevated camera. This was a test error, not a game fix.
-- T3 preview boot was slow and Begin clicks timed out at 60 s then 30 s. Its tab was closed. The documented
-  Chrome for Testing workflow through `tools/lib/browser.mjs` completed the smoke check. Use the GPU gate;
-  never launch installed Chrome with fresh automation profiles. Prefer T3 browser first per runtime rules.
-- Before landing a chosen treatment, review the complete moving village route, advancing bank, church
-  edges/clearing, bell sequence, closure and departure; replay the cloud transition from before handoff.
-  Compare against a separate unchanged build and check unaffected chapters, reflections and mobile cost.
-  The approximate light sample currently handles top/front planes, not the bank's side boundaries or clearing.
-- Keep density, gameplay concealment, camera behavior and approved chapter appearance outside this scope
-  unchanged. A production patch should use existing tuning for the prototype constants and omit study UI
-  and defines. The study itself is not ready to ship merely because its stationary comparisons look better.
-- Frozen RAF probes must use polling timers (`polling:50`), since RAF-based waitForFunction stalls after
-  the freeze. Individual-draw GPU timings were misleading; use the balanced batched asynchronous GPU-query
-  evidence below. Never describe a captured video as reviewed motion unless it was actually watched.
+`tools/drowned-fog-check.mjs`'s strand fixture no longer reaches `becalmed` (its checkpoint restore leaves the beat
+at `still` while the boat drifts); the stage frames above were taken with `?fog=` instead.
 
 ## Cheap village-fog study — 2026-10-17
 
 The transition repair is committed as `4a2bf422`. The appearance study uses a detached worktree at that commit
-and QA-only Vite transforms under `/tmp/updraft-village-fog-study-pEuyC9/`. No village appearance changes have
-been applied to the main checkout. The analytic density, coverage, progression and clearing calculations stay
+and QA-only Vite transforms under `/tmp/updraft-village-fog-study-pEuyC9/`. The analytic density, coverage, progression and clearing calculations stay
 unchanged in every prototype.
 
 ### Smallest promising treatment
@@ -405,9 +381,9 @@ Earlier frozen comparisons and insufficient first transition probe: `/tmp/updraf
 The hidden descent now preserves the bank's texture and lighting reference frame, moves its clear pocket
 atomically with the hull/camera, and covers the sail change more fully. Its verification is recorded above.
 
-Preserve the village's front progression, rising height, bell clearing and hidden-boat reveal. Give its fog
-spatial shape, light variation and a horizon treatment consistent with the cloud bank, while retaining a cheap
-density integration. Review that appearance before choosing how to cache it. Separately tune the arrival's
+Preserve the village's front progression, rising height, bell clearing and hidden-boat reveal. Its light and
+horizon are treated (above); a rolling top like the cloud bank's would still need its own spatial shape, while
+retaining a cheap density integration and a full-route review of what it hides. Review that appearance before choosing how to cache it. Separately tune the arrival's
 bank/haze handover so the texture and colour do not disappear together into a visibly different atmosphere.
 
 Verify from before the cloud-bank entry through the village reveal, then through the roof route and full bell

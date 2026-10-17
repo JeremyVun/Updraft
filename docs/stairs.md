@@ -214,7 +214,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
      swans have come round toward the sun, turning and tilting only as far as keeps them in the frame, until it is
      looking up past her at the sky they are going into. The bird sees them first and calls to them as the lens
      starts to go with them (Jeremy: "when the swans fly in, lets have the cygnet make a call"); she follows its look and her
-     feet go still.
+     feet go still. It calls once more as they pass nearest overhead, about 3 s later (Jeremy, 2026-10-17: "the cygnet
+     could make one more call as the swans fly past overhead").
    - *The boat.* Once the lens has come to rest over her shoulder into the sun, it holds there a few seconds
      (Jeremy: "hold that shot for maybe 5-7 seconds before the boat appears out of the clouds"); then the boat
      comes out of the foot of a tower of cumulus to the right of the sun (it has waited inside, hidden, since they
@@ -320,8 +321,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **The sail**: the route is `CLOUD_ROUTE` (the turn off the landing, then a Catmull-Rom wander through `MEANDER`),
   the bank's front `FOG_BANK`. The boat waits hidden in the foot of the nearest tower a little right of the sun
   (`harbour`) from the moment they come out on top, and once the swans are on their way into the sun (`BOAT_SETS_OFF`) sails
-  out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
-  draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
+  out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` hitches the kite's line three turns round the white
+  stem post under the lantern (`Boat.stemHitch`), where it leaves clear of the glass whichever way the kite stands
+  (Jeremy, 2026-10-17: "The kite line is sticking into and out of the boat lantern, it should be more properly
+  attached to the boat."; `kite-logic-check.mjs`), and under sail the kite draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
   round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). Only while
   it is perched does `lookOut` direct her hands; `Carry` keeps them supporting it after boarding and on its return.
   The bank is an analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the

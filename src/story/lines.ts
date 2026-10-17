@@ -32,6 +32,7 @@ export class LinesChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 24, height: 5 };
   readonly focus = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly behind = new THREE.Vector3();
   private readonly watching = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.12, 0, 1).normalize();
   private readonly rotaryFrom = new THREE.Vector3(tuning.rotaryWashing.cameraSide, 0, 1).normalize();
@@ -533,6 +534,14 @@ export class LinesChapter implements Chapter {
       if (this.beat === 'rotaryApproach') {
         const arrived = 1 - THREE.MathUtils.smoothstep(c.distanceTo(ROTARY_BEFORE), 1, 14);
         s.target.lerp(this.tmp.set(c.x, c.y + 2.8, c.z - 3), 1 - arrived);
+        // The walking view follows her out through the curtain's gap and only widens onto the rotaries as she reaches them.
+        const gap = CURTAINS[1], behind = this.behind.set(gap.crossX - c.x, 0, gap.center.z - c.z);
+        const trailing = THREE.MathUtils.smoothstep(behind.length(), 1, 3) * THREE.MathUtils.smoothstep(c.distanceTo(ROTARY_BEFORE), 1, r.approachSettle);
+        s.from.lerp(behind.normalize(), trailing).normalize();
+        const walking = Math.min(s.distance, k.walkDistance * Math.max(1, 0.53 / (window.innerWidth / window.innerHeight)));
+        s.distance = THREE.MathUtils.lerp(walking, s.distance, arrived);
+        s.height = THREE.MathUtils.lerp(k.walkHeight, s.height, arrived);
+        s.zoom = THREE.MathUtils.lerp(1, s.zoom, arrived);
       } else if (this.beat === 'rotaryThrough') {
         const along = THREE.MathUtils.smoothstep(ROTARY_INSIDE.z - c.z, 0, 8);
         s.target.lerp(this.tmp.set(c.x, c.y + 2.8, c.z - 4), along);

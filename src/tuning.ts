@@ -85,7 +85,7 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     /** Sleeping's morning clears off the sea passage within its first `seaMusicLead` seconds, without a phrase wait. */
     seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
-    /** `village_approach.ogg` opens on 0.2 s of silence and then its loudest note, so it comes in at full level. */
+    /** `village_approach.ogg` makes its own entrance (`recordedMusicOnce.villageApproach`), so the handoff opens at once. */
     villageArrivalFadeIn: 0,
     /** Sleeping's lullaby opens on near-silence and a soft first note, so it too comes in at full level. */
     sleepingArrivalFadeIn: 0,
@@ -119,11 +119,10 @@ export const tuning = {
      */
     fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
     /**
-     * The summit part, starting on its own, begins `summitDelay` after the bird reaches the top and rises over
-     * `summitFadeIn`. `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
+     * `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
      * `ribbonSeamWithin`, or fades over `ribbonFade`, and the music rests until the curtains.
      */
-    summitDelay: 1, summitFadeIn: 1.5, ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
+    ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
     /** Seconds Sleeping's morning takes to fade as the boat leaves for the sea. */
     sleepingDepartureFade: 4,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
@@ -147,9 +146,12 @@ export const tuning = {
      */
     recordedMusicOnce: {
       stillDeparture: { end: 118, fadeOut: 4, holdsHandoff: false },
-      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 1.75, holdsHandoff: true },
-      /** To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. */
-      villageApproach: { end: 36.93, fadeOut: .5, holdsHandoff: false },
+      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 2.25, holdsHandoff: true },
+      /**
+       * To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. It rises
+       * from silence under its first note, the loudest of the opening, so that note sits with the ones after it.
+       */
+      villageApproach: { end: 36.93, fadeOut: .5, enterFrom: 0, enterOver: 1.2, holdsHandoff: false },
       /**
        * From just before the attack at 8.0 s, coming in slowly after the last bell. `belfry_ending.ogg` (46.0–54.05 s
        * slowing over its last 3 s, its fade baked in) takes over in the quiet before the attack at 50.275 s.
@@ -223,9 +225,11 @@ export const tuning = {
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
     /**
      * When the air dies (the drowned village's becalming) the ambient breeze falls this share of the way to silence and
-     * the sea's wash this share quieter, easing in and out at `calmEase` per second; the player's own wind stays.
+     * the sea's wash this share quieter, easing in and out at `calmEase` per second; the player's own wind stays. Still
+     * water laps at the walls round the lens every `calmLap.every` seconds, at `calmLap.level` once the air is dead.
      */
-    calmBreeze: 0.95, calmSea: 0.6, calmEase: 0.4,
+    calmBreeze: 0.7, calmSea: 0.45, calmEase: 0.4,
+    calmLap: { every: [2.5, 6], level: 0.8 },
     /**
      * The player's wind is heard by how fast the stroke crosses the screen, not the ground under it, so the same gesture
      * sounds alike over near ground and far sky: `strokeMost` of a full gust at most, approached as the stroke passes
@@ -271,6 +275,10 @@ export const tuning = {
     cygnetFullDistance: 30, flockDistance: 320,
     /** The cygnet's footfalls stay cute but sit under everything else. */
     cygnetStepDb: -6,
+    /** The child's boots on the drowned village's slates and the belfry's boards: soft, under the cat and the bell. */
+    childStepDb: 0,
+    /** Footfalls (hers and the cat's paws) at full level within `near` of the lens, easing to `least` by `far`. */
+    tread: { near: 6, far: 40, least: 0.35 },
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
     callSpace: 4,
     shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,
@@ -350,14 +358,16 @@ export const tuning = {
     cottageTurn: -0.12,
     /** Seconds the child watches the family go before walking on: long enough for the V to grow small. */
     watchFlockFor: 13,
+    /** How quickly she turns to face them as they go (per second). */
+    watchTurn: 1.1,
     /** Her run down to the door, as a share of her usual running speed. */
-    runHomePace: 0.815,
+    runHomePace: 0.745,
     /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
     stopAfter: 24,
     /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
     noticeFor: 1, handsFrom: 0.3, raiseFor: 2.2,
     /** Let recognition settle, then refold while the melody continues. */
-    recogniseFor: 6,
+    recogniseFor: 5,
     lookUpFrom: 1.2, lookUpUntil: 2.4, relaxFrom: 2.4, relaxUntil: 4, relaxDrop: 0.04,
     /** After refolding, offer the plane briefly before the wind takes it. */
     releaseFor: 2,
@@ -376,7 +386,7 @@ export const tuning = {
     portraitBack: 9.5, narrowPortraitBack: 9.5, paperWeight: 0.65, portraitPaperWeight: 0.6,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
     /** Settle at the crest, then stay there as our gaze pans to the house and finally the credits. */
-    crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
+    crestBack: 12, crestRise: 18, homePanFor: 9, descentFit: 3, descentHouseWeight: 0.2,
     returnFrom: 2.5,
   },
   /** The child's orange toy washed up beside the home jetty (`world/home-toy.ts`). */
@@ -445,22 +455,25 @@ export const tuning = {
     liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
     down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
     hoverHeight: 3, afterlift: 6, afterFade: 5, drift: 3.6, driftGather: 6, driftSpread: .3, driftTurn: .35,
-    driftRise: 0.3, downFade: 19, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
-    inviteAfter: 5, arrivalRest: 3, seedRest: 21, listenFor: 5.5, familyAfter: 2,
+    driftRise: 0.3, downFade: 17, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
+    inviteAfter: 5, arrivalRest: 3, seedRest: 19, listenFor: 5.5, familyAfter: 2,
     /**
-     * On to the crest the listening view gives way to the crest's over her first `departureWalk` metres, the lens
-     * turning after her from where it stood for her first `departureHold` before it follows her down, its gaze
-     * drawn `departureLead` of the way from her toward the water; stopped on the crest, it turns the rest of the way.
+     * On to the crest the listening view, already behind her, gives way to the crest's over her first
+     * `departureWalk` metres as it follows her, its gaze drawn `departureLead` of the way from her toward the water;
+     * stopped on the crest, it turns the rest of the way.
      */
-    departureWalk: 16, departureHold: 8, departureLead: .45,
+    departureWalk: 19, departureLead: .45,
     /**
      * The play's camera: looking down on the flower bed from close behind her (`Bed`, aimed `cameraBedAim` of the
      * way from her to it), then round to the seed heads (`Seed`: from beyond them at `cameraSeedBearing`, the
      * bearing of the lens from her as `atan2(x, z)`, looking back over the heads to the shaded slope and the sky
      * away from the sun; rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold`
-     * metres), then the listening rise (plain names: at the bearing `cameraListenBearing`, west of her and a little
-     * ahead, so she walks toward the lens, hears the call from off the side of the frame and the pond stays out of
-     * it), each blended in as she walks. Coming to a stand the walk's view gives way to it over her last `approach`
+     * metres), then the listening rise (plain names: at the bearing `cameraListenBearing`, behind her right shoulder,
+     * so the lens comes round after her as she walks on toward the pond and she turns in profile to the call from off
+     * the right of the frame, the water still out of it), each blended in as she walks. Walking from
+     * the bed to the seeds the lens opens onto the landscape: from half `cameraSetOff` past the bed it draws back
+     * `cameraOpenBack`, comes down to `cameraOpenUp` over her and lifts its gaze `cameraOpenLook`, and it settles
+     * back into the seeds' view between `cameraOpenFrom` and `cameraOpenTo` metres from their stand. Coming to a stand the walk's view gives way to it over her last `approach`
      * metres (`seedApproach` for the seeds, whose view is so far round), followed at `cameraArrivePace`, and over
      * her last `cameraSettleFrom` metres its aim moves from her onto the play, whose heads it fits into the frame
      * over `cameraSettleFor` seconds once she stands; leaving a play it waits where it watched for her first
@@ -470,8 +483,10 @@ export const tuning = {
     cameraSetOff: 8, cameraSettleFrom: 10, cameraSettleFor: 4,
     cameraSeedBearing: 2.36, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedBearing: 2.74, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 2.5, cameraSeedHold: 6,
-    cameraBack: 10, cameraUp: 2, cameraPortraitBack: 13, cameraPortraitUp: 3, cameraPace: 0.5, cameraArrivePace: 0.35,
-    cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: 4.19,
+    cameraBack: 12, cameraUp: 3, cameraPortraitBack: 15, cameraPortraitUp: 4, cameraPace: 0.5, cameraArrivePace: 0.35,
+    cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: .55,
+    cameraOpenBack: 3, cameraOpenUp: 4, cameraOpenLook: 1.4, cameraPortraitOpenBack: 3, cameraPortraitOpenUp: 5,
+    cameraOpenFrom: 24, cameraOpenTo: 10,
     /**
      * She watches the released down go (`seedRest` seconds from its release until she walks on): `watchFrom` seconds
      * after the release the lens starts to lift its gaze after the cloud (aimed `watchTop` of the way from its heart
@@ -546,9 +561,10 @@ export const tuning = {
     starPulsePeriod: 6, starPulseDepth: 0.08,
     /**
      * Once the kite is complete its stars come alive: seconds to brighten, how much brighter they settle, and a slow
-     * breath (seconds, each star a little out of step) that lifts their light and swells them by these shares.
+     * breath (seconds, each star a little out of step) that lifts their light and swells them by these shares. The
+     * lines between them strengthen by `aliveLine` and breathe with the two stars they join by `aliveLinePulse`.
      */
-    aliveIn: 3, aliveGlow: 1.7, alivePeriod: 3.6, alivePulse: 0.9, aliveSwell: 0.45,
+    aliveIn: 3, aliveGlow: 1.95, alivePeriod: 3.6, alivePulse: 1.15, aliveSwell: 0.55, aliveLine: 1.35, aliveLinePulse: 0.45,
     channelLead: 4,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29,
@@ -742,7 +758,7 @@ export const tuning = {
   opening: {
     title: { afterFarewell: 13, fadeIn: 3, hold: 2.5, fadeOut: 3 },
     titleGust: { before: 3, duration: 6, reach: 48, width: 32, radius: 10, speed: 24, energy: .3, lift: .04,
-      lines: { interval: .45, spread: 22, height: 1.5, climb: .15, width: .2 } },
+      lines: { interval: .35, spread: 22, height: 1.5, climb: .15, width: .2 } },
     crossing: { speedScale: 0.99, whaleDepth: 2.4, whaleAt: 45, whalePan: 6, whaleFadeIn: 3.5, whaleFadeOut: 4, diveSwell: 1.8, diveSwellFor: 60 },
     shoreEchoes: { gulls: 10, gullSpacing: 10, afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
       crossSpeed: 6, forwardSpeed: 5.5, laundryLift: 5.15, laundryTurn: 2.2, laundrySteady: .65,
@@ -845,12 +861,14 @@ export const tuning = {
     alightEnd: 0.6,
     /**
      * Run up on a beach, they sit a moment before getting up, stand nearer the keel than at a jetty (the round bilge
-     * leaves less floor at the side), and step down this far out from the keel, this far forward.
+     * leaves less floor at the side), and step down this far out from the keel, this far forward. A walk on that
+     * crosses the bow passes this far ahead of its stem.
      */
     ashorePause: 0.8,
     ashoreInside: 0.16,
     ashoreOut: 1.25,
     ashoreAhead: 0.25,
+    ashoreRoundBow: 1,
     /**
      * Stepping down into a boat lying alongside a deck: how far the hull dips under the weight (m) and how soon after
      * the step that is deepest (s); how far it rolls toward the side the weight came over (radians), how fast it rocks
@@ -896,14 +914,18 @@ export const tuning = {
      * still air they droop with only a lean behind. It turns with the child, and a player's gust takes over from it.
      */
     breeze: 0.8, breezeSwell: 0.3,
-    /** How much of the child's own speed adds to the air carrying the ends out behind them. */
-    carry: 0.8,
+    /**
+     * How much of the child's own speed adds to the air carrying the ends out behind them. In a boat running before
+     * the wind the air keeps some pace with it, so only `carryAboard` of that counts.
+     */
+    carry: 0.8, carryAboard: 0.5,
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, never more than `gustMost`, and one felt at `gustTakeover` units per second or more
-     * carries them its own way, turning toward a new way at `gustTurn` (per second). In a boat they feel `gustAboard` of it.
+     * carries them its own way, turning toward a new way at `gustTurn` (per second). In a boat a gust takes nothing
+     * round: `gustAboard` of what the ends would feel adds to the air of the boat's going, bending the stream.
      */
-    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2, gustAboard: 0.5,
+    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2, gustAboard: 0.3,
     /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
     drag: 3.2,
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
@@ -1253,7 +1275,20 @@ export const tuning = {
      * and sliding the last `planeLead` metres into the fork, and the first out of it, along its own line.
      */
     planeGlide: 1.2, planeLift: 3, planeLead: 1.5,
+    /**
+     * The island's gust that carries the paper into the fork: it rises over `rise` seconds as the glide starts, its
+     * streaks travelling `pace` times the paper's mean speed (at least `leastPace` m/s) from `behind` metres back of
+     * it, and blows on `after` seconds past the glide, dying over the last `fall`. Its air bends the grass along a
+     * `length` m stretch behind the paper (`speed`, `radius`, `energy`, `lift`) and sets the stuck paper fluttering.
+     */
+    planeGust: { rise: 0.3, after: 1, fall: 0.8, pace: 1.4, leastPace: 7, behind: 4, length: 8, speed: 14, radius: 3.5,
+      energy: 0.55, lift: 0.05, lines: { interval: 0.1, spread: 5, height: 2, climb: 0.2, width: 0.32 } },
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
+    /**
+     * Through the finale the bough breathes a trace out of its mouth every `every` seconds, as strong as a soft note,
+     * until `tail` seconds before its phrase ends.
+     */
+    finaleStream: { every: 0.9, strength: 0.5, tail: 4 },
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
     waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,
@@ -1428,8 +1463,11 @@ export const tuning = {
     cameraLead: 0.36,
     cameraPace: 0.65,
     cameraFitResponse: 1.2,
-    /** A nearby separation: the child and bird share the frame throughout. */
-    shelterDistance: 12,
+    /**
+     * A nearby separation: the child and bird share the frame throughout. The view starts settling `frightComposeFrom`
+     * out while she walks on, and she stops at the flash, about `shelterDistance` from the shelter.
+     */
+    shelterDistance: 12, frightComposeFrom: 16,
     /** The bird flinches at the flash; the clap lands a quarter second after (Jeremy: it was ~250 ms early). */
     frightFlinchAfter: 0.16,
     frightThunderDelay: 0.41,
@@ -1477,8 +1515,16 @@ export const tuning = {
       inviteBowSpan: 5,
       inviteCircleRadius: 1.65,
       releaseSeconds: 2.6,
-      /** Seconds the whole freed scarf takes to be drawn in to the mast: about 135 m of wool, so the free end runs at up to 13 m/s. */
-      gatherSeconds: 16,
+      /**
+       * Seconds the whole freed scarf takes to be drawn in to the mast, from the moment the bow slips: about 135 m of
+       * wool, reeled like a tape measure. The share drawn goes as the time's share to the power `gatherPace`, eased at
+       * both ends, so it starts unhurried while the bow falls, gathers pace through the lengths behind her (the free end
+       * up to about 28 m/s) and comes to rest at the mast. The sail is woven from the wool as the last `1 − weaveFrom`
+       * of it arrives.
+       */
+      gatherSeconds: 10, gatherPace: 1.3, weaveFrom: 0.2,
+      /** How far the sail is woven when she sets off down to the boat, rather than watching its last stitches. */
+      walkOnWoven: 0.97,
       /** The tied lengths' spring to the wind (rad/s) and its damping ratio, over the air of ±`windSpan` rows. */
       windResponse: 2.2,
       windDamping: 0.9,
@@ -1644,6 +1690,12 @@ export const tuning = {
        * side (seconds, metres of arc), and its pause on top.
        */
       flutterWait: 0.6, flutterFor: 0.75, flutterArc: 0.55, onTopFor: 1.1, hopDownFor: 0.6, hopDownArc: 0.3,
+      /**
+       * Feathers it loses as it beats up over the bole, `flutterShedAt` of the way through the flutter, as on the sleeping island's
+       * bank; `flutterFeatherSize` times a startle's, since the lens here stands further off. Over the bole she watches it
+       * come up after her, holding the lens on it until `featherWatch` s after it launches, at most `featherWait` s.
+       */
+      flutterFeathers: 4, flutterShedAt: 0.5, flutterFeatherSize: 1.2, featherWatch: 1, featherWait: 0.9,
       /** How loud the leaves she lands in are, as a share of a heap thrown up. */
       landLeaves: 0.7,
     },
@@ -1671,11 +1723,12 @@ export const tuning = {
       uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
       /**
        * Seconds without updraft on the right heap before the cygnet goes to stand at it, and by round before the drawn
-       * updraft turns over it: soon at the first heap, once the leaves of its dive are down, and never in round 3,
-       * where the updraft is learned and a drawn one over a single heap of three would give its hide away. Its loops
-       * are `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
+       * updraft turns over it: soon at the first heap, once the leaves of its dive are down; in round 3 as soon as it
+       * has settled, so the player sees the heaps are ready to play, and over all three at once (`inviteEvery`), since
+       * one drawn over a single heap of three would give its hide away. Its loops are `inviteRadius` of the heap's
+       * radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
        */
-      hintAfter: 7, inviteAfter: [4, 6, Infinity], inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 3,
+      hintAfter: 7, inviteAfter: [4, 6, 0.4], inviteEvery: [false, false, true], inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 3,
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
       /**
@@ -1700,7 +1753,7 @@ export const tuning = {
        * Freed at a tangle while it runs on to hide, she watches it go at least `seeOffFor` seconds, and sets off after it
        * once it has come down to the leaves beyond the rise, or after `seeOffMost` whatever it is doing.
        */
-      seeOffFor: 2.5, seeOffMost: 7,
+      seeOffFor: 2.5, seeOffMost: 4,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
       /**
@@ -1777,12 +1830,15 @@ export const tuning = {
      */
     snagStretchRate: 9, snagStretchDamping: 0.3, snagTug: 1, snagLift: 0.6, snagThin: 1.5, snagShiverRate: 15,
     releaseSpring: 8, releaseDamping: 0.35, snagInviteSpan: 3,
-    creakTravel: 0.16, creakLevel: 0.4,
+    /** One creak once a frame has really turned, and a softer settle as it catches its last stretch to rest. */
+    creakTravel: 0.16, creakLevel: 0.4, settleLevel: 0.22,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
     inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
     cameraDistance: 20, cameraHeight: 1.6, cameraSide: 0.12, cameraFocusHeight: 3.2, cameraFocusSide: 3,
     cameraZoom: 0.88, narrowZoom: 0.58,
+    /** Walking up from the second curtain, the view trails her through its gap and comes round behind the rotaries over her last `approachSettle` m. */
+    approachSettle: 8,
     narrowDistance: 13, narrowHeight: 1.4, narrowSide: 0.08, narrowFocusSide: 1.5,
   },
   linesPassage: {
@@ -1876,8 +1932,12 @@ export const tuning = {
     slack: 0.45, pull: 1.4, drag: 0.5, beachGrip: 2.2,
     /** The heading it lies at on the sand once it is in. */
     berthYaw: -0.45,
-    /** A stalled player is shown a sweep across the pinwheel after this long without one. */
-    inviteAfter: 4, inviteSpan: 7, inviteWidth: 0.15,
+    /**
+     * A stalled player is shown a clockwise spiral winding out round the pinwheel after this long without a sweep:
+     * `inviteTurns` turns from `inviteInner` to `inviteOuter` m over `inviteSweep` s, then `invitePause` s.
+     */
+    inviteAfter: 4, inviteSweep: 2.4, invitePause: 1.2, inviteInner: 0.35, inviteOuter: 2, inviteTurns: 1.25,
+    inviteAlpha: 0.8, inviteWidth: 0.12,
     /** On a portrait screen, the share of the way the view at the bank turns to look out along the line. */
     narrowTurn: 0.6,
     /** Just through the door, the share of the way the view turns from straight ahead toward the waiting boat. */
@@ -1905,6 +1965,11 @@ export const tuning = {
     snagTether: 4, freeFor: 3, freeLift: 0.15,
     /** A shorter tether keeps the kite beside the boat in the narrower departure views. */
     shoreKiteStringLength: 22,
+    /**
+     * The sky mirror's kite is wound a few turns round the lamppost, high and clear of the water, and stands off to the
+     * north on this much string, within every star-play view.
+     */
+    mirrorKite: { hitch: { radius: 0.105, turns: 4, height: 2.1 }, stringLength: 22, azimuth: 3.5 },
     /** How much string is out. The kite flies at three quarters of it in the breeze and nearly all of it in a gust. */
     stringLength: 34,
     /** How high the kite rides in the island's own breeze, in radians above the horizon from its tie-off. */
@@ -2197,9 +2262,21 @@ export const tuning = {
      * `raftTurn` radians.
      */
     raftPort: 8, raftAhead: 9, raftTurn: 0.5,
-    /** Seconds into its first full breath when the blue-green net drifts clear, and how long it takes. */
-    slumpFrom: 1.8, slumpFor: 5,
-    breathNetGap: 0.14, breathNetAside: 24, breathNetAlong: 5, breathNetArc: 2.5, breathNetCell: 0.65, breathNetDrape: 6.5,
+    /**
+     * Its first full breath throws the blue-green net off the blowhole and the breeze carries it away as cloth. The
+     * breath rises `blast` m/s at its heart, `plume` metres out, easing over `exhale` seconds; the breeze comes in from
+     * `breezeFrom` seconds at `breeze` m/s, gusting by `gusts` of that, toward the tail and away from the boat in the
+     * shares `toward` [tailward, away], rising `lift` m/s over its back (falling off over `liftFor` metres); eddies of `flutter` m/s turn it over, rising and
+     * falling only `eddyRise` as much, never enough to hold it up; the air rises `tumble` m/s on one side of it
+     * 5 m out and falls on the other, swinging at `tumbleRate` rad/s, so it turns over one way and back. Air through its face
+     * carries it at `catch` and along it at `skim` (1/s); it is drawn down at `fall` m/s², comes down on the water at
+     * `water` metres, is stilled there at `wetDrag` (1/s), soaks so the air lets go of it at `soak` (1/s), and
+     * once it has lain there `settle[0]` seconds, all of it within `settle[1]` metres of the water (or `settle[2]`
+     * seconds whatever), rides the swell and sinks away over `sinkFor` seconds.
+     */
+    netFlight: { blast: 16, plume: 8, exhale: 0.8, breeze: 6.5, breezeFrom: 0.4, gusts: 0.35, toward: [0.45, 1] as const, lift: 2.5, liftFor: 22,
+      flutter: 3, eddyRise: 0.25, tumble: 2, tumbleRate: 0.8, catch: 2.6, skim: 0.35, fall: 3, water: 0.08, wetDrag: 6, soak: 3, settle: [3, 0.7, 12] as const, sinkFor: 14 },
+    breathNetGap: 0.14, breathNetCell: 0.65, breathNetDrape: 6.5,
     /** Half length and width of the opening beneath the upper net (m). */
     breathFlapAlong: 3.5, breathFlapAcross: 3.2,
     /**
@@ -2744,7 +2821,7 @@ export const tuning = {
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
-      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65, mistSun: 0.12,
+      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65,
       mistWispDensity: 0.24,
       mistWisps: [
         { across: -132, ahead: 1, width: 58, depth: 14, height: 1.05 },
@@ -3439,15 +3516,23 @@ export const tuning = {
      * `offsetAtNave` and may stand `arcAtNave` off astern, so the lens sees her past the nave's roof. On a lens of
      * `zoom` it turns toward the tower only as far as brings it `margin` radians inside the frame's side, keeping her
      * `herMargin` inside the other, and looks up from the storm's own aim only as far as keeps the lamp `margin` inside
-     * the frame's top, never above `tilt`. From `holdFor` seconds after the light is out it comes in over `letGoFor`
+     * the frame's top, never above `tilt` nor so far that the hull, at the swell's mean, comes within `boatMargin`
+     * radians of the frame's foot (room for a trough): passing under the tower the lamp may leave the top, the boat
+     * never the bottom. From `holdFor` seconds after
+     * the light is out it comes in over `letGoFor`
      * seconds to the storm's frame.
      */
     leaveFor: 9,
     lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 3.2, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
       arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.14, herMargin: 0.14, tilt: 0.26, pace: 0.6,
-      holdFor: 1, letGoFor: 5 },
+      boatMargin: 0.16, holdFor: 1, letGoFor: 5 },
     /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
     lensTurn: 0.6,
+    /**
+     * How quickly it takes up the hull's rise and fall (critically damped, per second): slow enough that it rides the
+     * swell's mean, not each wave. Low over the water it eases onto its clearance over its last `floorEase` metres.
+     */
+    heaveFollow: 0.3, floorEase: 0.6,
     /** Seconds she takes turning round on the thwart from the cat to the way they go, as they cast off. */
     turnFromCat: 3,
     /** Seconds she holds the startled cygnet as the light goes out. */

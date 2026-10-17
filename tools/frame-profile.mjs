@@ -13,6 +13,7 @@
 // terrain-skips-off restores the terrain's dead distant-field (a1-off), frost (a2-off) and outside-atlas field
 // (a3-off) work; veil-always draws the sleeping veil at zero; glass-sky-always computes the sky under a full mirror.
 // STATE='<js>' runs in main.ts's scope after the census, before the ablations, to force a state for both sides.
+// STATE may also register ablations of its own: __audit.customs = { name: on => ... } is called with whether each is named.
 // FORCE_GRASS_BAKES=1 ABLATIONS=grass-tables measures the cost of rebuilding all three tables each draw.
 // heights-direct turns the distant-height atlas off (uTerrainHeightsReady 0): every lookup beyond the window calls
 // worldHeight again, as before the atlas. heights-const is the upper bound on the distant-height atlas: every height read beyond the window (terrain
@@ -82,7 +83,7 @@
 // their cameras along the path (PATH_STEPS) and every step is compared the same way.
 // ALONG=10 under COMPARE_BASE plays both builds together from the fixture frame to the moment, held on every tenth frame
 // until both have been read as their loops drew it; frames whose hashes differ are compared (CAPTURE=1 saves those over
-// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village. STATE runs on BASE's page alone.
+// COMPARE_MAX). stairs:drowned plays the whole chapter on out into the village. STATE runs on BASE's page alone; SETUP on both.
 // PAIR_BASE=<another dev server> with FRAME times the frame on both builds at once (FRAME_PASS's frame, ABBA between
 // the two pages over PAIR_ROUNDS, with each page's none floor); SETUP and PAIR_SETUP run code in each page's main.ts
 // scope right after Begin (a level's settings; SETUP works without PAIR_BASE too); PAIR_PARTS=a,b also times those
@@ -278,6 +279,7 @@ window.__audit = {
     if (this.hidden) for (const [object,visible] of this.hidden) object.visible=visible;
     if (this.culling) for (const [object,culled] of this.culling) object.frustumCulled=culled;
     this.hidden=[];this.omit=omit;
+    for(const [name,set] of Object.entries(this.customs??{}))set((omit||'').split('+').includes(name));
     if(this.diagnosticMaterials)for(const [m,fragment]of this.diagnosticMaterials){if(m.fragmentShader!==fragment){m.fragmentShader=fragment;m.needsUpdate=true;}}
     sky.renderOrder=omit==='sky-last'?10:this.skyOrder;
     this.tintMaterials ??= [terrain.mesh.material,...grass.lods.map(l=>l.tableMat)].map(m=>[m,m.fragmentShader]);
@@ -840,8 +842,9 @@ window.__audit = {
     this.configure(omit);const b=snap();
     const bite={shaders:a.sources.filter((s,i)=>s[0]!==b.sources[i][0]||s[1]!==b.sources[i][1]).length,hidden:this.hidden.length,
       showing:this.hidden.filter(([o])=>showing.has(o)).length,settings:a.settings!==b.settings,
-      draw:['wind','reflection','bloom','post','grid-cull-off','stairs-full'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake};
-    if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
+      draw:['wind','reflection','bloom','post','grid-cull-off','stairs-full'].includes(omit)||omit==='grass-tables'&&!!this.forceGrassBakes||this.pairRebake,
+      custom:(omit||'').split('+').some(v=>this.customs?.[v])};
+    if(!bite.shaders&&!bite.hidden&&!bite.settings&&!bite.draw&&!bite.custom&&omit!=='none')throw Error('Ablation changes nothing: '+omit);
     return bite;
   },
   png(data) {
@@ -1054,7 +1057,7 @@ try {
     if(PAIR_BASE){await pair(chapter);continue;}
     let against,comparePage;
     if(COMPARE_BASE){
-      const other=await open(COMPARE_BASE,chapter);
+      const other=await open(COMPARE_BASE,chapter,process.env.SETUP);
       if(process.env.STATE)await other.page.evaluate(code=>__audit.state(code),process.env.STATE);
       against=await other.page.evaluate(capture=>__audit.frozenFrame(capture),process.env.CAPTURE==='1');
       assert.deepEqual(other.errors,[],'Browser errors on COMPARE_BASE');

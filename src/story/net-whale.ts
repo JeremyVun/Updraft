@@ -3,10 +3,11 @@ import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
 import { NET } from '../fx/sealife/netShader';
-import { DIVE_AT, GOODBYE_AT, SONG_AT, SPOUT_FROM, SPOUT_TO, WAVE_AT, type Skin, type SleepingWhale } from '../fx/sealife/sleeper';
+import { BREATH_IN, DIVE_AT, GOODBYE_AT, SONG_AT, SPOUT_FROM, SPOUT_TO, WAVE_AT, type Skin, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { callLength } from '../audio/whale-voice';
+import type { SeaRescue } from '../audio/sea-music';
 import type { Cast } from './cast';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
@@ -41,7 +42,7 @@ const WAVE_BACK = WAVE_AT + 2;
 const CALL_WITH = GOODBYE_AT + 0.8;
 /** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
 const FREED_BEFORE = 7.5;
-/** How far the net over the blowhole, or the fold over its eye, has visibly lifted when its phrase begins (0..1). */
+/** How far the net over the blowhole has visibly lifted when the rescue's music begins (0..1). */
 const STIRRED = 0.05;
 const SINK_TO = DIVE_AT - 1;
 /**
@@ -187,8 +188,6 @@ export class NetWhale {
   private heard = 0;
   private calledNear = false;
   private calledApproach = false;
-  /** The latest of the open sea's phrases an act of the rescue has begun (`phrase`). */
-  private cued = 0;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -220,6 +219,8 @@ export class NetWhale {
   private wet = 0;
   private peeled = 0;
   private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' | 'swimming' = 'cradle';
+  /** The net over the blowhole has first lifted: the rescue is under way. */
+  private stirred = false;
   private podGone = false;
   /** The way the pod goes once the whale has, or null to carry on along its way round. */
   private podYaw: number | null = null;
@@ -468,7 +469,6 @@ export class NetWhale {
   restore(point: string): void {
     const after = WHALE_SAVES.indexOf(point);
     if (after >= 0) {
-      this.cued = [0, 1, 2, 2, 3, 4][after];
       this.net.finishDraping();
       this.corkLaid = false;
       this.lineFramed = false;
@@ -482,12 +482,14 @@ export class NetWhale {
       this.hold = 1;
       this.turn = this.turnToward();
       this.cygnetIn = this.cast.cygnet.seat === 'satchel' ? 'satchel' : 'cradle';
+      this.stirred = after >= 1;
       if (after >= 1) {
         this.step = 'eye';
         this.progress = 1;
         this.breathed = this.looking = true;
         this.whale.awaken(null);
-        this.net.lift = this.net.slump = 1;
+        this.net.lift = 1;
+        this.net.thrown = true;
       }
       if (after >= 2) {
         this.step = 'line';
@@ -550,18 +552,14 @@ export class NetWhale {
   }
 
   /**
-   * Which of the open sea's recorded phrases the rescue has called for: -1 coming in, 0 at rest beside it, then one
-   * more as each act begins (the net over the blowhole lifting, the fold over its eye lifting, her first pull on the
-   * line, the cygnet's pull on the loop), and 5 once it is free. Taking the line calls for none. The supplied recording
-   * carries the release without a reward cue.
+   * Where the rescue is, for the open sea's recording: coming in and at rest in the quiet, under way from the moment
+   * the net over the blowhole first lifts, freeing it from the moment the cygnet starts pulling the last loop off
+   * (nothing can stop it from there), and gone. The recording carries the release without a reward cue.
    */
-  get phrase(): number {
-    if (this.step === 'approach') return -1;
-    return this.step === 'free' || this.step === 'gone' ? 5 : this.cued;
-  }
-
-  private cue(phrase: number): void {
-    this.cued = Math.max(this.cued, phrase);
+  get rescue(): SeaRescue {
+    if (this.step === 'approach' || !this.stirred) return 'coming';
+    if (this.step === 'gone') return 'gone';
+    return this.step === 'free' || this.slipT >= 0 ? 'freeing' : 'rescue';
   }
 
   /** How far into one of its calls it is, 0..1. */
@@ -1137,7 +1135,6 @@ export class NetWhale {
       const lifted = this.fold * (K.foldSettle + (1 - K.foldSettle) * this.foldGust);
       this.foldShown += (lifted - this.foldShown) * (1 - Math.exp(-dt * 6));
       whale.struggle = K.eyeTry + K.eyeTryLifted * this.foldShown;
-      if (this.foldShown >= STIRRED || this.fold >= 1) this.cue(2);
       if (this.fold >= 1) {
         this.foldT = 0;
         this.flapFrom = K.foldPart * this.foldShown;
@@ -1521,7 +1518,6 @@ export class NetWhale {
       this.pullFrom.copy(this.cast.cygnet.position);
       this.pullSlack = Math.max(0, this.a.subVectors(this.station, this.pullFrom).dot(this.pullAway));
       this.birdTo('pulling');
-      this.cue(4);
     }
     return true;
   }
@@ -1830,7 +1826,6 @@ export class NetWhale {
   /** The mesh is up off its head: she hauls. */
   private heaveNow(by: 'sweeps' | 'dolphin'): void {
     this.heavedBy ??= by;
-    this.cue(3);
     this.waiting = 0;
     this.puller = this.heaves % 2 === 0 ? 0 : 1;
     this.billow = 1;
@@ -2185,9 +2180,9 @@ export class NetWhale {
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
-    if (this.step === 'breath' && net.lift >= STIRRED) this.cue(1);
-    // The upper net drifts clear after the first full breath; the orange net waits for the later heaves.
-    if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
+    if (net.lift >= STIRRED || this.step !== 'breath' && this.step !== 'approach') this.stirred = true;
+    // Its first full breath throws the upper net off; the orange net waits for the later heaves.
+    if (whale.awake && (whale.phase !== 'woken' || whale.time >= BREATH_IN)) net.thrown = true;
     net.updraft = this.wind;
     net.flap = this.foldT >= 0 ? THREE.MathUtils.lerp(this.flapFrom, 1, THREE.MathUtils.smootherstep(this.foldT / K.foldFlip, 0, 1))
       : K.foldPart * this.foldShown;

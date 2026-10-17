@@ -116,8 +116,11 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 **Movement**
 - Stylised secondary motion on springs, never cloth simulation.
 - **The scarf** (`scarf.ts`, `tuning.scarf`): standing in still air the ends droop with only a lean behind; at a walk
-  they trail back and down, lifting further at a run or in a gust; a player's gust takes them its own way. They must
-  not stick out or blow about with no wind. The knot's rise and fall in each step carries the whole scarf rather than
+  they trail back and down, lifting further at a run or in a gust; a player's gust takes them its own way. Seated in
+  a boat they stream straight back from the way the boat goes, whichever way she is turned, trailing and drooping
+  much as at a walk (the boat runs before the wind, so she feels only part of its going); a gust there bends that
+  stream rather than taking it round, and with the boat's air coming from behind her they hang. They must not stick
+  out or blow about with no wind. The knot's rise and fall in each step carries the whole scarf rather than
   whipping it from the root. Knit is shading only.
 - **Seated on the ground** she holds the paper flat in her lap, or rests her mittens on her knees, and leans in a
   little (`lap`, `paperLap` in `traveller.ts`), never a doll with its arms out; the front hem drapes over her thighs

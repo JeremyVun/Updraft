@@ -2,7 +2,7 @@
 // across the right heap leave it standing and never find it, and circles over it find it in a few loops; wrong heaps
 // first (round 2's burst, round 3's stand and only lift their tops) with the right heap answering; heaps eroding each
 // on its own under circles; a child's random swipes taking nothing, then sloppy circles finding it (counted per
-// round); a stalled player through the hint and the drawn updraft (none in round 3); every heap held against strokes and circles until
+// round); a stalled player through the hint and the drawn updraft (over all three heaps at once in round 3); every heap held against strokes and circles until
 // it is in, from the boat, at the meeting and before rounds 2 and 3 (and the drift and trunk fallbacks); free-play
 // heaps standing against strokes and taken by circles; round 3's shuffle (its plan, its frame, the heaps held through
 // it, her and the cygnet watching); the leap into a standing heap and through a bare hollow; resumed saves at every new
@@ -506,7 +506,7 @@ const cased = {
 
   /**
    * A stalled player in round 2: the cygnet's hint, then the drawn updraft over the right heap, and circles after it
-   * find it. In round 3 nothing is drawn: over one heap of three it would give the hide away.
+   * find it. In round 3 it is drawn over all three heaps as soon as the squirrel has settled, never over its hide alone.
    */
   async stall() {
     const stallIn = async (round, seconds) => {
@@ -539,7 +539,13 @@ const cased = {
     const loops = await circleOver(0, 1);
     assert.ok(loops !== null, 'an updraft after the invitation did not find it');
     const three = await stallIn(2, 25);
-    assert.ok(three.invitation === null, `round 3 drew an updraft over its hide at ${three.invitation} s`);
+    const soon = await page.evaluate(async () => (await import('/src/tuning.ts')).tuning.birches.squirrel.inviteAfter[2]);
+    assert.ok(three.invitation !== null && three.invitation < soon + 2, `round 3's drawn updraft: ${three.invitation}`);
+    const over = await page.evaluate(() => {
+      const coax = __game.story.current.coax, r = __sq.ROUNDS[2];
+      return coax && [coax.at, ...(coax.also ?? [])].map((p) => r.heaps.findIndex((i) => Math.hypot(__sq.BIRCH_PILES[i].x - p.x, __sq.BIRCH_PILES[i].z - p.z) < 0.1));
+    });
+    assert.deepEqual(over, [0, 1, 2], `round 3's drawn updraft stands over heaps ${JSON.stringify(over)}`);
     return { two: { ...two, loops }, three };
   },
 

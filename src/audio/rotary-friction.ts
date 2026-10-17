@@ -5,11 +5,14 @@ const pressure: Curve[] = [
     [.205, .63], [.228, .94], [.253, .62], [.28, .42], [.31, .13], [.35, .055], [.41, .004], [.62, 0]],
   [[0, 0], [.045, .01], [.06, .6], [.077, .92], [.093, .68], [.112, .32], [.137, .58],
     [.16, .32], [.185, .39], [.215, .12], [.26, .032], [.32, .012], [.42, 0], [.62, 0]],
+  [[0, 0], [.04, .02], [.075, .42], [.105, .66], [.14, .48], [.19, .6], [.24, .36], [.3, .14],
+    [.37, .04], [.46, .006], [.62, 0]],
 ];
 const pitch: Curve[] = [
   [[0, 2868], [.085, 2871], [.125, 2886], [.23, 2880], [.27, 2902], [.315, 2940], [.62, 2936]],
   [[0, 2855], [.075, 2868], [.092, 2910], [.107, 2966], [.126, 2953], [.155, 2915],
     [.19, 2930], [.27, 2942], [.62, 2935]],
+  [[0, 2770], [.1, 2752], [.19, 2706], [.28, 2652], [.38, 2628], [.62, 2624]],
 ];
 
 function curve(points: Curve, t: number): number {
@@ -25,13 +28,13 @@ export function rotaryFriction(ctx: BaseAudioContext, variant: number): AudioBuf
   const rate = 24000, duration = .62;
   const buffer = ctx.createBuffer(1, Math.round(duration * rate), rate);
   const data = buffer.getChannelData(0);
-  let seed = variant ? 48271 : 712;
+  let seed = [712, 48271, 90001][variant];
   const random = () => ((seed = Math.imul(seed, 1664525) + 1013904223 | 0) >>> 0) / 2147483648 - 1;
   let phase = 0, upper = 0, overtone = 0, rough = 0, drift = 0, scrape1 = 0, scrape2 = 0;
   const driftRate = 1 - Math.exp(-1 / (.005 * rate));
   const roughRate = 1 - Math.exp(-1 / (.0007 * rate));
   const decay = Math.exp(-Math.PI * 850 / rate), resonance = 2 * decay * Math.cos(2 * Math.PI * 3800 / rate);
-  const contacts = variant ? [[.334, .7], [.431, 1]] : [[.331, .35], [.397, 1], [.48, .3]];
+  const contacts = [[[.331, .35], [.397, 1], [.48, .3]], [[.334, .7], [.431, 1]], [[.352, .45]]][variant];
   let peak = 0;
   for (let i = 0; i < data.length; i++) {
     const t = i / rate, load = curve(pressure[variant], t);
@@ -42,7 +45,7 @@ export function rotaryFriction(ctx: BaseAudioContext, variant: number): AudioBuf
     upper += 2 * Math.PI * (frequency * 2 + 7 + drift * 24) / rate;
     overtone += 2 * Math.PI * (frequency * 3 - 13 - drift * 40) / rate;
     const chatter = Math.max(.1, 1 + rough * 1.7 + .1 * Math.sin(t * 2 * Math.PI * (61 + 12 * t)));
-    const second = variant ? .18 : .75, third = variant ? .22 : .36;
+    const second = [.75, .18, .42][variant], third = [.36, .22, .2][variant];
     const ring = Math.sin(phase) + second * Math.sin(upper + .8) + third * Math.sin(overtone + 2.1);
     const scrape = random() * (1 - decay) + resonance * scrape1 - decay * decay * scrape2;
     scrape2 = scrape1; scrape1 = scrape;

@@ -88,9 +88,9 @@ export class WindLines {
 
   /** The front lays its streaks along its whole width, in the air at its own height, all going its way. */
   blowFront(dt: number, f: GustFront): void {
-    this.frontTimer -= dt;
+    this.frontTimer -= dt * f.strength;
     if (f.strength < 0.15 || this.frontTimer > 0) return;
-    this.frontTimer = (f.lines?.interval ?? 0.12) / f.strength;
+    this.frontTimer = f.lines?.interval ?? 0.12;
     const spread = (Math.random() - 0.5) * (f.lines?.spread ?? 30);
     const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 2;
     const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 2;

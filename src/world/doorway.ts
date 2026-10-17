@@ -79,10 +79,10 @@ export class DoorwayView {
         Object.assign(shader.uniforms, this.clipUniforms, { uDoorOffset: { value: offset } });
         shader.vertexShader = 'uniform vec3 uDoorOffset;\n' + shader.vertexShader;
         shader.vertexShader = shader.vertexShader.replace('distance(cameraPosition, world)', 'distance(cameraPosition, world + uDoorOffset)');
-        // The bird's depth nudge must measure from the destination camera AFTER translation;
+        // The bird's depth nudge must measure from the destination camera AFTER translation, whatever its amount;
         // nudging towards a camera hundreds of metres away would shift it sideways at the threshold.
-        const nudged = shader.vertexShader.includes('nudgedView(vWorld, uNudge)');
-        if (nudged) shader.vertexShader = shader.vertexShader.replace('nudgedView(vWorld, uNudge)', 'nudgedView(vWorld + uDoorOffset, uNudge)');
+        const nudged = /nudgedView\(vWorld,/.test(shader.vertexShader);
+        if (nudged) shader.vertexShader = shader.vertexShader.replace(/nudgedView\(vWorld,/g, 'nudgedView(vWorld + uDoorOffset,');
         const end = shader.vertexShader.lastIndexOf('}');
         const world = /(?:out|varying)\s+vec3\s+vWorld\s*;/.test(shader.vertexShader) ? 'vWorld += uDoorOffset;' : '';
         const translate = nudged ? '' : 'gl_Position += projectionMatrix * viewMatrix * vec4(uDoorOffset, 0.0);';

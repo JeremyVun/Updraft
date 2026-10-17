@@ -556,6 +556,12 @@ Rules:
   `waterWindAt`, `backlit` or `fogOf`'s `skyRadiance` (the compiler already shares them); readbacks every other frame
   and creatures on the baked height copy (not exact for little gain); resting the drowned village during the stairs
   (its leaf drift has no catch-up).
+- The whale's spray is fill-bound: its spout's veil drifts over the boat in hundreds of puffs metres across. Each
+  particle is drawn on a polygon only as far out as a fragment could reach the 0.003 opacity the shader keeps, none at
+  all below it, and keeps its exact square only when seen whole; the finer noise octaves are skipped where even their
+  full sum could not bring a fragment into sight. Its fog and cloud shadow are worked out per vertex. The whale's skin
+  is about all of its cost and cannot be baked: the whale is 110 m long and seen from metres away. Its eye work runs
+  only round the eye, and in the sea's mirror the lichen rosettes, scars and small forms are left out.
 - Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders
   skip its matrices; anything that moves stays automatic. `tools/fixed-matrices-check.mjs` fails if a fixed object moves.
 

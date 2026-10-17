@@ -255,33 +255,35 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `birches-score-check`, `mirror-score-check`, `clouds-music-check`, `village-music-check`, `dream-score-check`, `sleeping-score-check` (the former synthesised score, kept for studies, and the chapter's phases), `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
   The Lines, Boats, Birches and Home gates decode the supplied recordings and check looping, story continuity, mute/hidden-page
   suspension, late-decode cancellation and buffer release; Home also checks the ending fade and checkpoint offset.
-- `sea-music-check` decodes `sea.ogg` and checks its cut points, the silent hold at the break, phrase A at rest
-  (sample-continuous when the boat rests early), B to E on the rescue's steps without restarts, the close on release,
-  restores, the Sleeping handoff before the recording begins, the pad, call room, mute and silence.
+- `sea-music-check` decodes `sea.ogg` and checks its cut points, the crossing carried sample-continuous into the
+  rescue's bed, the bed going round without a gap or a cut for a slow rescue, the release at the end of the phrase the
+  cygnet's pull began in, played as written and faded on its resolution, restores, the Sleeping handoff before the
+  recording begins, the pad, call room, mute and silence. `sea-rescue-audition <out.wav> [freedAfter]` renders the
+  rescue's music for listening at any pace.
   `clouds-music-check` renders the stairs' `clouds.ogg`: decoded in the white, started `cloudsMusicDelay` after the view
   clears on top at half level rising to full, never restarted, faded by 3:28, the village's music held until then (fog or village
   first), a recording already over, a late join after music mute and silence.
   `village-music-check` renders Birches looping on its island, playing its pass out after sailing and ending at least
   `stairsSongRest` before the stairs song (faded or by itself), and the stairs song looping under the cloud and fading
-  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
-  level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
+  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top with its
+  1.2 s entrance under the loud first note as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
   rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at its start seam and
   its handover to `belfry_ending.ogg` (just before an attack, sample-aligned, no dip, faded to silence at its end),
   started on the fourth ring with its slow entrance, played through the storm's start into the ending's ritardando and
-  fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
+  fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the becalming without music and the silent storm.
   `sleeping-music-check` decodes `sleeping.ogg`, `cygnet_brave.ogg` and `sleeping_morning.ogg` and checks the
   lullaby's end, every seam, the climb's part boundaries and the morning's entry on the samples; the frost's bounded
-  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the summit begun on its own
-  a second late and rising in, the climb theme cut at its seam by the fog, queued, passed over and joined unbroken;
+  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, nothing begun at the summit, the climb theme cut at its seam by the fog, queued, passed over and joined unbroken;
   the part sounding as the bandage comes free let go at a seam or a short fade, and silence from there to the
   curtains; the morning from its second phrase as the curtains open; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
   each player's timeline (main's measured climb, the rebuilt climb, a slow player, `?chapter=sleeping`).
   `sleeping-music-browser-check [climb sleeping ribbon feather morning]` measures the same in the real game with a real
   AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue; `ribbon` drives the
-  summit's circles from `?chapter=ribbon`, logs the summit part against the top, the bandage freed, the turn and the leap, the morning's
+  summit's circles from `?chapter=ribbon`, checks nothing plays from the top through the bandage freed, the turn and the leap, the morning's
   seams against the waking, and its departure fade against the sea's entry).
-  `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
-  the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
+  `sea-music-browser-check [sea whale rescue]` runs `?chapter=sea` with no input in the real game: second 55 must fall
+  within 0.6 s of the boat coming to rest, the bed following the crossing without a gap; `?chapter=whale` must begin
+  the bed on load; `rescue` plays it with real gestures and checks the release follows the phrase the pull began in.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
   Sustained-flight checks cover six-second repeats from the last accepted phrase, colour timing, landing, mute and scripted suppression.
   `still-phrases-browser-check` uses real Begin and pointer strokes to verify colour, takeoff, deduplication and hidden-page suspension.

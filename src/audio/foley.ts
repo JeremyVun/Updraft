@@ -11,7 +11,7 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
   | 'dolphin-surface' | 'leaf-scuff' | 'leaf-rustle' | 'leaf-burst' | 'leaf-leap' | 'leaf-dive' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
   | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
-  | 'hull-strain' | 'rotary-creak';
+  | 'hull-strain' | 'rotary-creak' | 'rotary-settle';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -118,8 +118,8 @@ export class Foley {
         this.puff({ at: at + 0.45 + Math.random() * 0.8, len: 0.035 + Math.random() * 0.04, level: level * (0.005 + Math.random() * 0.008),
           pan: pan + (Math.random() - 0.5) * 0.45, type: 'bandpass', from: (2000 + Math.random() * 1800) * colour, q: 0.8, attack: 0.004 });
       }
-    } else if (kind === 'rotary-creak') {
-      this.rotary.play(this.out!, at, level, pan);
+    } else if (kind === 'rotary-creak' || kind === 'rotary-settle') {
+      this.rotary.play(this.out!, at, level, pan, kind === 'rotary-settle');
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;
@@ -515,6 +515,24 @@ export class Foley {
     } else {
       this.blip(at, 1000 + Math.random() * 300, 420, 0.07, 0.02 * weight * v, pan);
       this.puff({ at, len: 0.09, level: 0.014 * weight, pan, type: 'bandpass', from: 2600, to: 1200, q: 0.7 });
+    }
+  }
+
+  /** A small boot coming down: on slates a soft thump with a faint clack of slate, on boards a hollow knock. */
+  footstep(surface: 'slate' | 'wood', amount: number, pan: number): void {
+    const now = this.out?.ctx.currentTime;
+    if (now === undefined || amount < 0.01) return;
+    const at = now + 0.005;
+    const level = amount * 10 ** (tuning.audio.childStepDb / 20) * (0.75 + Math.random() * 0.25);
+    const colour = 0.9 + Math.random() * 0.2;
+    if (surface === 'wood') {
+      this.blip(at, 230 * colour, 140 * colour, 0.08, level * 0.04, pan, 'triangle', 0.04);
+      this.puff({ at, len: 0.03, level: level * 0.025, pan, type: 'bandpass', from: 1300 * colour, q: 1.3, attack: 0.002 });
+    } else {
+      this.blip(at, 160 * colour, 90, 0.08, level * 0.03, pan, 'sine', 0.03);
+      this.puff({ at, len: 0.05, level: level * 0.04, pan, type: 'lowpass', from: 650 * colour, attack: 0.002 });
+      if (Math.random() < 0.6) this.puff({ at: at + 0.01, len: 0.025, level: level * 0.035, pan, type: 'bandpass', from: 3000 * colour, q: 3.5, attack: 0.001 });
+      this.puff({ at: at + 0.03, len: 0.09, level: level * 0.015, pan, type: 'bandpass', from: 1800, to: 1000, q: 0.7, attack: 0.02 });
     }
   }
 

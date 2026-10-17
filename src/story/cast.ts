@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
+import type { SeaRescue } from '../audio/sea-music';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { SleepingGate } from '../audio/sleeping-music';
@@ -128,6 +129,8 @@ export interface Chapter {
   readonly seaMuffle?: number;
   /** How far the air has died, 0 to 1: the ambient breeze falls away and the sea lies quiet. */
   readonly calm?: number;
+  /** What her boots are heard on wherever she walks in this room; unset, her steps are not heard. */
+  readonly underfoot?: 'slate' | 'wood';
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
   /** The piano supplies gesture notes while engaged, independently of its fading mix. */
@@ -139,7 +142,7 @@ export interface Chapter {
   /** The low cloud deck over the stairs, while this chapter wants it; eased out when a chapter leaves it unset. */
   readonly cloudDeck?: CloudDeckState;
   /** The departure kite tied to a moving boat's bow and flying ahead of it on a heading, while this chapter wants it. */
-  readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
+  readonly kiteTow?: { at: THREE.Vector3; heading: number; axis: THREE.Vector3 } | null;
   /** The departure kite caught short by its string on something in the water, until this chapter lets it go. */
   readonly kiteSnag?: KiteSnag | null;
   /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
@@ -177,9 +180,9 @@ export interface Chapter {
   /** The bell's fourth ring has sounded, or a save is past it: the belfry's goodbye plays from here. */
   readonly bellsRung?: boolean;
   readonly seaScore?: SeaScorePhase;
-  /** The open sea's recording: its time on the passage clock, the rescue phrase reached and the whale's calls. */
+  /** The open sea's recording: its time on the passage clock, where the rescue is and the whale's calls. */
   readonly seaMusicTime?: number;
-  readonly seaPhrase?: number;
+  readonly seaRescue?: SeaRescue;
   readonly whaleCalling?: number;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;

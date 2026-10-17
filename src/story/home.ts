@@ -640,14 +640,17 @@ export class HomeChapter implements Chapter {
   }
 
   /** It reaches the wheel, and the whole family goes north with it in the line, and the child watches them out of sight. */
-  private updateGone(): void {
+  private updateGone(dt: number): void {
     const { child: c, cygnet, flock } = this.cast;
     if (flock.wheeling && cygnet.position.distanceTo(flock.head) < JOIN_AT) {
       flock.goOn(NORTH, LEAVE_CLIMB, LEAVE_SPEED, cygnet.position);
       this.leftAt = this.now;
       c.cheer();
     }
-    c.lookAt = cygnet.visible ? cygnet.position : flock.head;
+    const watching = cygnet.visible ? cygnet.position : flock.head;
+    c.lookAt = watching;
+    /** She turns herself round to follow them, not just her head, and watches them out of sight face on. */
+    if (!c.moving) c.faceToward(watching.x, watching.z, 1 - Math.exp(-dt * tuning.homeReveal.watchTurn));
     const away = this.leftAt > 0 && (this.now - this.leftAt > tuning.homeReveal.watchFlockFor || !cygnet.visible);
     /** They turn for home and walk a few paces down off the very top before they stop and sit. */
     if (away && !this.wentOn && !c.busy) {
@@ -770,7 +773,7 @@ export class HomeChapter implements Chapter {
     } else if (this.beat === 'fledge') {
       this.updateFledge();
     } else if (this.beat === 'gone') {
-      this.updateGone();
+      this.updateGone(dt);
     } else if (this.beat === 'settle') {
       // A glance from the house to the paper motivates the hands; keep their feet planted.
       c.faceToward(c.position.x + TO_COTTAGE.x * 10, c.position.z + TO_COTTAGE.y * 10, 1 - Math.exp(-dt * 1.8));

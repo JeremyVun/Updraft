@@ -115,7 +115,8 @@ export class LittleBoatsChapter implements Chapter {
     if (this.beat !== 'sailing') return null;
     const waiting = this.waiting;
     if (waiting) return waiting === r.drain.bathAt && r.drain.idle > tuning.littleBoats.inviteAfter ? r.drain.hintAt : null;
-    return r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
+    // The shared sweep's own wait ends as the lens settles from the launch close-up; the toy adds none to it.
+    return r.idle > 0 ? r.invitation : null;
   }
   get invitationRadius(): number {
     return this.waiting === this.cast.littleBoats.drain.bathAt ? this.cast.littleBoats.drain.waitingRadius : 0;

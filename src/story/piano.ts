@@ -7,6 +7,7 @@ import { MEADOW_CALLS, MEADOW_FINALE, type MeadowAnswer } from '../audio/meadow-
 import type { Cast } from './cast';
 import { PAPER_NOSE } from '../glider/glider';
 import type { WindSample } from '../wind/field';
+import type { GustFront } from '../fx/windlines';
 
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
 /** A view as a shot gives it: what it looks at, the bearing it stands on from there, how far back and how high. */
@@ -97,11 +98,22 @@ export class PianoStop {
   private readonly planeNose = new THREE.Vector3();
   private readonly planeShake = new THREE.Quaternion();
   private readonly shook = new THREE.Euler();
+  /** The island's own gust that takes the paper from over her into the fork, not the player's wind. */
+  private readonly carry: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(1, 0), flow: new THREE.Vector2(),
+    strength: 0, lines: tuning.piano.planeGust.lines };
+  private carryFrom = -Infinity;
+  /** The finale's steady stream of traces off the bough's mouth: when the next goes, and when the last. */
+  private streamAt = 0;
+  private streamTo = 0;
+  private streamed = 0;
+  private carryFor = 0;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /** How hard the wind is catching the paper in the fork, eased. */
   private blown = 0;
   private readonly approachFrame = { primary: this.approachChild, secondary: piano.keys,
     margin: tuning.piano.approachMargin, extra: tuning.piano.approachExtra };
+
+  get gustFront(): GustFront | null { return this.carry.strength > 0 ? this.carry : null; }
 
   /** QA: how far the stop has got, from noticing it to walking on. */
   get at(): string {
@@ -183,6 +195,7 @@ export class PianoStop {
         } else this.playHands(time, cast);
         this.wakeIsland(time);
         this.hearFinale(time, cast);
+        this.streamFinale(time);
         const over = this.finishedAt > 0 && time > this.finishedAt;
         if (over) {
           cast.cygnet.watch(null);
@@ -346,6 +359,8 @@ export class PianoStop {
     // The finale waits for her last answer to ring down.
     const starts = Math.max(this.now, piano.answerEnds) + tuning.windBough.finalRest;
     const ends = windBough.play(MEADOW_FINALE, starts, true);
+    this.streamAt = starts + tuning.windBough.inhale;
+    this.streamTo = ends - tuning.piano.finaleStream.tail;
     this.completeAt = ends + tuning.piano.completionRest;
     this.wakeAt = starts + tuning.windBough.inhale + MEADOW_FINALE.greenAt;
     this.finishedAt = Math.max(this.completeAt, this.wakeAt + finaleFor());
@@ -366,6 +381,15 @@ export class PianoStop {
       cygnet.does('look-about', this.out, 2.4);
       cygnet.watch(this.out, true);
     }
+  }
+
+  /** Under the finale the bough breathes traces out over the meadow at an even pace, the way her answers did. */
+  private streamFinale(time: number): void {
+    if (this.streamAt <= 0 || time < this.streamAt || time > this.streamTo) return;
+    const k = tuning.piano.finaleStream;
+    this.streamAt = time + k.every;
+    this.streamed++;
+    piano.breathe(windBough.mouth, 0.5 + 0.4 * Math.sin(this.streamed * 2.4), k.strength);
   }
 
   /** Music, the colour front and the widening camera begin together. */
@@ -399,9 +423,29 @@ export class PianoStop {
     const her = to === 'fork' ? this.planeFrom : cast.child.handPosition(this.planeHand);
     const way = her.distanceTo(this.planeBack) + 2 * lead;
     this.planeGlide = { to, start: this.now, length: Math.max(tuning.piano.planeGlide, way / 8) };
+    if (to !== 'fork') return;
+    const g = tuning.piano.planeGust;
+    this.carry.dir.set(this.planeFork.x - this.planeFrom.x, this.planeFork.z - this.planeFrom.z).normalize();
+    this.carry.flow.copy(this.carry.dir).multiplyScalar(g.pace * Math.max(way / this.planeGlide.length, g.leastPace));
+    this.carryFrom = this.now;
+    this.carryFor = this.planeGlide.length + g.after;
+  }
+
+  /** The gust rises as the paper is lifted, travels with it and blows on past the fork as it sticks. */
+  private blowCarry(cast: Cast): void {
+    const g = tuning.piano.planeGust, f = this.carry, age = this.now - this.carryFrom;
+    f.strength = age < 0 || age > this.carryFor ? 0
+      : THREE.MathUtils.smoothstep(age, 0, g.rise) * (1 - THREE.MathUtils.smoothstep(age, this.carryFor - g.fall, this.carryFor));
+    if (!f.strength) return;
+    f.at.set(this.planeAt.x - f.dir.x * g.behind, this.planeAt.y, this.planeAt.z - f.dir.y * g.behind);
+    cast.wind.addSplat({ source: f,
+      ax: f.at.x - f.dir.x * g.length, az: f.at.z - f.dir.y * g.length, bx: f.at.x, bz: f.at.z,
+      vx: f.dir.x * g.speed * f.strength, vz: f.dir.y * g.speed * f.strength, radius: g.radius,
+      energy: g.energy * f.strength, swirl: 0, lift: g.lift * f.strength });
   }
 
   private tendPlane(cast: Cast, dt: number): void {
+    this.blowCarry(cast);
     const { plane, child } = cast;
     const glide = this.planeGlide;
     if (!glide) {

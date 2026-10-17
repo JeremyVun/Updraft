@@ -13,6 +13,8 @@ export const MIRROR_PATH = [
   { x: -436 + MIRROR_SHIFT.x, z: -2320 + MIRROR_SHIFT.z }, { x: -406 + MIRROR_SHIFT.x, z: -2323 + MIRROR_SHIFT.z },
 ] as const;
 export const MIRROR_BERTH = { x: -390 + MIRROR_SHIFT.x, z: -2323 + MIRROR_SHIFT.z, yaw: Math.PI } as const;
+/** The lone lamppost beside the far jetty's berth, which the departure kite is wound round. */
+export const MIRROR_LAMPPOST = { x: MIRROR_BERTH.x - 4, z: MIRROR_BERTH.z - 1.05 } as const;
 export const MIRROR_DECK = { x0: -407 + MIRROR_SHIFT.x, z0: -2323 + MIRROR_SHIFT.z, x1: -391 + MIRROR_SHIFT.x, z1: -2323 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.22, rampAt: 'start', rampLength: 2.6 } as const;
 export const MIRROR_LIGHT_PATH = {
   from: MIRROR_BERTH,

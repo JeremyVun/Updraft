@@ -268,15 +268,33 @@ export class Scarf {
     const gustLeft = this.gust.x * cos - this.gust.z * sin;
     const gustBack = Math.max(0, -(this.gust.x * sin + this.gust.z * cos));
     this.aboardShare += (+this.aboard - this.aboardShare) * (1 - Math.exp(-span));
-    const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain * THREE.MathUtils.lerp(1, k.gustAboard, this.aboardShare), k.gustMost);
-    const takeover = Math.min(1, felt / k.gustTakeover);
+    const felt = Math.min(Math.hypot(gustLeft, gustBack) * k.gustGain, k.gustMost);
+    /**
+     * Carried along in a boat, the air she feels is mostly the boat's own going, and a gust only bends it: it adds
+     * to that air rather than taking the ends round to its own way, which would hold them out sideways whenever a
+     * gust filled the sail from behind.
+     */
+    const takeover = Math.min(1, felt / k.gustTakeover) * (1 - this.aboardShare);
+    const bend = k.gustAboard * this.aboardShare;
+    const bendLeft = Math.min(gustLeft * k.gustGain, k.gustMost) * bend;
+    const bendBack = Math.min(gustBack * k.gustGain, k.gustMost) * bend;
     /**
      * Heavy wool comes round to a new way slowly, rather than cracking across behind the child as a gust veers. It
      * comes round from where the ends are, so a gust arriving takes them from there, not from where the last one left.
      */
     const toward = THREE.MathUtils.lerp(this.splay, Math.atan2(gustLeft, gustBack), takeover);
     this.gustAngle += (toward - this.gustAngle) * (1 - Math.exp(-span * k.gustTurn));
-    const pace = Math.hypot(this.carried.x, this.carried.z) * k.carry;
+    /**
+     * The air of her going, in her frame: straight back along the way she is carried, which in a boat need not be
+     * the way she faces. A boat runs before the wind, so the air keeps some pace with it and she feels less of its
+     * going than of her own. Air reaching her from behind only leaves the ends hanging, the more the further round
+     * it comes, as a gust from behind does: blown forward they would whirl round her front.
+     */
+    const carry = k.carry * THREE.MathUtils.lerp(1, k.carryAboard, this.aboardShare);
+    const goBehind = (moveX * sin + moveZ * cos) * carry;
+    const goAcross = -(moveX * cos - moveZ * sin) * carry;
+    const goLeft = goAcross * (1 - Math.max(0, -goBehind) / (Math.hypot(goAcross, goBehind) || 1));
+    const goBack = Math.max(0, goBehind);
     /**
      * As many steps as keep each near `STEP`, and the same number as last frame while that still does: at a frame
      * time on the edge, a count flipping between one long step and two short ones pumps the ends into whirling.
@@ -292,15 +310,14 @@ export class Scarf {
     for (const e of this.ends) {
       /**
        * The air past the child that the end streams on, in their frame: the breeze, out behind and round toward the
-       * knot's side, and the air of their going, a little straighter behind, so seen from behind the ends still reach
-       * out past the bag. A gust swings the breeze round to its own way and never weakens it, so the ends follow a
-       * gust rather than falling slack where it meets the breeze. The air of their going still adds to it: a gust
-       * bends the stream behind a child sailing past, it does not whip it round to the gust's way and back.
+       * knot's side, and the air of their going, turned a little round toward the knot's side by the child's body,
+       * so seen from behind the ends still reach out past the bag. A gust swings the breeze round to its own way and
+       * never weakens it, so the ends follow a gust rather than falling slack where it meets the breeze.
        */
       const angle = this.gustAngle + (e.splay - this.splay) * (1 - takeover);
       const strength = THREE.MathUtils.lerp(breeze, Math.max(felt, breeze), takeover);
-      const bx = Math.sin(angle) * strength + Math.sin(e.splay * 0.65) * pace;
-      const bz = -Math.cos(angle) * strength - Math.cos(e.splay * 0.65) * pace;
+      const bx = Math.sin(angle) * strength + goLeft + Math.sin(e.splay * 0.65) * goBack + bendLeft;
+      const bz = -Math.cos(angle) * strength - Math.cos(e.splay * 0.65) * goBack - bendBack;
       const flowX = bx * cos + bz * sin;
       const flowZ = bz * cos - bx * sin;
       const flow = Math.hypot(flowX, flowZ);

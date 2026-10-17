@@ -278,6 +278,7 @@ float scarIn(vec2 m, vec2 id, float share, float px) {
   float h = hash12(id + 2.0);
   p.y -= (h - 0.5) * 0.15 * p.x * p.x / len + 0.05 * sin(p.x * 1.6 + h * 6.0);
   float along = abs(p.x) / len;
+  if (along >= 1.0) return 0.0;
   float w = (0.2 + 0.12 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, along));
   float mark = exp(-pow(p.y / max(w, 1e-3), 2.0)) * (1.0 - smoothstep(0.4, 1.0, along));
   return mark * (0.7 + 0.3 * hash12(id + 31.0)) * smoothstep(${f(L.scarSeen[0])}, ${f(L.scarSeen[1])}, 0.26 / px);
@@ -300,8 +301,10 @@ float rosette(vec2 m, vec2 id, float cell, float where, float px) {
   vec2 d = m - (id + 0.25 + 0.5 * vec2(hash12(id + 95.0), hash12(id + 97.0))) * cell;
   float r = cell * (0.16 + 0.24 * hash12(id + 93.0)) * (0.7 + 0.4 * where);
   float q = length(d * vec2(1.0, 0.8 + 0.4 * hash12(id + 98.0))) / r;
-  float edge = 1.0 + 0.5 * (vnoise(d / r * 1.6 + id * 7.31) - 0.5) + 0.2 * (vnoise(d / r * 4.0 + id * 3.7) - 0.5);
   float aa = px / r;
+  // Its lobes reach out to 1.35 of its radius at most.
+  if (q >= 1.35 + aa) return 0.0;
+  float edge = 1.0 + 0.5 * (vnoise(d / r * 1.6 + id * 7.31) - 0.5) + 0.2 * (vnoise(d / r * 4.0 + id * 3.7) - 0.5);
   return (1.0 - smoothstep(edge - aa, edge + aa, q)) * (0.85 + 0.15 * smoothstep(0.3, 0.9, q / edge));
 }
 
@@ -328,6 +331,8 @@ vec2 lichen(vec2 m, float cover, float px) {
   float colony = smoothstep(0.3, 0.75, vnoise(m * 0.2 + 41.0) * 0.7 + vnoise(m * 0.55 + 7.0) * 0.3 + cover - 0.3);
   float tone = vnoise(m * 0.4 + 17.0);
   if (colony <= 0.0) return vec2(0.0, tone);
+  // Rippled in the sea's mirror the rosettes are lost, as they are far off.
+  if (uMirrorPass > 0.5) return vec2(colony * 0.3, tone);
 #ifdef WHALE_GHOST
   float near = max(rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px),
     rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.3, px));
@@ -502,7 +507,7 @@ Skin skin(float far, float dry) {
     if (part == ${BODY}) {
       float above = overRestSea(vRest, s);
       // Its old scars are thicker about the head and down its flanks, where it is seen close.
-      float scar = scars(m, ${f(L.scars)} * (2.0 - smoothstep(0.2, 0.45, s)) * (0.2 + flank), px) * clear * dry;
+      float scar = uMirrorPass > 0.5 ? 0.0 : scars(m, ${f(L.scars)} * (2.0 - smoothstep(0.2, 0.45, s)) * (0.2 + flank), px) * clear * dry;
       k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.92 + 0.16 * n2), scar * ${f(L.scarAmount)});
       // Barnacles crust the head in small tight patches, along the chin and the lip, round its knobs and about the eye,
       // but never on the eye or in its folds; a few stray ones about each patch.
@@ -548,54 +553,59 @@ Skin skin(float far, float dry) {
       k.run = smoothstep(0.7, 0.85, vnoise(vec2(m.x * 0.45, m.y * 0.12 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
     }
 
-    // Never emissive: its warmth is the light on the iris and the gloss of the glass.
-    vec3 l = lids(e);
     float aa = fwidth(e.y) + 0.015;
-    float opening = smoothstep(l.y - aa, l.y + aa, e.y) * (1.0 - smoothstep(l.z - aa, l.z + aa, e.y))
-      * (1.0 - smoothstep(1.0 - aa, 1.0, abs(e.x))) * flank;
-    vec2 g = e - vec2(uGaze.x * 0.25, l.x + 0.03 + uGaze.y * 0.06);
-    float rr = length(g);
-    float iris = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, rr);
-    float pupil = 1.0 - smoothstep(0.19 - aa, 0.19 + aa, length(g * vec2(0.85, 1.15)));
-    // At its corners only a dark wet rim, never a white: a white makes it a person's eye.
-    vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, 1.0 - smoothstep(0.6, 0.98, abs(e.x)));
-    float fibres = 0.8 + 0.4 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
-    // Deep warm brown, lighter in a ring round the pupil and darkening to its edge.
-    vec3 brown = uIris * fibres * (1.0 + 0.9 * (1.0 - smoothstep(0.2, 0.38, rr))) * (1.0 - 0.6 * smoothstep(0.38, 0.5, rr));
-    vec3 eye = mix(mix(white, brown, iris), vec3(0.014, 0.011, 0.01), pupil);
-    float under = smoothstep(l.z - 0.4, l.z, e.y);
-    eye *= 1.0 - 0.7 * under;
-    vec2 folds = eyeFolds(e, l);
-    // Lines of age fan back from its rear corner: an old face that has smiled, never a stern one.
-    float lines = 0.0;
-    vec2 c = e - vec2(-1.02, -0.02);
-    if (c.x < 0.0 && c.x > -1.2) {
-      float fan = atan(c.y, -c.x);
-      float reach = length(c * vec2(1.0, 1.4));
-      lines = pow(abs(cos(fan * 4.2 + 0.5 * vnoise(vec2(reach * 2.5, fan * 2.0)))), 24.0)
-        * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan)));
-    }
-    // Beyond its folds a few long soft creases arch over it and sweep back toward the tail, the skin worn into lines.
-    float crease = 0.0;
-    for (int i = 0; i < 3; i++) {
-      float fi = float(i);
-      float x = e.x + 0.4 + 0.25 * fi;
-      float arc = 1.28 + 0.3 * fi - (0.12 - 0.02 * fi) * x * x + 0.04 * sin(e.x * 3.0 + fi * 2.0);
-      float reach = (1.0 - smoothstep(1.0 + 0.3 * fi, 2.0 + 0.4 * fi, abs(x + 0.3))) * (1.0 - 0.3 * fi);
-      crease = max(crease, (1.0 - smoothstep(0.02, 0.04 + aa, abs(e.y - arc))) * reach);
-    }
-    k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far))
-      * (1.0 - ${f(L.creases)} * crease * flank * (1.0 - far) * shows(0.06 * R * uScale, px));
-    k.albedo = mix(k.albedo, eye, opening);
-    k.gloss = opening;
-    // The wet rim of the lower lid catches the sky.
-    k.rim = (1.0 - smoothstep(0.0, 0.05, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.6, 0.9, abs(e.x))) * flank * uEye * (1.0 - far);
     // The top of the lower lip faces the sun, but a gold line along it would draw a mouth.
     float ledge = onJaw * (1.0 - smoothstep(0.0, 0.06, abs(below - 0.02)));
-    k.near = max((1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank, ledge);
-    k.caustic = opening * iris * (1.0 - pupil) * (1.0 - smoothstep(-0.35, 0.1, g.y)) * (1.0 - under);
-    k.iris = g * iris * opening;
-    if (part == ${BODY}) {
+    k.near = ledge;
+    // The eye, its folds, its lines, the creases over it and its soft light all lie within this of it, on the flank.
+    if (flank > 0.0 && e.x > -4.0 && e.x < 2.0 && abs(e.y - 0.5) < 3.5 + aa) {
+      // Never emissive: its warmth is the light on the iris and the gloss of the glass.
+      vec3 l = lids(e);
+      float opening = smoothstep(l.y - aa, l.y + aa, e.y) * (1.0 - smoothstep(l.z - aa, l.z + aa, e.y))
+        * (1.0 - smoothstep(1.0 - aa, 1.0, abs(e.x))) * flank;
+      vec2 g = e - vec2(uGaze.x * 0.25, l.x + 0.03 + uGaze.y * 0.06);
+      float rr = length(g);
+      float iris = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, rr);
+      float pupil = 1.0 - smoothstep(0.19 - aa, 0.19 + aa, length(g * vec2(0.85, 1.15)));
+      // At its corners only a dark wet rim, never a white: a white makes it a person's eye.
+      vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, 1.0 - smoothstep(0.6, 0.98, abs(e.x)));
+      float fibres = 0.8 + 0.4 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
+      // Deep warm brown, lighter in a ring round the pupil and darkening to its edge.
+      vec3 brown = uIris * fibres * (1.0 + 0.9 * (1.0 - smoothstep(0.2, 0.38, rr))) * (1.0 - 0.6 * smoothstep(0.38, 0.5, rr));
+      vec3 eye = mix(mix(white, brown, iris), vec3(0.014, 0.011, 0.01), pupil);
+      float under = smoothstep(l.z - 0.4, l.z, e.y);
+      eye *= 1.0 - 0.7 * under;
+      vec2 folds = eyeFolds(e, l);
+      // Lines of age fan back from its rear corner: an old face that has smiled, never a stern one.
+      float lines = 0.0;
+      vec2 c = e - vec2(-1.02, -0.02);
+      if (c.x < 0.0 && c.x > -1.2) {
+        float fan = atan(c.y, -c.x);
+        float reach = length(c * vec2(1.0, 1.4));
+        lines = pow(abs(cos(fan * 4.2 + 0.5 * vnoise(vec2(reach * 2.5, fan * 2.0)))), 24.0)
+          * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan)));
+      }
+      // Beyond its folds a few long soft creases arch over it and sweep back toward the tail, the skin worn into lines.
+      float crease = 0.0;
+      for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float x = e.x + 0.4 + 0.25 * fi;
+        float arc = 1.28 + 0.3 * fi - (0.12 - 0.02 * fi) * x * x + 0.04 * sin(e.x * 3.0 + fi * 2.0);
+        float reach = (1.0 - smoothstep(1.0 + 0.3 * fi, 2.0 + 0.4 * fi, abs(x + 0.3))) * (1.0 - 0.3 * fi);
+        crease = max(crease, (1.0 - smoothstep(0.02, 0.04 + aa, abs(e.y - arc))) * reach);
+      }
+      k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far))
+        * (1.0 - ${f(L.creases)} * crease * flank * (1.0 - far) * shows(0.06 * R * uScale, px));
+      k.albedo = mix(k.albedo, eye, opening);
+      k.gloss = opening;
+      // The wet rim of the lower lid catches the sky.
+      k.rim = (1.0 - smoothstep(0.0, 0.05, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.6, 0.9, abs(e.x))) * flank * uEye * (1.0 - far);
+      k.near = max((1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank, ledge);
+      k.caustic = opening * iris * (1.0 - pupil) * (1.0 - smoothstep(-0.35, 0.1, g.y)) * (1.0 - under);
+      k.iris = g * iris * opening;
+    }
+    // Its small forms shape the light on it close to; the mirror's ripples hide them.
+    if (part == ${BODY} && uMirrorPass < 0.5) {
       float d = 0.006;
       float fine = 1.0 - smoothstep(0.006, 0.02, fwidth(vRest.y) + fwidth(vRest.z));
       // The form here, then a step along each axis.

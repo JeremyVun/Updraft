@@ -102,7 +102,7 @@ Earlier catch remains free. Gesture motifs end with the rescue;
 earlier island motif starts are at least 4.5 seconds apart. Jeremy's verbatim brief and reversible controls are in
 [the audio contract](contracts/audio.md).
 The lowercase "updraft" title fades in after the look back, holds, and is gone before the whale (currently seconds
-34–42.5 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers with sparse windlines at 31–37 seconds. Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
+34–42.5 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers at 31–37 seconds, laying its windlines at a rate that follows its strength, about nine across the gust (`titleGust.lines.interval`). Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
 Still and its departure route lie 200 units farther south, so the ordinary crossing takes about 117 seconds at the
 same boat speed. This remains a listening experiment.
 After the whale, the camera eases upward and back for ten gulls, a bill-carried linen scrap and eight loose sheets
@@ -175,6 +175,9 @@ the post under a small taut shiver, then slips free and falls back into the hang
 pair finish the passage. Invitations offer one next action at a time (the preferred turn on visible linen, then a
 short sweep over the caught hem), pause during input and never supply wind. Nothing opens by idling. The snagged
 sheet's anchor is set when the frame is built, since the crossing renders it before the chapter's first update.
+Walking up from the second curtain, the view keeps its walking distance and follows her out through the curtain's
+gap, then comes round behind the rotaries and widens onto them over her last few metres (`approachSettle`), rather
+than drawing back and crossing the washing beside the gap.
 Their sage and dusty blue linen carries narrow cream stripes. Only the three curtain challenges wear white with
 red borders, so the two interactions read differently before the player touches them. Each frame gives one metal
 creak after real travel (see [audio](contracts/audio.md)).
@@ -211,7 +214,8 @@ her, the pinwheel, the line and the boat. Only a sweep across the pinwheel on sc
 sweeps nearby turns it a little; the breeze only rocks it); the wheel turns with it, the line runs in, one way only,
 and the boat follows its painter, surging when the painter tightens and gliding on when it slackens, slowed by the
 water and stopped by the sand right beside her. Nothing runs back out, so any number of sweeps over any time add up.
-After a few idle seconds a sweep is drawn across the pinwheel (`ShorePulleyRig`, never wind). Once the boat is in
+After a few idle seconds a clockwise spiral is drawn winding out round the pinwheel's hub, the same invitation as the
+drowned village's mill (`ShorePulleyRig`, never wind); circling over it or sweeping across it both spin the wheel. Once the boat is in
 she gives a small cheer, walks to it with the paper still in hand (no throw), lets go of the painter, gathers the
 bird up and lets it climb into the satchel to board: the first time it rides there, and the bag's flap is thrown open
 for the rest of the game. The departure kite is tied off on the piling. On a phone the view at the bank looks out
@@ -261,7 +265,8 @@ On the grass above the beach the child takes the cygnet out of the satchel and s
 her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both
 mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries it down the bank, kneels low by the
 water (`putDownFrom`) and reaches down to set it on the water just off the bank (`putDownAt`, leaning `putDownLean`). The
-player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
+sweep that shows how to fill its sail appears as the lens settles back from that close-up (the shared sweep's own
+wait, with nothing added). The player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, folded wings, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird).
@@ -328,8 +333,9 @@ joining the patch of colour on the near knoll where a piano stands (`PLACE`, `tu
 seen through a shallow saddle. The rest stays grey under the waiting region (`life.regions.waiting`,
 `uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
-**The piano is the key; music brings colour.** The plane leads the child to the piano and glides ahead of her, nose
-first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there nose down
+**The piano is the key; music brings colour.** The plane leads the child to the piano, and a gust of the island's
+own (not the player's: `tuning.piano.planeGust`, drawn as wind lines and heard as a gust) carries it ahead of her,
+nose first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there nose down
 between them, tail up and a little askew, turned three-quarters to the lens so its fold reads (`tuning.windBough.planeAt`).
 It is never quite still: it rocks about its nose and its tail and wing tips flutter, more when the player's wind or the
 bough's own breath goes by (`planeTremble`). It stays in view until she gets up and it comes back out to her hand. She
@@ -353,7 +359,8 @@ onsets, melody, tilts and the greening cue into `audio/meadow-cuts-measured.ts`,
 turns into calls, answers and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera eases a step up and out from her and
 stays there (`tuning.piano.steps`, each a share of the way from the playing view to the walk's view of her), and the
-finale is the last and largest step: the flute plays it alone, the cygnet listening from the satchel and looking
+finale is the last and largest step: the flute plays it alone, the bough breathing a steady stream of traces out over the meadow as it goes
+(`tuning.piano.finaleStream`), the cygnet listening from the satchel and looking
 about as the colour pours out, while the camera opens the rest of the way to the
 walk's view (about 15 m above her and 34 m back, 26 m over the ground below it; nearer than the walk's view before the
 piano, `tuning.meadowPlane.cameraAwake*`) over `finaleEase` seconds, low
@@ -368,17 +375,18 @@ ordinary sweep passes over them on screen they rise, lift their heads and open w
 bed from close behind her so each sweep's track shows across it and the woken part spreads; about two passes wake a
 flower, and the invitation only points at sleepers inside the lens. Once three quarters of the bed is up
 the last sleepers rise with it and petals lift off the whole bed, and that is the end of it. They walk together to
-seed heads farther through the fold, framed against the far slope. Sweeps only stir the heads; circling winds an
+seed heads farther through the fold, the lens opening onto the hills and sky as they go (`cameraOpen*`) and
+settling back over the last stretch into the seeds' own view, framed against the far slope. Sweeps only stir the heads; circling winds an
 updraft (the spiral invitation shows it) whose column draws the down off them, round and up. Lifted down never
 sinks back: unwound it hangs over the heads, and once it is all up the column carries it out over the top to drift
 away over the island, away from the lens and off the pond's side. She stands and watches it go: the lens lifts its
 gaze after the cloud and holds on it as it thins, keeping her and the cygnet at the foot of the frame, and comes back
-to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). The lens comes down in front of the pair as they
-walk on together toward it, the hill they came from behind them, and holds them there for a final listening pause
-(`cameraListenBearing`): the real swan call comes from beyond the frame, the cygnet's head comes up and she turns
-toward it, then gathers the cygnet into the satchel. She walks on past the lens, which turns after her and comes round
-behind her as she starts down (`departure*`); the pond and the family come into the edge of the frame as she reaches
-the crest, and once she stops there the lens turns from her onto the water (`tuning.crest.revealFor`). Neither play makes a note; ambient wind and idle time complete neither.
+to her as she walks on (`tuning.meadowEchoes.watch*`, `seedRest`). As the pair walk on together toward the pond the
+lens comes slowly round behind them, looking the way they are going, and stands behind her right shoulder for a
+final listening pause (`cameraListenBearing`): the real swan call comes from beyond the right of the frame, the water
+still out of it, the cygnet's head comes up and she turns toward it, then gathers the cygnet into the satchel. As she
+walks on the lens follows round behind her onto her line to the water (`departure*`); the pond and the family come
+into the edge of the frame as she nears the crest, and once she stops there the lens turns from her onto the water (`tuning.crest.revealFor`). Neither play makes a note; ambient wind and idle time complete neither.
 `world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`;
 `?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
 walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.
@@ -495,9 +503,10 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   told.
 - **A round.** Each has its own frame, lower and closer than the walk, from the south-east quarter toward the low sun,
   so leaves thrown up are lit through (`ROUNDS[].frames`; portrait on a longer lens eased in by a spring). She walks
-  round any heap in her way to her stand, turns there to face the heaps, body and head (round 2's far heap, round
-  3's middle one, so she faces the three as a whole), kneels and peers, and turns her head to each heap the wind
-  bursts. The right heap
+  round any heap in her way to her stand, turns there to face the heaps, body and head (in round 2 the heap it is
+  in, `BirchesSquirrel.facing`, so she never kneels turned to the wrong one; round 3's middle one, so she faces the
+  three as a whole), kneels and peers, and turns her head to each heap the wind bursts. The plane rides on her bag
+  from the walk in until the walk goes on, so it never sticks into her as she kneels. The right heap
   shivers every 2.5–4 s with a rustle; its tail tip is out half the time in round 1, a third in round 2 and a fifth in
   round 3; now and then it peeks. Wrong heaps never tell.
 - **Heaps yield only to updrafts** (Jeremy, 2026-10-16). Every heap, the squirrel's and the free-play ones, stands
@@ -516,16 +525,19 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
 - **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 7 s without
   an updraft on the right heap, swiping or not, it goes to that heap's rim and peers in (the in-story hint). The drawn
   updraft turns over it after 4 s at the first heap, once the leaves of its dive are down, and after 6 s in round 2.
-  Round 3 has none: the updraft is learned by then, and drawn over one heap of three it would give the hide away.
-  Neither supplies wind.
+  In round 3 it turns over all three heaps at once as soon as the squirrel has settled, so the player sees when the
+  heaps are ready to play (Jeremy: "we do need to show the updrafts over each pile, otherwise the player doesn't know
+  when they can start playing the game or not"); over one heap of three it would give the hide away. Neither supplies
+  wind.
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
   bow's own birch, on the swing tree's trunk under the limb (and on along the fallen birch's top once she is over). **Seeing it off:** before round 2 it dashes on ahead to hide
   (`dash`) as the first tangle's loop starts to lift, down the fork tree beside the loop and away east among the
   trunks, up the perch tree and down the wool beyond the rise. Freed before it has hidden, she and the cygnet watch it
-  go, at least `seeOffFor` (2.5 s), and set off after it once it has come down to the leaves beyond the rise
-  (`seeOffMost`, 7 s, at most), about 5.5 s after the loop is free. The lens stays in the tangle's frame and never
+  go, at least `seeOffFor` (2.5 s), and set off after it once it has come down to the leaves beyond the rise or
+  `seeOffMost` (4 s) after the loop is free, whichever is sooner, so she never stands about after the squirrel has
+  gone from the frame. The lens stays in the tangle's frame and never
   follows it; the depth blur keeps it sharp. Out of her sight its dive barely stirs the leaves (`splash`), so no spray
   far up the ride marks the heap. Before round 3 it waits in plain view instead (the shuffle).
 - **Round 3, the shuffle** (`BirchesSquirrel.plan`, `tuning.birches.squirrel.shuffle*`). Its three heaps stand on an arc
@@ -553,8 +565,11 @@ tangled back and forth among the trees, with four tangles in order where the chi
 upward sweep), circle the coils up off a broken birch (updraft circles, the column anchored at the wrap, the swirl
 invitation), draw a slipped loop sideways off the upturned limb of a fallen birch, then draw the bow outward off a low
 limb. Partial progress holds; the breeze cannot solve them. Released lengths fall and settle as cloth (`ScarfCloth`).
-Freed, the scarf draws along its length into the boat (`tuning.birches.scarf.gatherSeconds`) and becomes the red sail
-for the rest of the voyage. Under the canopy a stroke's wind lands no further than the shot's distance plus a reach
+The drawn gesture for a tangle waits until she has come to it and stands facing it (`BirchScarf.faced`), never while
+she is still walking up. Freed, the scarf draws along its length into the boat and becomes the red sail for the rest of
+the voyage. It reels in like a tape measure (`gatherSeconds` 10, `gatherPace`): it starts to run as the bow slips,
+unhurried while the bow falls and the lens draws back, gathers pace through the lengths behind her, and comes to rest
+at the mast as the sail fills from the arriving wool, so no row ever jumps and nobody waits on the far tail. Under the canopy a stroke's wind lands no further than the shot's distance plus a reach
 (`pointerReach`; `docs/contracts/wind.md`), so strokes at the trees or circles round the wool never flatten the next
 round's heaps.
 
@@ -566,7 +581,9 @@ with strokes along its arc exactly as in the drowned village (`SwingCrossing`, `
 `tuning.birches.swing.ride`), and at the top of a forward swing that will carry her she lets go, flies over the bole and
 lands on her feet in the leaves beyond with a laugh. If the player stops she waits on the swing, the drawn push along its
 arc offered after 5 s. The squirrel watches from the swing tree's trunk and runs on along the bole's top ahead of them;
-the cygnet flutters up onto the bole and hops down after her. Her walk, her fetching and the plane all keep to her side
+the cygnet flutters up onto the bole, losing a few feathers as it beats up over it, as on the sleeping island's bank
+(`flutterFeathers`), and hops down after her; she looks back at it coming, holding the lens a moment (under a second,
+`featherWait`) so the feathers fall in the frame before it turns to the next tangle. Her walk, her fetching and the plane all keep to her side
 of it (`southOfFallen`, the plane's `playEdge`).
 
 **Music.** "The Red Door Opens" (`assets/music/red_door.ogg`) plays from the approach crossing through boarding and
@@ -576,7 +593,9 @@ come between the two songs. Timings: `docs/contracts/audio.md` "Birches".
 
 Rulings: the leaves must not behave like grass; the room should be fun, and the cygnet's play is its own, not a
 scripted beat. The scarf reads as tangled wool, not a ribbon; every support is physical (no knot floating in the air);
-the wrapped trunk needs circling; the draw-in into the boat is unhurried. One corridor, never branched: "I do like the
+the wrapped trunk needs circling; the draw-in into the boat starts unhurried and never keeps the player waiting: "we
+need a clever way to "shorten" it so that the player doesn't have to wait so much for all the scarf behind her to reel
+in first". One corridor, never branched: "I do like the
 look of how the birches island is set up already as sort of this one corridor instead of zig zag paths everywhere like
 in the other chapters." The island's look is kept or lifted: "try to preserve or even uplift the aesthetics of the
 island with the swirling leaves and the golden light etc." The sails from the meadow and to the stairs are
@@ -664,14 +683,16 @@ About five to six minutes, nearly all of it the player's:
 7. **The storm** begins as she turns from the cat, out of the goodbye's calm. They go out north of the nave past the
    lighthouse (`STORM_WAY`, 173 m to the beach) on the first air, the player's wind still filling the sail until the
    storm's comes up; the lens comes down off the cat's sill in one move to look along the water at the boat with the
-   church and the lighthouse beyond. The dusk deepens into night, the first stars come out over the fog lying on the
-   water, the sea roughens and the rain begins; the lighthouse's beam turns over the fog and the boat, its horn
-   calls, and as they pass it its light fails and goes out in frame (30 s out) while the fog rises round the tower
-   and closes round them into the storm's night, lightning once the dark is established, the cygnet startled at the
-   light going and nuzzling under her chin, its shaking in the rain, the paper plane taken off her hand by a gust
-   (55 s out) and carried off fast and low over the wood, and the landing on the forest beach about 78 s after
-   casting off. The storm's night takes over from the fog's dark without lifting, and the fog thins off as the forest comes
-   up out of it. The landing is relief that turns into the wood's fear.
+   church and the lighthouse beyond, and holds that distance past the tower: passing under it the lantern may leave
+   the top of the frame, never the boat the bottom. It rides the swell's mean rather than each wave, so the boat
+   rises and falls in a steady frame. The dusk deepens into night, the first stars come out over the fog lying on
+   the water, the sea roughens and the rain begins; the lighthouse's beam turns over the fog and the
+   boat, its horn calls, and as they pass it its light fails and goes out in frame (30 s out) while the fog rises
+   round the tower and closes round them into the storm's night, lightning once the dark is established, the cygnet
+   startled at the light going and nuzzling under her chin, its shaking in the rain, the paper plane taken off her
+   hand by a gust (55 s out) and carried off fast and low over the wood, and the landing on the forest beach about
+   78 s after casting off. The storm's night takes over from the fog's dark without lifting, and the fog thins off as
+   the forest comes up out of it. The landing is relief that turns into the wood's fear.
 
 Rulings:
 - Coming down from the stairs, the stairs are never seen from the village (their room goes while the boat is still
@@ -747,12 +768,16 @@ flutters away low across the frame to her left, seen side on, before it climbs o
 looks round the bend and walks on, never to the trunk, while the camera comes back round behind her the way she
 came. Everything is in the same verbs: which coal, not a new mechanic.
 
-**The fright.** In a cleared glade the camera settles, then one close lightning flash and clap, the clap a quarter
-second after the flash (`tuning.wood.frightThunderDelay`; the bird flinches at the flash). The cygnet recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
+**The fright.** In a cleared glade the camera settles while she walks on, and she stops only at the flash: one close
+lightning flash and clap, the clap a quarter second after the flash (`tuning.wood.frightThunderDelay`; the bird flinches at the flash). The cygnet recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
 boulders under a tilted slab. Ambient lightning is suppressed for the whole chapter, so the fright has one cause,
 and it cannot repeat. The camera turns to the entrance; only then is the ember inside it seen. The player winds an
 updraft on it, revealing the frightened bird; the child crosses to a spot outside the rock, kneels and holds out a
 still hand, and after a moment it walks out to her. No completion jingle. She carries on with it at her chest.
+The view starts settling `frightComposeFrom` out from the shelter and she stops at the flash about `shelterDistance`
+from it, so her stopping never gives the fright away. Jeremy (2026-10-17): "the child stops walking a bit too soon
+before the thunder and lightning happen for the fright scene, which kind of "signals" to the player that something is
+going to happen."
 
 **The paper.** The last ember reveals the sodden plane caught in an exposed fork above her reach, rocking in the
 branch's sway. Strokes across it (the sweep invitation) slip it along the fork, keeping progress between strokes;
@@ -882,8 +907,10 @@ rest beside its head, the far length lost in haze. It is the whale from the firs
 
 Five steps share the rescue between wind, child and bird:
 
-1. Circles lift a separate blue-green net with a tighter weave, draped visibly over the orange net. The wind carries
-   it off to the far side, leaving the blowhole open. The orange net stays put throughout this challenge.
+1. Circles lift a separate blue-green net with a tighter weave, draped visibly over the orange net. Its first full
+   breath throws the net up as cloth; it streams in the column, folds over and the breeze carries it away over the far
+   side of its back, tumbling down onto the sea far off, where it sinks (`fx/sealife/net-flight.ts`,
+   `tuning.netWhale.netFlight`). The orange net stays put throughout this challenge.
 2. A sweep across the fold clears its eye; it opens and finds her.
 3. Strokes bring a cork to her reaching mitten so she can take the line.
 4. Gusts lift the net as she heaves it off the head, then lets the line go.
@@ -904,9 +931,10 @@ Dolphins follow their own stations, never swim in the air and never turn faster 
 crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while
 the camera finishes moving, and return two seconds after the last relevant stroke if more help is needed.
 
-Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest, then one whole phrase
-as each act begins (the net lifting, the fold lifting, her first pull, the cygnet's pull; none for taking the line) and
-its close from the release to the Mirror (`docs/contracts/audio.md`, "The long sea crossing").
+Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest in the quiet; its
+bass section as one continuous bed from the net first lifting, going round at its phrase ends for as long as the rescue
+takes; its close's theme from the end of the phrase the cygnet's pull began in, ending on its resolution as the whale
+dives (`docs/contracts/audio.md`, "The long sea crossing").
 
 Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
 `tuning.audio.whaleVoice`, `tuning.audio.seaMusicLead`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with
@@ -936,7 +964,11 @@ above the far jetty as a slightly crooked kite, its outline drawn as neighbourin
 once all four are up; each star lights a stretch of broken reflection across the deep channel. The last joins them
 and the empty boat comes round the deep outer channel (never over the flat) to the far jetty while the camera
 holds the sky view. The child gathers the cygnet, walks up that jetty's ramp and boards. The departure kite flies over the far
-jetty throughout.
+jetty throughout, its string wound a few turns round the jetty's lamppost about two metres up, and it flies steady
+in the still air (`tuning.linesToys.mirrorKite`, `steady`), so the string never comes down to the water. Jeremy
+(2026-10-17): "The kite string dips into the water. I assume it'd be difficult to have it lay ontop of the water, so
+maybe we can just have the kite sort of wrapped around the lamp post a bit and flying so that we sidestep that whole
+issue?"
 
 Rulings: no passive solution (the answer never appears while the player does nothing). No clouds on the ground or
 moon prop: keep the whole surface an open mirror. The paper stays visible throughout. Four stars (three ended the
@@ -963,8 +995,11 @@ they should pulse slowly, not just blink in and out really fast." Their cores an
 so camera movement must not make the almost edge-on lights flash; `sky-mirror-star-check.mjs` checks constant-light
 camera movement at normal and Ultra render scales separately from the intended pulse. Once the kite is complete
 its stars brighten over three seconds and then breathe, each slowly and a little out of step with the others, so the
-finished constellation looks alive (`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror
-chapter, it'd be cool if they shined a bit brighter and started pulsing like they were more alive."
+finished constellation looks alive, and the lines between them strengthen and breathe with the two stars each joins
+(`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror chapter, it'd be cool if they shined
+a bit brighter and started pulsing like they were more alive." And (2026-10-17): "when all the stars are completed,
+the effect where they brighten and pulse could be a touch more pronounced. Maybe the lines between them could be a
+touch more pronounced and pulse as well?"
 
 Departure. Jeremy's brief:
 
@@ -1012,14 +1047,21 @@ the closing line the ending is scripted to the music (`HOME_ENDING`): at the ans
 phrase to a fixed place in the recording, and the ending is timed from that (`docs/contracts/audio.md`, Homeward and Home). The
 family comes down for it; it flies by itself, a wobbly widening circuit over the child that steadies as it goes,
 always in frame (`tuning.fledge`); turns to her, calls (the call that is answered: the family bugles back), and
-goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence.
+goes north, taking the empty tail station of the V (`tuning.swanDeparture`). She cheers after them in silence, and
+turns herself round to face them as they go (`watchTurn`), watching them out of sight face on. Jeremy (2026-10-17):
+"When the child is watching the flock fly away, she's facing sideways with her head turned. She should be facing the
+flock as they fly away."
 
 **The drawing.** She walks on over the brow with the plane still folded and stops where the whole cottage clears
 the grass below (`tuning.homeReveal.stopAfter`). House first: a moment looking at it, the plane into both hands,
 then the physical unfold. The paper is the glider, plain white ruled paper, until it opens; the crayon drawing
 arrives as it flattens (hills and wall, house, sun, the little plane), and the recognition motif starts when
 sheet and real house are both in frame (`Chapter.afterCamera` checks the rendered view). The drawing is held
-(`recogniseFor`), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
+open (`recogniseFor`, 5 s; Jeremy, 2026-10-17: "Very surgical change to take away 1 second from the paper plane being
+open. Don't change any other timings in the sequence."; and, keeping the pan to the moon its length: "ok, then add a
+second somewhere after the paper plane reveal, maybe the camera pan up and the child running down the hill intot he
+house", so her run to the door (`runHomePace`) and the pan to the house (`homePanFor`) each take a second longer and
+she goes in at the same moment of the music), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
 `releaseFor` the island's own breeze takes it into the sunset. The camera looks over her shoulder at the sheet and the house, with the real low sun above and left
 of the cottage as in the drawing.
 

@@ -187,6 +187,9 @@ export class StairsChapter implements Chapter {
   private leg = 0;
   private skeinSent = false;
   private calledToThem = false;
+  /** The skein's nearest yet, flat, to the bird: once they are past overhead it calls after them once more. */
+  private skeinNearest = Infinity;
+  private calledAfterThem = false;
   private birdStop = 0;
   /** The furthest stop the bird has got to in the cloud; the child never goes past it. */
   private birdReached = 0;
@@ -242,12 +245,10 @@ export class StairsChapter implements Chapter {
   private alongWas = 0;
   private stuckSince = 0;
   private lastDt = 0;
-  /** The halo round the boat's lantern for the way over the cloud, and the kite's tie-off at the bow. */
+  /** The halo round the boat's lantern for the way over the cloud, and the kite's hitch on the stem post below it. */
   private readonly lantern = new BowLantern();
   private readonly flame = lanternFlame();
-  private readonly bow = new THREE.Vector3();
-  private readonly stern = new THREE.Vector3();
-  private readonly tow = { at: new THREE.Vector3(), heading: 0 };
+  private readonly tow = { at: new THREE.Vector3(), heading: 0, axis: new THREE.Vector3() };
   private berthed = false;
   /** The way the boat comes in to lie alongside the top landing, and how far along it it is. */
   private approach: THREE.Vector2[] = [];
@@ -406,11 +407,10 @@ export class StairsChapter implements Chapter {
     return this.cast.child.position.y > CLOUD.top - 0.5 || this.beat === 'sail' ? CLOUD.top : null;
   }
 
-  /** From the moment they are out on top, the kite is tied to the bow of the boat waiting on the cloud. */
-  get kiteTow(): { at: THREE.Vector3; heading: number } | null {
+  /** From the moment they are out on top, the kite is hitched round the stem post of the boat waiting on the cloud. */
+  get kiteTow(): { at: THREE.Vector3; heading: number; axis: THREE.Vector3 } | null {
     if (!this.berthed || this.beat === 'thin' || this.beat === 'down') return null;
-    this.cast.boat.hullEnds(this.bow, this.stern);
-    this.tow.at.copy(this.bow).y += 0.3;
+    this.cast.boat.stemHitch(this.tow.at, this.tow.axis);
     // Until they sail, the kite stands out over the open cloud beyond the landing, so its line never runs across it.
     this.tow.heading = this.beat === 'sail' || this.beat === 'fog' ? this.cast.boat.yaw : KITE_WAITS;
     return this.tow;
@@ -599,6 +599,14 @@ export class StairsChapter implements Chapter {
         if (!this.calledToThem && this.withThem > 0.02) {
           this.calledToThem = true;
           k.call(true);
+        }
+        if (this.calledToThem && !this.calledAfterThem && flock.active) {
+          const near = Math.hypot(flock.head.x - k.position.x, flock.head.z - k.position.z);
+          if (near > this.skeinNearest) {
+            this.calledAfterThem = true;
+            k.call(true);
+          }
+          this.skeinNearest = Math.min(this.skeinNearest, near);
         }
         const over = this.comingFor > WATCHED_ON;
         if (flock.active) this.look2.copy(flock.head);

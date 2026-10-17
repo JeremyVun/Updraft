@@ -28,12 +28,12 @@ export const MORNING_SEAMS: readonly number[] = [
   99.58, 109.68, 118.83,
 ];
 /**
- * `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed") in three parts, back to back in the recording, each from 30 ms
- * before the attack after one of its clean rests: the climb theme, the sparse commitment and the summit, each with the
- * gate that starts it.
+ * `cygnet_brave.ogg` ("Fragments for a Swan Who Stayed") in two parts, back to back in the recording, each from 30 ms
+ * before the attack after one of its clean rests: the climb theme and the sparse commitment, each with the gate that
+ * starts it. The summit has no music of its own.
  */
 export const BRAVE_PARTS: readonly (readonly [from: number, to: number, gate: SleepingGate])[] = [
-  [0, 96.27, 'feather'], [96.27, 112.11, 'catch'], [112.11, 153.18, 'summit'],
+  [0, 96.27, 'feather'], [96.27, 112.11, 'catch'],
 ];
 /**
  * `sleeping_morning.ogg` ("Colour Returns to the Meadow") plays from its second phrase as the curtains open, so the
@@ -114,8 +114,6 @@ export class SleepingMusic {
   /** When the lullaby falls silent on the audio clock; −Infinity until it sounds. */
   private lullabyEnds = -Infinity;
   private asleepSeen = false;
-  /** When the bird reached the top on the audio clock. */
-  private summitAt = -Infinity;
   /** The latest climb ending applied: the bandage freed, then the curtains. */
   private letGo = -1;
   /** The latest gate reached, and the latest part played or passed over. */
@@ -177,7 +175,6 @@ export class SleepingMusic {
       this.braveBus.gain.setTargetAtTime(braveLevel, now, .25);
       this.morningBus.gain.setTargetAtTime(morningLevel, now, .25);
     }
-    if (index >= gate('summit') && this.heard < gate('summit')) this.summitAt = now;
     this.heard = Math.max(this.heard, index);
     this.bedtime(now);
     this.climb(now);
@@ -254,13 +251,11 @@ export class SleepingMusic {
       return;
     }
     if (sounding && now < sounding.end - PLACE_AHEAD) return;
-    const [from, to, reached] = BRAVE_PARTS[next];
+    const [from, to] = BRAVE_PARTS[next];
     const held = !!sounding && !sounding.cut && BRAVE_PARTS[sounding.part][1] === from && now < sounding.end - END_FADE;
-    // Begun on its own, the summit part lets the arrival at the top settle and rises in.
-    const settles = reached === 'summit' && !held;
-    const at = Math.max(sounding ? Math.max(now, sounding.end) : now, settles ? this.summitAt + tuning.audio.summitDelay : now);
+    const at = sounding ? Math.max(now, sounding.end) : now;
     if (held) brave.holdThrough(sounding.clip, sounding.end);
-    const clip = brave.excerpt(from, to, at, held ? 1e-3 : settles ? tuning.audio.summitFadeIn : .01);
+    const clip = brave.excerpt(from, to, at, held ? 1e-3 : .01);
     if (!clip) return;
     this.placed = next;
     const placed = { clip, part: next, at, end: at + Math.min(to, clip.source.buffer!.duration) - from, cut: false };
