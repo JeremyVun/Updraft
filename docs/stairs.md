@@ -307,7 +307,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
   errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
 - **The sea of cloud**: its top (`StairsCloud`) is drawn on world-anchored nested grids (`cloud-grid.ts`), so far
   heaps never jump as the lens moves; its lobes are baked into tiling textures at load (`cloud-lobes.ts`) and drift
-  on the air (`tuning.stairs.cloudDrift`) under a veil of wisps. The towers are raymarched cumulus
+  on the air (`tuning.stairs.cloudDrift`) under a veil of wisps, in a layer that thins over its top (`WISP_SOFT`): a level top, seen from a lens just under it, cut every heap above it off along one straight line. The towers are raymarched cumulus
   (`cloud-towers.ts`) placed off the route and either side of `TOWER_GATE`; `CloudTowers.keepOut` keeps the lens out
   of them. The hull parts the tops in a trough that fills in behind, with a breath of vapour off the stern
   (`stairs-wake.ts`, `cloud-vapour.ts`); the top is never drawn inside the hull (`StairsCloud.holdOut`, the boat's

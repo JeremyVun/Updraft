@@ -18,6 +18,8 @@ const ROUTE_POINTS = CLOUD_ROUTE.length + 1;
 const TRAIL_POINTS = 16;
 /** How deep the layer the low wisps stream in lies over the tops, metres. */
 const WISP_LAYER = 4;
+/** How far either side of its height the layer thins away, metres; centred, so seen from above it is as deep as before. */
+const WISP_SOFT = 1.5;
 /** How many towers of cumulus the top of the cloud makes room for. */
 const FEET = 16;
 
@@ -122,6 +124,11 @@ in vec3 vRise;
 in vec3 vTower;
 flat in float vLevel;
 TOP
+/** How much of the wisps' layer lies above height y over the cloud's surface, in metres of it at full thickness. */
+float wispsAbove(float y) {
+  float u = clamp(${glsl(WISP_LAYER + WISP_SOFT)} - y, 0.0, ${glsl(2 * WISP_SOFT)});
+  return u * u / ${glsl(4 * WISP_SOFT)} + max(${glsl(WISP_LAYER - WISP_SOFT)} - y, 0.0);
+}
 void main() {
   if (vRing > uReach || gridHidden(vWorld.xz, vLevel)) discard;
   vec2 xz = vWorld.xz;
@@ -182,11 +189,13 @@ void main() {
   // Low wisps of vapour stream across the tops on the air: long thin streaks in a layer lying over them, thicker
   // the longer a sightline runs through it before it reaches the cloud.
   float veil = 0.0;
-  if (uWisps > 0.0 && vWorld.y < uSurface + ${glsl(WISP_LAYER)}) {
-    // The stretch of the sightline inside the layer, up to where it reaches the cloud here.
-    float above = cameraPosition.y - (uSurface + ${glsl(WISP_LAYER)});
-    float enter = above <= 0.0 ? 0.0 : ray.y < -1e-3 ? above / -ray.y : 1e6;
-    float path = clamp(dist - enter, 0.0, 160.0);
+  float lo = min(cameraPosition.y, vWorld.y) - uSurface, hi = max(cameraPosition.y, vWorld.y) - uSurface;
+  if (uWisps > 0.0 && lo < ${glsl(WISP_LAYER + WISP_SOFT)}) {
+    // The stretch of the sightline inside the layer, up to where it reaches the cloud here. The layer thins over
+    // its top: from an eye at a hard top, every heap reaching above it was cut off along one straight line.
+    float span = hi - lo;
+    float path = span > 1e-3 ? (wispsAbove(lo) - wispsAbove(hi)) / span : clamp((${glsl(WISP_LAYER + WISP_SOFT)} - lo) / ${glsl(2 * WISP_SOFT)}, 0.0, 1.0);
+    path = min(dist * path, 160.0);
     vec2 across = vec2(-uWispAir.y, uWispAir.x);
     for (int i = 0; i < 3; i++) {
       vec2 q = xz - ray.xz * path * (0.15 + 0.35 * float(i)) - uWispAir * uTime * ${glsl(tuning.stairs.wispSpeed)};
