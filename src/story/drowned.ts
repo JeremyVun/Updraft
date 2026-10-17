@@ -923,7 +923,12 @@ export class DrownedChapter implements Chapter {
     }
     const aim = Math.atan2(s.target.y - eyeY, s.distance);
     const lamp = Math.atan2(LIGHTHOUSE_LANTERN_Y - eyeY, Math.hypot(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ));
-    const look = lerp(aim, THREE.MathUtils.clamp(lamp - half + k.margin, aim, k.tilt), glance);
+    /** Never so far up that the hull drops out of the frame's foot, which would make the rig back off to keep it. */
+    const below = (p: THREE.Vector3) => Math.atan2(p.y - eyeY, Math.hypot(p.x - eyeX, p.z - eyeZ));
+    let lowest = below(this.subjects.primary);
+    for (const p of this.hullFrame) lowest = Math.min(lowest, below(p));
+    const ceiling = Math.max(aim, Math.min(k.tilt, lowest + half - k.boatMargin));
+    const look = lerp(aim, THREE.MathUtils.clamp(lamp - half + k.margin, aim, ceiling), glance);
     s.target.y = eyeY + Math.tan(look) * s.distance;
     s.height = eyeY - s.target.y;
     this.pace = lerp(this.pace, k.pace, held);
