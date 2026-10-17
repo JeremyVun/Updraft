@@ -31,7 +31,6 @@ try {
         shower: .8 * bump(t, 40, 45, 50, 56),
         winterGust: .9 * bump(t, 62, 63, 66, 67),
         piano: bump(t, 80, 81, 86, 88),
-        cues: t === 30 ? ['delight'] : [],
       }) },
       // Composed scores take the pad to 0 and give it back; the sea score's mood has no pad at all.
       scores: { seconds: 90, state: t => t < 25 ? { music: 'meadow', meadowScore: 'walk' }

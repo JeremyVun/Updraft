@@ -6,7 +6,6 @@ import type { GustFront } from '../fx/windlines';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
 import { tuning } from '../tuning';
 import { STILL_SHIFT } from '../world/geography';
 
@@ -473,7 +472,6 @@ export class IslandChapter implements Chapter {
           const shove = this.tmp.set(this.front.dir.x, 0, this.front.dir.y).multiplyScalar(o.gustShove)
             .addScaledVector(d, o.flockSpeed - 0.12);
           cygnet.plummet(this.left, this.fallen, o.fall, flock.heading, shove, d.x * this.front.dir.y - d.z * this.front.dir.x);
-          cue('fallen');
         }
       }
       /** It lands. The child does not move for a moment, and then runs. */
@@ -484,7 +482,6 @@ export class IslandChapter implements Chapter {
       }
       if (this.dropped && cygnet.grounded && this.downAt < 0) {
         this.downAt = this.now;
-        cue('landed');
       }
       /** The player is left alone with it for a moment before the child moves. */
       if (this.downAt > 0 && this.now - this.downAt > 3.4 && !c.busy) {

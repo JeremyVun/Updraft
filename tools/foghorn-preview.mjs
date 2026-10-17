@@ -54,14 +54,13 @@ try{
         const buffer=await rendering;
         const rms=(from,to)=>{let sum=0;for(let ch=0;ch<2;ch++)for(const x of buffer.getChannelData(ch).subarray(Math.floor(from*24000),Math.floor(to*24000)))sum+=x*x;
           return 10*Math.log10(Math.max(1e-20,sum/(2*(to-from)*24000)));};
-        return {...encodeAudio(buffer),remaining:horn?.sources.size??0,horn:foghornProposal,calls,cueSpaceUntil:sound.cueSpaceUntil,
+        return {...encodeAudio(buffer),remaining:horn?.sources.size??0,horn:foghornProposal,calls,
           early:rms(8,8.1),body:rms(9.5,11),beforeThunder:rms(17,17.4),beforePlane:rms(21,22)};
       }finally{Math.random=random;}
     },kind);
     check(result.clipped===0,`${kind}: no clipping`);check(result.remaining===0,`${kind}: all horn sources release`);
     if(kind==='integrated'){
       check(result.calls===1,'Production cue plays exactly one call');
-      check(result.cueSpaceUntil===0,'Environmental horn does not duck the score');
     }
     if(kind==='isolated'){
       check(result.early<result.body-20,'Horn enters softly rather than striking');

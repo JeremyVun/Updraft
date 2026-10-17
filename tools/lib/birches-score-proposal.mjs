@@ -10,7 +10,6 @@ export const birchesStudy = {
 };
 const smooth = (x, a, b) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const strokes = [7, 12.5, 20, 22.5, 25, 27.5, 30, 32.5, 38, 40, 42, 51, 53, 56, 63, 65, 67];
-const releases = [14, 44, 57, 68];
 
 export function birchesState(time, base) {
   const gust = strokes.some(at => time >= at && time < at + .5) ? 8 : 0;
@@ -25,7 +24,6 @@ export function birchesState(time, base) {
 /** Shared production wind, material sounds and existing scarf rewards in both versions. */
 export function birchesEvents(tick, sound, foley, state) {
   const time = tick / 8;
-  if (releases.includes(time)) state.cues.push('delight');
   if (!foley) return;
   // The cygnet can keep playing locally while the child works. No added animal calls.
   if (((time >= 3 && time < 10) || (time >= 37 && time < 42) || (time >= 49 && time < 54)) && tick % 6 === 0) {

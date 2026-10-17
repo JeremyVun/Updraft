@@ -1953,7 +1953,7 @@ term, so no rings), shaded as the stairs' cloud is, the sky's brightness without
 its folds), a share of the low sun scattered all through, gold where it is thin toward the sun, warming as it thins; the
 first column, the far plume and the sighs share it. Free, in seconds of `whale.time` (`sleeper.ts`): it drifts clear as
 before; `SPOUT_FROM` 6 the spout, `spray.jet` plus a `spray.column` `spoutBreadth` 1.5 times as broad, 20 m; the
-reward phrase and three leaps as before; from 7 to 13.8 its mist comes down over the boat (`spray.veil`: puffs from
+three leaps as before; from 7 to 13.8 its mist comes down over the boat (`spray.veil`: puffs from
 high in the plume carried on their own way, slowing as the square of their life, and fine drops glinting); the sea
 brightens round it from the spout (`water/glad.ts`, `gladSea` 0.8 out to `gladReach` 34 m along its head and forward
 body: the body lifted, the sun's glitter tripled); at `GLAD_AT` 9.2 its glad call (`whale-glad`: the same voice,

@@ -51,7 +51,7 @@ try {
     // Let the context's own start-up statechange pass before simulating calls.
     await pause();
     const heard = [];
-    for (const name of ['phrase', 'peep', 'bugle', 'flare', 'foghorn']) {
+    for (const name of ['phrase', 'peep', 'bugle', 'flare', 'foghorn', 'hoot']) {
       sound[name] = cue => { heard.push(typeof cue === 'string' ? cue : name); return null; };
     }
     const frame = (cues = []) => sound.update(1 / 60, { ...baseState, cues });
@@ -72,17 +72,17 @@ try {
       await settle(() => sound.running, 'Audio runs again once the interruption ends');
     };
 
-    frame(['delight']);
-    check(heard.join() === 'delight', 'A cue plays at once while audio runs');
+    frame(['bugle']);
+    check(heard.join() === 'bugle', 'A cue plays at once while audio runs');
     heard.length = 0;
     await call();
     check(!sound.running && sound.output === null, 'Interrupted audio is not running and offers no output graph');
-    frame(['restored']);
+    frame(['distress']);
     wait(2);
     frame(['foghorn']);
-    frame(['unfold']);
+    frame(['hoot']);
     wait(1.5);
-    frame(['delight']);
+    frame(['bugle']);
     check(heard.length === 0, 'Nothing plays while the interruption lasts');
     const retries = attempts;
     window.dispatchEvent(new Event('focus'));
@@ -91,8 +91,8 @@ try {
     window.dispatchEvent(new PageTransitionEvent('pageshow'));
     check(attempts === retries + 4, 'Focus, pointer press, pointer release and pageshow each retry resume');
     await hangUp();
-    frame(['home']);
-    check(heard.join() === 'unfold,delight,home',
+    frame(['kindled']);
+    check(heard.join() === 'hoot,bugle,flare,kindled',
       `Held cues younger than ${tuning.audio.heldCueLife} s play in order before the frame's own; stale ones drop (${heard.join()})`);
 
     heard.length = 0;
@@ -105,7 +105,7 @@ try {
 
     heard.length = 0;
     await call();
-    frame(['delight']);
+    frame(['bugle']);
     sound.setMuted(true);
     sound.setMuted(false);
     await hangUp();
@@ -116,7 +116,7 @@ try {
     sound.setMuted(true);
     await settle(() => ctx.state === 'suspended', 'Muting suspends the context');
     await pause();
-    frame(['delight']);
+    frame(['bugle']);
     check(attempts === beforeMute, 'A muted suspension is not treated as an interruption');
     sound.setMuted(false);
     await settle(() => sound.running, 'Unmuting resumes the context');
@@ -125,7 +125,7 @@ try {
 
     sound.setHidden(true);
     await settle(() => ctx.state === 'suspended', 'A hidden page suspends the context');
-    frame(['delight']);
+    frame(['bugle']);
     sound.setHidden(false);
     await settle(() => sound.running, 'A visible page resumes the context');
     frame();

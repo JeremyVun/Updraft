@@ -105,8 +105,6 @@ const HOLDS_UP = tuning.homeReveal.releaseFor;
 const WATCHES_IT = 8.5;
 /** How far out from the door somebody inside opens it on the run down: the light is on the grass before they get there. */
 const DOOR_OPENS_AT = 9;
-/** When the gaze turns toward the sea, measured from the doorway. */
-const RISE_FROM = 2;
 /** Seconds after the child goes in that the gaze leaves the house; it settles on the moon as the music fades. */
 const TURN_FROM = 3;
 /** A new staged view starts from wherever the camera is and eases onto its framing over this many seconds. */
@@ -257,7 +255,6 @@ export class HomeChapter implements Chapter {
   private gusted = false;
   private wentOn = false;
   private doorOpened = false;
-  private finaleStarted = false;
   trodden: THREE.Vector3 | null = null;
   hush = 0;
   readonly flockChatter = false;
@@ -750,7 +747,6 @@ export class HomeChapter implements Chapter {
       c.reachFor(0, null);
       p.launch(c.handPosition(this.hand), this.tmp.set(TOWARD_SUNSET.x * 5.5, 5.4, TOWARD_SUNSET.y * 5.5));
       p.depart(this.tmp.set(TOWARD_SUNSET.x, 0, TOWARD_SUNSET.y));
-      if (tuning.audio.homeEndingSounds) cue('release');
       this.wentAt = this.now;
     }
   }
@@ -790,7 +786,6 @@ export class HomeChapter implements Chapter {
       c.lookAt = drawing.point(0, 0.3, this.watching);
       if (this.recognisedAt < 0 && drawing.drawn > 0.97 && this.houseInFrame && this.paperInFrame) {
         this.recognisedAt = this.now;
-        if (tuning.audio.homeEndingSounds) cue('unfold');
       }
       if (this.recognisedAt >= 0) {
         const recognised = this.now - this.recognisedAt;
@@ -834,17 +829,12 @@ export class HomeChapter implements Chapter {
       if (!this.doorOpened && c.position.distanceTo(cottage.doorstep) < DOOR_OPENS_AT) {
         this.doorOpened = true;
         cottage.openDoor(true);
-        if (tuning.audio.homeEndingSounds) cue('home');
       }
     } else if (this.beat === 'inside') {
       this.duskTarget = 2;
       if (this.t > 1.2 && this.t < 1.25) c.walkTo(cottage.position.x, cottage.position.z, false, undefined, 0.3);
       if (this.t > 2.6) c.visible = false;
       if (this.t > 4.2) cottage.openDoor(false);
-      if (this.t >= RISE_FROM && !this.finaleStarted && !this.silence) {
-        this.finaleStarted = true;
-        if (tuning.audio.homeEndingSounds) cue('finale');
-      }
       if ((this.homeEndingTime ?? 0) >= HOME_ENDING.musicEndsAt) this.silence = true;
       if ((this.homeEndingTime ?? 0) >= HOME_ENDING.creditsAt) {
         this.finished = true;

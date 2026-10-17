@@ -180,7 +180,6 @@ export function contextSchedule(name) {
       events.push({ at: at + .625 * i, type: 'gesture', midi: 69 + i * 5, velocity: .25 });
     // The proposed star blooms replace the two generic delight cues; there is no third jingle.
   } else {
-    events.push({ at: 46, type: 'cue', cue: 'restored' });
     for (const at of [38,40,42,44]) {
       events.push({ at, type: 'gesture', midi: 66, velocity: .32 }, { at, type: 'material', material: 'sail', level: .055 });
     }

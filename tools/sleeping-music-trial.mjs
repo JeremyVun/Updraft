@@ -21,7 +21,7 @@ try {
       const phase = now < 40 ? 'shelter' : now < 53 ? 'cold' : now < 109 ? 'climb' : now < 125 ? 'summit' : 'morning';
       sound.update(.125, { ...baseState, music: now < 125 ? 'wood' : 'sea', sleepingScore: phase,
         land: 0, meadow: 0, night: 1, hush: .8, flockChatter: false,
-        cues: now === 125 ? ['lifted'] : [], silence: now >= 160 });
+        cues: [], silence: now >= 160 });
       for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain']) {
         sound[name].gain.cancelScheduledValues(ctx.currentTime);
         sound[name].gain.value = 0;

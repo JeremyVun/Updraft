@@ -47,5 +47,4 @@ still of each room where it was found.
 - Where finds show: the chapter select only, or also somewhere in the world (the satchel, the ending).
 - Whether finding them all changes anything, and if so what (it must not alter the drawing reveal).
 - Which rooms get one; crossings and the sea, which is held to 100 s, may be excluded.
-- How a find is marked in the moment without a chime that competes with the reward phrase
-  (`completeObjective()` is reserved for major conclusions).
+- How a find is marked in the moment without a chime competing with the room's recorded music.

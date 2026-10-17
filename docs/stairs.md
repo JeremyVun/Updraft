@@ -175,7 +175,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
    two come down out of the cloud, and between them three have come loose and hang turning in the air.
 2. **The loose flights (the puzzle).** The child climbs to where the stair stops; a gold drawing of the missing
    flight shows where it belongs; a stroke over the loose flight carries it on its own level, and it turns itself
-   to fit as it nears its place. The bird waits on the landing behind. The last one placed plays the reward phrase.
+   to fit as it nears its place. The bird waits on the landing behind. The last one placed knocks home like the others.
    On the sea below her, all seven of the little boats' toys sail by in a loose flotilla just off the north beach,
    out of the sun's glitter and on east under the stair (`src/world/stairs-fleet.ts`, `tuning.stairs.fleet`). They
    are seen only once she is high up, from the last loose flight until she goes into the white, where the lens

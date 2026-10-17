@@ -28,8 +28,6 @@ export function sleepingState(time, base) {
 export function sleepingEvents(tick, sound, foley, state) {
   const time = tick / 8;
   if (tick === 25 * 8) state.cues.push('calling');
-  if (tick === 32 * 8) state.cues.push('feather');
-  if (tick === 70 * 8) state.cues.push('lifted');
   if (foley) {
     // The approved hearth goes out and stays out; the clock has no alarm voice.
     foley.hearth(1 - smooth(time, 16, 21), 0.6, 0.35);

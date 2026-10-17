@@ -2298,8 +2298,7 @@ The sequence:
   sail cut by the right edge. On a phone these holds keep the hull (and in the haul its sail) inside the framing.
   From astern the bird stays small on a phone: it holds the loop's end about 4 m from her, and any frame holding
   both side by side fixes its size by that.
-- **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
-  as it spouts free.
+- **Reward.** Freeing the whale is the open sea's major conclusion; the sea's recording carries it as it spouts free.
 - **Pacing.** Player-paced, replacing the old 100-second passive crossing. Integrated prompt play reaches rest
   beside the whale at about 102 s, frees it at 167 s, sees it gone at 199 s and reaches the mirror at 244–245 s.
   These are observed timings, not a deadline on the player. The mirror stays hidden until the dive; its arrival

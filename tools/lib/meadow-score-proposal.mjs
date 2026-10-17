@@ -26,7 +26,6 @@ export function meadowEvents(tick, sound, foley, state) {
   const time = tick / 8;
   if (tick === 25 * 8) state.cues.push('bugle');
   if (tick === 29 * 8 || tick === 35 * 8) state.cues.push('calling');
-  if (tick === 50 * 8) state.cues.push('restored');
   if (foley) {
     if ((time < 24 || time >= 57) && tick % 8 === 0) foley.step('grass', .3, -.18);
     if (time >= 35 && time < 49 && tick % 5 === 0) foley.paddle(.3, -.18);

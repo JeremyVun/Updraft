@@ -28,7 +28,7 @@ for(const [step,answered,phase] of [['foot',0,'fog'],['climb',0,'fog'],['nest',0
   ['wait',4,'home'],['board',4,'home'],['aboard',4,'farewell']])
   assert.equal(drowned.call({beat:'church',church:{step,answered}}),phase);
 
-// Four actual returns must each emit exactly one star cue; an existing completed save emits none.
+// Each of the four returns is counted once, as it happens, and raises no sound cue.
 const child={},plane={held:false},cygnet={};
 const c=Object.create(SkyMirrorChapter.prototype);
 Object.assign(c,{beat:'play',elapsed:0,returned:0,cast:{skyMirror:room,child,cygnet,plane},
@@ -37,8 +37,8 @@ room.carried=null;room.bubbles=[];room.requestedStar=-1;room.aim={};room.holding
 takeCues();
 for(let progress=1;progress<=room.stars.length;progress++){
   c.beat='play';room.progress=progress;c.update(1/60,progress);
-  assert.deepEqual(takeCues(),['star']);
-  c.beat='play';c.update(1/60,progress+.1);assert.deepEqual(takeCues(),[]);
+  assert.equal(c.returned,progress);assert.deepEqual(takeCues(),[]);
+  c.beat='play';c.update(1/60,progress+.1);assert.equal(c.returned,progress);
 }
 c.returned=room.progress;c.beat='play';c.update(1/60,10);assert.deepEqual(takeCues(),[]);
-console.log('Chapter audio phases, all four star events, event de-duplication and restored completion pass.');
+console.log('Chapter audio phases, all four star returns, return de-duplication and restored completion pass.');

@@ -20,8 +20,6 @@ export function linesState(time, base) {
 
 export function linesEvents(tick, _sound, foley, state) {
   const time = tick / 8;
-  if (openings.includes(time)) state.cues.push('delight');
-  if (time === 55) state.cues.push('restored');
   if (!foley) return;
   const opening = openings.some(at => time >= at - 2 && time < at + 1.5);
   const family = time >= 47 && time < 55;

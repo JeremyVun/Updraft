@@ -78,7 +78,6 @@ try {
           const charge = cued && summit ? smooth(t, 76, 80) * (1 - smooth(t, 84, 85)) : 0;
           const cues = [];
           if (cued && Math.abs(t - callAt) < step / 2) cues.push('calling');
-          if (cued && Math.abs(t - 86) < step / 2) cues.push('lifted');
           sound.update(step, { ...baseState, music: 'wood', hush: .5, land: 1, sea: .2, meadow: 0, night: 1, life: 0,
             sleepingScore: summit ? 'summit' : 'climb', cold, charge,
             winterGust: nightWindSound(t, cold, 0),

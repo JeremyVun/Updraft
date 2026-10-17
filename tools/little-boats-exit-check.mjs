@@ -82,7 +82,6 @@ try {
   const seaStep = Math.max(...result.trace.slice(1).map((s, i) => Math.abs(s.sea - result.trace[i].sea)));
   const handoff = result.trace.findIndex(s => s.chapter === 'toMeadow');
   assert.deepEqual(errors, []);
-  assert(!result.cues.some(s => s.cues.includes('restored')), 'Little Boats has no completion phrase');
   assert(seaStep < .04, `water state stays continuous: largest step ${seaStep}`);
   assert.equal(result.trace[handoff].sea, result.trace[handoff - 1].sea, 'crossing inherits the departure sea');
   assert.equal(result.trace[handoff].swell, result.trace[handoff - 1].swell, 'swell cannot jump on boarding');

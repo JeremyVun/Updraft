@@ -1,16 +1,10 @@
 /** One-way story sound events; environmental calls do not duck the music. */
-export type Cue = 'foghorn' | 'star' | 'breeze' | 'delight' | 'restored' | 'fallen' | 'landed' | 'kindled' | 'comfort' | 'distress' | 'calling' | 'bugle' | 'filled' | 'feather' | 'lifted' | 'wave' | 'unfold' | 'release' | 'home' | 'finale' | 'flightHome' | 'puzzled' | 'hoot';
+export type Cue = 'foghorn' | 'kindled' | 'comfort' | 'distress' | 'calling' | 'bugle' | 'flightHome' | 'puzzled' | 'hoot';
 
 const pending: Cue[] = [];
 
 export function cue(name: Cue): void {
   pending.push(name);
-}
-
-/** The shared rising phrase for completing a major objective.
- * Call at the one-way success transition, never from checkpoint restoration or smaller progress steps. */
-export function completeObjective(): void {
-  cue('restored');
 }
 
 /** The cues raised since the last call. */

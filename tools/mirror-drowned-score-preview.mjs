@@ -102,11 +102,9 @@ try {
           };
           if (kind === 'scene') for (const e of contextSchedule(name)) atTime(e.at, () => {
             if (e.type === 'gesture') sound.chime(chordNote(e.midi,harmonyAt(name,e.at),62,81),e.velocity,.12,lead+e.at,1.8,false,true);
-            else if (e.type === 'cue') sound.phrase(e.cue, at => harmonyAt(name,at-lead));
             else if (e.type === 'material') foley.material(e.material,e.level,-.12);
             else if (e.type === 'thunder') sound.thunder(e.level,.35);
           });
-          sound.cueSpaceUntil = 0;
           const update = tick => {
             sound.update(.125, sceneState(name, Math.max(0,tick/8-lead), baseState));
             if (kind === 'music') for (const field of ['breezeGain','seaGain','rainGain','patterGain','gustGain','whistleGain','rustleGain','liftGain']) {

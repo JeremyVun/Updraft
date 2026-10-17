@@ -227,7 +227,7 @@ edit.
   still island's petal population. Density follows the flower patches, since the camera's look-ahead crosses region
   boundaries while the child stays in place; the original bug activated 4,178 reserve petals in one frame.
 - `little-boats-exit-check` uses real sail/plug gestures from the final pool checkpoint through boarding and the
-  crossing. It captures both sides of the chapter handoff and checks no completion phrase, continuous sea/swell
+  crossing. It captures both sides of the chapter handoff and checks continuous sea/swell
   strength and unchanged water shader; `OUT` selects its capture directory. `little-boats-logic-check` also checks
   this exit at 30/60/120 Hz from arrival and both pool checkpoints.
 

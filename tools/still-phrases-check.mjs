@@ -7,14 +7,6 @@ try {
     const { StillGestures } = await import('/src/audio/still-gestures.ts');
     const { tuning } = await productionModule('/src/tuning.ts');
     const checks = [], check = (ok, message) => { if (!ok) throw Error(message); checks.push(message); };
-    const fall = offlineSound(1).sound, fallNotes = [];
-    fall.chime = (...note) => fallNotes.push(note);
-    fall.phrase('fallen'); fall.phrase('landed');
-    check(fallNotes.length === 0, 'The recorded opening has no falling or touchdown musical tones');
-    tuning.audio.stillFallTones = true;
-    fall.phrase('fallen'); fall.phrase('landed');
-    check(fallNotes.length === 6, 'The original five-note fall and landing note remain available for comparison');
-    tuning.audio.stillFallTones = false;
     const events = new StillGestures(); let colour = .1;
     const step = (flying = false, wind = false, active = true, dt = .125) =>
       events.update(dt, active, flying, wind, 0, 0, () => colour);

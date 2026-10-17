@@ -51,10 +51,9 @@ Rules every room keeps:
   wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
-- **The reward phrase** (`completeObjective()` in `story/cues.ts`) plays
-  at the piano's lullaby answered (just after it finishes), the last loose stair flight placed and the whale freed.
-  Still and Little Boats leave their supplied music uninterrupted. Smaller steps keep
-  their own small responses.
+- **No reward phrase.** Each room's recording carries its conclusions (the meadow's flute finale, the whale's
+  release in the sea's recording); the stairs' last flight is marked only by its knock. Smaller steps keep
+  their own small, physical responses.
 
 ## The still island
 

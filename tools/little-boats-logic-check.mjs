@@ -170,7 +170,6 @@ for (const fps of [30, 60, 120]) {
     }
     const label = `${fps}fps from ${restored ?? 'arrival'}`;
     assert(f.chapter.done, `${label}: steady wind and the player's bath and plug complete all pool handoffs`);
-    assert(!takeCues().includes('restored'), `${label}: reveal leaves the supplied music uninterrupted`);
     assert.equal(breeze, 1, `${label}: sea matches the outgoing crossing before handoff`);
     assert(largestSeaStep < .025, `${label}: departure sea changes continuously: ${largestSeaStep}`);
     assert.equal(f.cast.cygnet.swims, restored === 69 ? 1 : restored === 33 ? 2 : 3, 'preserve remaining swims');

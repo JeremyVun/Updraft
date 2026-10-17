@@ -18,7 +18,7 @@ and `stairs-air.ts` are the stairs room's air; `sliced.ts` paces start-up synthe
 `PianoStrings` in `audio.ts`. Feel, level and timing knobs live in `tuning.audio` (plus `tuning.piano` and
 `tuning.storm` where noted).
 
-Story code raises cues through `cue()` / `completeObjective()` in `src/story/cues.ts`; `takeCues()` drains the queue
+Story code raises cues through `cue()` in `src/story/cues.ts`; `takeCues()` drains the queue
 once per rendered frame. Chapters expose optional score state (`linesScore`, `meadowScore`, `birchesScore`,
 `sleepingScore`, `sleepingMusic`, `seaScore`, `seaMusicTime`, `stairsAir`, `arrivalMusic`, and so on); `main.ts` copies it into `SoundState` every frame
 and clears it on exit.
@@ -41,7 +41,8 @@ and clears it on exit.
   as if the Home music plays all the way through to the credits.
 - No bell phrases over the swans at Home: not when the family arrives over the summit, not as they fly away. The
   wingbeats and the Home recording carry it.
-- The story no longer cues `delight` (the chime with the child's cheer): it no longer fits the music.
+- No synthesised completion or reward phrases over the recorded music: each room's recording, or the room's own
+  physical sound, carries its conclusions.
 - The sailing boat has no hull-water foley: its bursts sounded like flapping. Toy boats keep theirs.
 - No child voice: "never any voicing from the two main characters". The cygnet's calls, which he later heard and
   liked ("The cygnet sounds great"), are the one exception (`docs/cygnet.md`).
@@ -103,10 +104,11 @@ gate.
   summit's moment.
 - `hush` attenuates only the background score, never the player's feedback.
 
-Authored cues keep their own sound: `restored` (the shared completion phrase), `breeze`, `kindled`, `comfort` (the
-rescue hearth's two notes), `feather`, `lifted`, `star` and the rest use fixed pitches and the bright bell voice,
-independent of cursor harmony. An important cue ducks the accompaniment to `authoredCueDuck` (0.32) over 0.45 s and
-returns over 1.3 s. The piano keeps its own musical response.
+The only synthesised phrases are the dark wood's, on its D/A drone: `kindled` (D4 A4 D5) as a coal takes and `comfort`
+(D4 A4, the softer caring voice) as the rescue hearth is lit. They use fixed pitches and the bright bell voice,
+independent of cursor harmony, and leave the accompaniment where it is. Every other cue is a physical or animal sound:
+`flightHome` (the stairs' knock), `foghorn`, `hoot`, and the cygnet's and swans' `distress`, `calling`, `puzzled` and
+`bugle`. The piano keeps its own musical response.
 
 ## Scores, room by room
 
@@ -223,9 +225,7 @@ at (194, −1750) near Wood (0.167 units); the terrain height there is identical
 5.3125 s apart (80% of the endorsed tempo), with a held D/F♯ resolution at 1:25; the 185.3125 s form repeats for
 player pacing. It plays on the first island and its crossing (`openingScore`), follows a local audio clock, and the
 Lines arrival retires it without letting it return. During the fall the `openingScore` phase holds the first chord
-(D) while the skein passes. The original D-major `fallen` phrase and pitched landing note are separately
-disabled by `audio.stillFallTones`; re-enable that switch only when auditioning the old scoring. The skein has
-no phrase, only the swans' own calls. The pad then fades to silence with the fall and stays silent through the rescue, leaving calls, wind and sea;
+(D) while the skein passes. The fall and the touchdown have no phrase, only the swans' and the cygnet's own calls. The pad then fades to silence with the fall and stays silent through the rescue, leaving calls, wind and sea;
 when the child carries the bird away the piece begins again from its first chord (`openingReturn`). Render it with
 `node tools/opening-fall-render.mjs <out.wav>`.
 
@@ -240,8 +240,7 @@ for a lingering player, uses the dry music route and the shared arrival/exit fad
 hidden-page suspension. Its own recorded dynamics replace the old per-cue score trim; authored cues retain their
 shared accompaniment duck. The original `little-boats-score.ts` and its tuning remain available for studies.
 The decoded recording is about 43 MiB at 48 kHz; exit releases it.
-Jeremy's 2026-10-12 instruction: remove the Little Boats "puzzle completed" sound. The reveal no longer raises
-`restored`; the supplied recording carries the conclusion without that phrase or its accompaniment duck.
+The reveal has no completion sound (Jeremy, 2026-10-12): the supplied recording carries the conclusion.
 
 **Meadow and the piano.** The meadow plays cuts of four supplied takes (the playable prototype of 2026-10-15; Jeremy's
 brief and the cut list are in [the design](../backlog/meadow-echoes/design.md), "Piano hill and the meadow score").
@@ -275,7 +274,7 @@ tail fade is given), levels each to the room reference by measured loudness, and
   call's end: both are high-passed at 160 Hz, under their lowest note (C4), and the finale notched at its 215.3 Hz partial. Until the duet file is decoded the piano strings
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
   (`MEADOW_FINALE.greenAt`); the flute carries it alone, with nothing from the piano under it. Its
-  end raises no `restored`: the flute's finale is the reward.
+  end has no completion sound: the flute's finale is the reward.
 - One warm bed from the duet to the boat. From the duet's end it swells in over `afterFadeIn` (6 s) and plays
   unbroken through the flowers, the seeds, the listening rest, the pond, the family's departure, the feather, the
   shower and the walk to the boat, from `meadow_extended.ogg` (take E as Jeremy extended it): 0:22.60 to 2:53.05,
@@ -537,8 +536,7 @@ gestures read.
   freed, until the curtains; past the curtains, until the sea. The QA start `?chapter=ribbon`, a step below the top
   with the feather caught, plays the summit part a second after the bird reaches the top, the silence from the
   bandage freed and the morning at the curtains.
-- **Cues.** Sleeping no longer raises `feather` or `lifted` (D major against A and C minor): the climb theme's entrance is
-  the feather's sound, the summit part the bird's arrival at the top and the morning its flight. Landing adds no completion phrase.
+- **Cues.** Sleeping raises no phrases: the climb theme's entrance is the feather's sound, the summit part the bird's arrival at the top and the morning its flight. Landing adds no completion phrase.
 - **Loading.** The wood and the crossing from it prefetch the lullaby, decoded at the wood's handoff; bedtime prefetches
   the climb, decoded from `asleep`; the freed feather prefetches the morning, decoded from `catch`, so it is in hand well
   before the curtains; the sea prefetches from the summit. Each buffer is released when its last part ends, or on
@@ -609,8 +607,7 @@ it ends. Phrases play in order, never overlap and are never cut or faded early: 
 waits for it, and because each phrase follows the last in the recording, the waiting one starts at the sample where
 the last ends with the last one's fade dropped, so a quick rescue plays the recording unbroken from 129.93 through the
 close. If the waits become noticeable, pace the rescue rather than the music.
-The release raises no `restored` cue: as in
-Little Boats, the recording carries the conclusion, and the cue's D-major bell and duck would cut across it.
+The release has no completion sound: as in Little Boats, the recording carries the conclusion.
 
 Restores and QA starts: `?chapter=sea` / `dolphins` begin the whole passage with the recording; a resumed passage
 joins the crossing at its own time. `?chapter=whale` and a restored `whale-rest` stay silent until the first act; saves mid-rescue
@@ -747,7 +744,7 @@ shorter (`homeReveal.watchFlockFor` 13), and the run down to the house 2 s longe
 
   The recording ends on its own last note, which has rung out as the closing line comes.
 
-`homeEndingSounds = false` and `homeMusicDucking = false` keep the existing cue and ducking rules.
+`homeMusicDucking = false` lets the Home recording play on without the story's hush.
 `node tools/ending-audition.mjs <out.wav> [fromSeconds]` renders Home from the summit to the credits (START is where the
 island's pass is as they sit, ASK how long the cygnet asks, RATE the story's frames a second; WORLD=1 adds wind and a
 stand-in rush); `homeward-audio-check` covers the seams, the move into the opening, its loop, the return and restores.
@@ -951,8 +948,8 @@ After playtesting (2026-10-14):
 
 - Under the cloud the stairs song (`birches.ogg`) loops, begun from its top on the crossing's handoff (Birches, above;
   a stairs start under the cloud begins it on load). Each flight that docks raises
-  `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`). Jeremy (2026-10-17) removed the
-  completion phrase from the last flight: the knock and the stairs song carry it. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
+  `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight
+  has no completion phrase (Jeremy, 2026-10-17): the knock and the stairs song carry it. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
 - In the white the stairs song fades over `stairsSongCloudFade` (3 s, a trial value awaiting Jeremy's listen) and
   never starts again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
   `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.
@@ -1038,8 +1035,7 @@ Current implementation: move the title to crossing seconds 34–41 (three-second
 three-second fade), enlarge its type from 36 to 40 px at desktop, and send a six-second wind front through the
 existing Still flower patches starting at second 31. Replace the coast-shaped Lines concealment with a horizon-wide
 distance veil, preserving the farewell before drawing the visibility range inward. Move both Lines handoff gates
-six seconds earlier. Disable the falling phrase and its pitched landing note through `audio.stillFallTones`, keeping
-the synthesiser available and preserving physical sounds. The main boat's propulsion and leeway read the prevailing
+six seconds earlier. The fall and its landing have no phrase; physical sounds stay. The main boat's propulsion and leeway read the prevailing
 breeze independently of local gusts; its sail, pennant and heel still read the live field. Remove the offshore washing
 line without substituting a new attraction yet. Validate audio, passage timing, title/gust timing,
 the continuous reveal and the production build. This supersedes the earlier title and coast-mist experiments above.

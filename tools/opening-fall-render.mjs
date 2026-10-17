@@ -20,8 +20,6 @@ try {
     const cygnet = { pan: 0, distance: 12, active: true };
     const update = tick => {
       const t = tick * step, cues = [];
-      if (Math.abs(t - droppedAt) < step / 2) cues.push('fallen');
-      if (Math.abs(t - landedAt) < step / 2) cues.push('landed');
       if (t >= droppedAt && t < leavingAt - 4 && t >= nextCall) { cues.push('distress'); nextCall = t + (t < landedAt ? 1.35 : 2.2); }
       wanted = t < skeinAt ? 0 : t < droppedAt ? .55 : t < leavingAt ? 1 : .45;
       chapterHush += (wanted - chapterHush) * (1 - Math.exp(-step * .9));

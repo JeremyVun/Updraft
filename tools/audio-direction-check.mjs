@@ -80,16 +80,8 @@ try {
         `Forest ${lift?'updraft':'stroke'} retains its low D register`);
       if(!lift)check(notes.includes(53)&&notes.includes(60)&&notes.includes(65), 'Forest strokes retain the original minor colours outside the D/A pedal');
     }
-    events.length=0;tick(12,{music:'birches',birchesScore:'scarf'});tick(32,{music:'birches',birchesScore:'scarf',cues:['restored']});
-    check(JSON.stringify(events.map(e=>e[0]))==='[62,66,69,74,78,81,86]', 'Completion retains its original melody over the scarf harmony');
-    check(events.every(e=>!e[5]&&!e[6]), 'Completion uses the original bell voice and is independent of cursor tail gating');
-    events.length=0;tick(34,{music:'birches',birchesScore:'scarf',cues:['delight']});
-    check(JSON.stringify(events.map(e=>e[0]))==='[81,86,90]'&&events.every(e=>!e[5]&&!e[6]), 'Small successes retain the original high three-note bell phrase');
-    events.length=0;tick(36,{music:'birches',birchesScore:'scarf',cues:['breeze']});
-    check(JSON.stringify(events.map(e=>e[0]))==='[74,78,81]', 'The first breeze retains its original three-note phrase');
-    events.length=0;tick(40,{music:'home',cues:['unfold']});
-    check(JSON.stringify(events.map(e=>e[0]))==='[74,78,81,83,81,78,76,78,74,71,74,76,78,76,74]','The selected home melody retains every pitch');
-    check(sound.cueSpaceUntil>50,'The background makes room for the whole recognition melody');
+    events.length=0;tick(32,{music:'wood',cues:['kindled']});
+    check(JSON.stringify(events.map(e=>e[0]))==='[62,69,74]'&&events.every(e=>!e[5]&&!e[6]), 'A coal taking keeps its three bell notes, independent of cursor tail gating');
     delete ctx.currentTime;
 
     // Departure releases a forest gesture without a hard cut.
@@ -115,7 +107,7 @@ try {
     // Reviewable sustained passages expose joins, variation, reward overlap and phrase-aware departure.
     for (const item of [
       {name:'lines-loops',seconds:58,state:{music:'lines',linesScore:'family'}},
-      {name:'birches-rewards',seconds:48,state:{music:'birches',birchesScore:'walk'}},
+      {name:'birches-wind',seconds:48,state:{music:'birches',birchesScore:'walk'}},
       {name:'sea-theme',seconds:38,state:{music:'sea',seaScore:'open'}},
       {name:'phrase-handoff',seconds:16,state:{music:'lines',linesScore:'first'}},
     ]) {
@@ -126,7 +118,7 @@ try {
         if(now===6)outgoing=sound.linesScore;
         sound.update(.125,{...baseState,...item.state,land:0,flockChatter:false,
           ...(item.name==='phrase-handoff'?{arrivalMusic:now>=6?'boats':undefined}:{}),
-          ...(item.name==='birches-rewards'?{cues:now===10?['restored']:[],gust:now>=8&&now<15?12:0,charge:now>=26&&now<30?.7:0}:{}),
+          ...(item.name==='birches-wind'?{gust:now>=8&&now<15?12:0,charge:now>=26&&now<30?.7:0}:{}),
         });
         const stage=sound.arrivalTransition.stage;if(phases.at(-1)?.stage!==stage)phases.push({now,stage});
         if(item.name==='phrase-handoff'&&stage==='incoming'&&!checkedRetirement){check(!outgoing.source && !outgoing.buffer,'Outgoing voices are retired before the new composition enters');checkedRetirement=true;}

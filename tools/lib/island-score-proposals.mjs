@@ -55,8 +55,6 @@ export function contextEvents(name, tick, sound, foley, state, version = 'origin
   const time = tick / 8;
   if (name === 'sleeping') {
     if (tick === 10 * 8) state.cues.push('calling');
-    if (tick === 13 * 8) state.cues.push('feather');
-    if (tick === 28 * 8) state.cues.push('lifted');
     if (time >= 12 && time < 28 && tick % 8 === 0) foley?.step('grass', 0.45, -0.3);
     if (time >= 28 && time < 31 && tick % 4 === 0) foley?.flap(0.3, -0.3);
   } else {

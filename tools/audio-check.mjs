@@ -117,7 +117,6 @@ try {
     check(!fixture({ flock, flockChatter: false }).calls.some(c => c.name === 'bugle'), 'authored conversation preserves its intentional pauses');
     check(fixture({ flock, flockChatter: false, cues: ['bugle'] }).calls.some(c => c.name === 'bugle'), 'conversation still plays the authored adult response');
 
-    const { HomeChapter } = await import('/src/story/home.ts');
     const { SleepingChapter } = await import('/src/story/sleeping.ts');
     const { WoodChapter } = await import('/src/story/wood.ts');
     const cues = await productionModule('/src/story/cues.ts');
@@ -141,24 +140,6 @@ try {
     check(openingChapter.restored && openingChapter.restoredAt === 12 && openingChapter.cast.life.regions.island.w > 0,
       'The still island completes and brings back colour without its completion sound');
     check(cues.takeCues().length === 0, 'Still island completion raises no sound cue');
-    cues.completeObjective();
-    check(cues.takeCues().join() === 'restored', 'Other chapters retain the shared completion sound');
-    const endingSounds = tuning.audio.homeEndingSounds;
-    for (const enabled of [false, true]) {
-      tuning.audio.homeEndingSounds = enabled;
-      for (const fps of [10, 30, 60, 120, 144]) {
-        const home = { beat: 'inside', silence: false, t: 0, sky: { set() {} },
-          cast: { child: { position: { x: 0, y: 0, z: 0 } }, plane: {}, drawing: {}, cottage: {} } };
-        cues.takeCues();
-        let count = 0;
-        for (let time = 1.91; time < 2.5; time += 1 / fps) {
-          home.t = time; HomeChapter.prototype.updateEnding.call(home, 1 / fps);
-          count += cues.takeCues().filter(c => c === 'finale').length;
-        }
-        check(count === Number(enabled), `finale ${enabled ? 'schedules once' : 'stays disabled'} at ${fps} Hz`);
-      }
-    }
-    tuning.audio.homeEndingSounds = endingSounds;
     const morning = Object.assign(Object.create(SleepingChapter.prototype), {
       music: 'wood', hush: 0.5, now: 0, laneFrom: null, laneTo: null, seat: null,
       cast: { child: { position: { x: 0, y: 0, z: 0 }, stop() {}, walkTo() {} }, cygnet: { watch() {} },
@@ -197,10 +178,10 @@ try {
     check(completed === 1, 'piano checkpoint restore cancels a pending completion');
     const phraseNotes = [];
     const phrase = { ctx: { currentTime: 10 }, nextPulse: () => 10, chime: (...args) => phraseNotes.push(args) };
-    audioModule.Soundscape.prototype.phrase.call(phrase, 'feather');
-    check(phraseNotes.length === 2 && phraseNotes.at(-1)[0] === 69, 'feather has a small open-ended hint');
-    phraseNotes.length = 0; audioModule.Soundscape.prototype.phrase.call(phrase, 'lifted');
-    check(phraseNotes.length === 9, 'brave flight keeps the complete lifted phrase');
+    audioModule.Soundscape.prototype.phrase.call(phrase, 'kindled');
+    check(phraseNotes.map(n => n[0]).join() === '62,69,74', 'a coal taking lifts three notes out of the drone');
+    phraseNotes.length = 0; audioModule.Soundscape.prototype.phrase.call(phrase, 'comfort');
+    check(phraseNotes.map(n => n[0]).join() === '62,69' && phraseNotes.every(n => n[5] === true), 'the rescue hearth keeps its two soft notes');
 
     const { AudioEnvironment, shoreDistance } = await import('/src/audio/environment.ts');
     const island = (offset = 0) => (x, z) => 80 - Math.hypot(x - offset, z - offset);
@@ -291,7 +272,7 @@ try {
       } else {
         for (const kind of ['cloth', 'wool', 'sail', 'sail-settle', 'water', 'paper', 'door', 'splash']) foley.material(kind, 1, 0.5);
         if (name === 'busy') {
-          sound.update(1 / 60, { ...baseState, gust: 26, charge: 1, gliderLift: 1, shower: 1, cues: ['finale', 'distress'], cygnet: { active: true, pan: -0.8, distance: 10 } });
+          sound.update(1 / 60, { ...baseState, gust: 26, charge: 1, gliderLift: 1, shower: 1, cues: ['distress'], cygnet: { active: true, pan: -0.8, distance: 10 } });
           sound.thunder(1, 0.5, true);
         }
       }
@@ -305,12 +286,10 @@ try {
   });
   const tail = await page.evaluate(async () => {
     const { ctx, sound } = offlineSound(29);
-    let finale = false;
     const update = () => {
       const now = ctx.currentTime;
       sound.update(0.125, { ...baseState, music: 'home', night: 1, land: 0, scripted: true,
-        silence: now >= 23.5, cues: now >= 2 && !finale ? ['finale'] : [] });
-      if (now >= 2) finale = true;
+        silence: now >= 23.5 });
       // Isolate music at the production cut and credit times, retaining its actual reverb path.
       for (const key of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'nightGain', 'nightWhistleGain', 'liftGain']) {
         sound[key].gain.cancelScheduledValues(now); sound[key].gain.value = 0;
@@ -330,7 +309,7 @@ try {
       for (let ch = 0; ch < 2; ch++) for (let i = start * 24000; i < (start + 1) * 24000; i++) energy += buffer.getChannelData(ch)[i] ** 2;
       return { start, rmsDbFS: 10 * Math.log10(energy / 48000) };
     });
-    return { name: 'finale-cut', windows, ...encodeAudio(buffer) };
+    return { name: 'ending-cut', windows, ...encodeAudio(buffer) };
   });
   render.push(tail);
   for (const clip of render) {

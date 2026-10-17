@@ -5,7 +5,6 @@ import { verticalFov, type Shot } from '../camera';
 import { tuning } from '../tuning';
 import { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, MIRROR_SAIL_OUT, mirrorBed } from '../world/sky-mirror-layout';
 import type { Cast, Chapter } from './cast';
-import { cue } from './cues';
 import { MirrorCompanion } from './mirror-companion';
 import { PlaneArrival } from './plane-arrival';
 
@@ -180,7 +179,7 @@ export class SkyMirrorChapter implements Chapter {
       const carried=room.carried;
       const rising=room.stars.find(s=>s.state==='rising');
       const returnedNow=room.progress>this.returned;
-      if(returnedNow && !carried && !rising){this.returned=room.progress;cue('star');}
+      if(returnedNow && !carried && !rising)this.returned=room.progress;
       c.lookAt=carried?.position ?? rising?.light.position ?? room.aim;
       // Capture happens later in the frame than story navigation. Even an empty bubble locks
       // manual destination changes; a filled or rising light also holds automatic progression.

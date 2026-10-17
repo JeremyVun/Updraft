@@ -76,8 +76,6 @@ export const tuning = {
     obstacleSide: 8, obstacleSideResponse: 1, obstacleSideCost: 0.2, obstacleSideImprovement: 0.25,
   },
   audio: {
-    /** Keep the ending cue and material implementations available for comparison. */
-    homeEndingSounds: false,
     /** Let the Home composition carry the story without extra attenuation for cues. */
     homeMusicDucking: false,
     /** Begin near shore, leaving time for a fade, a real musical rest, and the incoming phrase. */
@@ -176,7 +174,6 @@ export const tuning = {
     musicRetryAfter: [1, 3],
     /** Reversible opening experiment; false restores the original drone. */
     stillPhraseExperiment: true,
-    stillFallTones: false,
     linesArrivalEarlier: 10,
     /** Little Boats' recording lets go this many seconds sooner on the crossing to the meadow. */
     meadowArrivalEarlier: 5,
@@ -225,7 +222,6 @@ export const tuning = {
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
     /** Minimum spacing between attacks, including both notes of a glider answer. */
     gesturePulses: 2, forestChimePulses: 4,
-    authoredCueDuck: .32, authoredCueAttack: .45, authoredCueRelease: 1.3,
     /** A cue raised while a call or Siri interrupts audio still plays if the interruption ends within this. */
     heldCueLife: 3,
     /** Wind can warm the background slightly without making the whole score surge. */

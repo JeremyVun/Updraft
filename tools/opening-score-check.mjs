@@ -23,7 +23,7 @@ try {
       const update=tick=>{
         const t=tick*step;
         sound.update(step,{...baseState,music:'still',openingScore:phase(t),startingIsland:true,life:1,
-          scripted:t>=home&&t<back,cues:t===rest?['fallen']:[]});
+          scripted:t>=home&&t<back});
         const score=sound.openingScore,now=ctx.currentTime;
         if(t===rest-.5)seen.home=[...score.chordAt(now)];
         if(t===rest-.5)seen.homePitch=sound.padVoices.map(v=>Math.round(12*Math.log2(v.osc[0].frequency.value/440)+69));
@@ -44,7 +44,7 @@ try {
       return seen;
     };
     const {ctx,sound}=offlineSound(215),notes=[],stages=[];
-    let score,epoch,normal,quiet,duck,looped=false;
+    let score,epoch,normal,quiet,looped=false;
     const voices=sound.padVoices.map(v=>v.osc),chime=sound.chime.bind(sound);
     sound.chime=(...args)=>{
       if(args[6]&&sound.openingScore)notes.push({midi:args[0],at:args[3],chord:[...sound.openingScore.chordAt(args[3])]});
@@ -57,11 +57,11 @@ try {
         arrivalMusic:t>=198&&!landed?'lines':undefined,
         life:Math.min(1,.1+t*.8/48),hush:care?1:0,scripted:care,flockChatter:false,
         gust:t%1<.25?12:0,charge:t%4>=2&&t%4<2.5?.5:0,
-        silence:t>=212,cues:t===60?['fallen']:[]});
+        silence:t>=212});
       score??=sound.openingScore;epoch??=score?.epoch;
       const stage=sound.arrivalTransition.stage;if(stages.at(-1)?.stage!==stage)stages.push({at:t,stage});
       if(t===58)normal=sound.padGain.gain.value;
-      if(t===64){quiet=sound.padGain.gain.value;duck=sound.backgroundDuck.gain.value;}
+      if(t===64)quiet=sound.padGain.gain.value;
       if(t===85)check(JSON.stringify(score.chordAt(ctx.currentTime))==='[42,57,62,66]','The new D/F# resolution sounds at 1:25');
       if(t===90.375)check(JSON.stringify(score.chordAt(ctx.currentTime))==='[47,54,62,66]','The motif waits for the full resolution');
       if(t===188){
@@ -79,7 +79,6 @@ try {
     const buffer=await rendering;
     check(looped,'The production render crosses the complete composition loop');
     check(quiet<normal*.12,'The fallen cygnet hush still withdraws the pad');
-    check(duck<.34,'The authored fall cue retains its accompaniment duck');
     check(notes.length===0,'Wind makes no chimes throughout the opening score and first crossing');
     check(sound.padVoices.every((v,i)=>v.osc===voices[i]),'Loops and departure allocate no replacement pad oscillators');
     let peak=0;for(let ch=0;ch<2;ch++)for(const sample of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(sample));

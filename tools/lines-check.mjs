@@ -66,15 +66,6 @@ try {
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
   const installChecks = async () => page.evaluate(() => {
     const g = __game;
-    window.__objectiveCues = [];
-    window.__completionPhrases = 0;
-    const soundUpdate = g.sound.update.bind(g.sound);
-    g.sound.update = (dt, state) => {
-      for (const name of state.cues) if (name === 'restored') window.__objectiveCues.push({ name, beat: g.story.current.beat });
-      soundUpdate(dt, state);
-    };
-    const phrase = g.sound.phrase.bind(g.sound);
-    g.sound.phrase = name => { if (name === 'restored') window.__completionPhrases++; phrase(name); };
     g.sound.start();
     window.__doorChecks = { source: 0, portal: 0, shore: 0, boatLeaks: 0, laundryLeaks: 0, reflectionLeaks: 0 };
     window.__doorFrames = []; let lastDoorFrame = 0;
@@ -161,7 +152,6 @@ try {
     await page.waitForFunction(gate => __game.curtains[gate].cleared, gate, { timeout: 12000 });
     const solved = await state();
     if (mode !== 'idle') assert(solved.now - before.now < 12, 'broad sweeps should open the sheet promptly');
-    assert.equal(await page.evaluate(() => window.__objectiveCues.length), 0, 'individual sheets are progress, not major completions');
     await page.waitForTimeout(1200);
     await page.screenshot({ path: `${prefix}-${gate + 1}-open.png` });
     report.passages.push({ gate, before, solved });
@@ -182,9 +172,6 @@ try {
   await page.waitForTimeout(4500);
   await page.screenshot({ path: `${prefix}-family.png` });
   report.family = await state();
-  report.completion = await page.evaluate(() => ({ cues: window.__objectiveCues, played: window.__completionPhrases }));
-  assert.deepEqual(report.completion.cues, [], 'the door opens without the shared completion cue');
-  assert.equal(report.completion.played, 0, 'the shared completion phrase must not play at the door');
   assert(report.family.held); console.log('family revealed');
   await page.waitForFunction(() => __game.story.current.beat === 'throughDoor' && __game.story.current.doorElapsed > 9.5, null, { timeout: 60000 });
   assert(!(await state()).crossed, 'camera must remain on the washing side until it reaches the threshold');
@@ -219,7 +206,6 @@ try {
     assert.equal(restored.gate, 3); assert(restored.curtains.every(g => g.cleared));
     assert(restored.crossed && restored.child[0] > 200 && restored.bird[0] > 200, 'reload must restore the far side');
     await page.waitForTimeout(200);
-    assert.equal(await page.evaluate(() => window.__objectiveCues.length), 0, 'restoring a completed objective must not replay its sound');
     console.log('restored family');
   }
   // Beyond the door the boat waits out on the water; only sweeps across the pinwheel on the bank wind it in.

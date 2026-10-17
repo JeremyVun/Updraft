@@ -219,7 +219,7 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
   const transitions=[],steps=[],saves=[];
-  let last='',step='',rewards=0,phrases=[],blowholeEdge=0,eyeOpen=0,finClear=Infinity;
+  let last='',step='',phrases=[],blowholeEdge=0,eyeOpen=0,finClear=Infinity;
   const asked={},moved={};
   const actionable={}, invitations={};
   let openSamples=0, blockedSamples=0, loopClear=Infinity, tailBend=0, flukeEdge=0, railSamples=0;
@@ -275,7 +275,6 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
     }
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
-    rewards+=takeCues().filter(q=>q==='restored').length;
     if(c.seaPhrase!==phrases.at(-1)){
       phrases.push(c.seaPhrase);
       // Each phrase begins as its act does: the net over the blowhole and the fold over its eye first lifting, her
@@ -338,7 +337,6 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
   }
   assert(finClear>=1,`the cygnet keeps a metre of clear water from the flipper: ${finClear.toFixed(2)} m`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
-  assert.equal(rewards,0,'the recording carries the release, without a reward cue');
   assert.deepEqual(phrases,[-1,0,1,2,3,4,5],`the recording's phrases follow rest, each act and the release in order: ${phrases}`);
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
   assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
@@ -380,7 +378,6 @@ for(const [point,played,state] of [
   assert(gone>0&&c.done,`from ${point} it is freed and the boat moors at the mirror`);
   assertPlayedBy(w,played,WHALE_SAVES.indexOf(point));
   assert(inSatchel>0,`${point}: the cygnet rides in the satchel as it goes`);
-  assert.equal(takeCues().filter(q=>q==='restored').length,0,`${point}: no reward cue over the recording`);
 }
 // Resumed after it has gone, there is no whale and the boat sails on to the mirror.
 {
@@ -395,7 +392,6 @@ for(const [point,played,state] of [
     assert.equal(b.speedLimit,Infinity,'the onward sail is not held back');
   }
   assert(c.done,'from the save after the whale the boat moors at the mirror');
-  assert.equal(takeCues().filter(q=>q==='restored').length,0,'a restored save is never rewarded again');
 }
 // An old swim checkpoint in the coastal channel should continue to the jetty, never return offshore.
 {

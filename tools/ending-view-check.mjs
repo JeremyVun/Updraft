@@ -16,16 +16,12 @@ const {Boat}=await import('../src/traveller/boat.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {HOME_ENDING}=await import('../src/story/home-ending.ts');
 const {tuning}=await import('../src/tuning.ts');
-// Retained cues mark narrative events in this geometry fixture; audio-check covers their disabled mix.
-tuning.audio.homeEndingSounds=true;
-const {Soundscape}=await import('../src/audio/audio.ts');
 
 const { HomeChapter } = await import('../src/story/home.ts');
 const { heightAt } = await import('../src/world/island.ts');
 const { grassHeightAt } = await import('../src/world/grass.ts');
 const { Drawing } = await import('../src/traveller/drawing.ts');
 const { Cottage } = await import('../src/world/cottage.ts');
-const { takeCues } = await import('../src/story/cues.ts');
 const { applyPalette, sunDirection } = await import('../src/world/palette.ts');
 const { atmo } = await import('../src/world/atmosphere.ts');
 function make(width,height,restore) {
@@ -42,16 +38,17 @@ function make(width,height,restore) {
  chapter.frame();
  if(!restore){chapter.beat='gone';chapter.frame();rig.cut(chapter.shot);chapter.beat='crest';chapter.frame();}
  else rig.cut(chapter.shot);
- takeCues();
  return {chapter,child,cygnet,flock,plane,carry,rig,drawing,cottage,air};
 }
+/** Steps the ending and names its narrative events this frame: the drawing recognised ('unfold'), the door opening ('home'). */
 function step(g,dt,time,obscure=false) {
  const {chapter,child,cygnet,flock,plane,carry,rig,air}=g;
+ const opened=chapter.doorOpened,known=chapter.recognisedAt>=0;
  chapter.update(dt,time);child.update(dt);carry.update(dt);plane.update(dt,time);flock.update(dt,time);
  cygnet.update(dt,time,child.position,air);carry.after();rig.update(dt,time,chapter.shot,chapter.pace);
  if(obscure)rig.camera.lookAt(rig.camera.position.clone().add(new THREE.Vector3(0,100,0)));
  chapter.afterCamera(rig.camera);
- return takeCues();
+ return [...(!known&&chapter.recognisedAt>=0?['unfold']:[]),...(!opened&&chapter.doorOpened?['home']:[])];
 }
 // The lower facade must clear the foreground vegetation, not just the bare terrain at the roof's centre.
 function assertFacade(g) {
@@ -252,16 +249,4 @@ for(const {w,h,fps,resize,restore} of cases.filter(c=>!process.env.ONLY || `${c.
  for(let i=120;i<300;i++)heard+=step(g,1/60,i/60).filter(c=>c==='unfold').length;
  assert.equal(heard,1);assert.equal(drawing.drawn,1);
  console.log('ok camera occlusion delays recognition, then recovers');
-}
-// Recognition is scheduled from the reveal, never from the next musical beat.
-{
- const notes=[];
- const sound={ctx:{currentTime:10},recognitionUntil:0,nextPulse:()=>100,chime:(...note)=>notes.push(note)};
- Soundscape.prototype.phrase.call(sound,'unfold');
- assert.equal(notes[0][3],10.02);
- const count=notes.length;
- Soundscape.prototype.phrase.call(sound,'release');assert.equal(notes.length,count,'early release must not layer another melody');
- sound.ctx.currentTime=sound.recognitionUntil+1;
- Soundscape.prototype.phrase.call(sound,'release');assert(notes.length>count);
- console.log('ok immediate motif scheduling and early-release music');
 }
