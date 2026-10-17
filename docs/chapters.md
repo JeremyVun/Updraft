@@ -239,7 +239,8 @@ On the grass above the beach the child takes the cygnet out of the satchel and s
 her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both
 mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries it down the bank, kneels low by the
 water (`putDownFrom`) and reaches down to set it on the water just off the bank (`putDownAt`, leaning `putDownLean`). The
-player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
+sweep that shows how to fill its sail appears as the lens settles back from that close-up (the shared sweep's own
+wait, with nothing added). The player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, folded wings, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird).
@@ -306,8 +307,9 @@ joining the patch of colour on the near knoll where a piano stands (`PLACE`, `tu
 seen through a shallow saddle. The rest stays grey under the waiting region (`life.regions.waiting`,
 `uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
-**The piano is the key; music brings colour.** The plane leads the child to the piano and glides ahead of her, nose
-first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there nose down
+**The piano is the key; music brings colour.** The plane leads the child to the piano, and a gust of the island's
+own (not the player's: `tuning.piano.planeGust`, drawn as wind lines and heard as a gust) carries it ahead of her,
+nose first, into the fork where the hollow wooden bough beside it splits into two pipes, and sticks there nose down
 between them, tail up and a little askew, turned three-quarters to the lens so its fold reads (`tuning.windBough.planeAt`).
 It is never quite still: it rocks about its nose and its tail and wing tips flutter, more when the player's wind or the
 bough's own breath goes by (`planeTremble`). It stays in view until she gets up and it comes back out to her hand. She
@@ -331,7 +333,8 @@ onsets, melody, tilts and the greening cue into `audio/meadow-cuts-measured.ts`,
 turns into calls, answers and the finale (sound in [audio](contracts/audio.md)). The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera eases a step up and out from her and
 stays there (`tuning.piano.steps`, each a share of the way from the playing view to the walk's view of her), and the
-finale is the last and largest step: the flute plays it alone, the cygnet listening from the satchel and looking
+finale is the last and largest step: the flute plays it alone, the bough breathing a steady stream of traces out over the meadow as it goes
+(`tuning.piano.finaleStream`), the cygnet listening from the satchel and looking
 about as the colour pours out, while the camera opens the rest of the way to the
 walk's view (about 15 m above her and 34 m back, 26 m over the ground below it; nearer than the walk's view before the
 piano, `tuning.meadowPlane.cameraAwake*`) over `finaleEase` seconds, low
