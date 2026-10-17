@@ -352,7 +352,7 @@ export const tuning = {
     /** How quickly she turns to face them as they go (per second). */
     watchTurn: 1.1,
     /** Her run down to the door, as a share of her usual running speed. */
-    runHomePace: 0.815,
+    runHomePace: 0.745,
     /** Stop beyond the convex shoulder, where the whole cottage clears the foreground grass. */
     stopAfter: 24,
     /** House first; a short look, hands up, then the unchanged 4.2-second physical unfold. */
@@ -377,7 +377,7 @@ export const tuning = {
     portraitBack: 9.5, narrowPortraitBack: 9.5, paperWeight: 0.65, portraitPaperWeight: 0.6,
     walkArc: 0.2, walkBack: 8, walkRise: 4.6,
     /** Settle at the crest, then stay there as our gaze pans to the house and finally the credits. */
-    crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
+    crestBack: 12, crestRise: 18, homePanFor: 9, descentFit: 3, descentHouseWeight: 0.2,
     returnFrom: 2.5,
   },
   /** The child's orange toy washed up beside the home jetty (`world/home-toy.ts`). */

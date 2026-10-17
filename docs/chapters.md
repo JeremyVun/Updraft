@@ -985,7 +985,10 @@ then the physical unfold. The paper is the glider, plain white ruled paper, unti
 arrives as it flattens (hills and wall, house, sun, the little plane), and the recognition motif starts when
 sheet and real house are both in frame (`Chapter.afterCamera` checks the rendered view). The drawing is held
 open (`recogniseFor`, 5 s; Jeremy, 2026-10-17: "Very surgical change to take away 1 second from the paper plane being
-open. Don't change any other timings in the sequence."), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
+open. Don't change any other timings in the sequence."; and, keeping the pan to the moon its length: "ok, then add a
+second somewhere after the paper plane reveal, maybe the camera pan up and the child running down the hill intot he
+house", so her run to the door (`runHomePace`) and the pan to the house (`homePanFor`) each take a second longer and
+she goes in at the same moment of the music), she looks up at the house and her hands settle, then she refolds it and holds it up, and after
 `releaseFor` the island's own breeze takes it into the sunset. The camera looks over her shoulder at the sheet and the house, with the real low sun above and left
 of the cottage as in the drawing.
 
