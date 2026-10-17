@@ -317,12 +317,13 @@ class Roofline {
   }
 }
 
-function roofGeometry(into: PartSink, r: Roofline, colour: THREE.Color, m: THREE.Matrix4, far = false): void {
+/** Both faces of each slope: seen from the water below its eaves, a slope's top faces away and only its underside closes it. */
+function roofGeometry(into: PartSink, r: Roofline, colour: THREE.Color, m: THREE.Matrix4): void {
   const kind = r.g.thatched ? THATCHED : SLATED;
   const { stations: n, across: k } = r;
   for (const side of [-1, 1]) {
     into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k), new THREE.Vector3(0, 1, side * 0.3)), colour, kind, m);
-    if (!far) into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k, r.thick), new THREE.Vector3(0, -1, 0)), colour, kind, m);
+    into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k, r.thick), new THREE.Vector3(0, -1, 0)), colour, kind, m);
     into.add(sheet(n, 1, (i, j) => r.top(i / n, side, 0, j * r.thick), new THREE.Vector3(0, 0, side)), colour, kind, m);
     for (const end of [0, 1]) {
       into.add(sheet(k, 1, (i, j) => r.top(end, side, i / k, j * r.thick), new THREE.Vector3(end ? 1 : -1, 0, 0)), colour, kind, m);
@@ -416,7 +417,7 @@ function chimney(into: PartSink, x: number, z: number, base: number, top: number
 function gableHouse(into: PartSink, g: Gable, lot: Lot, rand: Rng, m: THREE.Matrix4, perch: (p: THREE.Vector3) => void, stackWidth: number): void {
   const r = new Roofline(g, !!lot.exact, lot.mid ? 1 : 0);
   bodyGeometry(into, r, g.len, g.depth, lot.lime, m, lot.mid ? 3 : 6);
-  roofGeometry(into, r, lot.roof, m, lot.mid);
+  roofGeometry(into, r, lot.roof, m);
   const n = Math.max(r.stations, 6);
   const ridge = Array.from({ length: n + 1 }, (_, i) => r.top(i / n, 1, 1));
   if (!g.thatched) {
@@ -524,7 +525,7 @@ function farHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE
   const g = gableFor(type === 'catShoulder' ? 'cottage' : type, lot, rand);
   const r = new Roofline(g, false, 2);
   bodyGeometry(into, r, g.len, g.depth, lot.lime, m, r.across === 1 ? 1 : 3);
-  roofGeometry(into, r, lot.roof, m, true);
+  roofGeometry(into, r, lot.roof, m);
   for (const s of lot.stacks.slice(0, 1)) {
     const x = s.side * (g.len / 2 - 0.75);
     const t = r.t(x);
@@ -544,6 +545,7 @@ function turret(into: PartSink, lot: Lot, rand: Rng, m: THREE.Matrix4): void {
     .multiply(new THREE.Matrix4().makeRotationZ(range(rand, -0.08, 0.08)));
   into.add(new THREE.CylinderGeometry(radius, radius, eave + 2.6, 10, 1, true).translate(0, (eave - 2.6) / 2, 0), lot.lime, PLAIN, m);
   into.add(new THREE.ConeGeometry(radius + 0.55, hat, 10, 1, true).translate(0, hat / 2, 0), lot.roof, SLATED, lean);
+  into.add(new THREE.CircleGeometry(radius + 0.55, 10, Math.PI / 2).rotateX(Math.PI / 2), lot.roof, SLATED, lean);
 }
 
 /** A rounded-square plan: `k` 0 to 1 of the way round, at half-axes `a` along and `b` across. */
