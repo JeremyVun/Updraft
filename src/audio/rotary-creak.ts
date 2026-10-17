@@ -8,16 +8,17 @@ export class RotaryCreak {
   prepare(ctx: BaseAudioContext): AudioBuffer[] {
     let clips = this.buffers.get(ctx);
     if (!clips) {
-      clips = [rotaryFriction(ctx, 0), rotaryFriction(ctx, 1)];
+      clips = [rotaryFriction(ctx, 0), rotaryFriction(ctx, 1), rotaryFriction(ctx, 2)];
       this.buffers.set(ctx, clips);
     }
     return clips;
   }
 
-  play(out: AudioOut, at: number, level: number, pan: number): void {
+  /** The first creak alternates two takes; the settle, as the frame comes round to rest, is its own lower, falling one. */
+  play(out: AudioOut, at: number, level: number, pan: number, settle = false): void {
     const { ctx } = out, clips = this.prepare(ctx);
     const source = ctx.createBufferSource();
-    source.buffer = clips[this.next++ % clips.length];
+    source.buffer = settle ? clips[2] : clips[this.next++ % 2];
     const gain = ctx.createGain(); gain.gain.value = level;
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-.85, Math.min(.85, pan));

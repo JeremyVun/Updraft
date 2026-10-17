@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fixInPlace } from '../gl/fixed';
 import { screenBrush } from '../creatures/motion';
-import { WindGesture } from '../fx/wind-gesture';
+import { RibbonBatch, type Ribbon } from '../fx/ribbons';
+import { windPen } from '../fx/wind-gesture';
 import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import { feltWind, type WindField, type WindSample } from '../wind/field';
@@ -214,12 +215,12 @@ function pulleyWheel(r: number): THREE.BufferGeometry {
 /**
  * The rig on the shore: the bank post with its wheel and the pinwheel on the wheel's axle, the piling out in the
  * water with the other wheel, the loop of line between them with spare pegs riding it, and the boat's painter.
- * It draws whatever `shoreHaul` says, and shows a stalled player a sweep across the pinwheel.
+ * It draws whatever `shoreHaul` says, and shows a stalled player a clockwise spiral round the pinwheel.
  */
 export class ShorePulleyRig {
   readonly group = new THREE.Group();
-  private readonly gesture = new WindGesture('shore-invitation');
-  readonly invitation = this.gesture.batch.mesh;
+  private readonly spiral = new PinwheelSpiral();
+  readonly invitation = this.spiral.batch.mesh;
   private readonly wheels: THREE.Object3D[] = [];
   private readonly pegs: THREE.InstancedMesh;
   private readonly state = new Float32Array(4);
@@ -232,7 +233,6 @@ export class ShorePulleyRig {
   private readonly p = new THREE.Vector3();
   private readonly scale = new THREE.Vector3();
   private readonly bow = new THREE.Vector3();
-  private readonly inviteAt = new THREE.Vector3();
   private readonly stern = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 0, 1);
   private invited = 0;
@@ -357,19 +357,68 @@ export class ShorePulleyRig {
       this.painter.update(this.painterPoints);
     }
 
-    this.gesture.hide();
+    this.spiral.batch.mesh.visible = false;
     if (!camera) return;
     const offered = h.active && h.driveAge > K.inviteAfter && h.spin < 0.5;
     this.invited = offered ? this.invited + dt : 0;
-    this.alpha += ((offered ? tuning.linesPassage.inviteAlpha : 0) - this.alpha)
-      * (1 - Math.exp(-dt * (offered ? 6 : tuning.invitation.handover)));
-    if (this.alpha < 0.01) return;
-    const k = tuning.linesPassage;
-    const cycle = k.inviteSweep + k.invitePause;
-    // The pinwheel stands near the side of the frame: draw the sweep through it from the middle, so it is not clipped short.
-    const side = this.p.copy(SHORE_PINWHEEL).project(camera).x > 0 ? -1 : 1;
-    this.inviteAt.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(side * K.inviteSpan * 0.3).add(SHORE_PINWHEEL);
-    this.gesture.draw(camera, this.inviteAt, (this.invited % cycle) / k.inviteSweep, K.inviteSpan,
-      this.alpha, K.inviteWidth, 'across', Math.floor(this.invited / cycle) % 2 === 0 ? 1 : -1);
+    this.alpha += ((offered ? K.inviteAlpha : 0) - this.alpha)
+      * (1 - Math.exp(-dt * (offered ? 3 : tuning.invitation.handover)));
+    if (this.alpha < 0.005) return;
+    this.spiral.draw(camera, (this.invited % (K.inviteSweep + K.invitePause)) / K.inviteSweep, this.alpha);
+  }
+}
+
+/** A clean leading strand and two fainter wakes a little inside and behind it, as on the drowned village's mill. */
+const SPIRAL_POINTS = 64;
+const SPIRAL_STRANDS = [
+  { delay: 0, length: 1, width: 1, alpha: 1, inset: 0 },
+  { delay: 0.08, length: 0.7, width: 0.55, alpha: 0.55, inset: 0.12 },
+  { delay: 0.16, length: 0.45, width: 0.4, alpha: 0.3, inset: -0.1 },
+];
+
+/**
+ * Air winding out from the pinwheel's hub, clockwise as the player sees it, its travelling tip showing the way round:
+ * the circling stroke that blows the wheel, laid flat to the view so it reads at any angle. Drawing only.
+ */
+class PinwheelSpiral {
+  readonly batch = new RibbonBatch(SPIRAL_POINTS * SPIRAL_STRANDS.length, '#fff4dd', 1, false, tuning.invitation.lightFloor);
+  private readonly strokes: Ribbon[] = SPIRAL_STRANDS.map(() => ({
+    points: Array.from({ length: SPIRAL_POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0,
+  }));
+  private readonly right = new THREE.Vector3();
+  private readonly up = new THREE.Vector3();
+  private readonly toward = new THREE.Vector3();
+
+  constructor() {
+    this.batch.mesh.name = 'shore-invitation';
+    this.batch.mesh.visible = false;
+  }
+
+  draw(camera: THREE.Camera, phase: number, alpha: number): void {
+    const fade = THREE.MathUtils.smoothstep(phase, 0, 0.1) * (1 - THREE.MathUtils.smoothstep(phase, 0.85, 1.25));
+    this.right.setFromMatrixColumn(camera.matrixWorld, 0);
+    this.up.setFromMatrixColumn(camera.matrixWorld, 1);
+    this.toward.subVectors(camera.position, SHORE_PINWHEEL).normalize().multiplyScalar(K.pinwheelRadius * 0.6);
+    const pen = windPen(camera, SHORE_PINWHEEL, K.inviteWidth);
+    const turns = K.inviteTurns * Math.PI * 2;
+    /** From below the hub, so the tip ends rising past its near side the way the sails go round. */
+    const start = -Math.PI * 0.5;
+    for (let j = 0; j < SPIRAL_STRANDS.length; j++) {
+      const s = SPIRAL_STRANDS[j], r = this.strokes[j];
+      const head = Math.min(1, phase * 1.15 - s.delay);
+      r.alpha = head > 0 ? alpha * fade * s.alpha * THREE.MathUtils.smoothstep(head, 0, 0.1) : 0;
+      r.width = pen * s.width;
+      if (!r.alpha) continue;
+      const length = Math.min(head, 0.75 * s.length);
+      for (let i = 0; i < SPIRAL_POINTS; i++) {
+        const t = head - (i / (SPIRAL_POINTS - 1)) * length;
+        const a = start + t * turns;
+        const rad = THREE.MathUtils.lerp(K.inviteInner, K.inviteOuter, t) * (1 + s.inset * (1 - t) * 0.3);
+        /** Screen right is -cos, up is sin: the angle growing goes clockwise. */
+        r.points[i].copy(SHORE_PINWHEEL).add(this.toward)
+          .addScaledVector(this.right, -Math.cos(a) * rad).addScaledVector(this.up, Math.sin(a) * rad);
+      }
+    }
+    this.batch.mesh.visible = this.batch.update(this.strokes);
   }
 }

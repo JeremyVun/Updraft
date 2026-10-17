@@ -742,7 +742,7 @@ export const tuning = {
   opening: {
     title: { afterFarewell: 13, fadeIn: 3, hold: 2.5, fadeOut: 3 },
     titleGust: { before: 3, duration: 6, reach: 48, width: 32, radius: 10, speed: 24, energy: .3, lift: .04,
-      lines: { interval: .45, spread: 22, height: 1.5, climb: .15, width: .2 } },
+      lines: { interval: .35, spread: 22, height: 1.5, climb: .15, width: .2 } },
     crossing: { speedScale: 0.99, whaleDepth: 2.4, whaleAt: 45, whalePan: 6, whaleFadeIn: 3.5, whaleFadeOut: 4, diveSwell: 1.8, diveSwellFor: 60 },
     shoreEchoes: { gulls: 10, gullSpacing: 10, afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
       crossSpeed: 6, forwardSpeed: 5.5, laundryLift: 5.15, laundryTurn: 2.2, laundrySteady: .65,
@@ -1777,12 +1777,15 @@ export const tuning = {
      */
     snagStretchRate: 9, snagStretchDamping: 0.3, snagTug: 1, snagLift: 0.6, snagThin: 1.5, snagShiverRate: 15,
     releaseSpring: 8, releaseDamping: 0.35, snagInviteSpan: 3,
-    creakTravel: 0.16, creakLevel: 0.4,
+    /** One creak once a frame has really turned, and a softer settle as it catches its last stretch to rest. */
+    creakTravel: 0.16, creakLevel: 0.4, settleLevel: 0.22,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
     inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
     cameraDistance: 20, cameraHeight: 1.6, cameraSide: 0.12, cameraFocusHeight: 3.2, cameraFocusSide: 3,
     cameraZoom: 0.88, narrowZoom: 0.58,
+    /** Walking up from the second curtain, the view trails her through its gap and comes round behind the rotaries over her last `approachSettle` m. */
+    approachSettle: 8,
     narrowDistance: 13, narrowHeight: 1.4, narrowSide: 0.08, narrowFocusSide: 1.5,
   },
   linesPassage: {
@@ -1876,8 +1879,12 @@ export const tuning = {
     slack: 0.45, pull: 1.4, drag: 0.5, beachGrip: 2.2,
     /** The heading it lies at on the sand once it is in. */
     berthYaw: -0.45,
-    /** A stalled player is shown a sweep across the pinwheel after this long without one. */
-    inviteAfter: 4, inviteSpan: 7, inviteWidth: 0.15,
+    /**
+     * A stalled player is shown a clockwise spiral winding out round the pinwheel after this long without a sweep:
+     * `inviteTurns` turns from `inviteInner` to `inviteOuter` m over `inviteSweep` s, then `invitePause` s.
+     */
+    inviteAfter: 4, inviteSweep: 2.4, invitePause: 1.2, inviteInner: 0.35, inviteOuter: 2, inviteTurns: 1.25,
+    inviteAlpha: 0.8, inviteWidth: 0.12,
     /** On a portrait screen, the share of the way the view at the bank turns to look out along the line. */
     narrowTurn: 0.6,
     /** Just through the door, the share of the way the view turns from straight ahead toward the waiting boat. */

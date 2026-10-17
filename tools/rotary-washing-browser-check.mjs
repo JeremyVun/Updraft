@@ -143,7 +143,9 @@ try {
     assert(after.speed*direction>=0,'a spinner must never carry reverse momentum');
   }
   const visibility=await checkFamilyVisibility(page);
-  assert.deepEqual(rotary.sounds.map(s=>s.kind).sort(),['creak','creak','release'],'two bearing creaks and one cloth release across the whole encounter');
+  assert.deepEqual(rotary.sounds.map(s=>s.kind).sort(),['creak','creak','release','settle','settle'],'each frame creaks then settles, with one cloth release across the whole encounter');
+  for(const i of [0,1]){const creak=rotary.sounds.filter(s=>s.kind==='creak')[i],settle=rotary.sounds.filter(s=>s.kind==='settle')[i];
+    assert(settle.time-creak.time>.5,'each settle comes well after its creak');}
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/report.json`,JSON.stringify({visibility,width,height,touch:touchMode,errors,
     full:!!process.env.FULL||!!process.env.CROSSING,crossing:!!process.env.CROSSING,reverse:!!process.env.REVERSE,
