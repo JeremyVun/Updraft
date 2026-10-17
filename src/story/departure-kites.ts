@@ -58,6 +58,7 @@ export class DepartureKites {
     const tow = story.name === 'stairs' ? story.current.kiteTow ?? null : null;
     this.markers.stairs.follow = tow?.at ?? null;
     this.markers.stairs.ahead = tow?.heading ?? null;
+    this.markers.boats.snag = story.name === 'boats' ? story.current.kiteSnag ?? null : null;
     for (const [name, kite] of Object.entries(this.markers)) {
       const enabled = name === story.name ? story.current.departureKite !== false
         : (name === 'mirror' && story.name === 'toMirror')

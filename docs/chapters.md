@@ -238,8 +238,8 @@ lip.
 
 On the grass above the beach the child takes the cygnet out of the satchel and sets it down, and it walks up with
 her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both
-mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries it down to the lip and lowers it
-onto the water. The
+mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries it down the bank, kneels low by the
+water (`putDownFrom`) and reaches down to set it on the water just off the bank (`putDownAt`, leaning `putDownLean`). The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, folded wings, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
@@ -253,11 +253,15 @@ bath toward the stream tips it (a push the other way rocks it back); over the ri
 pool, and once `pourNeeded` of it is in the pools have risen `riseHeight`, the rocks go under and a short surge
 carries the fleet over. The fleet then waits against the plug. Gusts only rock it; circles drawn over it stand an
 updraft on it (`updraftTarget`, the spiral `coax` after the usual wait) that lifts it in tugs, bubbles streaming
-round its rim, keeping whatever it has worked loose, until it pops free and the chain hauls it up. A whirl opens
-where it sat and the risen pools rush out of the mouth, carrying the whole fleet out and round to the right into the
+round its rim, keeping whatever it has worked loose, until it pops free and the chain hauls it up. The departure
+kite waits caught on the plug's chain all along, its string snagged round the links just above the plug so it can
+only strain low over the mouth on a few metres of line, the rest trailing over the water to its post on the bank
+(`tuning.linesToys.snagTether`). The updraft that pulls the plug lets it go: it climbs off the chain and comes round
+onto its own string over `freeFor` s. A whirl opens
+where the plug sat and the risen pools rush out of the mouth, carrying the whole fleet out and round to the right into the
 sea, where the toys sail on until out of view. The child and the
 cygnet keep glancing at whatever is holding them, and the shot leans toward it while the fleet waits. Round the final
-bend their own boat waits among the toys (the reveal); the departure kite rises once the plug is out. The paper
+bend their own boat waits among the toys (the reveal), the freed kite flying over it. The paper
 stays on the backpack throughout.
 
 The boat reveal has no completion phrase (Jeremy, 2026-10-12). During boarding the island's half-strength breeze

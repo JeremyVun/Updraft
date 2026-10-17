@@ -6,6 +6,7 @@ import type { WindField } from '../wind/field';
 import { tuning } from '../tuning';
 import { atmo, ATMO_GLSL } from './atmosphere';
 import { heightAt } from './island';
+import type { KiteSnag } from './kite';
 import { littleBoatsBath } from './little-boats-bath';
 import { LITTLE_BOATS as L, boatsCourse, boatsLevel, boatsWaterHeight, boatsWidth, boatsX } from './little-boats-layout';
 
@@ -126,6 +127,12 @@ function film(fragmentShader: string, uniforms: Record<string, THREE.IUniform>):
   });
 }
 
+/** The chain's links, from the plug up into the haze. */
+function chainLink(i: number, out = new THREE.Vector3()): THREE.Vector3 {
+  return out.set(Math.sin(i * 0.03) * 1.2, 0.25 * tuning.littleBoats.plugScale + 0.6 + i * 0.84, Math.sin(i * 0.017) * 0.6);
+}
+const KITE_SNAG = chainLink(2);
+
 /** Drops thrown up where water lands or bubbles: born in world space and left to fall. */
 class Splash {
   private readonly count = 96;
@@ -203,6 +210,8 @@ export class LittleBoatsDrain {
   /** Where the bath's pour meets the pool. */
   readonly pourAt = new THREE.Vector3();
   readonly plugAt = new THREE.Vector3();
+  /** Where the departure kite's string has caught round the chain, and the water its slack lies on. */
+  readonly kiteSnag: KiteSnag = { at: new THREE.Vector3(), water: 0 };
   private water = 1;
   private tip = 0;
   private tipV = 0;
@@ -333,7 +342,8 @@ export class LittleBoatsDrain {
       const g = new THREE.TorusGeometry(0.18, 0.034, 6, 12);
       g.scale(1.47, 2.835, 2.1);
       g.rotateY(((i % 2) * Math.PI) / 2);
-      g.translate(Math.sin(i * 0.03) * 1.2, 0.25 * k.plugScale + 0.6 + i * 0.84, Math.sin(i * 0.017) * 0.6);
+      const at = chainLink(i);
+      g.translate(at.x, at.y, at.z);
       links.push(g);
     }
     this.hang.add(new THREE.Mesh(mergeGeometries(links), brass));
@@ -541,6 +551,9 @@ export class LittleBoatsDrain {
     this.hang.rotation.set(swing * 0.6, 0, swing);
     this.plug.rotation.set(this.rockX + wobble * Math.sin(time * 3.1), 0, this.rockZ + wobble * Math.cos(time * 2.6) + jiggle);
     this.plugAt.set(this.plugRest.x, this.plugRest.y + 0.8 + this.haul, this.plugRest.z);
+    this.hang.updateMatrix();
+    this.kiteSnag.at.copy(KITE_SNAG).applyMatrix4(this.hang.matrix);
+    this.kiteSnag.water = boatsWaterHeight(this.plugRest.x, this.plugRest.z, time);
 
     this.whirlDisc.visible = this.whirl > 0.01;
     this.whirlMaterial.uniforms.uWhirl.value = this.whirl;

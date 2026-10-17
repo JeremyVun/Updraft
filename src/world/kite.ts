@@ -22,6 +22,12 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
+/** Caught short by its string on something standing in the water: where it has caught, and the water level there. */
+export interface KiteSnag {
+  at: THREE.Vector3;
+  water: number;
+}
+
 /**
  * Notebook paper on two sticks. `vPaper.xy` is the place on the kite itself, so the sail carries the one thing
  * that says kite and not paper plane at any distance: a cross of spars, and the foot of it cut from the faded
@@ -119,6 +125,8 @@ const TAIL_POINTS = 16;
 const TAIL_LENGTH = 9;
 const FLOAT_SCALE = 0.32;
 const CORD_POINTS = 18;
+/** Snagged, the cord point where it is caught: the rest run on up to the kite. */
+const SNAG_POINT = 12;
 const UP = new THREE.Vector3(0, 1, 0);
 
 function sailGeometry(): THREE.BufferGeometry {
@@ -249,6 +257,17 @@ export class Kite {
   /** Tied to something that moves (the bow of a boat) instead of its post, and flying ahead of it on this heading. */
   follow: THREE.Vector3 | null = null;
   ahead: number | null = null;
+  /** Caught short on a snag instead of flying on its string from the post; the slack lies on the water between. */
+  snag: KiteSnag | null = null;
+  /** Where it flies from this frame: the snag, or its post. */
+  private readonly tie = new THREE.Vector3();
+  private readonly via = new THREE.Vector3();
+  private water = -Infinity;
+  /** How far it has come round from the snag to its own string, 0..1. */
+  private freed = 1;
+  private readonly held = new THREE.Quaternion();
+  private readonly turned = new THREE.Quaternion();
+  private readonly snagPoints: THREE.Vector3[] = [];
 
   constructor(
     private readonly wind: WindField,
@@ -280,7 +299,10 @@ export class Kite {
     this.group.add(this.cord.mesh);
     this.group.add(this.tailBatch.mesh);
 
-    for (let i = 0; i < CORD_POINTS; i++) this.cordPoints.push(new THREE.Vector3());
+    for (let i = 0; i < CORD_POINTS; i++) {
+      this.cordPoints.push(new THREE.Vector3());
+      this.snagPoints.push(new THREE.Vector3());
+    }
     for (let i = 0; i < TAIL_POINTS; i++) {
       this.tail.push(new THREE.Vector3());
       this.was.push(new THREE.Vector3());
@@ -325,6 +347,19 @@ export class Kite {
     if (dt < 1e-4) return;
     if (this.floating) { this.floatOnWater(time); return; }
     const k = tuning.linesToys;
+    if (this.snag) {
+      this.via.copy(this.snag.at);
+      this.water = this.snag.water;
+      this.freed = 0;
+    } else if (this.freed < 1) {
+      if (this.freed === 0) this.letGo();
+      this.freed = this.asleep ? 1 : Math.min(1, this.freed + dt / k.freeFor);
+      if (this.freed >= 1) this.water = -Infinity;
+    }
+    this.tie.copy(this.snag ? this.snag.at : this.anchor);
+    const line = this.snag ? k.snagTether : this.stringLength;
+    /** Coming off a snag, it takes up its own string's pull gradually, so it drifts off rather than whips round. */
+    const free = this.snag ? 1 : THREE.MathUtils.smootherstep(this.freed, 0, 1);
     const air = feltWind(this.wind.sample(this.position.x, this.position.z, this.sample), this.wind.calm);
     const incoming = Math.hypot(air.x, air.z);
     const gain = incoming > 1e-4 ? k.kiteWindLimit * Math.tanh(incoming / k.kiteWindLimit) / incoming : 1;
@@ -344,12 +379,12 @@ export class Kite {
       this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.8));
     } else if (speed > 0.25) {
       const turn = Math.atan2(air.x, air.z) - this.azimuth;
-      this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.55));
+      this.azimuth += Math.atan2(Math.sin(turn), Math.cos(turn)) * (1 - Math.exp(-dt * 0.55 * free));
     }
     /** A kite never hangs still: it wanders a slow figure of eight, and the harder it blows the wider it swings. */
     const rate = k.swoopRate + strength * 0.22;
     this.phase += dt * rate;
-    const swing = k.swoop * (0.55 + 0.45 * strength);
+    const swing = k.swoop * (0.55 + 0.45 * strength) * free;
     const bank = Math.cos(this.phase) * swing * rate;
 
     /**
@@ -362,13 +397,13 @@ export class Kite {
     this.elevVel *= Math.exp(-dt * k.climbDamping);
     this.elev = THREE.MathUtils.clamp(this.elev + this.elevVel * dt, 0.12, 1.0);
     const taut = 0.72 + 0.25 * THREE.MathUtils.smoothstep(speed + air.energy * 4, 1, 12);
-    this.reach += (taut - this.reach) * (1 - Math.exp(-dt * 1.4));
+    this.reach += (taut - this.reach) * (1 - Math.exp(-dt * 1.4 * (0.1 + 0.9 * free)));
     this.roll += (bank - this.roll) * (1 - Math.exp(-dt * 2.5));
 
     const flown = this.azimuth + Math.sin(this.phase) * swing;
-    const span = this.stringLength * this.reach;
+    const span = line * this.reach;
     const flat = Math.cos(this.elev) * span;
-    this.position.set(this.anchor.x + Math.sin(flown) * flat, this.anchor.y + Math.sin(this.elev) * span, this.anchor.z + Math.cos(flown) * flat);
+    this.position.set(this.tie.x + Math.sin(flown) * flat, this.tie.y + Math.sin(this.elev) * span, this.tie.z + Math.cos(flown) * flat);
     /** Whatever the player does to it, it stays in the air: the string is the only thing holding it down. */
     this.position.y = Math.max(this.position.y, Math.max(heightAt(this.position.x, this.position.z), 0) + FOOT + 1.2);
 
@@ -379,6 +414,17 @@ export class Kite {
     }
     this.streamTail(dt, time, air, speed);
     this.runCord(time, span, speed);
+  }
+
+  /** Comes off the snag where it is: its own string takes over from the kite's place, so nothing jumps. */
+  private letGo(): void {
+    this.a.subVectors(this.position, this.anchor);
+    this.azimuth = Math.atan2(this.a.x, this.a.z);
+    this.phase = 0;
+    this.elev = Math.atan2(this.a.y, Math.hypot(this.a.x, this.a.z));
+    this.elevVel = tuning.linesToys.freeLift;
+    this.reach = this.a.length() / this.stringLength;
+    this.held.copy(this.sail.quaternion);
   }
 
   private floatOnWater(time: number): void {
@@ -405,7 +451,7 @@ export class Kite {
 
   /** Nose up the string, belly into the wind, banked into whichever way it is swinging. */
   private face(dt: number, camera: THREE.Camera): void {
-    this.yAxis.subVectors(this.position, this.anchor).normalize();
+    this.yAxis.subVectors(this.position, this.tie).normalize();
     this.xAxis.copy(this.yAxis).cross(UP).normalize();
     this.zAxis.crossVectors(this.xAxis, this.yAxis).normalize();
     this.basis.makeBasis(this.xAxis, this.yAxis, this.zAxis);
@@ -420,17 +466,26 @@ export class Kite {
     this.sail.quaternion.setFromRotationMatrix(this.basis);
     this.sail.rotateY(this.shown + this.roll * 0.6);
     this.sail.rotateZ(-this.roll);
+    if (this.freed < 1 && !this.snag) {
+      this.turned.copy(this.sail.quaternion);
+      this.sail.quaternion.copy(this.held).slerp(this.turned, THREE.MathUtils.smootherstep(this.freed, 0, 1));
+    }
     this.sail.updateMatrixWorld();
   }
 
-  /** Lays the tail out downwind, for the first frame after the island comes back into view. */
+  /** Lays the tail out downwind, for the first frame after the island comes back into view; snagged, along the water. */
   private settle(wx: number, wz: number): void {
     const step = TAIL_LENGTH / (TAIL_POINTS - 1);
-    this.a.set(wx, -2.5, wz).normalize().multiplyScalar(step);
+    if (this.snag) {
+      this.a.set(wx, 0, wz);
+      if (this.a.lengthSq() < 1e-6) this.a.set(1, 0, 0);
+      this.a.normalize().setY(-0.75).normalize().multiplyScalar(step);
+    } else this.a.set(wx, -2.5, wz).normalize().multiplyScalar(step);
     this.tail[0].copy(this.sail.localToWorld(this.b.set(0, -FOOT, 0)));
     this.was[0].copy(this.tail[0]);
     for (let i = 1; i < TAIL_POINTS; i++) {
       this.tail[i].copy(this.tail[i - 1]).add(this.a);
+      if (this.snag) this.tail[i].y = Math.max(this.tail[i].y, this.floorAt(this.tail[i]));
       this.was[i].copy(this.tail[i]);
     }
   }
@@ -476,6 +531,14 @@ export class Kite {
           this.tail[i].copy(this.tail[i - 1]).addScaledVector(this.a, step / d);
         }
       }
+      if (this.water > -Infinity) {
+        for (let i = 1; i < TAIL_POINTS; i++) {
+          const floor = this.floorAt(this.tail[i]);
+          if (this.tail[i].y >= floor) continue;
+          this.tail[i].y = floor;
+          this.was[i].y = floor;
+        }
+      }
       this.tailStep = h;
     }
     this.tailBatch.update(this.ribbons);
@@ -513,20 +576,43 @@ export class Kite {
     this.bows.geometry.getAttribute('normal').needsUpdate = true;
   }
 
-  /** The string hangs in its own weight and comes straight as the kite pulls: the slack is the whole story. */
+  /**
+   * The string hangs in its own weight and comes straight as the kite pulls: the slack is the whole story. Snagged,
+   * it runs from the post over the water to the snag and on up to the kite.
+   */
   private runCord(time: number, span: number, speed: number): void {
     this.b.copy(this.sail.localToWorld(this.c.set(0, 0.05, -0.12)));
-    const sag = Math.max(0, this.stringLength - span) * 0.42;
     const shiver = Math.min(0.09, speed * 0.008);
-    for (let i = 0; i < CORD_POINTS; i++) {
-      const t = i / (CORD_POINTS - 1);
-      const p = this.cordPoints[i];
-      p.lerpVectors(this.anchor, this.b, t);
+    const line = this.snag ? tuning.linesToys.snagTether : this.stringLength;
+    this.hangCord(this.cordPoints, 0, CORD_POINTS - 1, this.anchor, this.b, line - span, time, shiver);
+    if (this.freed < 1) {
+      const tether = tuning.linesToys.snagTether;
+      const ashore = this.stringLength - tether - this.anchor.distanceTo(this.via);
+      this.hangCord(this.snagPoints, 0, SNAG_POINT, this.anchor, this.via, ashore, time, 0);
+      this.hangCord(this.snagPoints, SNAG_POINT, CORD_POINTS - 1, this.via, this.b, tether - this.via.distanceTo(this.b), time, shiver);
+      const shed = THREE.MathUtils.smootherstep(this.freed, 0, 1);
+      for (let i = 0; i < CORD_POINTS; i++) this.cordPoints[i].lerpVectors(this.snagPoints[i], this.cordPoints[i], shed);
+    }
+    this.cord.update(this.cordPoints);
+  }
+
+  /** Points `from`..`to` of a cord hung from `a` to `b` with `slack` to spare, lying on whatever water it reaches. */
+  private hangCord(out: THREE.Vector3[], from: number, to: number, a: THREE.Vector3, b: THREE.Vector3, slack: number, time: number, shiver: number): void {
+    const sag = Math.max(0, slack) * 0.42;
+    for (let i = from; i <= to; i++) {
+      const t = (i - from) / (to - from);
+      const p = out[i];
+      p.lerpVectors(a, b, t);
       const bow = Math.pow(Math.sin(t * Math.PI), 1.15);
       p.y -= sag * bow;
       p.x += Math.sin(t * 9 - time * 4.2) * shiver * bow;
       p.z += Math.cos(t * 9 - time * 4.2) * shiver * bow;
+      if (this.water > -Infinity) p.y = Math.max(p.y, this.floorAt(p) - 0.01);
     }
-    this.cord.update(this.cordPoints);
+  }
+
+  /** What a snagged kite's string and tail lie on: the bank, or the water over it. */
+  private floorAt(p: THREE.Vector3): number {
+    return Math.max(heightAt(p.x, p.z), this.water) + 0.04;
   }
 }
