@@ -2744,7 +2744,7 @@ export const tuning = {
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
-      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65, mistSun: 0.12,
+      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65,
       mistWispDensity: 0.24,
       mistWisps: [
         { across: -132, ahead: 1, width: 58, depth: 14, height: 1.05 },

@@ -1,7 +1,7 @@
 # Village fog diagnosis — 2026-10-17
 
-Diagnosis followed by a verified, scoped fix for the abrupt cloud-to-village handoff. The separate village mist
-appearance and later bank-to-haze styling remain outside this patch.
+Diagnosis followed by a verified, scoped fix for the abrupt cloud-to-village handoff, then the village mist's
+light and horizon treatment (below). The arrival's bank-to-haze styling remains open.
 
 ## Jeremy's brief (verbatim)
 
@@ -17,11 +17,47 @@ appearance and later bank-to-haze styling remain outside this patch.
 
 > cool, commit. Next i need you to help figure out if there's a cheap way to make the village fog look better
 
+## Village mist light and horizon — landed 2026-10-17
+
+Jeremy, after playing the whole game (verbatim): "The issues with the fog haze are still there on the horizon. Just
+doesn't look good. [screenshot] I can see the issue when she's walking to the first tree challenge."
+
+His screenshot (`?chapter=roofs`, about 15 s in) showed the mist as one flat grey-lilac slab with a ruler-straight
+top along the horizon. The camera there stands at 4.8 m, inside the mist's soft top (its middle at 3.9 m, its upper
+edge at 5.3 m). From inside that softness a level sightline runs on through thin mist to the horizon, so the fog
+turns opaque exactly at the horizon; with one constant colour that differs from the sky's horizon, the meeting is a
+hard line. The same line shows from the belfry, where the eye is far above the top.
+
+The study's light-plus-horizon treatment (mode 7, no noise) is now the shipping mist, in `seaMistLight`
+(`src/world/atmosphere.ts`), with one correction:
+
+- The colour is taken where a sightline reaches the middle of the soft top (or the front, if the eye is ahead of it),
+  12 m in. Measuring to the upper edge, as the study did, put an eye inside the softness at "already in it", so the
+  roofs view kept its line; measured to the middle, level sightlines from that eye reach the horizon colour.
+- Its lit top over a cooler depth, a forward sun term, and from 30 to 160 m along the sightline a blend into the
+  sky's colour toward that bearing, kept through closure and night.
+- In the village (`uSeaFogShape.w`), ordinary distance haze turns toward the sky's own colour along the ray between
+  200 and 900 m, so the far roofs fade into the same horizon.
+
+The density integration, coverage, progression, clearing and what the mist hides are unchanged (`drowned-mist-check`,
+`drowned-fog-motion-check`). No pass, texture or loop is added; the noise variant was left out, since it was not
+visible at play distances and doubled the added bake cost. While the mist is away (`uSeaFogShape.w = 0`, including
+the whole cloud arrival) every expression reduces to the previous one.
+
+Evidence (`/tmp/polish2-fog/`): `before/` and `after/` are the same game frames from a separate build of
+`f6c55d6f` and this change, at the roofs walk (frames 360–960), `fog=0.3`, `0.6`, `1`, the belfry, the church, the
+storm (300, 900) and the roofs in portrait. Skies match to within 0.2/255 at identical frames; the roofs horizon
+step that read 193→150 across one row now grades from the sky through a pale horizon band into the blue depth over
+about 40 rows. Consecutive-frame changes across the horizon band match the original's (no added flicker), and the
+cache shows no blockiness at the horizon.
+
+`tools/drowned-fog-check.mjs`'s strand fixture no longer reaches `becalmed` (its checkpoint restore leaves the beat
+at `still` while the boat drifts); the stage frames above were taken with `?fog=` instead.
+
 ## Cheap village-fog study — 2026-10-17
 
 The transition repair is committed as `4a2bf422`. The appearance study uses a detached worktree at that commit
-and QA-only Vite transforms under `/tmp/updraft-village-fog-study-pEuyC9/`. No village appearance changes have
-been applied to the main checkout. The analytic density, coverage, progression and clearing calculations stay
+and QA-only Vite transforms under `/tmp/updraft-village-fog-study-pEuyC9/`. The analytic density, coverage, progression and clearing calculations stay
 unchanged in every prototype.
 
 ### Smallest promising treatment
@@ -338,9 +374,9 @@ Earlier frozen comparisons and insufficient first transition probe: `/tmp/updraf
 The hidden descent now preserves the bank's texture and lighting reference frame, moves its clear pocket
 atomically with the hull/camera, and covers the sail change more fully. Its verification is recorded above.
 
-Preserve the village's front progression, rising height, bell clearing and hidden-boat reveal. Give its fog
-spatial shape, light variation and a horizon treatment consistent with the cloud bank, while retaining a cheap
-density integration. Review that appearance before choosing how to cache it. Separately tune the arrival's
+Preserve the village's front progression, rising height, bell clearing and hidden-boat reveal. Its light and
+horizon are treated (above); a rolling top like the cloud bank's would still need its own spatial shape, while
+retaining a cheap density integration and a full-route review of what it hides. Review that appearance before choosing how to cache it. Separately tune the arrival's
 bank/haze handover so the texture and colour do not disappear together into a visibly different atmosphere.
 
 Verify from before the cloud-bank entry through the village reveal, then through the roof route and full bell
