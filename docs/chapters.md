@@ -481,11 +481,13 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
 - **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
   waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
   loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
-  bow's own birch, on the swing tree's trunk under the limb (and on along the fallen birch's top once she is over). **Counting:** before rounds 2 and 3 it dashes on ahead to hide as the
-  tangle's loop starts to lift. Freed before it has hidden, she watches it go, turns her back on where it went,
-  three-quarters to the lens, covers her eyes with both mittens and counts, nodding on every number; then she looks
-  round for it and sets off. The lens stays on her in the tangle's frame; the squirrel goes off small and far up the
-  ride.
+  bow's own birch, on the swing tree's trunk under the limb (and on along the fallen birch's top once she is over). **Seeing it off:** before round 2 it dashes on ahead to hide
+  (`dash`) as the first tangle's loop starts to lift, down the fork tree beside the loop and away east among the
+  trunks, up the perch tree and down the wool beyond the rise. Freed before it has hidden, she and the cygnet watch it
+  go, at least `seeOffFor` (2.5 s), and set off after it once it has come down to the leaves beyond the rise
+  (`seeOffMost`, 7 s, at most), about 5.5 s after the loop is free. The lens stays in the tangle's frame and never
+  follows it; the depth blur keeps it sharp. Out of her sight its dive barely stirs the leaves (`splash`), so no spray
+  far up the ride marks the heap. Before round 3 it waits in plain view instead (the shuffle).
 - **The leap.** After round 3 the cygnet dives into the deepest leaves left in the hollow that the lens shows, and the
   child takes a run and jumps in after it, landing on her seat in an explosion of backlit gold; she sits a moment and
   gets up. If the hollow has been blown bare she runs on through it toward the sun, kicking up what is left. From here
