@@ -190,6 +190,15 @@ export class MeadowSong {
     shot.from = this.side;
     shot.distance = portrait ? pick(t.cameraPortraitBedBack, t.cameraPortraitSeedBack, t.cameraPortraitBack) : pick(t.cameraBedBack, t.cameraSeedBack, t.cameraBack);
     shot.height = portrait ? pick(t.cameraPortraitBedUp, t.cameraPortraitSeedUp, t.cameraPortraitUp) : pick(t.cameraBedUp, t.cameraSeedUp, t.cameraUp);
+    if (this.beat === 'follow' && this.index === 1) {
+      // Between the bed and the seeds the lens opens onto the landscape, settling back to the seeds' own view as she nears them.
+      const left = Math.hypot(c.x - garden.stands[0].x, c.z - garden.stands[0].z);
+      const open = THREE.MathUtils.smoothstep(left, t.cameraSetOff * .5, t.cameraSetOff + 8)
+        * THREE.MathUtils.smoothstep(Math.hypot(c.x - next.x, c.z - next.z), t.cameraOpenTo, t.cameraOpenFrom);
+      shot.distance += (portrait ? t.cameraPortraitOpenBack : t.cameraOpenBack) * open;
+      shot.height = THREE.MathUtils.lerp(shot.height, portrait ? t.cameraPortraitOpenUp : t.cameraOpenUp, open);
+      shot.target.y += t.cameraOpenLook * open;
+    }
     shot.eye = undefined; shot.attention = undefined; shot.composition = 'hold';
     shot.carry = true; shot.carryAnchor = c; shot.clearance = 2.5; shot.smoothFit = 2;
     if (this.beat === 'follow') {
@@ -235,7 +244,7 @@ export class MeadowSong {
     this.frameSubjects.margin = PLAY_MARGIN;
     if (this.index === 2) {
       this.exitLook.copy(shot.target).sub(c);
-      this.exitEye.copy(LENS.position);
+      this.exitEye.copy(LENS.position).sub(c);
     }
     const watch = this.watching;
     if (watch > 0) this.watch(shot, cast, watch, portrait);
@@ -319,23 +328,28 @@ export class MeadowSong {
   }
 
   /**
-   * On to the crest she walks on past the lens, which stays where it watched her listen and turns after her, then
-   * comes round behind her as she goes down, its gaze drawn a little ahead of her toward where she is going: the
-   * water comes into the edge of the frame as she reaches the top.
+   * On to the crest the lens goes on behind her from where it watched her listen, easing into the crest's view as she
+   * walks, its gaze drawn a little ahead of her toward where she is going: the water comes into the edge of the frame
+   * as she reaches the top.
    */
   depart(shot: Shot, cast: Cast): number {
     const t = tuning.meadowEchoes, c = cast.child.position, stand = garden.stands[2];
     const gone = Math.hypot(c.x - stand.x, c.z - stand.z);
     shot.target.copy(this.departLook(c, shot.target, this.aimAt));
-    shot.eye!.lerp(this.exitEye, 1 - THREE.MathUtils.smootherstep(gone, t.departureHold, t.departureWalk));
+    // Round her by bearing, so the lens comes round at an even pace over the whole walk rather than cutting across.
+    const k = THREE.MathUtils.smoothstep(gone, 0, t.departureWalk);
+    const [fromYaw, fromPitch] = aim(ORIGIN, this.exitEye), [toYaw, toPitch] = aim(c, shot.eye!);
+    const from = this.exitEye.length(), to = shot.eye!.distanceTo(c);
+    shot.eye = look(c, fromYaw + Math.atan2(Math.sin(toYaw - fromYaw), Math.cos(toYaw - fromYaw)) * k,
+      THREE.MathUtils.lerp(fromPitch, toPitch, k), from * (to / from) ** k, this.placedEye);
     shot.composition = 'hold'; shot.smoothFit = 2;
-    return THREE.MathUtils.lerp(t.cameraPace, .9, THREE.MathUtils.smootherstep(gone, 0, t.departureWalk));
+    return THREE.MathUtils.lerp(t.cameraPace, .9, THREE.MathUtils.smoothstep(gone, 0, t.departureWalk * .3));
   }
 
   /** Where the lens looks as she walks on from listening: at her, drawn `departureLead` of the way to `ahead` as she goes. */
   departLook(c: THREE.Vector3, ahead: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
     const t = tuning.meadowEchoes, stand = garden.stands[2];
-    const walked = THREE.MathUtils.smootherstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, t.departureWalk);
+    const walked = THREE.MathUtils.smoothstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, t.departureWalk);
     return out.copy(c).add(this.exitLook).lerp(ahead, walked * t.departureLead);
   }
 }

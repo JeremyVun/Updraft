@@ -46,7 +46,8 @@ natural wood.
   very polished". Each beach chapter calls `Traveller.stepAshore`: the child sits a moment (`boarding.ashorePause`),
   then steps out over the gunwale onto the sand beside the bow, standing nearer the keel than at a jetty
   (`ashoreInside`) so a boot does not come through the round bilge. A walk the chapter asks for waits until her
-  feet are down. Chapter starts and restored saves begin with her already ashore.
+  feet are down; on the meadow's beach, where her way on crosses the bow, she goes round it `ashoreRoundBow` ahead
+  of the stem rather than through it. Chapter starts and restored saves begin with her already ashore.
 - **Alighting onto a jetty** (`Traveller.alight`, `tuning.boarding.alight*`): four beats, the reverse of boarding.
   Up off the thwart onto the floorboards while turning to face the boards; the lead foot onto the edge with a lean,
   weight still in the boat; the weight across, the body rising only with the boards and clearing the gunwale while

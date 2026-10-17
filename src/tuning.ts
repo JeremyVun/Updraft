@@ -445,22 +445,25 @@ export const tuning = {
     liftReach: 13, liftCap: 0.05, releaseTime: 2, chargeFrom: 0.05, chargeFull: 0.35,
     down: 720, columnRadius: 1.1, columnSpread: 0.3, columnTop: 5.5, releaseTop: 12, columnRise: 1.7, columnSwirl: 2.4,
     hoverHeight: 3, afterlift: 6, afterFade: 5, drift: 3.6, driftGather: 6, driftSpread: .3, driftTurn: .35,
-    driftRise: 0.3, downFade: 19, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
-    inviteAfter: 5, arrivalRest: 3, seedRest: 21, listenFor: 5.5, familyAfter: 2,
+    driftRise: 0.3, downFade: 17, downFadeSpread: 8, downFarScale: 2.5, downGlint: .15,
+    inviteAfter: 5, arrivalRest: 3, seedRest: 19, listenFor: 5.5, familyAfter: 2,
     /**
-     * On to the crest the listening view gives way to the crest's over her first `departureWalk` metres, the lens
-     * turning after her from where it stood for her first `departureHold` before it follows her down, its gaze
-     * drawn `departureLead` of the way from her toward the water; stopped on the crest, it turns the rest of the way.
+     * On to the crest the listening view, already behind her, gives way to the crest's over her first
+     * `departureWalk` metres as it follows her, its gaze drawn `departureLead` of the way from her toward the water;
+     * stopped on the crest, it turns the rest of the way.
      */
-    departureWalk: 16, departureHold: 8, departureLead: .45,
+    departureWalk: 19, departureLead: .45,
     /**
      * The play's camera: looking down on the flower bed from close behind her (`Bed`, aimed `cameraBedAim` of the
      * way from her to it), then round to the seed heads (`Seed`: from beyond them at `cameraSeedBearing`, the
      * bearing of the lens from her as `atan2(x, z)`, looking back over the heads to the shaded slope and the sky
      * away from the sun; rising `cameraSeedRise` with the down and keeping its column in frame to `cameraSeedHold`
-     * metres), then the listening rise (plain names: at the bearing `cameraListenBearing`, west of her and a little
-     * ahead, so she walks toward the lens, hears the call from off the side of the frame and the pond stays out of
-     * it), each blended in as she walks. Coming to a stand the walk's view gives way to it over her last `approach`
+     * metres), then the listening rise (plain names: at the bearing `cameraListenBearing`, behind her right shoulder,
+     * so the lens comes round after her as she walks on toward the pond and she turns in profile to the call from off
+     * the right of the frame, the water still out of it), each blended in as she walks. Walking from
+     * the bed to the seeds the lens opens onto the landscape: from half `cameraSetOff` past the bed it draws back
+     * `cameraOpenBack`, comes down to `cameraOpenUp` over her and lifts its gaze `cameraOpenLook`, and it settles
+     * back into the seeds' view between `cameraOpenFrom` and `cameraOpenTo` metres from their stand. Coming to a stand the walk's view gives way to it over her last `approach`
      * metres (`seedApproach` for the seeds, whose view is so far round), followed at `cameraArrivePace`, and over
      * her last `cameraSettleFrom` metres its aim moves from her onto the play, whose heads it fits into the frame
      * over `cameraSettleFor` seconds once she stands; leaving a play it waits where it watched for her first
@@ -470,8 +473,10 @@ export const tuning = {
     cameraSetOff: 8, cameraSettleFrom: 10, cameraSettleFor: 4,
     cameraSeedBearing: 2.36, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedBearing: 2.74, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 2.5, cameraSeedHold: 6,
-    cameraBack: 10, cameraUp: 2, cameraPortraitBack: 13, cameraPortraitUp: 3, cameraPace: 0.5, cameraArrivePace: 0.35,
-    cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: 4.19,
+    cameraBack: 12, cameraUp: 3, cameraPortraitBack: 15, cameraPortraitUp: 4, cameraPace: 0.5, cameraArrivePace: 0.35,
+    cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: .55,
+    cameraOpenBack: 3, cameraOpenUp: 4, cameraOpenLook: 1.4, cameraPortraitOpenBack: 3, cameraPortraitOpenUp: 5,
+    cameraOpenFrom: 24, cameraOpenTo: 10,
     /**
      * She watches the released down go (`seedRest` seconds from its release until she walks on): `watchFrom` seconds
      * after the release the lens starts to lift its gaze after the cloud (aimed `watchTop` of the way from its heart
@@ -845,12 +850,14 @@ export const tuning = {
     alightEnd: 0.6,
     /**
      * Run up on a beach, they sit a moment before getting up, stand nearer the keel than at a jetty (the round bilge
-     * leaves less floor at the side), and step down this far out from the keel, this far forward.
+     * leaves less floor at the side), and step down this far out from the keel, this far forward. A walk on that
+     * crosses the bow passes this far ahead of its stem.
      */
     ashorePause: 0.8,
     ashoreInside: 0.16,
     ashoreOut: 1.25,
     ashoreAhead: 0.25,
+    ashoreRoundBow: 1,
     /**
      * Stepping down into a boat lying alongside a deck: how far the hull dips under the weight (m) and how soon after
      * the step that is deepest (s); how far it rolls toward the side the weight came over (radians), how fast it rocks
@@ -1257,7 +1264,20 @@ export const tuning = {
      * and sliding the last `planeLead` metres into the fork, and the first out of it, along its own line.
      */
     planeGlide: 1.2, planeLift: 3, planeLead: 1.5,
+    /**
+     * The island's gust that carries the paper into the fork: it rises over `rise` seconds as the glide starts, its
+     * streaks travelling `pace` times the paper's mean speed (at least `leastPace` m/s) from `behind` metres back of
+     * it, and blows on `after` seconds past the glide, dying over the last `fall`. Its air bends the grass along a
+     * `length` m stretch behind the paper (`speed`, `radius`, `energy`, `lift`) and sets the stuck paper fluttering.
+     */
+    planeGust: { rise: 0.3, after: 1, fall: 0.8, pace: 1.4, leastPace: 7, behind: 4, length: 8, speed: 14, radius: 3.5,
+      energy: 0.55, lift: 0.05, lines: { interval: 0.1, spread: 5, height: 2, climb: 0.2, width: 0.32 } },
     phraseRest: 9, finaleWaveAfter: 0.35, completionRest: 1.2,
+    /**
+     * Through the finale the bough breathes a trace out of its mouth every `every` seconds, as strong as a soft note,
+     * until `tail` seconds before its phrase ends.
+     */
+    finaleStream: { every: 0.9, strength: 0.5, tail: 4 },
     /** Each completed sweep sends music across a larger stretch of the visible meadow. */
     responseReach: [45, 85, 125], responseSpeed: [12, 19, 26],
     waveWidth: 0.65, waveAlpha: 0.55, waveOver: 1.3,

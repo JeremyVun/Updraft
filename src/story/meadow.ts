@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { PlaneArrival } from './plane-arrival';
 import { verticalFov, type Shot } from '../camera';
 import type { CameraAttention } from '../camera-direction';
+import type { GustFront } from '../fx/windlines';
 import { BANK, POND, POND_LEVEL, ISLES, mainlandCoastZ, meadowPoint, pondOut } from '../world/heightfield';
 import { WAY } from '../world/fields';
 import { piano, PATCH, PLACE } from '../world/piano';
@@ -10,6 +11,7 @@ import { windBough } from '../world/wind-bough';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
+import { BOW_Z } from '../traveller/boat/form';
 import { cue } from './cues';
 import { PianoStop } from './piano';
 import { harebells } from '../world/harebells';
@@ -226,8 +228,13 @@ export class MeadowChapter implements Chapter {
     feather.flying = false;
     feather.visible = false;
     plane.homeRadius = tuning.meadowPlane.reach;
+    const toBeach = () => child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
+    const aboard = child.riding;
     child.stepAshore(cast.boat);
-    child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
+    if (aboard) {
+      const bow = new THREE.Vector3(0, 0, BOW_Z + tuning.boarding.ashoreRoundBow).applyMatrix4(cast.boat.group.matrixWorld);
+      child.walkTo(bow.x, bow.z, false, toBeach, 0.4);
+    } else toBeach();
   }
 
   /**
@@ -307,6 +314,7 @@ export class MeadowChapter implements Chapter {
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged || this.song.active; }
+  get gustFront(): GustFront | null { return this.piano.gustFront; }
   get windInvitation(): THREE.Vector3 | null { return this.song.invitation ?? this.featherInvitation; }
   /** The feather only wants blowing one way, toward the cygnet. */
   get invitationHeading(): number | null { return this.windInvitation ? this.featherHeading : null; }

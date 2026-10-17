@@ -179,7 +179,7 @@ const lodged={};
   const inverse=piano.group.matrix.clone().invert(),local=new THREE.Vector3();
   const inCase=p=>{local.copy(p).applyMatrix4(inverse);return Math.abs(local.x)<0.95&&local.y>-0.1&&local.y<2.05&&local.z>-0.6&&local.z<0.85;};
   // In the strongest wind, so the paper trembles its most in the fork: it must stay clear of both pipes all the while.
-  const gale={sample:(x,z,out)=>Object.assign(out,{x:20,z:0,energy:1,lift:0})};
+  const gale={sample:(x,z,out)=>Object.assign(out,{x:20,z:0,energy:1,lift:0}),addSplat(){}};
   const fly=(from,to,hand,stay=0)=>{
     const stop=new PianoStop(),pinned={at:new THREE.Vector3(),rotation:new THREE.Euler()};
     const plane={position:from.clone(),group:{quaternion:new THREE.Quaternion()},visible:true,keptSmall:false,

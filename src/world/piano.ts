@@ -500,6 +500,11 @@ export class Piano {
     }
   }
 
+  /** A breath of the bough's finale: a trace off its mouth that runs up the hill behind the case as her notes' do. */
+  breathe(from: THREE.Vector3, pitch: number, strength: number): void {
+    this.traces.spawn(from, this.back, pitch, strength, true);
+  }
+
   /** A note of her answer: its key goes down and a trace lifts off it; the strings sound it only if the recording could not. */
   private play({ midi, key, velocity, voiced }: Scheduled): void {
     if (key >= 0 && key < KEY_COUNT) {
