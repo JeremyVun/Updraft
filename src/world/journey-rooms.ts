@@ -116,6 +116,32 @@ export function drawJourneyRooms(rooms: readonly Room[], objects: Partial<Record
   try { draw(); } finally { for (const root of hidden) root.visible = true; hidden.length = 0; }
 }
 
+/** Rooms that can share a frame with the drowned village, and so its sea fog. */
+const SEA_FOG_ROOMS = new Set<Room>([...DROWNED_FROM_BIRCHES, ...DROWNED_FROM_STAIRS, ...DROWNED_TO_WOOD, 'stairs']);
+
+/**
+ * Compiles the sea fog out of materials drawn only in the other rooms (`SEA_FOG 0`), about 0.1 s less compiling each
+ * on Windows. A material anything else draws keeps it, as does one sharing its shader text with another material, so
+ * no program splits in two. Call before the programs are built. QA `__stats.seaFogMissing` counts any drawn in the fog.
+ */
+export function outsideSeaFog(scene: THREE.Object3D, objects: Partial<Record<Room, THREE.Object3D[]>>): void {
+  const materials = (o: THREE.Object3D): THREE.Material[] => [(o as THREE.Mesh).material ?? []].flat();
+  const away = new Set<THREE.Object3D>(), candidates = new Set<THREE.ShaderMaterial>(), kept = new Set<THREE.Material>();
+  for (const room in objects) if (!SEA_FOG_ROOMS.has(room as Room)) for (const root of objects[room as Room]!) root.traverse(o => {
+    away.add(o);
+    for (const m of materials(o)) if (m instanceof THREE.ShaderMaterial && (m.vertexShader + m.fragmentShader).includes('uSeaFogShape')) candidates.add(m);
+  });
+  scene.traverse(o => { if (!away.has(o)) for (const m of materials(o)) kept.add(m); });
+  const text = (m: THREE.ShaderMaterial): string => [m.vertexShader, m.fragmentShader, JSON.stringify(m.defines), m.customProgramCacheKey()].join('\0');
+  const shared = new Set<string>();
+  scene.traverse(o => { for (const m of materials(o)) if (m instanceof THREE.ShaderMaterial && (kept.has(m) || !candidates.has(m))) shared.add(text(m)); });
+  for (const m of candidates) {
+    if (kept.has(m) || shared.has(text(m))) continue;
+    m.defines.SEA_FOG = 0;
+    m.needsUpdate = true;
+  }
+}
+
 /** The meadow and home animals share instanced batches; exclude each animal in its own world position. */
 export function clipJourneyProps(root: THREE.Object3D): void {
   const seen = new Set<THREE.Material>();

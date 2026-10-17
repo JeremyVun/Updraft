@@ -1,4 +1,4 @@
-import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, journeyReveal, type Room } from './world/journey-rooms';
+import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, journeyReveal, outsideSeaFog, type Room } from './world/journey-rooms';
 import { LittleBoats } from './world/little-boats';
 import { boatsWaterBase } from './world/little-boats-layout';
 import * as THREE from 'three';
@@ -45,7 +45,7 @@ import { Cursor } from './input/cursor';
 import { PointerInput } from './input/pointer';
 import { params } from './params';
 import { QA } from './qa';
-import { coldShaders, drawables, gpuIdle, keepPainting, passJob, prepareInBatches, settlePrograms, warmCount, warmRender, warmSimulations, watchFirstDraws, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
+import { coldShaders, drawables, gpuIdle, keepPainting, passJob, prepareInBatches, settlePrograms, warmCount, warmRender, warmSimulations, watchFirstDraws, watchSeaFogDraws, watchStrayPrograms, yieldBoot, type CompileJob } from './gl/boot';
 import { runBootPasses, simMaterials, simWrites } from './gl/gpu';
 import { hasVariants, selectAll, variantSteps } from './gl/variants';
 import { Quality, WORLD_QUALITY, type QualityLevel } from './gl/quality';
@@ -169,6 +169,7 @@ renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
 const strayPrograms = QA ? watchStrayPrograms(renderer) : null;
 const playDraws = QA ? watchFirstDraws(renderer) : null;
+const seaFogDraws = QA ? watchSeaFogDraws(renderer, () => atmo.uniforms.uSeaFogShape.value.w > 0) : null;
 if (QA && params.coldshaders) coldShaders(renderer);
 if (params.shot) document.body.classList.add('shot');
 
@@ -509,6 +510,7 @@ roomObjects.stairs?.push(stairsLeaves);
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }
+outsideSeaFog(scene, roomObjects);
 
 await built();
 const nativePixelRatio = Math.min(window.devicePixelRatio, 2);
@@ -1416,6 +1418,7 @@ function frameInner(now: number): void {
       bootStrayPrograms: strayPrograms,
       bootSteps: { counted: builtSteps, expected: BUILD_STEPS },
       playFirstDraws: playDraws?.report(),
+      seaFogMissing: seaFogDraws?.report(),
       frame: frameIndex,
       time,
       simulationSteps: timing.steps,
@@ -1558,6 +1561,7 @@ async function boot(): Promise<void> {
   startScreen.ready((withSound, pick) => {
     try {
       playDraws?.begin();
+      seaFogDraws?.begin();
       if (withSound) {
         soundChosen = true;
         setSound(controls.soundOn);

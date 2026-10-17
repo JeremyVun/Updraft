@@ -40,7 +40,15 @@ bounds, not quality settings. `NOISE_GLSL` retains the original fixed loop for w
 shaders: rolling those loops also changed grass motion in the seeded image comparison, despite tiny differences
 in individual noise samples.
 `fogOf` shares one sky-radiance calculation across its three veils, and the terrain caches share their exact
-fallback calls. Neither effect counts nor program variants are reduced. Validate changes with `noise-loop-check`,
+fallback calls. Neither effect counts nor program variants are reduced. The same rule holds for any heavy helper
+written out at several call sites, by hand or by a JS `.map().join`: the D3D compiler inlines each one. Later loops
+of this kind are the Lines grass clearings (`uLinesClearings`, a table walked by a loop; unrolled, each clearing's
+`fbm` made the grass table's first draw stall the veil for 2 s), the sea mist's three passes (`uMistPasses`), the
+water's three swell samples (`uSwellSamples`), the height bake's tested points (`uHeightTests`) and the whale's skin
+(`uRosetteCells`, `uLichenScales`, `uShellScatters`, `uFormTaps`; the ghost keeps its rosettes written out, since
+looped they drew slower there). A shader also evaluates `fogOf` once and reuses it. `start-check` checks every bound
+is uploaded. Roll a loop only where it does not cost frame time: the water's two glass sky lookups stay written out
+for that reason. Validate changes with `noise-loop-check`,
 seeded `render-parity-check`, and cold startup on the platform's normal backend; measured evidence is in
 `backlog/boot-veil/build_plan.md` (Windows follow-up).
 
@@ -110,7 +118,13 @@ Failure paths:
 - **Every program costs a first visit time.** A program's first draw takes about 0.2 s on Apple hardware (Safari
   compiles in the background, but the first draw blocks the thread that issues it), so every new program or variant
   adds about 0.2 s to a first visit on an iPad (about 25 s for about 200 programs). Weigh a new variant
-  against that; duplicates (the same vertex and fragment source built twice) are a bug.
+  against that; duplicates (the same vertex and fragment source built twice) are a bug. On Windows each program
+  costs about a second to compile even with a trivial body, most of it the atmosphere every scene shader includes, so
+  small materials share programs where that costs no frame time: the drowned village's lit props pick a look by
+  `uLook` (`world/prop-shader.ts`), the net's sheet, ropes and corks by `uPart`, the rotary cloth rides the Lines
+  curtain's program and the sleeping whale the crossing whale's. Merges that drew measurably slower were left apart
+  (the cat's and the cygnet's coats, the seabirds into the gulls, the floating kite's spars, the belfry beside the
+  other props).
 
 ### Progress on the veil
 
@@ -444,7 +458,13 @@ Bakes that follow the world:
 - `world/fog-lookup.ts` evaluates the original village `seaFog` into an atlas for each camera.
   Materials sample it instead of compiling that integration repeatedly. Each atlas is 1280×896 RGBA16F
   (8.75 MiB), with 64 radial slices from 0.25 to 8192 m; each slice has 160×96 samples over the camera view plus a
-  25% margin and a 32×16 spherical fallback for offscreen vertices. Optical depth and depth-weighted light are
+  25% margin and a 32×16 spherical fallback for offscreen vertices. Pixel shaders compile the fallback out, since a
+  pixel's own sightline lies inside the margin; one that fogs other points defines `FOG_OFF_SCREEN` (the grass's
+  per-frame pass). Materials drawn only in rooms that never share a frame with the village (`outsideSeaFog`,
+  `world/journey-rooms.ts`) compile the sea fog out of `fogOf` (`SEA_FOG 0`), about 0.1 s less compile each on
+  Windows; it skips any material something else draws or whose shader text another shares, so no program splits.
+  QA `__stats.seaFogMissing` counts their draws while the fog is out, held at 0 by `playthrough` and
+  `drowned-fog-check`. Optical depth and depth-weighted light are
   filtered in direction and physical distance; decoding restores exact opacity for terrain/water early exits.
   `beginFrame` invalidates before the main camera's grass bake, even at fixed game time. The scene's
   `onBeforeRender` selects/bakes each main, reflected or doorway camera and rebinds its uniforms on reuse;

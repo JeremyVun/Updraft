@@ -17,9 +17,10 @@
 //   - The sea's mirror is redrawn on alternate frames and the palette eases nothing for `fog`, so a few frames after
 //     a change are enough; the frame is taken after 20.
 //   - Runs in `shot` mode against a dev server: an edit under src reloads the page mid-run.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import assert from 'node:assert/strict';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-drowned-fog-check';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -28,8 +29,7 @@ const only = process.env.ONLY ?? null;
 const STAGES = [['clear', 0, 'today.jpg'], ['far', 0.3, 'fog-far.jpg'], ['near', 0.6, 'fog-near.jpg'], ['arrives', 1, 'fog-arrives.jpg']];
 const VIEWS = { landscape: [1600, 900], upright: [852, 1846] };
 
-const browser = await chromium.launch({ channel: 'chromium', headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const { browser, close } = await openBrowser();
 const errors = [];
 
 async function open(width, height) {
@@ -177,9 +177,12 @@ try {
       await page.screenshot({ path: file });
       console.log('church', JSON.stringify(await sheet(file, null, `${prefix}-church-sheet.png`, await probePoints(page))), file);
     }
+    // Every material drawn here must take the sea fog (world/journey-rooms.ts outsideSeaFog).
+    const missing = await page.evaluate(() => __stats.seaFogMissing);
+    assert.equal(missing?.draws ?? 0, 0, `Drawn without the sea fog while it is up: ${missing?.names.join(', ')}`);
     await page.context().close();
   }
   if (errors.length) console.log(`page errors:\n${errors.join('\n')}`);
 } finally {
-  await browser.close();
+  await close();
 }

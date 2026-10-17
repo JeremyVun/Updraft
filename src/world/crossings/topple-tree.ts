@@ -4,6 +4,7 @@ import { ATMO_GLSL, atmo } from '../atmosphere';
 import { SWELL_GLSL, swellUniforms } from '../water/swell';
 import { mulberry32 } from '../noise';
 import { REFLECTION_LAYER } from '../water/reflection';
+import { propLook, propMaterial } from '../prop-shader';
 import type { Deck } from '../decks';
 import type { PointerInput } from '../../input/pointer';
 import type { WindField } from '../../wind/field';
@@ -15,22 +16,12 @@ import { BARK, EARTH, ROOT, merged, segmentGap, tagged, tube } from './shapes';
 const HEAVE = 0.45;
 const PLATE_R = 1.15;
 
-const TREE_VERT = /* glsl */ `
-${ATMO_GLSL}
-uniform float uShiver;
-uniform float uFlex;
-uniform float uShudder;
-uniform float uHeight;
-uniform vec2 uSpan;
-uniform float uHeave;
-in float aShake;
-in float aKind;
-in float aPhase;
-out vec3 vWorld;
-out vec3 vNormal;
-out vec3 vLocal;
-out float vKind;
-void main() {
+const BARK_LOOK = propLook({
+  program: 'timber',
+  varyings: 'vec3 vLocal; float vKind;',
+  vertexInputs: 'uniform float uShiver; uniform float uFlex; uniform float uShudder; uniform float uHeight; uniform vec2 uSpan; uniform float uHeave; in float aShake; in float aKind; in float aPhase;',
+  fragmentInputs: 'uniform float uWater; uniform float uSoak; uniform float uHeave;',
+  vertex: /* glsl */ `
   vec3 p = position;
   if (aKind > ${ROOT - 0.5} && aKind < ${EARTH + 0.5}) {
     /** The side of the plate away from the fall breaks up out of the bed as the roots give. */
@@ -49,18 +40,8 @@ void main() {
   vLocal = position;
   vKind = aKind;
   gl_Position = projectionMatrix * viewMatrix * w;
-}`;
-
-const TREE_FRAG = /* glsl */ `
-${ATMO_GLSL}
-uniform float uWater;
-uniform float uSoak;
-uniform float uHeave;
-in vec3 vWorld;
-in vec3 vNormal;
-in vec3 vLocal;
-in float vKind;
-void main() {
+`,
+  fragment: /* glsl */ `
   vec3 n = normalize(vNormal);
   if (!gl_FrontFacing) n = -n;
   int kind = int(vKind + 0.5);
@@ -109,8 +90,9 @@ void main() {
   /** A wet sheen, broken up: mud and roots running with water glint in places, never all over. */
   float sheen = pow(max(dot(reflect(-uSunDir, n), V), 0.0), 40.0) * smoothstep(0.45, 0.8, vnoise(vLocal.xz * 6.0 + vLocal.y * 4.0));
   col += uSunColor * sheen * sun * gloss;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
-}`;
+  return col;
+`,
+});
 
 /** Mud stirred up off the bed, clouding the water round the foot: it shows less the flatter the water is seen. */
 const SILT_VERT = /* glsl */ `
@@ -575,15 +557,9 @@ export class ToppleTree {
  * stood at (`water` up from its foot). Its twigs shiver with `uShiver`.
  */
 export function barkMaterial(height: number, water: number): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    vertexShader: TREE_VERT,
-    fragmentShader: TREE_FRAG,
-    uniforms: {
-      ...atmo.uniforms,
-      uShiver: { value: 0 }, uFlex: { value: 0 }, uShudder: { value: 0 }, uHeight: { value: height },
-      uSpan: { value: new THREE.Vector2(0, 1) }, uWater: { value: water }, uSoak: { value: 0 }, uHeave: { value: 0 },
-    },
-    side: THREE.DoubleSide,
+  return propMaterial(BARK_LOOK, {
+    uShiver: { value: 0 }, uFlex: { value: 0 }, uShudder: { value: 0 }, uHeight: { value: height },
+    uSpan: { value: new THREE.Vector2(0, 1) }, uWater: { value: water }, uSoak: { value: 0 }, uHeave: { value: 0 },
   });
 }
 

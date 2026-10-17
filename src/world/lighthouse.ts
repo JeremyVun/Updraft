@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { tuning } from '../tuning';
 import { fixInPlace } from '../gl/fixed';
 import { atmo, ATMO_GLSL } from './atmosphere';
+import { propLook, propMaterial } from './prop-shader';
 
 /** A child's remembered lighthouse: broad at the water, impossibly tall above it. */
 export const LIGHTHOUSE_SCALE = new THREE.Vector3(1.85, 2.15, 1.85);
@@ -22,6 +23,18 @@ function failing(u: number): number {
   return THREE.MathUtils.lerp(p0, p1, THREE.MathUtils.smootherstep(u, u0, u1));
 }
 
+/** The lamp: its own flat colour. Drawn from both sides like every prop look; its back faces are behind its front. */
+const LAMP_LOOK = propLook({
+  fragmentInputs: 'uniform vec3 uGlow;',
+  vertex: /* glsl */ `
+  vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+`,
+  fragment: /* glsl */ `
+  return uGlow;
+`,
+});
+
 /** A turning light made visible by rain. In the storm its light fails and goes out, in sight, as they pass it. */
 export class LighthouseLight {
   readonly object = new THREE.Group();
@@ -32,21 +45,7 @@ export class LighthouseLight {
   private readonly beam: THREE.Mesh;
   private readonly glow = { value: new THREE.Color('#ffe6ad') };
   /** The lamp itself, seen through whatever weather lies between it and the eye. */
-  private readonly lamp = new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, uGlow: this.glow },
-    vertexShader: `
-      varying vec3 vWorld;
-      void main() {
-        vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
-        gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
-      }`,
-    fragmentShader: `${ATMO_GLSL}
-      uniform vec3 uGlow;
-      varying vec3 vWorld;
-      void main() {
-        gl_FragColor = vec4(applyFog(uGlow, vWorld), 1.0);
-      }`,
-  });
+  private readonly lamp = propMaterial(LAMP_LOOK, { uGlow: this.glow });
 
   constructor(position: THREE.Vector3) {
     this.object.position.copy(position).setY(LIGHTHOUSE_LANTERN_Y);

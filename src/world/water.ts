@@ -71,6 +71,7 @@ ${SWELL_GLSL}
 ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
+uniform int uSwellSamples;
 vec3 surfaceShift(vec2 p, float distanceToCamera) {
   float shown = waterRoomPresence(p);
   return (swellShift(p, swellHeight(p, distanceToCamera)) + vec3(0.0, windWaveHeight(p) * chopHere(p, distanceToCamera) + shown * (boatsWaterBase(p) + boatsRipple(p, uTime)), 0.0)) * (1.0 - shown * mirrorWater(p));
@@ -91,11 +92,19 @@ void main() {
   vec2 xz = w.xz;
   float fromCamera = length(cameraPosition.xz - xz);
   float height = swellHeight(xz, fromCamera);
-  // Neighbour samples include the envelope gradient as well as the travelling crests.
+  // Neighbour samples include the envelope gradient as well as the travelling crests. A loop of uSwellSamples (3)
+  // keeps surfaceShift to one expansion where the compiler inlines every call.
   const float E = 1.5;
-  vec3 at = surfaceShift(xz, fromCamera);
-  vec3 along = vec3(E, 0.0, 0.0) + surfaceShift(xz + vec2(E, 0.0), fromCamera) - at;
-  vec3 across = vec3(0.0, 0.0, E) + surfaceShift(xz + vec2(0.0, E), fromCamera) - at;
+  // Each sample lands in its own variable: a local array indexed by k is slow indexable memory on D3D.
+  vec3 at = vec3(0.0), along = vec3(E, 0.0, 0.0), across = vec3(0.0, 0.0, E);
+  for (int k = 0; k < uSwellSamples; k++) {
+    vec3 shift = surfaceShift(k == 1 ? xz + vec2(E, 0.0) : k == 2 ? xz + vec2(0.0, E) : xz, fromCamera);
+    if (k == 0) at = shift;
+    else if (k == 1) along += shift;
+    else across += shift;
+  }
+  along -= at;
+  across -= at;
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vHeave = max(heaveLift(xz), 0.0);
@@ -636,6 +645,7 @@ export class Water {
         ...gladUniforms,
         uWaterRooms: this.rooms.uniform,
         uWaterWind: this.windWaves.uniform,
+        uSwellSamples: Object.freeze({ value: 3 }),
         uSkyMirrorAppearance: { value: 1 },
         uLandSkip: { value: false },
         uRipple: { value: rippleTexture() },

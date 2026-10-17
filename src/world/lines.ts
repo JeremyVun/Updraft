@@ -235,9 +235,22 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), shown);
 }`;
 
-/** A passage sheet, stepped as real cloth on the CPU: its particles arrive here already in the world. */
-const CURTAIN_VERT = /* glsl */ `
+const ROTARY = tuning.rotaryWashing;
+
+/**
+ * A passage sheet, stepped as real cloth on the CPU: its particles arrive here already in the world. With `uRotary`
+ * at 1 it is a sheet on the rotary line instead (`rotary-washing.ts`), hanging from its arm in the breeze, dragged
+ * round by the spin and hooked by a snag; the two share this program, so the rotary costs no compile of its own.
+ */
+export const CURTAIN_VERT = /* glsl */ `
+${ATMO_GLSL}
 uniform vec3 uColor;
+uniform float uRotary;
+uniform vec3 uCentre;
+uniform vec3 uSnagAt;
+uniform float uSnag;
+uniform float uSnagPull;
+uniform float uSpin;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vColor;
@@ -246,12 +259,38 @@ out float vSwing;
 out float vRole;
 out float vCurtain;
 void main() {
-  vWorld = position;
-  vNormal = normal;
   vColor = uColor;
   vUv = uv;
   vSwing = 0.0;
   vRole = -1.0;
+  if (uRotary > 0.5) {
+    float hang = 1.0 - uv.y;
+    vec3 p = position;
+    vec4 world = modelMatrix * vec4(p, 1.0);
+    vec4 sway = swayAt(world.xz);
+    vec2 breeze = clamp(sway.xy, vec2(-3.0), vec2(3.0));
+    vec2 radial = world.xz - uCentre.xz;
+    vec2 drag = vec2(-radial.y, radial.x) * uSpin * 0.38;
+    float ripple = sin(uv.x * 13.0 + uTime * 1.8 - hang * 3.0) * 0.07;
+    world.xz += (breeze * 0.18 + drag) * hang * hang;
+    world.xz += normalize(radial) * ripple * hang;
+    world.y += (length(breeze) * 0.04 + abs(uSpin) * 0.2) * hang * hang;
+    float caught = clamp(uSnag, 0.0, 1.0);
+    float taut = max(uSnagPull, 0.0);
+    float tug = caught * uSnagPull * hang * hang * smoothstep(0.25, 0.85, uv.x)
+      * ${glsl(ROTARY.snagTug)} * (1.0 + 0.2 * taut * sin(uTime * ${glsl(ROTARY.snagShiverRate)} - hang * 4.0));
+    world.xz += normalize(uCentre.xz - uSnagAt.xz) * tug;
+    world.y += sin(hang * 3.141593) * tug * ${glsl(ROTARY.snagLift)};
+    float hooked = pow(smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x), 1.0 + ${glsl(ROTARY.snagThin)} * taut * caught) * uSnag;
+    world.xyz = mix(world.xyz, uSnagAt, hooked);
+    vWorld = world.xyz;
+    vNormal = normalize(mat3(modelMatrix) * normal);
+    vCurtain = 2.0;
+    gl_Position = projectionMatrix * viewMatrix * world;
+    return;
+  }
+  vWorld = position;
+  vNormal = normal;
   vCurtain = 1.0;
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
@@ -645,7 +684,7 @@ export class WashingLines {
       geometry.setAttribute('uv', new THREE.BufferAttribute(cloth.uv, 2));
       geometry.setIndex(new THREE.BufferAttribute(cloth.index, 1));
       const material = new THREE.ShaderMaterial({
-        uniforms: { ...this.clothMat.uniforms, uColor: { value: CLOTH_COLOURS[sheet.colour] } },
+        uniforms: { ...this.clothMat.uniforms, uColor: { value: CLOTH_COLOURS[sheet.colour] }, uRotary: { value: 0 } },
         vertexShader: CURTAIN_VERT,
         fragmentShader: CLOTH_FRAG,
         side: THREE.DoubleSide,

@@ -176,6 +176,7 @@ try {
     report.saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('updraft.progress.v1')??'null'));
     assert.equal(report.errors.length,0,report.errors.slice(0,5).join('\n'));
     assert.deepEqual(s.valves,[],`A drowned safety valve carried the room on: ${s.valves.join(', ')} (${s.chapter}/${s.beat})`);
+    assert.equal(s.stats?.seaFogMissing?.draws??0,0,`Drawn without the sea fog while it is up: ${s.stats?.seaFogMissing?.names.join(', ')}`);
     if(s.trodden)assert(s.trodden.every(Number.isFinite)&&s.trodden[1]>0,
       `Invalid grass patch (x, radius, z): ${s.chapter} ${s.trodden}`);
     if(report.chapters.at(-1)?.name!==s.chapter){

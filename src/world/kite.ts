@@ -35,6 +35,8 @@ export interface KiteSnag {
  */
 const PAPER_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+/** Nearer the lens than x the paper is gone, and beyond y it is whole (m). */
+uniform vec2 uLensFade;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vPaper;
@@ -54,11 +56,7 @@ void main() {
   float through = max(-ndl, 0.0) * 0.5;
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * (max(ndl, 0.0) * 0.65 + through * 0.8) * sun) + uSunColor * rim * 0.18;
-  #ifdef WATER_KITE
-  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 0.8, 1.5));
-  #else
-  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 3.0, 8.0));
-  #endif
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, uLensFade.x, uLensFade.y));
 }`;
 
 const DRIFT_VERT = /* glsl */ `
@@ -289,9 +287,11 @@ export class Kite {
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
     if (options.tiedTo !== 'rail' && !this.floating) this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
 
-    const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, defines: this.floating ? { WATER_KITE: 1 } : {}, side: THREE.DoubleSide, alphaToCoverage: true });
+    // A kite a few paces from the lens fills the frame, so the sail and its sticks give way early; the small one
+    // floating on the water only within a pace or two. The range is a uniform so every kite's paper is one program.
+    const lensFade = this.floating ? new THREE.Vector2(0.8, 1.5) : new THREE.Vector2(3, 8);
+    const paper = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms, uLensFade: { value: lensFade } }, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));
-    // A kite a few paces from the lens fills the frame, so the sail and its sticks give way early.
     const spars = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG, defines: this.floating ? {} : { LENS_FADE: 1 }, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sparGeometry(), spars));
     this.group.add(this.sail);
