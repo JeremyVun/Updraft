@@ -178,7 +178,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
    to fit as it nears its place. The bird waits on the landing behind. The last one placed plays the reward phrase.
    On the sea below her, all seven of the little boats' toys sail by in a loose flotilla just off the north beach,
    out of the sun's glitter and on east under the stair (`src/world/stairs-fleet.ts`, `tuning.stairs.fleet`). They
-   are seen only once she is high up, from the last loose flight until she goes into the white, where the lens
+   are seen only once she is high up, from the second loose flight until she goes into the white, where the lens
    looks down on the water: each is put on the sea only while the lens is not looking at it, so none is seen to
    appear. Nobody turns to them (Jeremy: "they just sail on by doing their own thing in the background below them";
    "it should be when the camera is mostly pointed down"). They are smaller than in their own room, so she
