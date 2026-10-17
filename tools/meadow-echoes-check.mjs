@@ -76,7 +76,7 @@ try {
       opened: e.flowers.filter(f => f.seen && f.shown > .6).length, flying: e.down.count,
       invitation: c.windInvitation ? p(c.windInvitation) : null, heading: c.invitationHeading,
       piano: g.piano.expect && c.piano?.at === 'seated'
-        ? { expect: g.piano.expect, path: [0,1].map(t=>p(g.piano.guideAlong(t,g.piano.keys.clone()))) } : null,
+        ? { path: Array.from({length:9},(_,i)=>p(g.piano.guideAlong(i/8,g.piano.keys.clone()))) } : null,
       camera: g.rig.camera.position.toArray(), at: g.child.position.toArray() };
   });
   const shot = async label => {
@@ -131,8 +131,7 @@ try {
       await page.waitForTimeout(4000); await shot('walk-resumes'); break;
     }
     if(s.piano) {
-      const forward = s.piano.expect.at(-1)>s.piano.expect[0];
-      await sweep(s.piano.path[forward?0:1],s.piano.path[forward?1:0],1500);
+      for(let k=0;k<s.piano.path.length-1;k++) await sweep(s.piano.path[k],s.piano.path[k+1],250);
       await page.waitForTimeout(1500);
     } else if(s.active) {
       if(!idleChecked.has(s.count)) {

@@ -5,8 +5,9 @@ import { windPen } from './wind-gesture';
 
 const POINTS = 49;
 /**
- * A path that stays while listening, with air repeatedly demonstrating its direction. It is drawn bold, in the dark
- * halo of the invitations that must read against a bright field, and over the grass in front of it.
+ * A path to trace that stays while listening, with air repeatedly demonstrating its direction from a ringed start.
+ * It is drawn bold, in the dark halo of the invitations that must read against a bright field, over everything. Once
+ * a finger starts along it, what is traced is drawn brighter and what is left fades back.
  */
 export class KeyLine {
   readonly batch = new RibbonBatch(POINTS * 4, '#fff4dd', 1, false, tuning.invitation.lightFloor);
@@ -20,7 +21,7 @@ export class KeyLine {
   private readonly marker: Ribbon = { points: Array.from({ length: POINTS }, () => new THREE.Vector3()), alpha: 0, width: 0 };
   private shown = 0;
   private since = 0;
-  private direction = 0;
+  private active = false;
 
   constructor() {
     this.batch.halo = 1;
@@ -28,22 +29,24 @@ export class KeyLine {
   }
 
   update(dt: number, time: number, along: (t: number, out: THREE.Vector3) => THREE.Vector3,
-    camera: THREE.Camera, direction: number, progress: number): void {
-    if (direction !== this.direction) { this.since = time; this.direction = direction; }
-    this.shown += ((direction ? 1 : 0) - this.shown) * (1 - Math.exp(-dt * 5));
+    camera: THREE.Camera, active: boolean, progress: number): void {
+    if (active !== this.active) { this.since = time; this.active = active; }
+    this.shown += ((active ? 1 : 0) - this.shown) * (1 - Math.exp(-dt * 5));
     this.batch.mesh.visible = this.shown > 0.005;
     if (!this.batch.mesh.visible) return;
     const t = tuning.piano;
     const phase = ((time - this.since) % t.guideCycle) / t.guideSweep;
     const head = Math.min(1, phase);
-    const pen = windPen(camera, along(0.5, this.centre), t.linePen, true) * t.guideWeight;
-    this.ribbon.alpha = this.shown * 0.9;
+    // Bold, but never so bold that its ring crowds a narrow screen's edge.
+    const pen = Math.min(windPen(camera, along(0.5, this.centre), t.linePen, true) * t.guideWeight,
+      along(0, this.start).distanceTo(along(1, this.centre)) * t.guideBoldest);
+    const tracing = THREE.MathUtils.smoothstep(progress, 0, 0.06);
+    this.ribbon.alpha = this.shown * (0.9 - 0.5 * tracing);
     this.ribbon.width = pen * 0.8;
-    this.sweep.alpha = this.shown * (1 - THREE.MathUtils.smoothstep(phase, 1, 1.3));
+    this.sweep.alpha = this.shown * (1 - THREE.MathUtils.smoothstep(phase, 1, 1.3)) * (1 - tracing);
     this.sweep.width = pen;
-    this.answer.alpha = this.shown * (progress > 0 ? 0.95 : 0);
-    this.answer.width = pen * 0.8;
-    along(direction < 0 ? 1 : 0, this.start);
+    this.answer.alpha = this.shown * (progress > 0 ? 1 : 0);
+    this.answer.width = pen * 1.1;
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
     this.up.setFromMatrixColumn(camera.matrixWorld, 1);
     this.marker.alpha = this.shown * (progress < 0.05 ? 0.75 + Math.sin(time * 3) * 0.15 : 0);
@@ -52,8 +55,8 @@ export class KeyLine {
       const f = i / (POINTS - 1);
       along(f, this.ribbon.points[i]);
       const demonstration = Math.max(0, head - (1 - f) * 0.28);
-      along(direction < 0 ? 1 - demonstration : demonstration, this.sweep.points[i]);
-      along(direction < 0 ? 1 - f * progress : f * progress, this.answer.points[i]);
+      along(demonstration, this.sweep.points[i]);
+      along(f * progress, this.answer.points[i]);
       this.marker.points[i].copy(this.start)
         .addScaledVector(this.right, Math.cos(f * Math.PI * 2) * pen * 1.8)
         .addScaledVector(this.up, Math.sin(f * Math.PI * 2) * pen * 1.8);

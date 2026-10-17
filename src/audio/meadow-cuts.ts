@@ -14,7 +14,7 @@ export const MEADOW_SOURCES = {
 
 export type MeadowSource = keyof typeof MEADOW_SOURCES;
 export interface MeadowCut {
-  source: MeadowSource; from: number; to: number; fadeOut?: number; cents?: number; midi?: number;
+  source: MeadowSource; from: number; to: number; fadeOut?: number; cents?: number;
   /**
    * `to` is the attack of the take's next phrase. The cut keeps the take until just before it, then its sound rings on
    * at the decay measured between the take's phrases, down to the take's own silence.
@@ -46,15 +46,6 @@ export const MEADOW_CUTS = {
     { source: 'B', from: 6.1, to: 12.24, ringOut: true },
     { source: 'B', from: 12.0, to: 18.62, ringOut: true },
     { source: 'B', from: 18.4, to: 24.395, ringOut: true },
-  ] },
-  /**
-   * The cygnet's steps on the keys under the finale: single notes of the finale's chord (A♭ major) from the answers'
-   * take, each from just before its attack to just before the next note. The A♭ rings over the C before it.
-   */
-  steps: { file: 'meadow-duet.ogg', cuts: [
-    { source: 'B', from: 0.2, to: 0.566, fadeOut: 0.1, midi: 60 },
-    { source: 'B', from: 0.566, to: 0.831, fadeOut: 0.1, midi: 68 },
-    { source: 'B', from: 87.325, to: 87.826, fadeOut: 0.12, midi: 75 },
   ] },
   /**
    * The finale under the greening: a rising A♭-major arpeggio, then a long held close. `greenAt` (seconds in the

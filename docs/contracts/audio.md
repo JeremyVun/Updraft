@@ -246,7 +246,7 @@ Jeremy's 2026-10-12 instruction: remove the Little Boats "puzzle completed" soun
 **Meadow and the piano.** The meadow plays cuts of four supplied takes (the playable prototype of 2026-10-15; Jeremy's
 brief and the cut list are in [the design](../backlog/meadow-echoes/design.md), "Piano hill and the meadow score").
 `audio/meadow-cuts.ts` is the one table of cuts per beat; `node tools/meadow-music-cuts.mjs` (SOURCES=<folder of the
-takes>) cuts them from the takes into `meadow-walk.ogg`, `meadow-duet.ogg` (calls, answers, steps and finale packed
+takes>) cuts them from the takes into `meadow-walk.ogg`, `meadow-duet.ogg` (calls, answers and finale packed
 with 0.25 s gaps) and `meadow-after.ogg` (the warm bed and its close; Ogg Opus, 48 kHz stereo, 20 ms edges unless a
 tail fade is given), levels each to the room reference by measured loudness, and writes what it measured to
 `audio/meadow-cuts-measured.ts`. Swapping a take or a cut is an edit to the table and a rerun.
@@ -254,13 +254,13 @@ tail fade is given), levels each to the room reference by measured loudness, and
 - Landing to the stool: the walk (O 0–27.2) loops with 3 s rests. It arrives through the ordinary handoff from Little
   Boats and begins once the background gate is open, so its first note is not under the gate's rise; sitting fades it
   over `tuning.piano.fadeOut` (`pianoMix`), and it is released.
-- The duet: the bough's four flute calls, her four piano answers, the flute finale and the cygnet's steps are the
+- The duet: the bough's four flute calls, her four piano answers and the flute finale are the
   instruments' own voices, on the instrument route (sound-off silences them, music-off does not). Nothing sounds from
   the piano before the bough's first call. Each call starts with the bough's inhale so its first breath lands as the
   inhale ends; reply input opens after the flute's measured end. With no answer begun `callAgainAfter` (25 s) later
   the bough says the call once more, `callAgainDb` (−4 dB) softer, and then stays silent. Following the guide far
   enough plays the answer whole at its own tempo; her hands and the keys follow its measured onsets and melody notes,
-  and stroke speed changes nothing. The guide tilts with the answer's overall rise or fall (`tilt`).
+  and stroke speed changes nothing. The straight guides tilt with the answer's overall rise or fall (`tilt`).
 - The answers ring out. Take B plays its phrases straight on, pedal down, so each answer keeps the take up to 60 ms
   before the next phrase's attack (`ringOut`; the tool checks nothing of the attack reaches it) and there crossfades,
   over the last 0.34 s it measured, into the ring of its own sound: its partials, each at a frequency taken from the
@@ -272,8 +272,7 @@ tail fade is given), levels each to the room reference by measured loudness, and
   ends over its last 1.4 s (`release`) as the take's own seven phrase endings into silence do (their median level
   curve), and fades over its last 0.3 s. The other calls and the finale already end in the take's silence. Until the duet file is decoded the piano strings
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
-  (`MEADOW_FINALE.greenAt`), when the cygnet starts along the keys: six footfalls on single notes cut from the
-  answers' take, C4, A♭4 and E♭5 of the finale's chord, `stepDb` (−10 dB) under the answers so the flute leads. Its
+  (`MEADOW_FINALE.greenAt`); the flute carries it alone, with nothing from the piano under it. Its
   end raises no `restored`: the flute's finale is the reward.
 - One warm bed from the duet to the boat. From the duet's end it swells in over `afterFadeIn` (6 s) and plays
   unbroken through the flowers, the seeds, the listening rest, the pond, the family's departure, the feather, the

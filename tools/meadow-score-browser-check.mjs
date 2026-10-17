@@ -37,20 +37,16 @@ try {
     'The piano demonstration retains its musical space');
   for (let n = 0; n < 4; n++) {
     await page.waitForFunction(() => __game.piano.expect !== null, null, { timeout: 60000 });
-    const { start, end, matched } = await page.evaluate(() => {
+    const { points, matched } = await page.evaluate(() => {
       const p = __game.piano, camera = __game.rig.camera;
-      const points = [0, 1].map(t => {
-        const v = p.guideAlong(t, p.keys.clone()).project(camera);
+      const points = Array.from({ length: 41 }, (_, i) => {
+        const v = p.guideAlong(i / 40, p.keys.clone()).project(camera);
         return [(v.x + 1) * innerWidth / 2, (1 - v.y) * innerHeight / 2];
       });
-      const forward = p.expect.at(-1) > p.expect[0];
-      return { start: points[forward ? 0 : 1], end: points[forward ? 1 : 0], matched: p.matched };
+      return { points, matched: p.matched };
     });
-    await page.mouse.move(...start); await page.waitForTimeout(160);
-    for (let i = 1; i <= 40; i++) {
-      await page.mouse.move(start[0] + (end[0] - start[0]) * i / 40, start[1] + (end[1] - start[1]) * i / 40);
-      await page.waitForTimeout(30);
-    }
+    await page.mouse.move(...points[0]); await page.waitForTimeout(160);
+    for (const point of points) { await page.mouse.move(...point); await page.waitForTimeout(30); }
     await page.waitForFunction(count => __game.piano.matched === count, matched + 1, { timeout: 15000 });
     await page.waitForFunction(() => __game.piano.expect === null, null, { timeout: 15000 });
   }

@@ -1,7 +1,7 @@
 // Cuts the meadow's recorded music from its source takes, per `src/audio/meadow-cuts.ts`, into `assets/music/` and
 // writes the measurements the game plays them by to `src/audio/meadow-cuts-measured.ts`: loudness and gain to the room
 // reference, where each call's flute begins and ends, each answer's note onsets with the melody note of each (her
-// hands play along to them) and its overall rise or fall, the cygnet's single notes, where the finale's colour front
+// hands play along to them) and its overall rise or fall, where the finale's colour front
 // starts, the decay the answers ring out at, and where the warm bed can go over into its close.
 // SOURCES=<dir> finds the takes (default: this checkout's assets/music). Needs ffmpeg with libopus.
 import { spawnSync } from 'node:child_process';
@@ -508,15 +508,6 @@ measured.answers = MEADOW_CUTS.answers.cuts.map((cut, i) => {
   const room = roomOf('B');
   report.push(`  B's decay between its phrases: ${room.gaps.map(g => round(g, 2)).join(', ')} dB/s; rings out at their median, `
     + `${round(room.decay, 2)} dB/s (RT60 ${round(60 / room.decay, 1)}s), down to its silence at ${round(silenceOf('B'), 1)} dBFS`);
-}
-{
-  // Single notes, as quiet as the answers they come from: too short to measure alone.
-  const gainDb = round(measured.answers.reduce((sum, a) => sum + a.gainDb, 0) / measured.answers.length, 1);
-  measured.steps = MEADOW_CUTS.steps.cuts.map(cut => {
-    const step = { gainDb, midi: cut.midi, ...pack(MEADOW_CUTS.steps.file, cutAudio(cut)) };
-    report.push(`step ${noteName(cut.midi)}: B ${cut.from}–${cut.to}, ${gainDb} dB`);
-    return step;
-  });
 }
 {
   const cut = MEADOW_CUTS.finale.cuts[0], audio = cutAudio(cut), signal = mono(audio), { attack, end } = extent(signal);
