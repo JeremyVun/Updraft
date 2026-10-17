@@ -896,14 +896,18 @@ export const tuning = {
      * still air they droop with only a lean behind. It turns with the child, and a player's gust takes over from it.
      */
     breeze: 0.8, breezeSwell: 0.3,
-    /** How much of the child's own speed adds to the air carrying the ends out behind them. */
-    carry: 0.8,
+    /**
+     * How much of the child's own speed adds to the air carrying the ends out behind them. In a boat running before
+     * the wind the air keeps some pace with it, so only `carryAboard` of that counts.
+     */
+    carry: 0.8, carryAboard: 0.5,
     /**
      * A player's gust is caught at `gustCatch` and let go at `gustRelease` (per second). The ends feel it `gustGain`
      * times as hard as it blows, never more than `gustMost`, and one felt at `gustTakeover` units per second or more
-     * carries them its own way, turning toward a new way at `gustTurn` (per second). In a boat they feel `gustAboard` of it.
+     * carries them its own way, turning toward a new way at `gustTurn` (per second). In a boat a gust takes nothing
+     * round: `gustAboard` of what the ends would feel adds to the air of the boat's going, bending the stream.
      */
-    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2, gustAboard: 0.5,
+    gustCatch: 5, gustRelease: 0.9, gustGain: 2, gustTakeover: 5, gustMost: 8, gustTurn: 2, gustAboard: 0.3,
     /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
     drag: 3.2,
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
