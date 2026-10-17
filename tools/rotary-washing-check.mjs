@@ -54,7 +54,7 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
   for(let i=0;i<fps*45&&!pair.open;i++){stroke(far);pair.update(1/fps,wind);}
   assert(pair.open,'both independently align');step(15);
   assert(Math.abs(Math.sin(near.angle))<1e-8 && Math.abs(Math.sin(far.angle))<1e-8);
-  assert.deepEqual(sounds.sort(),['creak','creak','release'],'only one creak per frame and one cloth release');
+  assert.deepEqual(sounds.sort(),['creak','creak','release','settle','settle'],'each frame creaks once and settles once, with one cloth release');
   sounds.length=0;pair.reset(true);step(5);assert(pair.open,'legacy restore bypasses both');
   assert.equal(sounds.length,0,'restoring the completed rotaries is silent');
   pair.reset();assert(!pair.open && near.angle===k.startAngle && far.unhook===0);

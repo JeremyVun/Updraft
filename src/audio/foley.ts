@@ -11,7 +11,7 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
   | 'dolphin-surface' | 'leaf-scuff' | 'leaf-rustle' | 'leaf-burst' | 'leaf-leap' | 'leaf-dive' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
   | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
-  | 'hull-strain' | 'rotary-creak';
+  | 'hull-strain' | 'rotary-creak' | 'rotary-settle';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -118,8 +118,8 @@ export class Foley {
         this.puff({ at: at + 0.45 + Math.random() * 0.8, len: 0.035 + Math.random() * 0.04, level: level * (0.005 + Math.random() * 0.008),
           pan: pan + (Math.random() - 0.5) * 0.45, type: 'bandpass', from: (2000 + Math.random() * 1800) * colour, q: 0.8, attack: 0.004 });
       }
-    } else if (kind === 'rotary-creak') {
-      this.rotary.play(this.out!, at, level, pan);
+    } else if (kind === 'rotary-creak' || kind === 'rotary-settle') {
+      this.rotary.play(this.out!, at, level, pan, kind === 'rotary-settle');
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

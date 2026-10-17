@@ -148,16 +148,17 @@ export class RotaryWashing {
   readonly rotors = [new RotaryFrame(0, K.x, K.z, Math.PI), new RotaryFrame(1, K.farX, K.farZ, 0)];
   active = false;
   activeRotor = -1;
-  onSound: ((kind: 'creak' | 'release', at: THREE.Vector3) => void) | null = null;
+  onSound: ((kind: 'creak' | 'settle' | 'release', at: THREE.Vector3) => void) | null = null;
   get open(): boolean { return this.rotors.every(r => r.open); }
   get caught(): boolean { return this.rotors.every(r => r.aligned); }
   get snagTarget(): THREE.Vector3 | null { return this.active ? this.rotors.find(r => (this.activeRotor < 0 || r.index === this.activeRotor) && r.snagTarget)?.snagTarget ?? null : null; }
   reset(open = false): void { this.active = false; this.activeRotor = -1; this.rotors.forEach(r => r.reset(open)); }
   update(dt: number, wind: WindField): void {
     for (const r of this.rotors) {
-      const creaked = r.creaked, ready = r.ready;
+      const creaked = r.creaked, ready = r.ready, aligned = r.aligned;
       r.update(dt, wind, this.active && (this.activeRotor < 0 || r.index === this.activeRotor));
       if (!creaked && r.creaked) this.onSound?.('creak', r.top);
+      if (!aligned && r.aligned) this.onSound?.('settle', r.top);
       if (!ready && r.ready) this.onSound?.('release', r.snagPoint);
     }
   }

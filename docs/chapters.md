@@ -102,7 +102,8 @@ Earlier catch remains free. Gesture motifs end with the rescue;
 earlier island motif starts are at least 4.5 seconds apart. Jeremy's verbatim brief and reversible controls are in
 [the audio contract](contracts/audio.md).
 The lowercase "updraft" title fades in after the look back, holds, and is gone before the whale (currently seconds
-34–41 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers with sparse windlines at 31–37 seconds. Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
+34–41 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers at 31–37 seconds, laying its windlines at a rate that follows
+its strength, about nine across the gust (`titleGust.lines.interval`). Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
 Still and its departure route now lie 200 units farther south. The ordinary crossing takes about 117 seconds,
 giving roughly 33 extra seconds after the later whale, at the same boat speed. This remains a listening experiment.
 After the whale, the camera eases upward and back for six gulls, a bill-carried linen scrap and four loose sheets
@@ -165,7 +166,9 @@ Between the second and third curtains stand two giant rotaries. Their placement 
 original organic washing field; the rectangular enclosures were rejected. Both start spread. The farther one's trailing sheet is hooked over a neighbouring
 post: turning pulls it taut, and a local updraft lifts the hem free. Broad sweeps then align the bare halves of both
 frames with the path. Each catches independently; neither runs back. The child and cygnet wait outside their swept
-circles until both have settled, then walk through together.
+circles until both have settled, then walk through together. Walking up from the second curtain, the view keeps
+its walking distance and follows her out through the curtain's gap, then comes round behind the rotaries and widens
+onto them over her last few metres (`approachSettle`), rather than drawing back and crossing the washing beside the gap.
 Their sage and dusty blue linen carries narrow cream stripes. Only the three curtain challenges wear white with
 red borders, so the two interactions read differently before the player touches them.
 
@@ -189,7 +192,8 @@ her, the pinwheel, the line and the boat. Only a sweep across the pinwheel on sc
 sweeps nearby turns it a little; the breeze only rocks it); the wheel turns with it, the line runs in, one way only,
 and the boat follows its painter, surging when the painter tightens and gliding on when it slackens, slowed by the
 water and stopped by the sand right beside her. Nothing runs back out, so any number of sweeps over any time add up.
-After a few idle seconds a sweep is drawn across the pinwheel (`ShorePulleyRig`, never wind). Once the boat is in
+After a few idle seconds a clockwise spiral is drawn winding out round the pinwheel's hub, the same invitation as the
+drowned village's mill (`ShorePulleyRig`, never wind); circling over it or sweeping across it both spin the wheel. Once the boat is in
 she gives a small cheer, walks to it with the paper still in hand (no throw), lets go of the painter, gathers the
 bird up and lets it climb into the satchel to board: the first time it rides there, and the bag's flap is thrown open
 for the rest of the game. The departure kite is tied off on the piling. On a phone the view at the bank looks out

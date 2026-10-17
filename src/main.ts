@@ -411,7 +411,9 @@ const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
 rotaryWashing.onSound = (kind, at) => {
   if (!sound.running || story.name !== 'lines') return;
-  worldFoley.knock(kind === 'creak' ? 'rotary-creak' : 'cloth', at, kind === 'creak' ? tuning.rotaryWashing.creakLevel : 0.45);
+  const k = tuning.rotaryWashing;
+  if (kind === 'release') worldFoley.knock('cloth', at, 0.45);
+  else worldFoley.knock(kind === 'creak' ? 'rotary-creak' : 'rotary-settle', at, kind === 'creak' ? k.creakLevel : k.settleLevel);
 };
 const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);

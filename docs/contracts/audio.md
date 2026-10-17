@@ -870,8 +870,9 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
-  and reaching toward each other are silent. Each rotary gives one metal-bearing creak after real angular travel:
-  `rotary-friction.ts` generates two 0.62 s variations from irregular pressure, ringing harmonics around
+  and reaching toward each other are silent. Each rotary creaks twice: one metal-bearing creak after real angular
+  travel, then a softer settle (`settleLevel`) with a lower, falling pitch and a single light collar contact as it
+  catches near its resting angle. `rotary-friction.ts` generates two 0.62 s variations of the first and the settle from irregular pressure, ringing harmonics around
   2.9/5.8/8.7 kHz, filtered noise and brief collar contacts. `rotary-creak.ts` caches the generated buffers when
   audio starts, then alternates them without synthesis work at the gesture. No recorded PCM ships with this sound.
   Jeremy approved this procedural timbre. The [reference study](../../assets/audio-reference/rotary-creak/README.md)
