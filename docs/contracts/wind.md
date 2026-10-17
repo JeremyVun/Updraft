@@ -180,9 +180,9 @@ them.
   prevailing breeze and the story (see Sailing). The toy-boat puzzles use the player's wind.
 - **The rotary washing lines.** A screen-local sweep selects the nearest visible frame and writes a tangential
   splat. The frame uses that submitted air immediately while its delayed field sample arrives; unrelated and
-  ambient wind never turn it. A continuous sweep keeps its turn direction as the cloth rotates past the pointer.
-  Local circles lift the snagged hem through the shared lift field. Partial progress stays earned. Each aligned frame catches independently; both must settle before
-  the travellers cross. Drawn spiral/sweep invitations never supply wind.
+  ambient wind never turn it. Each frame turns one way only, so a sweep in either direction advances it, and only
+  the frame whose turn it is takes strokes. Sweeps along the snag's post or a charged updraft near its foot free the
+  hooked sheet. Partial progress stays earned, and each aligned frame catches independently. Drawn invitations never supply wind.
 - **The meadow's flower bed and seed heads.** `MeadowEchoes.brush` tests moving strokes against each flower and
   head on screen: flowers keep the wakefulness a sweep gives them and lean along it, and a splat is laid at the bed
   so its grass answers. Seed heads only lean. Their down is taken by the circling charge while the column stands at

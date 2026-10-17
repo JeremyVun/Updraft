@@ -287,7 +287,7 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `still-phrases-browser-check` uses real Begin and pointer strokes to verify colour, takeoff, deduplication and hidden-page suspension.
   `still-departure-browser-check` runs the tree/fall/bandaging sequence, checks the plane stays secured under real pointer wind and music begins on the walk to the boat
   at source second 8, continues through the crossing, and the title fades in/out before the whale and clears on arrival.
-  Current trial: title 34–41 s, whale 45 s; `crossing-camera-check` verifies its six-second attention ramp.
+  Current trial: title 34–42.5 s, whale 45 s; `crossing-camera-check` verifies its six-second attention ramp.
   `still-phrases-check` renders the recording's 1:54–1:58 fade and silence afterward, including ongoing gain updates.
   `lines-reveal-browser-check` sails through the farewell, title, whale and approach while sampling the production
   horizon veil on the GPU: sampled dry land and twelve horizon bearings stay concealed from afar; the near shore clears on approach.

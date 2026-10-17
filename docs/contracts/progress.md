@@ -124,7 +124,10 @@ Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old co
 visit. A pick starts that room at once, on the page already loaded and with sound, exactly as Begin or Continue
 starts theirs: the veil departs and `story.start` begins the room as `?chapter=` would, with saving on. The pick
 overrides the save without touching it; the room's first played frames save its `entry` checkpoint, which then
-replaces it.
+replaces it. Never reload the page or reset the world for a pick: a reload loses the click Safari needs to start
+audio, several start changes have no inverse (an opened bag, closures over the previous chapter), and rebuilding
+the cast leaks GPU resources and window listeners. Instead nothing room-specific starts until the choice is made,
+so a pick matches a fresh `?chapter=` load by construction (`tools/chapter-pick-check.mjs`).
 
 ## Start over
 

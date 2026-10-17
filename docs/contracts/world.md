@@ -42,7 +42,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | sky mirror | (−581, −2282) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
 | home | (−336, −2562) | 190 × 165 | `ISLES.home` |
 
-The rotary washing-line prototype extends Lines 80 m north (`tuning.world.linesNorthExtension`), mapping its
+The rotary washing lines extend Lines 80 m north (`tuning.world.linesNorthExtension`), mapping its
 existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged. A rounded
 rise beyond the third curtain (`linesFold`) conceals the family clearing at (14, −353); the door stands on grass
 at (14, −361), well before the northern beach. The height atlas's reach includes the extended underwater slope.
@@ -56,47 +56,39 @@ tufts and ground tint), then re-measuring both crossings that touch it. `node to
 distances; `tools/geography-check.mjs` checks migrations, clearance and continuity.
 
 Revision 10 moves Still and its first four departure waypoints 200 units south. Lines stays fixed; the first
-whale surfaces relative to the departing boat, moving the encounter with it. The 2026-10-11 timing experiment
-and Jeremy's exact brief are in [audio.md](audio.md). The ordinary crossing grows from 76.3 to 117 seconds,
-including 32.7 additional seconds after the whale's later appearance. Sailing speeds remain unchanged.
+whale surfaces relative to the departing boat, moving the encounter with it. The timing experiment behind it
+and Jeremy's exact brief are in [audio.md](audio.md).
 
 Revision 11 moves only the secret shore 60 m east, from (240, −365) to (300, −365). Its doorway destination,
 berth, pulley, terrain and grass follow the same origin. Existing shore and departure saves migrate once.
-The departure measures 45.5 s against 31.9 s before the move, without changing speed; the destination's mist
-conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
+The destination's mist conceals the departure's first stretch. Still-to-Lines uses a 0.99 drive multiplier.
 
 Revision 12 grows the birches and moves them. The island as first built is cut across its walk into bands
 (`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−136, −16); everything on it is authored in
 those band-local terms and placed with `birchesAt` / `birchesGap`. Each band keeps its ground, grass patterns,
 trees and scarf exactly; the shift and openings are whole grass tiles (8 m). The island stands out over open sea,
 about 120 m of water from the meadow's nearest shore. With no input, `toBirches` measures 47.3 s from the meadow's
-far shore and push-off to the stairs 45.8 s (both 23.3 s before the revision); boat speed is unchanged. Saves on
+far shore and push-off to the stairs 45.8 s. Saves on
 the old island, at its
-berth and old village saves that began there migrate once. The birches' design record:
-[birches-uplift](../backlog/birches-uplift/design.md).
+berth and old village saves that began there migrate once. The room and its layout rules: [chapters.md](../chapters.md)
+"The birches".
 
-### Still grass restoration, 2026-10-11
+### Still grass restoration
 
 Jeremy's scope ruling, verbatim:
 
 > AT THIS STAGE OF THE GAME IT IS INCREDIBLY IMPORTANT THAT YOU DO NOT MAKE CHANGES TO THE LOOK AND FEEL OF THINGS OUTSIDE THE SCOPE OF REQUESTED CHANGED THAT ARE OTHERWISE SETTLED ALREADY. DO YOU UNDERSTAND? WHAT DID YOU DO TO THE GRASS ON THE STILL ISLAND?! IT'S PATTERN IS COMPLETELY DIFFERENT FROM WHATS ON updraft.jeremyvun.com WHICH WAS THE LAST ACCEPTED VERSION?? ARE YOU SURE YOU DIDN'T UNSOLICITED CHANGE THE GRASS PATTERN OF THE STILL ISLAND??!
 
-The relocation preserved the island's terrain and grass colour pattern, but left blade seeds, LOD selection,
-tuft noise, tall/short patches and the ground tint's fine variation at world coordinates. Moving Still therefore
-regenerated those patterns. This was a regression, not an approved appearance change. The separate moving
-flattened patch added during the boarding work was also unrequested and has been removed.
+A relocated room's blade seeds, LOD selection, tuft noise, tall/short patches and the ground tint's fine variation
+must stay at their original coordinates, or moving the room regenerates its grass pattern. There is no moving
+flattened patch at boarding; it was never requested.
 
-`stillGrassOffset` now keeps those grass inputs at the original coordinates, while roots, ground sampling and
+`stillGrassOffset` keeps those grass inputs at the original coordinates, while roots, ground sampling and
 wind remain at Still's relocated position. `grassHeightAt` uses the same original pattern coordinates.
 `tools/still-grass-check.mjs` compares GPU blade tables at all three detail levels against an independent
 pre-relocation QA build and saves still captures for inspection. It requires `COMPARE_BASE`; matching only
-two paths inside the modified build does not establish restoration.
-
-Validation used a separate `de1286a2` QA build: its blade hash, LOD selection, table shader and grass-pattern
-literal blocks match the deployed `main-cFBCsncW.js`. All 42,240 sampled blades across three detail levels retain
-identical shape and ground-normal values; translated positions/ground heights differ by less than 0.001 units
-and packed colour by at most 0.000245. The CPU grass height matches at all 1,981 above-water sample points.
-The original and repaired screenshots were inspected side by side. Typecheck and production build pass.
+two paths inside the modified build does not establish restoration. The accepted reference is QA build `de1286a2`,
+whose grass matches the deployed build Jeremy accepted.
 
 ## Crossings
 
@@ -120,17 +112,12 @@ Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets
 
 A crossing is never shortened by losing an encounter: the sea includes the swim and the whale rescue before the
 mirror approach. The pod normally nudges the boat to lead it in; a missed nudge cannot strand it before the whale.
-Geography revision 6 moves the mirror and home together (`PAST_THE_WHALE`), placing the mirror straight on beyond
-the whale while preserving the final crossing's shape and length.
-The second 2026-10-10 playtest adjustment brings the whale 52 m closer (revision 7), shortening the approach by
-about 12 seconds while retaining the dolphin beats and twelve-second swim. The mist keeps the same reveal order:
-heard, blow visible, then body. Revision 8 moves mirror and home together another 43 m (`ONWARD_SEA`) and widens
-the mirror's approach curve so the boat rounds it at its ordinary pace. There is no special onward or
-arrival speed cap: the sail and normal steering/mooring physics govern speed. Jeremy's final 2026-10-10 targets
-replace those longer passages: revision 9 moves the whale toward departure (`WHALE_SHORTENING`) and moves Mirror
-and home together (`MIRROR_SHORTENING`). The first puzzle begins at about 62 s, and sailing from
-the whale disappearing to the Mirror takes 38–41 s. The pod joins sooner,
-the full twelve-second swim stays, and its nudge begins the lead when it makes contact. The camera waits for the
+The mirror and home move together (geography revisions 6–9: `PAST_THE_WHALE`, `ONWARD_SEA`, `WHALE_SHORTENING`,
+`MIRROR_SHORTENING`), keeping the mirror straight on beyond the whale and the final crossing's shape and length. The
+mist keeps the whale's reveal order: heard, blow visible, then body. The mirror's approach curve is wide enough to
+round at the ordinary pace; there is no special onward or arrival speed cap. To Jeremy's targets, the first puzzle
+begins at about 62 s and sailing from the whale disappearing to the Mirror takes 38–41 s. The pod joins with the
+dolphin beats and the full twelve-second swim, and its nudge begins the lead when it makes contact. The camera waits for the
 blow before closing on the whale. Home retains its 206 m route and 40–41 s ordinary crossing.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
 bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
@@ -146,6 +133,12 @@ The player never sees the next island before it is time.
   Incoming water is enabled under the same full cover as its land. A room coming into view is covered
   in fog first and cleared after (`JourneyReveal`, `tuning.world.arrivalFogCover`/`arrivalFogClear`). The door
   shore is visible only from the washing and its outgoing crossing; the home jetty only from `toHarbour`.
+- **No cut at a handoff.** A chapter change never switches anything already in view in one frame. A destination's
+  kite is enabled from its crossing under the same cover as its landing stage (`story/departure-kites.ts`); the
+  wood's sheltered fireflies blend to open-country size, colour and population on leaving; storm visuals and light
+  take the eased squall, while lightning triggers keep raw chapter weather. Verify from before the handoff with
+  `rendering-continuity-check` and `tools/rendering-continuity-audit.mjs`, judging local image changes rather than
+  whole-frame averages.
 - **Haze.** Each chapter sets a `haze`; the veil (`uVeil`, `world/atmosphere.ts`) dissolves the world past it
   whatever the height.
 - **Island mist.** The island ahead can lie in its own mist (`uIsleMist`, `uIsleMistRange`, part of

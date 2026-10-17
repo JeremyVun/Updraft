@@ -17,6 +17,66 @@ appearance and later bank-to-haze styling remain outside this patch.
 
 > cool, commit. Next i need you to help figure out if there's a cheap way to make the village fog look better
 
+> how can i play and test each version?
+
+> /handoff another agent to continue the work
+
+## Continuation handoff — 2026-10-17
+
+The transition fix is committed and verified; the village appearance work remains an isolated, playable study.
+Jeremy has been given the comparison and has not yet selected an appearance treatment. Continue from his
+feedback; do not treat the recommendation as his approval to land or deploy it. The current recommendation
+is **Light + horizon**, without noise. No deployment has been requested.
+
+Read `docs/journey.md`, `docs/roadmap.md`, this document, and the path-puzzles design/final review. Follow
+the project AGENTS.md and backlog-item skill. A successor must also read Jeremy's actual user turns in the
+previous transcript, not rely solely on this handoff. Visual work requires Astra or Opus; no subagents unless
+Jeremy requests them. Coordinate through disk with `coord note`/`coord status`. Never read actual `.env`
+files; isolated Vite builds here use `envDir:false`.
+
+### Current state and files
+
+- Main checkout: `/Users/jeremy/projects/updraft`. Transition commit: `4a2bf422`,
+  **Preserve fog and camera continuity through the village descent**. Main has subsequent work from other
+  sessions; the study deliberately remains pinned to this commit.
+- This session's uncommitted repository work is this diagnosis/study document. At handoff,
+  `docs/code-review-2026-10-17.md` is also dirty from another session; leave it alone.
+- Study directory: `/tmp/updraft-village-fog-study-pEuyC9`. `base/` is the detached baseline worktree;
+  `build.mjs` applies QA-only source transforms and writes `site/`. No appearance edits are in main game code.
+- `play-controls.js` supplies the isolated Fog test panel. Version values: original `0`, horizon only `6`,
+  light + horizon `7`, light + horizon + noise `5`. Ignore earlier experimental modes 1–4.
+- `build.mjs` now includes the final night horizon correction; the older `v3/` daytime captures predate that
+  integration. `night/closed-8.png` and `night/closing-8.png` show the corrected night treatment.
+- Server: `http://127.0.0.1:5350`, Python PID **96060** when checked at handoff, exec session **73081**.
+  It is intentionally left running for Jeremy. Check the listener before restarting; do not launch a duplicate.
+  The exact restart command and playable URL are below. All owned automated browsers are closed.
+- Rebuild: `node /tmp/updraft-village-fog-study-pEuyC9/build.mjs`. The build uses the main checkout's
+  installed Vite and the detached base sources; inspect dependencies and source hashes before changing the base.
+
+### Verification and next work
+
+- The committed transition repair was checked from the unchanged cloud checkpoint, including every
+  handoff frame in landscape and portrait, with separate baseline captures. Details and evidence are below.
+- Appearance study: five seeded frozen views, camera-offset stills, closure-colour comparisons, unchanged
+  optical-depth readbacks, and batched GPU timings. These do **not** constitute a full moving gameplay review.
+- Playable UI: `play-check.mjs` / `play-check.json` pass normal-speed Begin, all four in-place switches,
+  advancing frames, a pointer gesture, and a belfry restart retaining mode 7; browser errors are empty.
+  Its first run had an incorrect assertion expecting story beat `belfry`; the actual containing beat is
+  `church`. Corrected assertion checks that beat and the elevated camera. This was a test error, not a game fix.
+- T3 preview boot was slow and Begin clicks timed out at 60 s then 30 s. Its tab was closed. The documented
+  Chrome for Testing workflow through `tools/lib/browser.mjs` completed the smoke check. Use the GPU gate;
+  never launch installed Chrome with fresh automation profiles. Prefer T3 browser first per runtime rules.
+- Before landing a chosen treatment, review the complete moving village route, advancing bank, church
+  edges/clearing, bell sequence, closure and departure; replay the cloud transition from before handoff.
+  Compare against a separate unchanged build and check unaffected chapters, reflections and mobile cost.
+  The approximate light sample currently handles top/front planes, not the bank's side boundaries or clearing.
+- Keep density, gameplay concealment, camera behavior and approved chapter appearance outside this scope
+  unchanged. A production patch should use existing tuning for the prototype constants and omit study UI
+  and defines. The study itself is not ready to ship merely because its stationary comparisons look better.
+- Frozen RAF probes must use polling timers (`polling:50`), since RAF-based waitForFunction stalls after
+  the freeze. Individual-draw GPU timings were misleading; use the balanced batched asynchronous GPU-query
+  evidence below. Never describe a captured video as reviewed motion unless it was actually watched.
+
 ## Cheap village-fog study — 2026-10-17
 
 The transition repair is committed as `4a2bf422`. The appearance study uses a detached worktree at that commit
@@ -25,6 +85,13 @@ been applied to the main checkout. The analytic density, coverage, progression a
 unchanged in every prototype.
 
 ### Smallest promising treatment
+
+Playable comparison: the isolated build at `http://127.0.0.1:5350/?chapter=roofs&mistStudy=7&progress=0&analytics=0`
+has a **Fog test** panel. **Version** switches in place: Original (`0`), Horizon colour (`6`), Light + horizon (`7`),
+and Add soft variation (`5`). **Start at** restarts at the roofs, belfry, church, arrival, or clouds approach.
+The latter starts before the cloud-to-village handoff. All versions include the committed transition repair.
+The playable lighting variants include the final night-colour correction below. Saves are disabled.
+To restart this temporary server: `python3 -m http.server 5350 --bind 127.0.0.1 --directory /tmp/updraft-village-fog-study-pEuyC9/site`.
 
 1. Match the distant ordinary haze to the sky. Its existing `skyColor` call samples a slightly elevated direction
    and multiplies the result by `(0.84, 0.87, 0.92)`. In the village, blend that direction toward the actual ray and

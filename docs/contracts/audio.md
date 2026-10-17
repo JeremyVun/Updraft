@@ -35,7 +35,7 @@ and clears it on exit.
   The held-chord crossfade replacement for the shared pad's chord clock and glides was rejected; the pad's clock and
   glides stay.
 - The opening island keeps its approved drone available, disabled during the Still phrase experiment below; an "evolution" study was rejected ("the original still sounds better").
-- The former Lines score remains available for studies; Jeremy requested `lines.ogg` for playback on 2026-10-11. Previously, a from-scratch rewrite was "a clear downgrade". Don't propose it again. No
+- The former Lines score remains available for studies; Lines plays `lines.ogg`. A from-scratch rewrite was "a clear downgrade": don't propose it again. No
   completion phrase when the door opens.
 - The piano-lullaby reprise at Home was rejected. Home's ending is scripted from the successful updraft and must feel
   as if the Home music plays all the way through to the credits.
@@ -104,7 +104,7 @@ gate.
   brought up, and the higher bound volume brought down." It reaches `strokeMost` (0.6) of a full gust at most, nearing
   it past `strokeSpan` (1.6) screen heights a second; held strokes count by the same pressed gain as the wind. A stroke
   across 0.4 of a 16:9 screen peaks the gust layer at about −30 dB in 0.9 s, −25 dB in 0.45 s and −23 dB in 0.22 s at any
-  height (before, −20 dB over sky and −35 to −55 dB near the bottom). A story's gust front still sounds at its own
+  height. A story's gust front still sounds at its own
   strength. The wind itself and its gameplay are unchanged.
 - Sleeping's night wind has its own noise voice, filter and slow pan (`nightGain`, `nightWhistleGain`, `nightPan`),
   never shared with the player's gust, so the player's wind stays audible over it: the night wind gives way under a
@@ -160,11 +160,7 @@ Jeremy's follow-up, verbatim:
 
 > ok the still island music is beautiful now, one thing is, allow those spliced music clips to play ontop of one another if the last one has already played e.g. ~5 seconds. e.g. the next clip can play while the reverbe of the last clip is still going.
 
-> We should make sure to bring forward some of the phrases from 2:00 onwards as well, they have some colour with some horns. can you show me the sequence of phrases that will be played?
-
-> or, we keep those phrases with the horns for during the corssing then they see the whale
-
-The old horn passage remains available in `StillPhrases.crossing`, but the following direction supersedes it.
+The horn passage from 2:00 on remains available in `StillPhrases.crossing`; the crossing plays `still_2.ogg` (below).
 The starting file downloads alongside shader compilation and decodes after Begin, before play is revealed;
 failed loads fall back to ambience, and gestures never queue. A decoded Still buffer is
 about 69 MiB at 48 kHz and is released on exit. Playback uses the dry music route and honours music mute.
@@ -175,9 +171,7 @@ about 69 MiB at 48 kHz and is released on exit. Playback uses the dry music rout
 >
 > Then, at a certain point we should fade in the "updraft" title as she's making the crossing over to the island of lines. In addition, just for your context, be prepared that we will likely have to move the still island out a bit further so that the crossing a bit longer to accomodate all this new emotive space, as well as the timing of when she sees the whale.
 
-Title timing: "After the look back, before the whale". Further adjustments, verbatim:
-
-> also, the "timeout" before a new motif can play on the still island, whats it at now? 5 seconds? can you reduce whatever it is by 0.5 seconds
+Title timing: "After the look back, before the whale". Further adjustment, verbatim:
 
 > btw, when playing still_2.ogg, it should start at the second phrase that plays at 8 seconds, not the first phrase.
 
@@ -192,9 +186,9 @@ continues. Direct crossing starts begin this recording at second 8; the crossing
 position. A companion checkpoint prepares it behind the veil and waits for the next plane release.
 
 The title uses slightly enlarged ending typography and a story-clock fade (`opening-title.ts`, `tuning.opening.title`):
-thirteen seconds after the 21-second farewell, fade in for three, hold for one, fade out for three (34–41 seconds).
-It takes no input, pauses with story time, and disappears on leaving the crossing. The title is independent of
-music mute. The first whale now surfaces at 45 seconds, after the farewell camera has finished turning, and its
+thirteen seconds after the 21-second farewell, fade in for three, hold for two and a half, fade out for three
+(34–42.5 seconds). It takes no input, pauses with story time, and disappears on leaving the crossing. The title is
+independent of music mute. The first whale surfaces at 45 seconds, after the farewell camera has finished turning, and its
 camera attention eases in and out over six seconds (`tuning.opening.crossing`). These are trial story-clock cues,
 not sample-locked music cues: boarding time still determines which source phrase accompanies them.
 
@@ -204,13 +198,10 @@ Jeremy's 2026-10-11 timing and geography experiment, verbatim:
 >
 > And then i think we definitely need to move the whale and still island position back by atleast 30 seconds (don't change the boats speed). Then we can think about what other attractions we can add along the way.
 
-He chose **“More sailing after the whale”**, measured at the ordinary breeze. The implementation moves Still and
-its first four departure waypoints 200 units south, leaving Lines fixed. The whale surfaces relative to the boat,
-so its encounter moves with that departure. The measured ordinary crossing grows from 76.3 to 117 seconds;
-with the whale eight seconds later, sailing after its appearance grows from 39.3 to 72 seconds (+32.7 seconds).
-Boat speed settings are unchanged. Geography revision 10 migrates existing saves; new attractions remain for
-a later experiment. Next review is listening to the title and whale alongside the recording in normal play.
-To retime independently, the previous title delay was 3, whale onset 37, and whale camera easing 2 seconds.
+He chose **“More sailing after the whale”**, measured at the ordinary breeze. Still and its first four departure
+waypoints sit 200 units further south, leaving Lines fixed. The whale surfaces relative to the boat, so its encounter
+moves with that departure. The ordinary crossing measures 117 seconds, about 72 of them sailing after the whale
+appears. Boat speed settings were not changed for it. Geography revision 10 migrates older saves.
 
 Jeremy's next fine-tuning brief, verbatim:
 
@@ -218,19 +209,7 @@ Jeremy's next fine-tuning brief, verbatim:
 > - also as a fine tune, we should end the play of `still_2.ogg` on ~1.58 faded out before it plays the next phrase
 > - and lastly, as the child is sailing out to the island of lines, they shouldn't be able to see it until they get closer. Right now the fog / haze effect doesn't hide the island reveal until they get close (from afar you can see the island of lines as the camera pans over to the whale right now (they shouldn't be able to see it)
 
-The preceding pass tried four more seconds of title delay, approximately halfway into the next eight-second phrase;
-font size stays as it was. The fallback is the original 24–34-second title with a modest size increase, pending
-Jeremy's listening pass. That pass gave Lines its own coast mist (fully concealed beyond 110 units from the camera,
-clearing over 110–55) throughout `toLines`; this stays independent of the farewell and the whale's open-water view.
-The fine-tune passes the production build, 48 Still audio checks and 51 Lines score checks. A real crossing GPU
-probe checks 117 dry-land points: full concealment through the whale and at second 95, partial shoreline reveal
-at 105 (77 units from the eye), and a clear near shore at 115 (37 units). Title fades are checked at each boundary.
-
-Verification: production build; geography/save migration, boat clearance, crossing camera and haze checks;
-real browser bandaging/score/title/whale handoff; opening colour/plane motif playback; full first-crossing camera
-coverage. Still's 340 sampled dry-land heights are unchanged after translation. The distant height/colour atlases
-also move. The broad terrain atlas audit passes visible-surface accuracy but reports a separate open-sea mismatch
-at (194, −1750) near Wood (0.167 units); the terrain height there is identical with Still at its old and new positions.
+Title timing and Lines' concealment are set in the choreography refinement below.
 
 **Preserved opening drone (experiment disabled).** `opening-score.ts` conducts the original four detuned pad voices through the approved 33 voicings,
 5.3125 s apart (80% of the endorsed tempo), with a held D/F♯ resolution at 1:25; the 185.3125 s form repeats for
@@ -253,9 +232,12 @@ shared accompaniment duck. The original `little-boats-score.ts` and its tuning r
 The decoded recording is about 43 MiB at 48 kHz; exit releases it.
 The reveal has no completion sound (Jeremy, 2026-10-12): the supplied recording carries the conclusion.
 
-**Meadow and the piano.** The meadow plays cuts of four supplied takes (the playable prototype of 2026-10-15; Jeremy's
-brief and the cut list are in [the design](../backlog/meadow-echoes/design.md), "Piano hill and the meadow score").
-`audio/meadow-cuts.ts` is the one table of cuts per beat; `node tools/meadow-music-cuts.mjs` (SOURCES=<folder of the
+**Meadow and the piano.** The meadow's sound is wind instruments with the piano, never chamber strings (Jeremy,
+2026-10-15: "this chapter is all about wind instruments"). It plays cuts of four supplied takes in one key (F minor
+turning to A♭ major) that share the duet's tune, named in `MEADOW_SOURCES`: O, the original Sleeping Meadow, whose
+sad opening Jeremy loves; B, the take whose phrases are cut into her answers; E, the warmest take, as Jeremy extended
+it; and the solo flute, which belongs to the duet alone (Jeremy: "i think it should be used only for the piano
+puzzle"). `audio/meadow-cuts.ts` is the one table of cuts per beat; `node tools/meadow-music-cuts.mjs` (SOURCES=<folder of the
 takes>) cuts them from the takes into `meadow-walk.ogg`, `meadow-duet.ogg` (calls, answers and finale packed
 with 0.25 s gaps) and `meadow-after.ogg` (the warm bed and its close; Ogg Opus, 48 kHz stereo, 20 ms edges unless a
 tail fade is given), levels each to the room reference by measured loudness, and writes what it measured to
@@ -286,7 +268,8 @@ tail fade is given), levels each to the room reference by measured loudness, and
   play the melody notes instead. The finale's colour front starts on the measured top of its opening arpeggio
   (`MEADOW_FINALE.greenAt`); the flute carries it alone, with nothing from the piano under it. Its
   end has no completion sound: the flute's finale is the reward.
-- One warm bed from the duet to the boat. From the duet's end it swells in over `afterFadeIn` (6 s) and plays
+- One warm bed from the duet to the boat, with no music of the feather's own and no silence for the family (Jeremy,
+  2026-10-16: "I'm not convinced that the music should stop so soon and so abruptly"). From the duet's end it swells in over `afterFadeIn` (6 s) and plays
   unbroken through the flowers, the seeds, the listening rest, the pond, the family's departure, the feather, the
   shower and the walk to the boat, from `meadow_extended.ogg` (take E as Jeremy extended it): 0:22.60 to 2:53.05,
   then round from 1:36.60 with no rest, as a native loop (`loopStart`/`loopEnd`). The cut's last 0.6 s carries the
@@ -309,7 +292,7 @@ tail fade is given), levels each to the room reference by measured loudness, and
   crossing itself has no bed and is quiet until Birches. `node tools/meadow-bed-render.mjs` renders the whole run
   from the duet's end to Birches through the game's sound (LISTEN, GONE and PUSH set the story's times).
 - `MeadowChapter.meadowMusic` names the part; `audio/meadow-music.ts` plays it. The shared pad is silent in the meadow
-  (`MOODS.meadow.level` 0) and the synthesised `MeadowScore` no longer plays; `meadowScore` remains story state.
+  (`MOODS.meadow.level` 0) and the synthesised `MeadowScore` does not play; `meadowScore` remains story state.
   `hush` does not apply. Files are fetched ahead in Little Boats and on the crossing (walk, duet) and during the duet
   (warm bed), decoded as their part nears and released once played: the walk as she sits, the duet as the warm bed
   begins, the warm bed once its close has played. A start or restore in the meadow waits behind the veil for its first
@@ -660,7 +643,7 @@ never sounds. If no seam lies in that window, it fades over `mirrorFade` at once
 separates the two (9.5 s after a fade at once): across every leave time it stops at a seam 70% of the time, with
 about 9 s of silence on average. Jeremy (2026-10-15), verbatim: "There's not enough minimum separation between the sky
 mirror's music ending and the summit music starting, and the fade out of the sky mirror music could be longer"; he
-chose a 5 s minimum and a 3 s fade (it had allowed a seam as little as 1 s before Home and faded over 1.2 s). The
+chose a 5 s minimum and a 3 s fade. The
 background is silent from the seam until Home.
 A later Home start (past landing, for the hilltop) holds across landing: the handoff keeps the audio-clock time it
 last took from the crossing.
@@ -1060,31 +1043,12 @@ Jeremy's brief (verbatim):
 >
 > remove that clothes line sitting in the ocean. We need to think of better points of interest or even pre-echoes of the island of lines after the whale.
 
-Current implementation: move the title to crossing seconds 34–41 (three-second rise, one-second hold,
-three-second fade), enlarge its type from 36 to 40 px at desktop, and send a six-second wind front through the
-existing Still flower patches starting at second 31. Replace the coast-shaped Lines concealment with a horizon-wide
-distance veil, preserving the farewell before drawing the visibility range inward. Move both Lines handoff gates
-six seconds earlier. The fall and its landing have no phrase; physical sounds stay. The main boat's propulsion and leeway read the prevailing
-breeze independently of local gusts; its sail, pennant and heel still read the live field. Remove the offshore washing
-line without substituting a new attraction yet. Validate audio, passage timing, title/gust timing,
-the continuous reveal and the production build. This supersedes the earlier title and coast-mist experiments above.
-
-
-Checks for this refinement: production build; 50 Still audio checks and 51 Lines score checks; all eight measured
-passages complete (Still → Lines: 117 s). Storm/steering, haze continuity and 24 crossing-camera cases pass. The title and horizon browser
-replay samples actual GPU concealment and airborne petals; capture paths and final result are recorded below.
-
-The horizon/title replay passes: the title reaches full opacity at 37.5 s and is gone at 41 s, before the child
-crosses its centre. The real wind lifts visible petals during the 31–37 s sweep. All 117 dry-land probes stay fully
-concealed through second 95; the shoreline is partially visible at 105 s (80.5 units away) and clear at 115 s
-(39.7 units). Twelve bearings beyond the visibility range are equally concealed throughout. Captures:
-`/tmp/updraft-horizon-33.png`, `/tmp/updraft-horizon-37.5.png`, `/tmp/updraft-horizon-39.5.png`,
-`/tmp/updraft-horizon-65.png` and `/tmp/updraft-horizon-105.png` (opened in Preview).
-
-The separate full bandaging-to-departure browser rerun was cancelled while waiting for another session's GPU
-check; this pass verifies title timing in the actual continuous crossing and audio behavior in the offline
-production checks. It does not claim a new full rescue playback run.
-
+The title runs at crossing seconds 34–42.5 (three-second rise, 2.5-second hold, three-second fade; `tuning.opening.title`),
+40 px at desktop, with a six-second wind front through the existing Still flower patches starting at second 31. Lines
+is concealed by a horizon-wide distance veil, not a coast-shaped mist, preserving the farewell before the visibility
+range draws inward. The fall and its landing have no phrase; physical sounds stay. The main boat's propulsion and
+leeway read the prevailing breeze independently of local gusts; its sail, pennant and heel still read the live field.
+There is no offshore washing line.
 
 ## First-whale visibility, music gap and shore echoes — 2026-10-11
 
@@ -1095,40 +1059,14 @@ Jeremy's brief (verbatim):
 > 2) how much silence is there now between the lines music and the end of the still_2 music? is it too much? should we move the still island slightly closer or the easier solution being to increase the speed of the boat a tiny tiny bit to cut it down by a few seconds?
 > 3) I do think we should have the same kind of water wave effect as with the whale encounter later in the game when the whale dives. and yea i think you're right, if we have a pieces of laundry flying away and a gull carrying a scrap of linen, that would be a nice pre-dream echo. after the whale, there's like no animals or birds, which is probably why it feels a bit empty. what do you mean by the reflection of washing? Let's leave that for now and revisit it after above is done
 
-Plan: keep a broad clear horizon through the complete first whale surfacing and dive, validating the whale itself
-as well as hidden Lines. Measure native audio and story time from the actual post-bandaging throw to Lines before
-choosing a pacing correction. Reuse the later whale's physical spreading swell at the first dive. Add sparse
-post-whale gull life, one bird carrying a linen scrap, and a couple of loose pieces of cloth carried by wind.
-The washing-reflection idea is deferred. Preserve the title, original supplied music and fixed player-independent
-propulsion; any new timing should be explicitly recorded below.
-
 Jeremy added (verbatim):
 
 > yea, can we make it deterministic between when the child makes that paper aeroplane throw and when they get into the boat? e.g. disable the ability for the player to randomly blow the paper plane around etc.
 
-The post-bandaging departure now owns the input: one aimed throw to a fixed inland pickup spot, wind-independent
-settling flight, a direct walk, pickup and the existing boarding animation. Earlier catch remains interactive.
-The baseline native-audio replay measured 21.47 s from throw to crossing and 13.97 s of silence before Lines.
-Re-measure after the authored departure before changing the boat speed or island placement.
-
-Final timing pass: the authored throw-to-crossing interval measured 20.25 s in two full native-audio replays.
-Both Lines approach gates now use a 12-second lead adjustment (previously 6); the actual silence after Still’s
-1:58 endpoint measures 6.90 s, down from 13.97 s in the baseline. Boat speed, geography, title and whale timings
-are unchanged. The horizon stays clear to 205 units, fully hidden beyond 260, through the whale; both it and
-the ordinary distance haze close in only after crossing second 60. The first dive uses the shared physical
-swell, with independent expiry so the inactive later whale cannot erase it. Two gulls begin their pass at
-second 69, one carrying linen; two loose handkerchiefs follow on the air. The existing cloth solver animates
-all three pieces. A single quiet gull cry accompanies the pass. No washing reflection is added.
-
-Validation: production build and targeted Still/Lines audio checks pass. Real child/plane/boarding checks cover
-opposing gusts at 30/60/120 Hz; only the releasing hand’s small wind sway and a pickup callback frame differ.
-The GPU horizon replay keeps all 117 dry-land probes hidden through second 95, then reveals the near shore
-continuously. The separate full crossing capture keeps the whale clear throughout the dive, observes the
-physical swell, and sees both gulls and all three linen pieces from the sailing camera with no browser errors.
-The first visual pass sent loose cloth above the frame; the corrected lower pass is captured at
-`/tmp/updraft-first-crossing-84.png`, `-98.png` and `-106.png`; the whale is at `-52.png` and `-56.png`.
-Cloth stability/bill attachment, swell ownership/expiry, haze continuity and crossing-camera checks pass.
-
+The horizon stays clear through the first whale's surfacing and dive and closes in only after crossing second 60.
+The first dive uses the shared physical swell, with independent expiry so the inactive later whale cannot erase it.
+After the whale, gulls (one carrying a linen scrap) and loose pieces of cloth pass on the air, animated by the existing
+cloth solver; a single quiet gull cry accompanies the pass. The washing-reflection idea is deferred.
 
 ## Secured plane, whale fades and horizontal title gust — 2026-10-11
 
@@ -1138,14 +1076,11 @@ Jeremy's brief (verbatim):
 > - instead of just disabling the ability for the player to create wind temporarily on the still island, just have the child  hold the paper plane at the state of the sequence i.e. attach it to her backpack. then the player can still create wind throughout the entire sequence.
 > - the "updraft" on still island i think needs to be a little more horizontal from left to right in the direction of the direction of travel, instead of simply "upwards", and a tasteful amount of windlines would be good too.
 
-This supersedes the single departure throw and input lock above. Secure the plane on the satchel from the tree
-sequence through boarding; keep player wind available throughout Still. Start `still_2` as she sets off for the
-boat after bandaging, keeping source second 8 and the 1:58 cutoff. Re-measure the shorter walk-to-boarding interval
-and music gap. The first whale's body and underwater silhouette ease in over 3.5 seconds and disappear over the
-last 4 seconds of the encounter; its surfaced portion stays fully visible. The later whale retains its own
-visibility choreography. The title gust uses the shot's ground-projected screen-right direction, lower lift and
-sparse, thin windlines. Keep the title/camera/whale cue times and crossing propulsion unchanged.
-
+The plane is secured on the satchel from the tree sequence through boarding; player wind stays available throughout
+Still. `still_2` starts as she sets off for the boat after bandaging, from source second 8 to the 1:58 cutoff. The
+first whale's body and underwater silhouette ease in over 3.5 seconds and disappear over the last 4 seconds of the
+encounter; its surfaced portion stays fully visible. The later whale keeps its own visibility choreography. The title
+gust uses the shot's ground-projected screen-right direction, lower lift and sparse, thin windlines.
 
 ## Post-whale framing and livelier shore echoes — 2026-10-11
 
@@ -1157,57 +1092,23 @@ Jeremy's brief (verbatim):
 >
 > The lines music starts like ~2 seconds too early i.e. it starts playing even though the fog hasn't revealed the island of lines yet. Either increase the speed of the boat by like 1% or something and tone down the fog a tiny bit to get more a feeling of an expansive sea.
 
-Plan: stage six gulls and four loose pieces of linen in the same post-whale shot, with the bill-carried scrap
-as a separate detail. Give the loose cloth angular motion and uneven lift, keeping the existing cloth solver's
-folding and bill attachment. Ease the camera up and slightly back after the whale, give it a slow lateral drift,
-and return gently toward the visible shore. Open the horizon veil moderately and start Lines about two seconds
-later; keep boat propulsion fixed. Evaluate this pass before adding another dolphin encounter. Check whole boat
-and child silhouettes, simultaneous visibility of birds/cloth, actual tumbling over time, and music/reveal alignment
-in a continuous crossing. The earlier secured-plane replay measured 17.03 s to boarding and 3.95 s of silence.
-
-
-The first rendered sky pass kept the full boat in frame and opened roughly the upper half of the image to the sky.
-All six gulls crossed visibly, and the loose sheets rolled through different orientations, but their entrances
-lagged the flock. Move their staggered release earlier so several sheets and most of the gulls share the shot.
-The revised reveal already shows the Lines shore around crossing second 100.
-
-The shorter direct walk exposed an old camera assumption: the boarding shot aimed at sea level while the child
-was still uphill. Keep its target at the child's height and reserve her full silhouette alongside the boat.
-
-Native-audio replay with the revised music gate: 17.03 seconds from the walk cue to crossing, 5.89 seconds from
-Still's scheduled 1:58 endpoint to Lines. Lines begins at crossing second 98.86, about two seconds later than
-the previous gate; the rendered shore is visible around that time. Boat speed and crossing duration remain fixed.
-The secured-plane browser check confirms zero launches, live pointer gusts, no muted interval and source-second-8
-playback continuing across boarding. The first whale fade and title sweep browser replay passes.
-
+After the whale the camera eases up and slightly back with a slow lateral drift, then returns gently toward the
+visible shore (`shoreEchoes.camera`), so the gulls and sheets share the shot with the whole boat and child. Lines
+begins at about crossing second 99, as the rendered shore appears; boat propulsion stays fixed. Boarding is about 17 s
+from the walk cue.
 
 Jeremy's follow-up (verbatim):
 
 > i think the sheets flying are not organic enough. they are all in a single line evenly spaced at the same height, and i presume all moving at the same speed and direction..
 
-Replace regular releases and shared flow with per-sheet launch time, depth, altitude, pace, curved wind bearing,
-lift rhythm and tumble axis/rate. Preserve coherent prevailing wind, but let individual pieces rise, dip, linger
-and overtake each other. Verify changing projected heights and uneven gaps over a sequence, not one still.
+Each loose piece has its own release time, launch depth, lateral offset, altitude, curved bearing, breathing speed,
+lift rhythm and tumble axis and rate, under one coherent prevailing wind, so pieces rise, dip, linger and overtake
+each other (`shoreEchoes.laundry`). Verify changing projected heights and uneven gaps over a sequence, not one still.
 
-The four loose pieces now have separate irregular release times, launch depths and lateral offsets, base
-altitudes from 4–12 units, curved bearings and independently breathing speeds. Their lift, rotation axes and
-turning rhythms differ, including opposite tumble directions. Reduced backlighting lets folds read as cloth.
-The physical checks cover distinct heights/speeds/headings at 30/60/120 Hz; the browser checks also compare
-projected vertical spread and overtaking, rather than merely counting objects inside the frame.
-
-The recorded crossing replay passes: all five linen pieces enter the shot, at least four gulls and three loose
-sheets share it, and a loose sheet turns substantially while visible. Independent checks on the capture data
-confirm vertical separation and overtaking. Review clip: `/tmp/updraft-crossing-linen.mp4`; captures at
-`/tmp/updraft-first-crossing-{88,92,100}.png`. Production and QA builds pass. The clip was generated but not watched;
-these results establish automated checks and still-frame inspection, not visual approval of the motion.
-The final secured-plane replay also passes with live pointer wind and uninterrupted source playback through
-boarding. The close tracking camera added during this work caused a post-bandaging regression in Jeremy's
-playtest. Removed its bearing override, subject fitting and variable distance/height, and removed the moving
-pressed-grass patch. Jeremy's correction: "btw the boarding camera is still fucked up."
-The first rollback missed the changed departure state: boarding now starts uphill. A real replay showed the
-post-bandaging shot requesting distance 48.34 for 1.4 seconds, then reversing to 26 and aiming at sea level.
-Keep the previous 26/6.5 boarding composition and .35 pace, enter it directly after bandaging, and keep its target
-at least at the child's height until she reaches shore. Check from the bandaging sequence, not a restored boat.
+The boarding camera keeps its 26/6.5 composition and .35 pace, is entered directly after bandaging, and keeps its
+target at least at the child's height until she reaches shore: a close tracking camera here broke the post-bandaging
+shot (Jeremy: "btw the boarding camera is still fucked up."). Check it from the bandaging sequence, not a restored
+boat.
 
 ## Title, wind and crossing timing polish — 2026-10-11
 
@@ -1217,33 +1118,20 @@ Jeremy's brief (verbatim):
 > - the wind sounds are a touch too loud in the game e.g. the wind that blows on still island before the title. It draws attention away from the title, which then disappears a bit too quickly
 > - on the crossing to the lines island, the gulls should appear sooner. there's a stretch of empty space after the whale encounter that is a bit too long. The flying sheets either need to be a bit sooner as well, or a bit after. Right now, both these events are playing in the silence between when still_2 music stops and lines music starts which is a bit weird.
 
-Extend the title's full-opacity hold from 1 to 2.5 seconds, retaining its onset and three-second fades: crossing
-seconds 34–42.5. Apply `audio.windDb = -3` to the shared breeze, gust, whistle, grass-rustle and updraft audio,
-including scripted weather. This does not alter the wind simulation or the sea, rain and music mix.
-
-Keep the gull/linen sequence's start at crossing second 69, after the boat and camera turn, but shorten its
-off-screen approach from 80 to 40 units so its visible pass arrives earlier under Still's recording. Keep the
-existing individual sheet delays and flight behavior. Give the existing camera timing its own `afterFarewell`
-value of 48, preserving the prior shot exactly when the birds' start changes. Camera composition, boat
-speed, geography, fog, grass and the Lines entrance timing remain as previously set.
+`audio.windDb = -3` applies to the shared breeze, gust, whistle, grass-rustle and updraft audio, including scripted
+weather; it does not alter the wind simulation or the sea, rain and music mix. The gull and linen sequence starts at
+crossing second 69 (`shoreEchoes.afterFarewell` 48), after the boat and camera turn, with a short off-screen approach
+so its visible pass arrives under Still's recording; the camera has its own `afterFarewell`.
 
 Jeremy's follow-up (verbatim):
 
 > - with re: to the gulls and sheets, I think you've overcorrected. They are appearing out of nowhere while the camera is still panned over to the whale. A little bit of space after the whale is ok, just not as much as was before. Make sure things aren't teleporting into existence in the camera. It's ok for things to teleport in outside of the camera view though if required. I think you've picked up on this already
 > - Also, i get the feeling that still_2.ogg is not playing all the way to 1:58 seconds. something is cutting it off early?
 
-The gull group's initial bounds and each loose sheet are checked against the camera frustum at creation;
-anything intersecting it starts beyond the incoming edge with a margin, then follows the existing continuous flight.
-This adjusts only initial placement, never repositions visible objects, and preserves the camera.
+The gull group's initial bounds and each loose sheet are checked against the camera frustum at creation; anything
+intersecting it starts beyond the incoming edge with a margin, then follows its continuous flight. This adjusts only
+initial placement, never repositions visible objects, and preserves the camera.
 
-The generic arrival fade began around source 1:56 and multiplied Still's own 1:54–1:58 envelope, making its tail
-drop faster. Still's recording now reports its authored cutoff as its handoff time. Its Lines transition waits
-until that time and then enters the rest with no additional fade. Other recordings retain their normal handoffs.
-The native source still starts at 0:08 and stops at 1:58; neither the supplied asset nor the endpoint changes.
-
-Verified from the real tree checkpoint through bandaging, boarding and Lines: gulls first enter around crossing
-second 74 and loose sheets around 76, with several sheets visible before Still's fade. All six creation events
-(the flock and five cloth pieces) occur outside the frame. Inspected captures at 68, 78 and 84 seconds; no video
-was recorded. Still reaches its scheduled 1:58 endpoint without the arrival gate reducing its tail, followed by
-5.89 seconds before Lines. Boarding remains 17.03 seconds. Production/QA builds, audio and arrival checks,
-camera checks, and cloth/off-screen entry checks at multiple frame rates and aspect ratios pass.
+Still's recording reports its authored cutoff as its handoff time, so the generic arrival fade never multiplies its
+own 1:54–1:58 envelope: its Lines transition waits until that time and then enters the rest with no additional fade.
+Other recordings keep their normal handoffs. About 5.9 s of quiet separate Still's 1:58 end from Lines.

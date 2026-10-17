@@ -24,7 +24,8 @@ Jeremy's follow-up, verbatim:
 > - sleeping test fixture
 > Explain the rest to me in more detail
 
-Findings **1, 2, 3, 4, 5, 6, 7 and 9 are resolved**. Finding **8 remains open**. The descriptions preserve the
+Findings **1, 2, 3, 4, 5, 6, 7 and 9 are resolved**. Finding **8 is closed as visually accepted by Jeremy**, with
+movement and the existing test tolerance unchanged. Its numerical test failure remains recorded. The descriptions preserve the
 original evidence and line numbers; subsequent verification below supersedes the earlier browser blockage.
 
 - Title disposal releases its UI, painting, wind and callback references. The picker shares the title's abort
@@ -160,6 +161,34 @@ They do not reproduce or invalidate the isolated contact check's failing stride/
 remains open for reconciling the isolated fixture with the story walker; movement and test tolerances stay unchanged.
 Syntax and diff-whitespace checks passed. All owned test browsers and the diagnostic server were stopped after
 these runs. This follow-up changed only the music-loading test and this report; no commit or deploy was made.
+
+Jeremy's self-test request, verbatim:
+
+> speak to me as if i am a human. what are the bugs and i need you to set it up so that i can test them myself
+
+An isolated local review server now provides the failing test and the seeded game approach with replay,
+pause, slow motion and close views. Open
+`http://127.0.0.1:5274/?shot=1&chapter=roofs&ratio=1&progress=0&analytics=0&review=test`.
+The test opens paused at update 911, with a slider and “Show reported gap” button. On the current checkout
+browser runs measured 33.68 and 35.42 mm against the roof geometry, at the same root position as the earlier
+35.60 mm probe. The variation between those measurements has not been diagnosed. The UI reports its current measurement.
+“Game approach” starts before the wall climb using the story walker; “Play the village yourself” removes the
+review controls and starts at the village roof checkpoint. Neither reads or writes the player's save.
+
+The setup lives in `/tmp/updraft-contact-playtest-ak5E5A/`; restart with
+`node /tmp/updraft-contact-playtest-ak5E5A/server.mjs`. It uses an isolated Vite cache, disables environment-file
+loading and HMR, and adds its controls/render access only through that server. Production source is unchanged.
+Browser checks reproduced the measurement, stepped/replayed the reported moment, exercised play/pause, and
+advanced the game approach onto the roof. Captures are `reported-gap.png`, `game-approach.png` and `game-roof.png`
+in the same directory. Finding 8 stays open: the isolated failure is reproducible, but its occurrence in ordinary
+play is still unconfirmed. The server is deliberately left running for Jeremy.
+
+Jeremy's response to the self-test setup, verbatim:
+
+> ok it's fine
+
+Finding 8 is accepted without a movement change. This closes the requested visual review; it does not turn the
+existing numerical contact check into a pass. No test assertion or tolerance was changed.
 
 ### 1. P2 — Release the title's painting tree when play starts
 

@@ -4,28 +4,17 @@
 
 The whole journey is built and plays end to end, from the still island to the red door and the closing line, and it is
 live at https://updraft.jeremyvun.com. The work now is polish before a wider release: Jeremy playtests, lists what
-he finds, and each item is fixed and surgically verified. Sharing plans and the proposed Steam release are in
+he finds, and each item is fixed and surgically verified. A defect needs reproducible evidence from actual play in
+motion, not a sampled still: Jeremy ruled the paper plane and the grass fine as they are. Sharing plans and the proposed Steam release are in
 `docs/launch.md` (local only).
 
 ## In progress
 
-- **Meadow musical journey** ([backlog/meadow-echoes/design.md](backlog/meadow-echoes/design.md)): rolling hills,
-  flower and seed play, and a wind-bough/piano duet foundation merged onto `main` on 2026-10-14. Jeremy's
-  recorded phrases and final musical synchronisation remain to be integrated.
-
-- **The stairs in the clouds** ([stairs.md](stairs.md)): the sail over the cloud and the way down into the mist are
-  being redone to Jeremy's 09-28 notes (a view of the whole cloud sea and a less straight course, clouds that don't
-  read as snow, no boat popping in as the camera breaks through, the boat nearer the jetty, no cloud changing state
-  as it comes into range, no player wind needed while the pair enjoy the ride). The chapter select already has its
-  still and the name "Cloud stairs".
 - **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a
   second while the game boots (`start-check` fails). Compilation scheduling, staged construction and the progress
   line are implemented; the original phase 4, physical-device verification and 500 ms smoothness target remain open.
 - **More to do on the path** ([backlog/path-puzzles](backlog/path-puzzles/)): puzzles on the main path so players
   don't feel there is not enough to do. Choosing ideas room by room.
-- **Chapter select without a reload** ([backlog/chapter-select-in-place](backlog/chapter-select-in-place/)): a pick
-  starts the room at once, with sound, instead of reloading to the veil. The start path and its gates are built;
-  the remaining painting work and final review are tracked in the backlog plan.
 
 ## Open
 
@@ -38,6 +27,7 @@ For Jeremy's eye, ear or hands:
   sea before the stairs song, and the stairs song's ending at a phrase end below the white (`birchesSailFade`,
   `stairsSongRest`, `stairsSongEndFade`; [contracts/audio.md](contracts/audio.md)). The island grew and gained a squirrel, heaps
   and loose leaves; its cost is for his profiling session.
+- The stairs: the sail's air over the cloud, heard in the game ([stairs.md](stairs.md)).
 - A playthrough on the iPad for performance: smoothness on Auto, heat and battery. It also settles whether the
   child's bone texture moves before the frame's passes ([engine.md](engine.md), Open).
 
@@ -62,35 +52,6 @@ Engineering, not scheduled:
 - The main chunk carries a bundle-size warning.
 - No graphics-memory budget for older iPads (grass tables about 28 MiB, static atlases about 26 MiB).
 - Startup and audio wiring could move out of `main.ts` in small steps.
-
-## Visual polish review — 2026-10-01
-
-Jeremy's brief:
-
-> "have a look at the game and see if you can see anything we can make better. For one, i noticed that on the stairs chapter, the secont step from the top for the flights that the player moves has some kind of z level collision, causing flashing of the textures"
-
-He clarified: "Vertical front of the step".
-
-The first pass sampled chapter entrances rather than reviewing complete interactions. Jeremy rejected the
-paper-plane and grass criticisms: "do you see them as being an issue? I don't...?" Leave both as they are;
-neither still demonstrated a problem. The review now follows actual play in motion and requires reproducible
-evidence before calling something a defect. Preserve the journey's readable companions and uninterrupted
-atmosphere (`journey.md`). The stairs' landing-mist intersection is covered by the focused fix (`stairs.md`).
-
-The continuous replay also exposed a camera reversal at the piano's final answer: the third response's wide
-view reset to the close playing view before widening again. The handoff now starts at the already earned view;
-`piano-frame-check` covers the fourth answer and the start of the final reveal, not just subjects staying in frame.
-The corrected desktop replay passed four real sweeps, idle non-completion, colour rewards and departure;
-chronological frames confirm that the finale widens from the third response without pulling inward first.
-The focused camera regression also passes in landscape and portrait; typecheck and the production build pass.
-
-The desktop review followed real pointer gestures through every chapter, with video, chronological frames and
-camera traces. The first recording's browser closed during the drowned village; Continue resumed its saved
-checkpoint and completed the remaining journey, the closing screen, completed-save reload and Play again with
-no reported game errors. All three movable stair flights docked and all four mirror stars returned. This is
-coverage across two runs, not one uninterrupted pass. The driver knows puzzle targets, so it does not establish
-first-time discoverability; this pass also does not cover listening or performance on other devices.
-Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `continued`).
 
 ## Later
 

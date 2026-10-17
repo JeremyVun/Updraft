@@ -244,7 +244,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - The cygnet never flies here and is never lifted by the wind: flight belongs to the sleeping island and home.
 - Every gesture is answered: gusts move the flights, tear cloud wisps, fill the sail.
 - The pieces the player moves are dragged like the sky mirror's bubbles, from a camera placed for it.
-- Jeremy reviewed the stowed plane on 2026-10-01 and does not consider its triangular silhouette an issue; leave it.
+- Jeremy does not consider the stowed plane's triangular silhouette an issue; leave it.
 
 ## How it is built
 

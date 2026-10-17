@@ -102,11 +102,13 @@ Earlier catch remains free. Gesture motifs end with the rescue;
 earlier island motif starts are at least 4.5 seconds apart. Jeremy's verbatim brief and reversible controls are in
 [the audio contract](contracts/audio.md).
 The lowercase "updraft" title fades in after the look back, holds, and is gone before the whale (currently seconds
-34–41 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers with sparse windlines at 31–37 seconds. Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
-Still and its departure route now lie 200 units farther south. The ordinary crossing takes about 117 seconds,
-giving roughly 33 extra seconds after the later whale, at the same boat speed. This remains a listening experiment.
-After the whale, the camera eases upward and back for six gulls, a bill-carried linen scrap and four loose sheets
-that roll and fold on the wind. Lines begins around crossing second 99 as the shore emerges through a broader
+34–42.5 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers with sparse windlines at 31–37 seconds. Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
+Still and its departure route lie 200 units farther south, so the ordinary crossing takes about 117 seconds at the
+same boat speed. This remains a listening experiment.
+After the whale, the camera eases upward and back for ten gulls, a bill-carried linen scrap and eight loose sheets
+that roll and fold on the wind, launched in waves over 28 seconds (`tuning.opening.shoreEchoes`). Most are pale
+linen; three are muted mauve, dusty rose and taupe, because bright red, blue and yellow belong to the family's line
+beyond the door. Lines begins around crossing second 99 as the shore emerges through a broader
 horizon veil. The Still recording finishes about six seconds earlier.
 
 `toLines`. The curve round the restored island: the camera looks back at it for the farewell (21 s) and turns
@@ -117,19 +119,17 @@ and through the whale’s dive. A broad horizon veil hides all distant scenery e
 Lines emerges shoreline first as the boat approaches; no island-shaped fog bank marks its location.
 The ordinary distance haze remains (`linesCrossingHaze`, `linesHazeFrom`, `linesHazeTo`). About 117 s.
 Lines' recording uses a twelve-second approach lead adjustment. The first whale’s dive sends out the shared physical
-swell. From crossing second 69, two gulls pass, one carrying linen, followed by two loose handkerchiefs; a sparse
-cry accompanies their closest pass. The loose cloth and bill-held corner use the existing cloth solver.
- This supersedes the earlier shorter crossing to give the new recording
-and whale encounter more room. It holds leaving the cove, the island receding, the farewell and the whale.
+swell. The procession begins at crossing second 69; a sparse cry accompanies the gulls' closest pass. The loose cloth and bill-held corner use the existing cloth solver.
+The length gives the recording and the whale encounter room: leaving the cove, the island receding, the farewell
+and the whale.
 
 ## The island of lines
 
 `story/lines.ts`, `world/lines.ts` (washing and cloth), `world/lines-layout.ts`, `world/lines-passage.ts` (the
 curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/shore-pulley.ts`
 (the pinwheel and pulley line on that shore), `world/kite.ts`, `world/pinwheels.ts`. `?chapter=washing`; `?chapter=door`
-starts at the family's line, `?chapter=shore` just through the door. The rotary prototype adds
-`world/lines-rotary.ts` and `world/rotary-washing.ts`; `?chapter=rotary` starts at it.
-Its brief and visual decisions are in [the design](backlog/lines-rotary/design.md).
+starts at the family's line, `?chapter=shore` just through the door. The rotary washing lines are
+`world/lines-rotary.ts` (mechanics) and `world/rotary-washing.ts` (cloth); `?chapter=rotary` starts at them.
 
 The first impossible fragment of home: somebody's washing with nobody there, and a child lost in it. Jeremy:
 **overwhelmed, not vast**. Density is the lever, not area: a low whaleback (`tuning.world.linesDome`) packed with
@@ -161,18 +161,40 @@ cygnet goes first and looks back for the child, through the way the fallen cloth
 chosen once the sheet has been down `passAfter`), and the child follows. Crossing arrivals stay earned if a gust
 moves the waiting bird; reaching the gap counts even if the bird has already cleared its own walking target.
 
-Between the second and third curtains stand two giant rotaries. Their placement is being revised against the
-original organic washing field; the rectangular enclosures were rejected. Both start spread. The farther one's trailing sheet is hooked over a neighbouring
-post: turning pulls it taut, and a local updraft lifts the hem free. Broad sweeps then align the bare halves of both
-frames with the path. Each catches independently; neither runs back. The child and cygnet wait outside their swept
-circles until both have settled, then walk through together.
+Between the second and third curtains stand two giant rotary washing lines, staggered in depth (near green on the
+left, far blue on the right) with disjoint swept circles, both in the player view on desktop and phone. Each stands
+across the naturally legible way forward, and the surrounding washing discourages a way round by its density alone.
+Both start spread. Broad sweeps over a frame's visible linen turn it; strokes on one never turn the other. Each turns
+only one way, the shorter way to its opening, and a sweep in either direction advances it: acceleration is bounded,
+it coasts briefly, and its catch never rebounds. Aligned, its bare half agrees with the worn ground and stays open.
+Align green; the pair walk into its bare half and wait beside the mast, enclosed by its sheets but not blocked by
+them. The camera accompanies that walk and only then eases its attention toward blue, whose trailing sheet is
+hooked over an ordinary neighbouring post and holds the frame near its start. Sweeps anywhere along that post, or
+an updraft round its foot, free it after about 1.7 seconds of wind work, kept across pauses; the corner stays on
+the post under a small taut shiver, then slips free and falls back into the hanging sheet. Blue then aligns and the
+pair finish the passage. Invitations offer one next action at a time (the preferred turn on visible linen, then a
+short sweep over the caught hem), pause during input and never supply wind. Nothing opens by idling. The snagged
+sheet's anchor is set when the frame is built, since the crossing renders it before the chapter's first update.
 Their sage and dusty blue linen carries narrow cream stripes. Only the three curtain challenges wear white with
-red borders, so the two interactions read differently before the player touches them.
+red borders, so the two interactions read differently before the player touches them. Each frame gives one metal
+creak after real travel (see [audio](contracts/audio.md)).
 
-The original lane between curtains one and two is formed by loose, overlapping rows of varied washing. The later
-path turns round a bend; the family must stay hidden until curtain three has been completed. That reveal is being
-rechecked as the prototype's rejected cloth walls are removed. The northern
-terrain extends 40 m beneath more washing, keeping the final clearing inland; the arrival heights are unchanged.
+The washing is one organic funnel: a variable-width alley whose nearby lines roughly follow it with angular
+variation while farther lines turn across the wind, density rising gradually away from the walk, varied lengths,
+pole heights, sag and gaps, some short laundry hanging high across the walk, and soft noise-edged grass patches.
+The camera stays inside the washing. Never force the route with walls, rectangular bays, cropped corridors or
+custom cloth screens, and never clear broad camera reservations through the field: both were rejected, and they
+erase the lane between curtains one and two. Placement uses fractions of the whole path (`against`, `pointAt`), so
+lengthening the route shifts seeded rows; compare the look against a separate checkout of the earlier build, not a
+toggle. Worn grass is local to the mechanisms and waiting places, soft on the approaches and exits.
+
+The terrain extends 80 m north (see [world](contracts/world.md)). A rounded rise beyond the third curtain hides the
+family clearing, inland round a bend, until that curtain has opened, including while it billows and partly
+releases; the family is there throughout and never fades or spawns. The camera follows the child over the crest,
+gains height as she descends and settles on the reveal only as she reaches the clearing; it never runs ahead to
+frame the destination. Both companions stay in the framing contract while waiting and walking, since switching it
+only for walks causes abrupt corrections. The third curtain's torn sheet keeps its fold when it catches the rope,
+which collides at its real thickness.
 
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue
@@ -340,8 +362,7 @@ her knoll across the slopes that face her, and the grey hold is released only on
 round the piano's far end from the bough (`Piano.wayRound`), never through it. Competing wind
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
-In the Meadow rework ([design](backlog/meadow-echoes/design.md)), the piano stands on a nearby rounded knoll
-beyond the preserved shore bank. Its camera opens across the rolling hollow as colour returns. The child then
+The piano stands on a nearby rounded knoll beyond the shore bank. Its camera opens across the rolling hollow as colour returns. The child then
 sets the cygnet down beside a low bed of flowers asleep in the grass: short, bowed and closed into buds. Where an
 ordinary sweep passes over them on screen they rise, lift their heads and open wide, and the camera looks down on the
 bed from close behind her so each sweep's track shows across it and the woken part spreads; about two passes wake a
@@ -404,6 +425,19 @@ Rulings:
   belongs to the sleeping island.
 - The pond is far from the piano and the family leaves over falling ground and open water, never through a hill.
 - The pond's encounter plays no reward chime.
+- Keep the landing beach, the climb up the grey shore bank and their camera shots ("I like the opening sequence and
+  camera shots where the child walks up the grey shore bank. Please try to preserve that part"). The piano stays on its
+  knoll close to the entry, raised and steep on the hollow side so the colour pours down off her hill.
+- The bough is a hollow wooden bough, large enough to read beside the child and piano, never a literal flute ("a flute
+  is too small").
+- The duet camera widens a little up and out with each completed answer and never climbs high enough to see the whole
+  island at poor detail ("It should never get to 120 meters"). The first flower bed stays intimate: the camera may pull
+  back and climb for a steeper look, "just not as much as it has been doing". The seeds' release is held and watched
+  away, never hurried.
+- Play belongs to the landscape: low beds in the rolling hills with soft irregular edges, no giant flower props, bells
+  that read as lamp posts, receiver sockets, delivery stations or rectangular corridors. Design it from the player
+  camera: the first bed is seen as one dense field, so progress shows in the bed itself as it wakes, never in hidden
+  clusters ("they dont see three clumps of flowers at all").
 - Walls: field boundaries are painted as dry-stone lines, and every one that crosses the route has a gateway
   exactly where the path goes (`GATE`, `WIDE_GATE` in `fields.ts`); see the standing rule in `docs/journey.md`.
 
@@ -444,8 +478,13 @@ After landing, the child looks up the ride, steps aside and sets the cygnet down
 plays on its own (`birches-play.ts`): hops to a heap, chases gusts, dives in and rummages (`delve`), shakes, and
 follows when the child moves on. It never flies here; it is gathered up at the boat.
 
-**The squirrel.** A red squirrel lives in the birches (`creatures/squirrel.ts`), drawn 3× life size so it reads beside
-the cygnet, and the child and the cygnet play hide-and-seek with it all the way over the island, finding it the only
+**The squirrel.** A red squirrel lives in the birches (`creatures/squirrel.ts`), drawn 3.6× life size
+(`tuning.squirrel.scale`) so it reads beside the cygnet: rust-red with a cream belly, autumn ear tufts and its tail
+carried in an S, an acorn in its mouth as it runs and in its paws as it sits, painted in the room's own light and never
+a toy. It leads, as the drowned village's cat does: it runs on ahead and waits where the next stop is, is never needed
+off-screen and is never seen to jump. The lens singles it out only by focus (the depth blur's `alsoSharp`) and
+low-weight glances (at the meeting, its find, its run on to the next stop, its startle under the second tangle's coils
+and the goodbye), never a pan and never on a tell. The child and the cygnet play hide-and-seek with it all the way over the island, finding it the only
 way the player can do anything: by blowing the heaps apart. Three rounds, of one, two and three heaps, sit between the
 tangles, so the walk alternates between a precise gesture (a tangle) and loose, joyful gusting (a heap). Rounds gate
 the walk as tangles do: the walk's next target is the next pending stop, tangle or round.
@@ -489,6 +528,13 @@ the walk as tangles do: the walk's next target is the next pending stop, tangle 
   (`seeOffMost`, 7 s, at most), about 5.5 s after the loop is free. The lens stays in the tangle's frame and never
   follows it; the depth blur keeps it sharp. Out of her sight its dive barely stirs the leaves (`splash`), so no spray
   far up the ride marks the heap. Before round 3 it waits in plain view instead (the shuffle).
+- **Round 3, the shuffle** (`BirchesSquirrel.plan`, `tuning.birches.squirrel.shuffle*`). Its three heaps stand on an arc
+  in front of her, side by side across both orientations' frames, close enough that portrait holds all three (Jeremy:
+  "roughly presented infront of her", not a line leading away). It sits up between two of them, chatters a dare and
+  dives into one in plain view, then moves heap to heap to a neighbour three or four times, quickening and sometimes
+  doubling back; the last one or two moves go under the leaves as a hump of litter travelling between the heaps
+  (`AutumnBirches.burrow`). She and the cygnet follow every move; every heap, the squirrel or its hump and the whole
+  child stay in frame throughout, and the heaps hold until it settles.
 - **The leap.** After round 3 the cygnet dives into the deepest leaves left in the hollow that the lens shows, and the
   child takes a run and jumps in after it, landing on her seat in an explosion of backlit gold; she sits a moment and
   gets up. If the hollow has been blown bare she runs on through it toward the sun, kicking up what is left. From here
@@ -541,7 +587,12 @@ e.g. if both become 40 seconds or whatever".
 
 Rules: the squirrel hides, not the cygnet, so the dark wood's hiding-and-finding stays unspent. Nothing is lost or
 failed, and no timer finds it. The child looks at the heaps and the squirrel, never at the camera. The child, the
-cygnet and the squirrel stay whole and readable in every round frame, portrait and landscape.
+cygnet and the squirrel stay whole and readable in every round frame, portrait and landscape. Three rounds, never
+more: past three a seek game becomes a chore. Hides follow the live leaves rather than heaps the wind cannot touch,
+because every gust must do to the floor what it looks like it does. The island grows only by opening gaps between its
+bands, never by scaling (the tangles, the swing and the scarf's wraps are tuned shapes), and never by side glades off
+the ride: the low lens under the canopy looks through trunks at them. A round heap never stands under the scarf's
+wool or in a tangle's sightline, and grown trees keep off each round's views (`ROUND_VIEWS`).
 
 Knobs: `tuning.birches` (`squirrel` the game, `strokeReach`, the heaps' `heap*`, `bury*` and `burst*`, `scarf`),
 `tuning.squirrel` (the creature: scale and pace). Checks: `tools/squirrel-rounds-check.mjs` (real strokes and circles:
@@ -549,15 +600,13 @@ Knobs: `tuning.birches` (`squirrel` the game, `strokeReach`, the heaps' `heap*`,
 `leap`, `bare`, `resume`, `frames`; dev server), `squirrel-check.mjs` (poses,
 close stills, the room at round distance, motion contact and clips), `scarf-check.mjs` (`PHYSICS=1`, `NATURAL=1`),
 `scarf-geometry-check.mjs`, `scarf-exact-check.mjs`, `birches-drift-check.mjs`, `birches-foley-check.mjs`. On the QA
-stage, `play('squirrel:<action>')` (`story/squirrel-yard.ts`). Design record and Jeremy's brief:
-[backlog/birches-uplift](backlog/birches-uplift/design.md).
+stage, `play('squirrel:<action>')` (`story/squirrel-yard.ts`).
 
 ## The stairs in the clouds
 
 Between the birches and the drowned village: `toStairs` is about 45 s east over open sea, ending under a low cloud
 deck at a small grassy island (`STAIRS_ISLE`). Everything about the room, including Jeremy's brief and the open work,
-is in `docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: Jeremy wants the sail over the cloud fixed
-first, and it needs a still and a name.
+is in `docs/stairs.md`. `?chapter=stairs`; "Cloud stairs" in the chapter select.
 
 ## The drowned village
 
@@ -896,7 +945,7 @@ the child's face, as if she is about to blow through it.
 
 Rules: no timers, hidden percentages, constellation matching, raised causeway or sand road.
 
-Camera correction, 2026-10-10. Jeremy's brief:
+Camera. Jeremy's brief:
 
 > "I think something has regressed with the camera dollying on the sky mirror chapter. can you check? for example, when i updraft the second star up and it goes into the sky, the camera never pans up far enough to see the first star. There also seems to be some weird overly done zoom outs"
 >
@@ -917,7 +966,7 @@ its stars brighten over three seconds and then breathe, each slowly and a little
 finished constellation looks alive (`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror
 chapter, it'd be cool if they shined a bit brighter and started pulsing like they were more alive."
 
-Departure correction, 2026-10-10. Jeremy's brief:
+Departure. Jeremy's brief:
 
 > "One other bug with the sky mirror chapter i need fixed - when they sail off in the boat, it should follow the lighted up path. Right now, the boat sort of sails at an angle from the lighted path - to someone with ocd it is very annoying. I'd also like you to have a think about whether we can make that lighted path look a bit better. Right now it looks like some random wiggly lines."
 
