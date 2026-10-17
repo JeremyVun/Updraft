@@ -101,8 +101,10 @@ try {
     const { LITTLE_BOATS } = await import('/src/world/little-boats-layout.ts');
     const { SKY_MIRROR } = await import('/src/world/sky-mirror-layout.ts');
     const { followWindow } = await import('/src/world/window.ts');
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const rise = birchesAt(hf.BIRCH_RISE.x, hf.BIRCH_RISE.z);
     const at = [[0, 0], [hf.DOOR_SHORE.x, hf.DOOR_SHORE.z], [LITTLE_BOATS.x, LITTLE_BOATS.z], [hf.BANK.x, hf.BANK.crest],
-      [hf.POND.x, hf.POND.z], [hf.BIRCH_RISE.x, hf.BIRCH_RISE.z], [hf.SLEEP_HILL.x, hf.SLEEP_HILL.z],
+      [hf.POND.x, hf.POND.z], [rise.x, rise.z], [hf.SLEEP_HILL.x, hf.SLEEP_HILL.z],
       [SKY_MIRROR.x, SKY_MIRROR.z], [hf.COTTAGE.x, hf.COTTAGE.z], [hf.LAST_HILL.x, hf.LAST_HILL.z], [-1234, -2987], [905, 640]];
     for (const [x, z] of at) followWindow(x, z, true);
     const child = __game.child.position;

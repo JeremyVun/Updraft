@@ -16,6 +16,26 @@ const {tuning}=await import('../src/tuning.ts');
 const origin=new THREE.Vector3(-3000,2,-3000);
 const shot=()=>({target:origin.clone(),distance:20,height:5,from:new THREE.Vector3(0,0,1)});
 const samples=[];
+for (const fps of [30, 60, 120]) for (const carried of [true, false]) {
+  const r = new CameraRig(), s = shot();
+  s.target.y = 52;
+  s.eye = s.target.clone().add(new THREE.Vector3(7, 3.4, 12));
+  r.cut(s);
+  for (let i = 1; i <= fps; i++) {
+    s.eye.x += 3 / fps; s.target.x += 3 / fps;
+    r.update(1 / fps, i / fps, s, 0.5);
+  }
+  const transform = new THREE.Matrix4().makeRotationY(-0.905);
+  const moved = s.target.clone().applyMatrix4(transform);
+  transform.setPosition(-3100 - moved.x, -34.3, -3100 - moved.z);
+  const expected = r.camera.position.clone().applyMatrix4(transform);
+  s.eye.applyMatrix4(transform); s.target.applyMatrix4(transform);
+  if (carried) r.relocate(s, transform, 1);
+  else r.cut(s);
+  r.update(1 / fps, 1, s, 0.5);
+  const gap = r.camera.position.distanceTo(expected);
+  assert(carried ? gap < 0.01 : gap > 0.1, `hidden relocation at ${fps} Hz, carried=${carried}: ${gap}`);
+}
 // Attention and staged changes build speed in every axis, even when a beat requests a fast response.
 // Sample at several frame rates: the same static destination should trace the same continuous motion.
 const reframes=[];
@@ -200,7 +220,8 @@ for(const fps of [30,60,120]) for(const radius of [0,.6]){
 }
 // Amortized CPU cost of attention and candidate evaluation, including the twice-a-second terrain samples.
 const costs=[];
-for(const [name,at] of [['sea',[-3000,2,-3000]],['meadow',[5,20,-780]],['birches',[-15,8,-1090]],['wood',[-20,4,-1750]]]) {
+const {birchesAt}=await import('../src/world/birches-layout.ts'),birches=birchesAt(-15,-1090);
+for(const [name,at] of [['sea',[-3000,2,-3000]],['meadow',[5,20,-780]],['birches',[birches.x,8,birches.z]],['wood',[-20,4,-1750]]]) {
   const timings=[],reviewCosts=[],anchor=new THREE.Vector3(...at);
   for(let run=0;run<5;run++) {
     const d=new CameraDirection(),s=shot(),eye=new THREE.Vector3(),look=new THREE.Vector3(),camera=new THREE.PerspectiveCamera(62,.46,.5,7000);

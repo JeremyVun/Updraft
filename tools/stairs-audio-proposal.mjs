@@ -25,8 +25,8 @@ const T = {
 const CLOUDS_FROM = T.clear + .5, CLOUDS_END = CLOUDS_FROM + 208.3;
 
 const SEGMENTS = [
-  ['Under the cloud: the puzzle, the birches recording playing its pass out, flights knocking home', 0, T.hesitate],
-  ['At the edge: the child stops, the bird goes up first; the birches stop within a second', T.hesitate, T.follow],
+  ['Under the cloud: the puzzle, the stairs song, flights knocking home', 0, T.hesitate],
+  ['At the edge: the child stops, the bird goes up first; the stairs song fades over 3 s', T.hesitate, T.follow],
   ['In the white, lower half', T.follow, (T.follow + T.emerge) / 2],
   ['In the white, upper half', (T.follow + T.emerge) / 2, T.emerge],
   ['Out on top: the last gust, the cloud wind dying, the high air', T.emerge, T.clear],
@@ -98,7 +98,7 @@ async function render(page, musicOnly) {
         if (verb && !verb.buffer && sound.reverbConvolver.buffer) verb.buffer = sound.reverbConvolver.buffer;
         sound.update(step, { ...baseState, ...wind, charge: 0, overLand: onFoot && t < T.follow, breeze: .35,
           life: 1, night: 0, sea: 1, meadow: 0, land: onFoot ? 1 : 0, cold: 0, shower: 0,
-          music: down ? 'drowned' : 'birches', birchesScore: down ? undefined : 'return',
+          music: down ? 'drowned' : 'birches', stairsSong: !down,
           drownedScore: down ? 'drift' : undefined, hush: down ? .3 : .35,
           arrivalMusic: air.phase === 'fog' || down ? 'drowned' : undefined,
           stairsAir: down ? undefined : { ...air },
@@ -142,7 +142,7 @@ async function render(page, musicOnly) {
       }
       window.__stairsPcm = new Uint8Array(pcm.buffer);
       // Twenty seconds after the room, nothing of it should still be running.
-      const leftover = { stairsSound: !!sound.stairsSound, cloudsScore: !!sound.cloudsScore, birchesScore: !!sound.birchesScore };
+      const leftover = { stairsSound: !!sound.stairsSound, cloudsScore: !!sound.cloudsScore, stairsScore: !!sound.stairsScore };
       return { windows, clipped, finite, peakDbFS: 20 * Math.log10(peak), stages, cues, leftover, bytes: window.__stairsPcm.length };
     } finally { Math.random = originalRandom; }
   }, { T, RATE, musicOnly });
@@ -178,10 +178,10 @@ function cueSheet(report) {
   const { arc, music } = report.renders;
   const stage = name => music.stages.find(s => s.stage === name)?.t;
   const rows = [
-    [0, 'Under the cloud. The birches\' closing phrase (approved) carries on; the player pushes the loose flights (gusts).'],
+    [0, 'Under the cloud. The stairs song (birches.ogg) from its top; the player pushes the loose flights (gusts).'],
     ...T.knocks.map((t, i) => [t, `Flight ${i + 1} knocks home: a soft wooden tok, a smaller tk as it settles, a puff of cloud.`]),
     [T.third, 'Flight 3 knocks home, with the shared completion phrase (`restored`, unchanged).'],
-    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The birches recording, if it is still playing, stops over about a second; the wind in the cloud is heard faintly from above.'],
+    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The stairs song fades over 3 s; the wind in the cloud is heard faintly from above.'],
     [T.follow, 'The child follows into the white. No music: a close, muffled wind that buffets, and a moan that rises with the climb.'],
     [(T.follow + T.emerge) / 2, 'Halfway up: the buffets come quicker and harder, the moan climbs, the sea has gone.'],
     [T.emerge, 'Out on top. The last of the wind sweeps past and away as clouds.ogg begins at half its level, reaching full in under two seconds.'],
@@ -251,9 +251,9 @@ try {
   const arc = report.renders.arc, music = report.renders.music;
   assert(arc.finite && music.finite, 'finite audio');
   assert.equal(arc.clipped, 0, 'no clipping in the mix');
-  // The music is silent in the white once the birches have stopped, and through the rest before the village.
+  // The music is silent in the white once the stairs song has faded, and through the rest before the village.
   const silent = (from, to) => music.windows.slice(from, to).every(w => w.rmsDbFS < -70);
-  const drained = T.hesitate + 2, climbEnd = T.emerge;
+  const drained = T.hesitate + 3.5, climbEnd = T.emerge;
   const gap = music.stages.find(s => s.stage === 'gap'), incoming = music.stages.find(s => s.stage === 'incoming');
   const audible = (from, to) => music.windows.slice(from, to).every(w => w.rmsDbFS > -70);
   report.checks = {

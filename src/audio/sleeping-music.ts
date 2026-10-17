@@ -2,8 +2,8 @@ import { PhraseClips, type Clip } from './phrase-clips';
 import { tuning } from '../tuning';
 
 /** How far Sleeping's story has come, as its recordings follow it (`SleepingChapter.sleepingMusic`). */
-export type SleepingGate = 'bedtime' | 'asleep' | 'feather' | 'mist' | 'catch' | 'summit' | 'glide';
-const GATES: readonly SleepingGate[] = ['bedtime', 'asleep', 'feather', 'mist', 'catch', 'summit', 'glide'];
+export type SleepingGate = 'bedtime' | 'asleep' | 'feather' | 'mist' | 'catch' | 'summit' | 'ribbon' | 'glide';
+const GATES: readonly SleepingGate[] = ['bedtime', 'asleep', 'feather', 'mist', 'catch', 'summit', 'ribbon', 'glide'];
 const gate = (name: SleepingGate) => GATES.indexOf(name);
 
 /**
@@ -93,9 +93,9 @@ class Recording extends PhraseClips {
  * frost waits for it (`lullabyLeft`); falling asleep early in it ends it at its next seam. The climb's parts each begin
  * as their gate is reached and never overlap, are never cut or faded early but for the climb theme, which the fog ends
  * at its next seam, or over a slow fade when none is near: a part reached while another sounds starts as that one ends,
- * the latest reached playing instead of any passed over. The curtains opening start the morning at once, and the climb
- * part still sounding gives way to it the way the fog takes the theme. A save or a late start plays nothing until the
- * next gate, but for bedtime and the freed feather.
+ * the latest reached playing instead of any passed over. The bandage coming free lets the climb go the same way,
+ * and nothing plays until the curtains open and start the morning at once. A save or a late start plays nothing until
+ * the next gate, but for bedtime and the freed feather.
  */
 export class SleepingMusic {
   private readonly lullabyBus: GainNode;
@@ -114,6 +114,10 @@ export class SleepingMusic {
   /** When the lullaby falls silent on the audio clock; −Infinity until it sounds. */
   private lullabyEnds = -Infinity;
   private asleepSeen = false;
+  /** When the bird reached the top on the audio clock. */
+  private summitAt = -Infinity;
+  /** The latest climb ending applied: the bandage freed, then the curtains. */
+  private letGo = -1;
   /** The latest gate reached, and the latest part played or passed over. */
   private heard = -1;
   private placed = -1;
@@ -173,6 +177,7 @@ export class SleepingMusic {
       this.braveBus.gain.setTargetAtTime(braveLevel, now, .25);
       this.morningBus.gain.setTargetAtTime(morningLevel, now, .25);
     }
+    if (index >= gate('summit') && this.heard < gate('summit')) this.summitAt = now;
     this.heard = Math.max(this.heard, index);
     this.bedtime(now);
     this.climb(now);
@@ -218,7 +223,8 @@ export class SleepingMusic {
     if (!brave?.decoded) return;
     if (this.queued && now >= this.queued.at) { this.sounding = this.queued; this.queued = null; }
     const sounding = this.sounding && now < this.sounding.end ? this.sounding : null;
-    if (this.heard >= gate('glide') && this.placed < BRAVE_PARTS.length) this.giveWay(brave, sounding, now);
+    const ending = this.heard >= gate('glide') ? gate('glide') : this.heard >= gate('ribbon') ? gate('ribbon') : -1;
+    if (ending > this.letGo) { this.letGo = ending; this.giveWay(brave, sounding, now, ending === gate('glide')); }
     if (sounding?.part === 0 && !sounding.cut && this.heard >= gate('mist')) {
       const { mirrorSeamSoonest, mirrorSeamRelease, fogSeamWithin, fogFade } = tuning.audio;
       const position = now - sounding.at;
@@ -248,11 +254,13 @@ export class SleepingMusic {
       return;
     }
     if (sounding && now < sounding.end - PLACE_AHEAD) return;
-    const [from, to] = BRAVE_PARTS[next];
-    const at = sounding ? Math.max(now, sounding.end) : now;
+    const [from, to, reached] = BRAVE_PARTS[next];
     const held = !!sounding && !sounding.cut && BRAVE_PARTS[sounding.part][1] === from && now < sounding.end - END_FADE;
+    // Begun on its own, the summit part lets the arrival at the top settle and rises in.
+    const settles = reached === 'summit' && !held;
+    const at = Math.max(sounding ? Math.max(now, sounding.end) : now, settles ? this.summitAt + tuning.audio.summitDelay : now);
     if (held) brave.holdThrough(sounding.clip, sounding.end);
-    const clip = brave.excerpt(from, to, at, held ? 1e-3 : .01);
+    const clip = brave.excerpt(from, to, at, held ? 1e-3 : settles ? tuning.audio.summitFadeIn : .01);
     if (!clip) return;
     this.placed = next;
     const placed = { clip, part: next, at, end: at + Math.min(to, clip.source.buffer!.duration) - from, cut: false };
@@ -261,10 +269,12 @@ export class SleepingMusic {
   }
 
   /**
-   * The curtains: the part waiting is passed over, and the one sounding ends at its next seam if one comes within
-   * `mirrorSeamRelease`, or else over `curtainsFade`. Nothing in the climb plays after.
+   * The bandage freed, and the curtains: the part waiting is passed over, and the one sounding ends at its next
+   * seam if one comes within `ribbonSeamWithin` (at least `mirrorSeamSoonest` ahead, over up to `mirrorSeamRelease`),
+   * or else over `ribbonFade`; at the curtains, within `mirrorSeamRelease`, or else over `curtainsFade`. Nothing in the
+   * climb plays after.
    */
-  private giveWay(brave: Recording, sounding: Placed | null, now: number): void {
+  private giveWay(brave: Recording, sounding: Placed | null, now: number, curtains: boolean): void {
     if (this.queued) {
       this.queued.clip.source.stop();
       if (this.queued.held && sounding) brave.fadeAtEnd(sounding.clip, sounding.end);
@@ -272,14 +282,16 @@ export class SleepingMusic {
     }
     this.placed = BRAVE_PARTS.length;
     if (!sounding || sounding.cut) return;
-    const { mirrorSeamRelease, curtainsFade } = tuning.audio;
+    const { mirrorSeamSoonest, mirrorSeamRelease, curtainsFade, ribbonSeamWithin, ribbonFade } = tuning.audio;
+    const within = curtains ? mirrorSeamRelease : ribbonSeamWithin, fade = curtains ? curtainsFade : ribbonFade;
+    const soonest = curtains ? 0 : mirrorSeamSoonest;
     const position = now - sounding.at, length = sounding.end - sounding.at, from = BRAVE_PARTS[sounding.part][0];
-    const seam = BRAVE_SEAMS.map(seam => seam - from).find(seam => seam > position && seam < length - 1e-6) ?? length;
-    const near = seam - position <= mirrorSeamRelease;
+    const seam = BRAVE_SEAMS.map(seam => seam - from).find(seam => seam > position + soonest - 1e-6 && seam < length - 1e-6) ?? length;
+    const near = seam - position <= within;
     // Its own end is near enough: it rings out there as it would have.
     if (near && seam === length) return;
-    const at = near ? sounding.at + seam : now + curtainsFade;
-    brave.endAt(sounding.clip, at, near ? at - now : curtainsFade);
+    const at = near ? sounding.at + seam : now + fade;
+    brave.endAt(sounding.clip, at, near ? Math.min(curtains ? Infinity : mirrorSeamRelease, at - now) : fade);
     sounding.clip.finishing = true;
     sounding.end = at;
     sounding.cut = true;

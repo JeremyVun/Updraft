@@ -10,10 +10,14 @@ globalThis.location = { search: '?shot' };
 const root = path.resolve(process.env.ROOT ?? fileURLToPath(new URL('..', import.meta.url)));
 const { BirchScarf } = await import(path.join(root, 'src/world/birch-scarf.ts'));
 const island = await import(path.join(root, 'src/world/island.ts'));
+// The fixture is the wood as it first grew, in the island's band-local terms; checkouts from before the island moved have no layout.
+const layout = await import(path.join(root, 'src/world/birches-layout.ts')).catch(() => null);
+const place = (x, z) => layout ? layout.birchesAt(x, z) : { x, z };
 const trees = JSON.parse(fs.readFileSync(new URL('./lib/birch-trees.json', import.meta.url), 'utf8'))
-  .map(([x, y, z, scale]) => ({ x, y, z, scale }));
+  .map(([x, y, z, scale]) => ({ ...place(x, z), y, scale }));
+const berth = place(-4, -1197), middle = place(0, -1130);
 {
-  const res = 400, size = 200, minX = -100, minZ = -1230, data = new Float32Array(res * res);
+  const res = 560, size = 280, minX = middle.x - size / 2, minZ = middle.z - size / 2, data = new Float32Array(res * res);
   for (let z = 0; z < res; z++) for (let x = 0; x < res; x++) data[z * res + x] = island.heightAt(minX + (x + .5) / res * size, minZ + (z + .5) / res * size);
   island.setHeightGrid({ data, res, size, minX, minZ, stride: 1 });
 }
@@ -36,7 +40,7 @@ let time = 0, frame = 0, mast;
 const step = (seconds, dt = 1 / 60) => {
   for (let f = 0; f < Math.round(seconds / dt); f++) {
     time += dt; frame++; wind.t = Math.floor(frame / 2) * 2 / 60;
-    if (mast) mast.set(-4 + .06 * Math.sin(time * 1.3), 3.1 + .08 * Math.sin(time * .9), -1197 + .04 * Math.sin(time * 1.1));
+    if (mast) mast.set(berth.x + .06 * Math.sin(time * 1.3), 3.1 + .08 * Math.sin(time * .9), berth.z + .04 * Math.sin(time * 1.1));
     scarf.update(dt, wind, mast);
   }
 };

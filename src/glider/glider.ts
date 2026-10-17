@@ -138,6 +138,15 @@ export class Glider {
   private carrier: Traveller | null = null;
   /** Set down by hand rather than landed from flight, it keeps the size it is carried at. */
   keptSmall = false;
+  private reception: {
+    child: Traveller; from: THREE.Vector3; tangent: THREE.Vector3; at: THREE.Vector3;
+    rotation: THREE.Quaternion; flight: THREE.Quaternion;
+    scale: number; yaw: number; duration: number; time: number;
+    phase: 'approach' | 'catch' | 'recover';
+  } | null = null;
+  private readonly gripOffset = new THREE.Vector3();
+  private readonly catchTilt = new THREE.Quaternion();
+  private catchTurn = 0;
   /** A story object resting in the world until picked up (the wet paper in the wood). */
   private restingAt: THREE.Vector3 | null = null;
   private pinned = false;
@@ -226,6 +235,7 @@ export class Glider {
   }
 
   launch(from: THREE.Vector3, velocity: THREE.Vector3): void {
+    this.cancelReturn();
     this.settlingAt = null;
     this.pinned = false;
     this.restingAt = null;
@@ -276,6 +286,7 @@ export class Glider {
   }
 
   depart(heading: THREE.Vector3, departure: Departure = HOME_DEPARTURE): void {
+    this.cancelReturn();
     this.settlingAt = null;
     this.departing = heading.clone().normalize();
     this.departure = departure;
@@ -292,6 +303,91 @@ export class Glider {
     return this.group.visible;
   }
 
+  get returning(): boolean { return this.reception !== null; }
+
+  returnTo(child: Traveller): void {
+    if (this.held || this.reception) return;
+    const k = tuning.planeCatch;
+    const direction = this.position.clone().sub(child.position).setY(0);
+    if (direction.lengthSq() < 0.01) direction.set(Math.sin(child.yaw), 0, Math.cos(child.yaw));
+    direction.normalize();
+    const at = child.position.clone().addScaledVector(direction, k.approachDistance);
+    at.add(new THREE.Vector3(direction.z, 0, -direction.x).multiplyScalar(k.hand[0]));
+    at.y = Math.max(child.position.y + k.approachHeight,
+      (this.landingGround?.(at.x, at.z) ?? heightAt(at.x, at.z)) + k.groundClearance);
+    const duration = Math.max(k.minApproachSeconds, this.position.distanceTo(at) / k.speed);
+    const tangent = this.velocity.clone().multiplyScalar(duration);
+    tangent.clampLength(0, Math.min(this.position.distanceTo(at) * 0.4, this.position.distanceTo(child.position) * 0.5));
+    const yaw = Math.atan2(direction.x, direction.z);
+    this.reception = { child, from: this.position.clone(), tangent, at,
+      rotation: this.group.quaternion.clone(),
+      flight: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw + Math.PI, 0.12, 'YXZ')),
+      scale: this.body.scale.x, yaw,
+      duration, time: 0, phase: 'approach' };
+    this.catchTurn = k.wristTurn;
+    this.settlingAt = this.restingAt = null;
+    this.companion = null;
+    this.pinned = false;
+    child.stop();
+    child.standUp();
+    child.stowPlane(false, true);
+  }
+
+  private cancelReturn(): void {
+    this.reception?.child.reachFor(0, null);
+    this.reception = null;
+    this.catchTurn = 0;
+  }
+
+  private updateReturn(dt: number): void {
+    const r = this.reception!, c = r.child, k = tuning.planeCatch;
+    r.time += dt;
+    c.faceToward(c.position.x + Math.sin(r.yaw), c.position.z + Math.cos(r.yaw), 1 - Math.exp(-dt * k.turnRate));
+    this.prev.copy(this.position);
+    if (r.phase === 'recover') {
+      this.placeHeld();
+      if (r.time >= k.recoverSeconds) this.reception = null;
+      return;
+    }
+    const u = Math.min(1, r.time / r.duration), ease = u * u * (3 - 2 * u);
+    if (r.phase === 'approach') {
+      this.position.lerpVectors(r.from, r.at, ease).addScaledVector(r.tangent, u * (1 - u) ** 2);
+      const ground = this.landingGround?.(this.position.x, this.position.z) ?? heightAt(this.position.x, this.position.z);
+      this.position.y = Math.max(this.position.y, ground + k.groundClearance);
+      this.body.scale.setScalar(THREE.MathUtils.lerp(r.scale, tuning.paperCarry.scale, ease));
+      this.group.quaternion.copy(r.rotation).slerp(r.flight, ease);
+      if (u >= k.reachAt) c.reachLocal(0, this.scratch.fromArray(k.hand));
+    } else {
+      // Contact uses this frame's posed mitten, after the child has moved.
+      c.planeQuaternion(this.heldRotation);
+      this.heldRotation.premultiply(this.catchTilt.setFromAxisAngle(this.gripOffset.set(0, 1, 0), k.wristTurn));
+      c.handPosition(this.scratch);
+      this.scratch.sub(this.gripOffset.copy(PAPER_GRIP).multiplyScalar(this.body.scale.x).applyQuaternion(this.heldRotation));
+      this.position.lerpVectors(r.from, this.scratch, ease);
+      this.group.quaternion.copy(r.rotation).slerp(this.heldRotation, THREE.MathUtils.smoothstep(u, 0, k.levelAt));
+    }
+    this.velocity.subVectors(this.position, this.prev).divideScalar(Math.max(dt, 1e-6));
+    this.airborne = true;
+    this.restTime = 0;
+    this.lift = 0;
+    this.group.position.copy(this.position);
+    this.group.updateMatrixWorld(true);
+    this.shadowMat.uniforms.uOpacity.value = 0;
+    this.trails.update([]);
+    if (u < 1) return;
+    r.time = 0;
+    if (r.phase === 'approach') {
+      r.phase = 'catch';
+      r.from.copy(this.position);
+      r.rotation.copy(this.group.quaternion);
+      r.duration = k.catchSeconds;
+    } else {
+      r.phase = 'recover';
+      this.hold(c);
+      c.reachFor(0, null);
+    }
+  }
+
   set visible(on: boolean) {
     this.group.visible = on;
     this.trails.mesh.visible = on;
@@ -299,6 +395,7 @@ export class Glider {
 
   update(dt: number, time: number): void {
     this.clock = time;
+    if (this.reception) { this.updateReturn(dt); return; }
     const size = this.held || this.keptSmall ? tuning.paperCarry.scale : SCALE;
     this.body.scale.setScalar(THREE.MathUtils.lerp(this.body.scale.x, size, 1 - Math.exp(-dt * tuning.paperCarry.sizeRate)));
     if (this.restingAt) {
@@ -556,7 +653,7 @@ export class Glider {
    * the ground under the cursor (where the wind field is pushed) lies well behind it.
    */
   brush(camera: THREE.Camera, a: THREE.Vector2, b: THREE.Vector2, gust: number, dir: THREE.Vector2, charge: number, dt: number): void {
-    if (this.restingAt || this.settlingAt) return;
+    if (this.restingAt || this.settlingAt || this.reception) return;
     if (this.held) return;
     const s = this.scratch.copy(this.position).project(camera);
     const aspect = window.innerWidth / window.innerHeight;
@@ -585,6 +682,12 @@ export class Glider {
     if (!this.carrier) return;
     /** Sample after the child's pose, including the boat's roll and this frame's step. */
     this.carrier.planeQuaternion(this.heldRotation);
+    if (this.catchTurn) {
+      const reach = this.carrier.reached(0);
+      const turn = this.catchTurn * THREE.MathUtils.smoothstep(reach, 0, 0.15);
+      this.heldRotation.premultiply(this.catchTilt.setFromAxisAngle(this.gripOffset.set(0, 1, 0), turn));
+      if (!this.reception && reach < 0.001) this.catchTurn = 0;
+    }
     this.carrier.handPosition(this.position);
     this.position.sub(this.scratch.copy(PAPER_GRIP).multiplyScalar(this.body.scale.x).applyQuaternion(this.heldRotation));
     this.group.position.copy(this.position);

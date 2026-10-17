@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { tuning } from '../../tuning';
 import type { MaterialSound } from '../../audio/foley';
 import { RopeSwing, type SwingSpot } from './rope-swing';
 import type { CrossingCast } from './tree-crossing';
@@ -11,6 +10,8 @@ export interface SwingWay {
   /** On the far side's slope, where her feet come down. */
   landing: THREE.Vector3;
   onward?: THREE.Vector3;
+  /** Something she has to go over on the way down: the top of it where her way crosses it, and how far her feet clear it. */
+  over?: { top: THREE.Vector3; clear: number };
 }
 
 export type SwingEvent = 'creak' | 'leap' | 'land';
@@ -58,7 +59,7 @@ export class SwingCrossing {
 
   /** Once the world's own gust has taken over it keeps on until she is across: its own progress never stops it. */
   get valving(): boolean {
-    if (this.stalled > tuning.crossings.swing.valveAfter) this.valveOn = true;
+    if (this.stalled > this.swing.knobs.valveAfter) this.valveOn = true;
     return this.valveOn;
   }
 
@@ -114,7 +115,7 @@ export class SwingCrossing {
 
   /** Round to face the way it swings, a hand to the near rope as the seat is drawn in, then down onto it. */
   private board(): void {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     const c = this.cast.child;
     const s = this.swing;
     const u = THREE.MathUtils.clamp(this.t / k.boardFor, 0, 1);
@@ -149,7 +150,7 @@ export class SwingCrossing {
   }
 
   private ride(dt: number, camera: THREE.PerspectiveCamera): void {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     const c = this.cast.child;
     const s = this.swing;
     s.rider = 1;
@@ -174,7 +175,7 @@ export class SwingCrossing {
 
   /** Near the top of a forward swing, and a leap from here would reach the landing. */
   private carries(): boolean {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     const s = this.swing;
     if (s.speed <= 0 || s.peak - s.angle > k.releaseLead || s.angle < 0.2) return false;
     const seat = s.seat(this.seatNow);
@@ -184,18 +185,29 @@ export class SwingCrossing {
     const flight = (v.y + Math.sqrt(Math.max(0, v.y * v.y + 2 * g * drop))) / g;
     const forward = (this.way.landing.x - seat.x) * s.toward.x + (this.way.landing.z - seat.z) * s.toward.y;
     const reach = (v.x * s.toward.x + v.z * s.toward.y) * flight;
-    return reach >= forward + k.releaseSpare;
+    return reach >= forward + k.releaseSpare && this.clears(seat, v.y, flight, forward);
+  }
+
+  /** Her feet go over what is in the way, on the arc `Traveller.leap` will fly from here. */
+  private clears(seat: THREE.Vector3, up: number, flight: number, forward: number): boolean {
+    const over = this.way.over;
+    if (!over) return true;
+    const s = this.swing;
+    const ahead = (over.top.x - seat.x) * s.toward.x + (over.top.z - seat.z) * s.toward.y;
+    if (ahead <= 0) return seat.y >= over.top.y + over.clear;
+    const t = flight * Math.min(1, ahead / Math.max(forward, 1e-3));
+    return seat.y + up * t - 0.5 * s.knobs.leapGravity * t * t >= over.top.y + over.clear;
   }
 
   private leapVelocity(out: THREE.Vector3): THREE.Vector3 {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     const s = this.swing;
     s.velocity(out);
     return out.set(out.x + s.toward.x * k.leapForward, out.y + k.leapUp, out.z + s.toward.y * k.leapForward);
   }
 
   private letGo(): void {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     const c = this.cast.child;
     const s = this.swing;
     const v = this.leapVelocity(this.velocity);
@@ -220,7 +232,7 @@ export class SwingCrossing {
   private lookBack(): void {
     const c = this.cast.child;
     if (this.t > 0.25) c.lookAt = this.swing.seat(this.tmp);
-    if (!this.up || this.t < tuning.crossings.swing.landFor + tuning.crossings.swing.lookBack || c.busy) return;
+    if (!this.up || this.t < this.swing.knobs.landFor + this.swing.knobs.lookBack || c.busy) return;
     const onward = this.way.onward;
     this.phase = onward ? 'leaving' : 'over';
     c.lookAt = null;
@@ -229,7 +241,7 @@ export class SwingCrossing {
 
   /** The world's own gusts at the seat, pumping it as a good stroke would, until she is carried over. */
   private blow(dt: number): void {
-    const k = tuning.crossings.swing;
+    const k = this.swing.knobs;
     this.valveClock -= dt;
     if (this.valveClock > 0) return;
     this.valveClock = k.valveEvery;

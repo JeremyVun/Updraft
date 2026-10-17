@@ -193,9 +193,10 @@ export const atmo = {
     uFogBankShape: { value: new THREE.Vector4(0, 1, 1, 0) },
     /** The light of its white (rgb) and how brightly the low sun glows through it (a). */
     uFogBankLight: { value: new THREE.Vector4(1, 1, 1, 0) },
+    uFogBankFrame: { value: new THREE.Vector3(1, 0, 0) },
     /**
      * How clear the pocket round the boat is kept in it (the deck's pocket, `uCloudBubble`), 0 to 1 (x), and how far
-     * into its white the eye is, 0 to 1 (y).
+     * into its white the eye is, scaled by the bank's density (y).
      */
     uFogBankEye: { value: new THREE.Vector2() },
     /** The drowned village's sea fog: a point on its front (x, z) and the way it comes (z, w). Drawn with the deck. */
@@ -378,6 +379,7 @@ uniform vec4 uCloudBubble;
 uniform vec4 uFogBank;
 uniform vec4 uFogBankShape;
 uniform vec4 uFogBankLight;
+uniform vec3 uFogBankFrame;
 uniform vec2 uFogBankEye;
 uniform vec4 uSeaFog;
 uniform vec4 uSeaFogShape;
@@ -660,7 +662,7 @@ float cloudShadow(vec2 xz) {
     float under = 1.0 - smoothstep(uCloudDeckY.x - 2.0, uCloudDeckY.y, cameraPosition.y);
     lit *= 1.0 - 0.55 * uCloudDeck.w * under;
     // In the white of the bank of mist the sun comes through it softly, from all round.
-    lit *= 1.0 - 0.5 * uFogBankEye.y;
+    lit *= 1.0 - 0.5 * min(1.0, uFogBankEye.y);
   }
 #endif
   return lit;
@@ -784,15 +786,18 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float up = clamp((ro.y + rd.y * near - fl) / max(top - fl, 1.0), 0.0, 1.0);
   float billow = vnoise(vec2(v0 + dv * near, u0 + du * near) * 0.11 + (ro.y + rd.y * near - fl) * 0.07) * 0.5
     + vnoise(vec2(v0 + dv * deeper + uTime * 0.6, u0 + du * deeper) * 0.05) * 0.5;
-  float toward = max(0.0, dot(rd, uSunDir));
+  vec3 litRay = vec3(rd.x * uFogBankFrame.x - rd.z * uFogBankFrame.y, rd.y,
+    rd.z * uFogBankFrame.x + rd.x * uFogBankFrame.y);
+  float toward = max(0.0, dot(litRay, uSunDir));
   // Seen from outside, its face is in its own shade, the low sun being beyond it, and lighter toward its top.
   vec3 face = uFogBankLight.rgb * vec3(0.52, 0.5, 0.5) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
     + uSunColor * uFogBankLight.a * pow(toward, 3.0) * 0.06;
   // From inside it is white all round, and lighter toward the sun; long wisps of it stream past level as the boat
   // goes, nearer ones faster than those further off.
   vec2 wisp = vec2(u0, v0) + vec2(du, dv) * 8.0, further = vec2(u0, v0) + vec2(du, dv) * 20.0;
-  float streaming = smoothstep(0.3, 0.8, vnoise(vec2(wisp.x * 0.1, wisp.y * 0.55 + (ro.y + rd.y * 8.0) * 0.7)) * 0.55
-    + vnoise(vec2(further.x * 0.05, further.y * 0.25 + (ro.y + rd.y * 20.0) * 0.3) + 5.3) * 0.45);
+  float textureY = ro.y + uFogBankFrame.z;
+  float streaming = smoothstep(0.3, 0.8, vnoise(vec2(wisp.x * 0.1, wisp.y * 0.55 + (textureY + rd.y * 8.0) * 0.7)) * 0.55
+    + vnoise(vec2(further.x * 0.05, further.y * 0.25 + (textureY + rd.y * 20.0) * 0.3) + 5.3) * 0.45);
   vec3 white = uFogBankLight.rgb * (0.72 + 0.5 * streaming) * mix(0.8, 1.0, smoothstep(0.3, 1.0, toward));
   float inside = uFogBankEye.y / max(uFogBankShape.w, 1e-3);
   vec3 light = mix(face, white, inside);

@@ -106,6 +106,11 @@ frame (default 1). The glider's wake also writes when it skims low.
   chapter can anchor the updraft: while a chapter `invitesFlight`, `main.ts` sets `input.anchor` to the cygnet, and
   the wood (the waiting coal), the birches (the wrapped trunk) and the sky mirror (a filled bubble) do the same.
   Circles drawn within `tuning.pointer.anchorNear` screen heights of the anchor stand the column there.
+- **How far the wind lands.** A chapter's `pointerReach` brings the wind back along the cursor's ray to that distance
+  from the lens, so under a canopy a stroke at the trees cannot land on the floor far beyond them. The stroke's speed
+  is measured where the ray fell, and `input.gust`, the chimes and the cloth brushes read it there; the wind written
+  is as fast as the stroke is where it lands. The birches use the shot's distance plus `tuning.birches.strokeReach`
+  (16 m), and plus `scarf.strokeReach` (4 m) at a tangle, so circling the wool never strips the next round's heaps.
 - **Camera motion makes no wind.** Strokes project both screen endpoints through the current camera. An idle
   pointer makes no ground picks; the last gesture's gust settles at its world point. Picks march the ray 2 m at a
   time to 700 m, skipping the height lookup where the ray is above every hill or over open water clear of every

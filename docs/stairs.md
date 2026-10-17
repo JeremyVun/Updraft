@@ -166,7 +166,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## The room, beat by beat
 
-1. **Under the cloud.** A short blind hop from the birches (`toStairs`) runs the boat under a low cloud deck onto a
+1. **Under the cloud.** A three-quarter-minute sail from the birches (`toStairs`) runs the boat under a low cloud deck onto a
    small grassy island. The child sets the cygnet down; here it goes on its own feet the whole way. They look up. A
    soft toy staircase (chunky rounded steps with their blocks showing underneath, a dusty-rose runner, fat honey
    rails both sides on round balusters, big knobbed newels, rails round every landing, no house) climbs up and
@@ -285,8 +285,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **By quality level** (`CloudStairs.setLevel`, from `applyWorldQuality`): Ultra and High stream 56 wisps and march
   the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low 24 wisps and 1.5×;
   the rags left thicken a little, and a change eases over about a second.
-- **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
-  phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
+- **Order**: birches → `toStairs` (about 45 s east over open sea from the push-off; the deck comes down over the sea;
+  the birches' song plays out, a quiet stretch of sea, then the stairs song on the arrival handoff) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
   `DESCENT_END`.
 - **The cloud's colours** (`cloudShade`, `cloudGold`, `cloudGlow` in `atmosphere.ts`): every part of the cloud (its
   top, underside, towers, the white inside it, the haze, puffs and vapour, and the bank of mist through `CLOUD_GOLD`)
@@ -332,9 +332,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
   fog as the rest of the scene. Its eight-metre shape sample is only a look ahead, not a minimum visible distance;
   treating it as an entry distance left the bottom of the screen uncovered. `tools/stairs-fog-check.mjs` checks
   coverage and continuity on the GPU, including the pocket of clearer air round the boat.
-- **Sound**: `src/audio/stairs-sound.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed); the birches
-  recording, if it is still playing, stops over a second as they go up into the white, and silence holds through the
-  white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
+- **Sound**: `src/audio/stairs-sound.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed); the stairs song
+  (`birches.ogg`, "A Question, Then a Gentle Answer") comes in from its top on the sail's arrival handoff, at least
+  10 s after the birches' "The Red Door Opens" has ended, and loops under the cloud; it fades over 3 s as they go up
+  into the white (`stairsSongCloudFade`, a trial), and silence holds through the white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
   measured timeline are in `docs/contracts/audio.md`); rendered with `tools/stairs-audio-proposal.mjs`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`

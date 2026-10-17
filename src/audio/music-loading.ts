@@ -1,7 +1,8 @@
 import boatsUrl from '../../assets/music/boats.ogg?url';
 import homeUrl from '../../assets/music/home.ogg?url';
 import linesUrl from '../../assets/music/lines.ogg?url';
-import birchesUrl from '../../assets/music/birches.ogg?url';
+import birchesUrl from '../../assets/music/red_door.ogg?url';
+import stairsUrl from '../../assets/music/birches.ogg?url';
 import cloudsUrl from '../../assets/music/clouds.ogg?url';
 import mirrorUrl from '../../assets/music/mirror.ogg?url';
 import seaUrl from '../../assets/music/sea.ogg?url';
@@ -17,8 +18,8 @@ import type { SleepingGate } from './sleeping-music';
 import type { StairsPhase } from './stairs-air';
 import { tuning } from '../tuning';
 
-export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'sleeping' | 'cygnetBrave' | 'sleepingMorning' | 'lines' | 'boats' | 'still' | 'stillDeparture';
-const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, clouds: cloudsUrl,
+export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'stairs' | 'clouds' | 'villageApproach' | 'belfry' | 'sleeping' | 'cygnetBrave' | 'sleepingMorning' | 'lines' | 'boats' | 'still' | 'stillDeparture';
+const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, stairs: stairsUrl, clouds: cloudsUrl,
   villageApproach: villageApproachUrl, belfry: belfryUrl, sleeping: sleepingUrl, cygnetBrave: cygnetBraveUrl,
   sleepingMorning: sleepingMorningUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
 /** Derived endings (`recordedMusicOnce` `ending`), fetched and decoded with their recordings. */
@@ -95,9 +96,11 @@ export function musicForStart(choice: string | { chapter: string; point?: string
   if (chapter === 'island') return tuning.audio.stillPhraseExperiment ? 'still' : null;
   if (['lines', 'washing', 'door', 'shore', 'toBoats'].includes(chapter)) return 'lines';
   if (['boats', 'toMeadow'].includes(chapter)) return 'boats';
-  // Past the loop the birches' recording has stopped in the white; the top of the cloud is next.
+  // Past the loop the stairs song has faded in the white; the top of the cloud is next.
   if (['cloud', 'nest'].includes(chapter) || chapter === 'stairs' && typeof choice === 'object' && choice?.point === 'cloud') return 'clouds';
-  if (['birches', 'autumn', 'toStairs', 'stairs', 'clouds'].includes(chapter)) return 'birches';
+  if (['birches', 'autumn'].includes(chapter)) return 'birches';
+  // The birches' recording never begins once they have sailed: a crossing start is quiet until the stairs song.
+  if (['stairs', 'clouds'].includes(chapter)) return 'stairs';
   // The village's start has its approach; a storm save is past the bells, so the belfry's goodbye plays on load.
   if (['drowned', 'village'].includes(chapter) && (typeof choice !== 'object' || !choice?.point)) return 'villageApproach';
   if (chapter === 'storm' || chapter === 'drowned' && typeof choice === 'object' && choice?.point === 'storm') return 'belfry';
@@ -122,13 +125,14 @@ export function nextMusicForChapter(chapter: string, stairs?: StairsPhase, sleep
   if (chapter === 'toLines') return 'lines';
   if (chapter === 'lines' || chapter === 'toBoats') return 'boats';
   if (chapter === 'meadow' || chapter === 'toBirches') return 'birches';
+  if (chapter === 'birches' || chapter === 'toStairs') return 'stairs';
   if (chapter === 'stairs' && stairs && stairs !== 'under') return 'villageApproach';
-  if (['birches', 'toStairs', 'stairs'].includes(chapter)) return 'clouds';
+  if (chapter === 'stairs') return 'clouds';
   if (chapter === 'drowned') return 'belfry';
   if (chapter === 'wood' || chapter === 'toSleeping') return 'sleeping';
   if (chapter === 'sleeping') {
     if (sleeping === 'bedtime' || sleeping === 'asleep') return 'cygnetBrave';
-    return sleeping === 'summit' || sleeping === 'glide' ? 'sea' : 'sleepingMorning';
+    return sleeping === 'summit' || sleeping === 'ribbon' || sleeping === 'glide' ? 'sea' : 'sleepingMorning';
   }
   if (chapter === 'toMirror') return 'mirror';
   if (chapter === 'mirror') return 'home';

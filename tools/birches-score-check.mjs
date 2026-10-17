@@ -13,7 +13,7 @@ try {
       story.beat = beat; check(phase.call(story) === 'walk', `${beat}: the initial walk phase is retained`);
     }
     scarf.completed = 1;
-    for (const beat of ['walk','swingOffer','toScarf','scarf','unravelling']) {
+    for (const beat of ['walk','toScarf','scarf','unravelling']) {
       story.beat = beat; check(phase.call(story) === 'scarf', `${beat}: later scarf work selects its story phase`);
     }
     for (const beat of ['toSwing','swinging']) {
@@ -28,10 +28,11 @@ try {
       story.beat = beat; check(phase.call(story) === 'return', `${beat}: the return phase continues through departure`);
     }
     for (const count of [0,1,2,3,4]) {
-      const restoredScarf = { restore(n) { this.completed = n; this.finished = n === 4; } };
+      const restoredScarf = { active: -1, snags: [], restore(n) { this.completed = n; this.finished = n === 4; } };
       const restored = Object.assign(Object.create(BirchesChapter.prototype), { cast: {
-        birches: { scarf: restoredScarf }, boat: {}, child: { stop() {} }, cygnet: { carried: false },
-      } });
+        birches: { scarf: restoredScarf, swingWay: { onward: { x: 0, z: 0 } } }, boat: { beach() {} },
+        child: { stop() {}, stowPlane() {}, place() {}, position: { x: 0, z: 0 } }, cygnet: { carried: false },
+      }, squirrel: { release() {}, restore() {} }, crossing: { reset() {} }, cueNow: {} });
       takeCues(); restored.restoreCheckpoint(`scarf4-${count}`, [2,1,.65,count]);
       check(restored.birchesScore === (count === 0 ? 'walk' : count === 4 ? 'return' : 'scarf') && !takeCues().length,
         `Checkpoint with ${count} freed tangles resumes the right section without a reward`);

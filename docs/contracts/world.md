@@ -34,7 +34,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
-| birches | (0, −1128) | 60 × 80 | `ISLES.birches` |
+| birches | (−136, −1172) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
 | stairs | (100, −1236) | 30 × 26 | `STAIRS_ISLE` (`stairs-layout.ts`) |
 | drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
 | dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
@@ -64,6 +64,16 @@ Revision 11 moves only the secret shore 60 m east, from (240, −365) to (300, �
 berth, pulley, terrain and grass follow the same origin. Existing shore and departure saves migrate once.
 The departure measures 45.5 s against 31.9 s before the move, without changing speed; the destination's mist
 conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
+
+Revision 12 grows the birches and moves them. The island as first built is cut across its walk into bands
+(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−136, −16); everything on it is authored in
+those band-local terms and placed with `birchesAt` / `birchesGap`. Each band keeps its ground, grass patterns,
+trees and scarf exactly; the shift and openings are whole grass tiles (8 m). The island stands out over open sea,
+about 120 m of water from the meadow's nearest shore. With no input, `toBirches` measures 47.3 s from the meadow's
+far shore and push-off to the stairs 45.8 s (both 23.3 s before the revision); boat speed is unchanged. Saves on
+the old island, at its
+berth and old village saves that began there migrate once. The birches' design record:
+[birches-uplift](../backlog/birches-uplift/design.md).
 
 ### Still grass restoration, 2026-10-11
 
@@ -101,8 +111,8 @@ Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets
 | still island → lines | 117 s | the long first curve: farewell look back and the whale |
 | door shore → little boats | 45 s | Secret shore moved 60 m east; sailing pace unchanged. |
 | little boats → meadow | 40 s | arrives lined up with the hill path |
-| meadow → birches | 20 s | a short blind hop |
-| birches → stairs | short | under the cloud deck |
+| meadow → birches | 25 s from the far shore | a short blind hop, bearing west |
+| birches → stairs | 30 s from push-off | open sea, ending under the cloud deck |
 | drowned village to the wood | player-paced | the cat, the run and the church wait for the player; the storm from the nave is about 45 s |
 | wood → sleeping | 40 s | a sheltered bend |
 | sleeping → sky mirror (the sea) | player-paced | first whale puzzle at about 60 s; five-step rescue and farewell; about 40 s from the whale disappearing to the mooring |
@@ -130,8 +140,10 @@ bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pac
 The player never sees the next island before it is time.
 
 - **Only two rooms at a time.** `visibleRooms` (`world/journey-rooms.ts`) gives each chapter the rooms it may draw:
-  a crossing its departure and destination, a room itself. Terrain and grass discard the rest, water drops their
-  shallows and surf, and their props leave both the scene and the reflection. A room coming into view is covered
+  a crossing its departure and destination, a room itself. Terrain and grass discard the rest, and their props
+  leave both the scene and the reflection. Water retains the outgoing shore's contribution and eases it to deep
+  sea over `tuning.water.departureFade` (6 s), because its offshore partition can still be visible at landing.
+  Incoming water is enabled under the same full cover as its land. A room coming into view is covered
   in fog first and cleared after (`JourneyReveal`, `tuning.world.arrivalFogCover`/`arrivalFogClear`). The door
   shore is visible only from the washing and its outgoing crossing; the home jetty only from `toHarbour`.
 - **Haze.** Each chapter sets a `haze`; the veil (`uVeil`, `world/atmosphere.ts`) dissolves the world past it
@@ -140,7 +152,9 @@ The player never sees the next island before it is time.
   `journeyVeilAt` so emissive props obey it): sightlines over that coast dissolve into `skyRadiance` beyond a
   distance, so the near shore comes out first and nothing behind shows through. The drowned village keeps the wood
   in it beyond its drawn trees; the crossing to the sleeping island keeps all but the landing shore in it, so the
-  summit window is found ashore (`tuning.world.woodMist`, `sleepingMist`; lifted at `isleMistLift` on landing).
+  summit window is found ashore; the meadow's sail keeps the birches in it until about halfway over, and the
+  birches' sail keeps the stairs in it until about the last 80 m, under the cloud coming down
+  (`tuning.world.woodMist`, `sleepingMist`, `birchesMist`, `stairsMist`; lifted at `isleMistLift` on landing).
 - **First-crossing horizon.** `Chapter.horizonMist` feeds `uHorizonMist`, a sky-colour distance veil across every
   bearing, without coast-shaped boundaries. It keeps the farewell clear to 140 units and fully dissolves scenery
   beyond 240; after the title it eases over 16 seconds to the 55–110 unit approach range. It releases gradually
@@ -156,8 +170,9 @@ The player never sees the next island before it is time.
   `tuning.skyMirror.arriveFor` (7 s).
 - **Nothing snaps into colour.** Everything north of `LIVING_BEYOND` (`atmosphere.ts`) is already alive before the
   child reaches it; only the still island starts grey, and the meadow is held back by its waiting region.
-  `main.ts` eases time of day, haze, season and rain toward what each chapter asks, so a chapter change is never a
-  cut in the sky.
+  `main.ts` eases time of day, haze, season, rain and visual storm cover toward what each chapter asks, so a chapter
+  change is never a cut in the sky. Lightning triggers still read the chapter's storm state. Sheltered firefly
+  size, colour, population and movement blend into their open-country values over `tuning.wood.fireflyTransition`.
 
 ## The sea surface
 

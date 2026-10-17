@@ -37,7 +37,7 @@ try {
   const cases = [
     ['island', '', 8.5, 21.5, .95], ['lines', 'washing', 240, -483.5, .1],
     ['boats', 'boats', 353, -652, Math.PI], ['meadow', 'meadow', null, null, .2],
-    ['birches', 'birches', -4, -1197, .15], ['wood', 'wood', -34, -1908, .2],
+    ['birches', 'birches', null, null, .15], ['wood', 'wood', -34, -1908, .2],
     ['sleeping', 'sleeping', -214.5, -1926, -1.76], ['mirror', 'mirror', -390, -2323, Math.PI],
   ].filter(([name]) => !process.env.ONLY || process.env.ONLY.split(',').includes(name));
   for (const [name, query, x, z, yaw] of cases) {
@@ -66,8 +66,9 @@ try {
         await page.screenshot({ path: `${prefix}-mirror-stars-${mask}.png` });
       }
     }
-    await page.evaluate(({ name, x, z, yaw }) => {
+    await page.evaluate(async ({ name, x, z, yaw }) => {
       const g = __game, c = g.story.current;
+      if (name === 'birches') ({ x, z } = (await import('/src/world/birches.ts')).BIRCHES_BERTH);
       if (name === 'meadow') {
         c.skipAhead(); c.crestDone = true; c.update(0, 0);
         x = g.boat.position.x; z = g.boat.position.z;

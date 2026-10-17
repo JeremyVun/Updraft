@@ -43,9 +43,10 @@ try {
   await page.waitForFunction(() => __game.sound.running);
   assert(await page.evaluate(() => __game.sound.birchesScore === beforeMute), 'Unmute keeps the score instance');
 
-  await page.evaluate(() => {
-    const g = __game, c = g.story.current;
-    g.birches.scarf.restore(1); g.child.stop(); g.child.place(3,-1107,0); g.glider.hold(g.child);
+  await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const g = __game, c = g.story.current, at = birchesAt(3, -1107);
+    g.birches.scarf.restore(1); g.child.stop(); g.child.place(at.x, at.z, 0); g.glider.hold(g.child);
     g.cygnet.rideIn('satchel'); c.swings=0; c.swingOffered=false;
     c.resumeWalk(); c.update(0,c.now); g.rig.cut(c.shot);
   });

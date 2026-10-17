@@ -17,8 +17,8 @@ const mechanics = [
   'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'crossing-linen', 'first-whale-swell', 'dream-story', 'drowned-camera', 'drowned-fog-motion',
-  'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
+  'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'rendering-continuity', 'piano-growth', 'piano-logic',
+  'plane-routing', 'plane-catch', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
   'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',

@@ -179,7 +179,7 @@ export class Boat {
     this.sailMat = new THREE.ShaderMaterial({
       vertexShader: SAIL_VERT,
       fragmentShader: SAIL_FRAG,
-      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uScarf: { value: 0 }, uFill: { value: 0 }, uFlutter: { value: 0 }, uRipplePhase: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 }, uShelter: { value: 0 } },
+      uniforms: { ...atmo.uniforms, uSubject: { value: this.subject }, uScarf: { value: 0 }, uFill: { value: 0 }, uFlutter: { value: 0 }, uRipplePhase: { value: 0 }, uLuff: { value: 0 }, uDroop: { value: 1 }, uShelter: { value: 0 }, uGiveWay: { value: tuning.sail.givesWay } },
       side: THREE.DoubleSide,
       alphaToCoverage: true,
     });
@@ -277,6 +277,8 @@ export class Boat {
   }
 
   /** The droop actually drawn by the cloth, 0 full to 1 hanging dead. */
+  /** How much of the sail is left where it hangs between the camera and the child (`tuning.sail.givesWay` unless a room asks for less). */
+  sailGivesWay = tuning.sail.givesWay;
   get sailDroop(): number { return this.sailMat.uniforms.uDroop.value; }
   get sailFlutter(): number { return this.sailMat.uniforms.uLuff.value; }
 
@@ -491,6 +493,7 @@ export class Boat {
 
     const sail = this.sailMat.uniforms;
     sail.uScarf.value = this.scarfSail;
+    sail.uGiveWay.value = this.sailGivesWay;
     sail.uShelter.value = this.shelter;
     /** With nothing moving in it the cloth is dead weight: the leech falls in and it hangs off the mast in folds. */
     const hang = 1 - THREE.MathUtils.smoothstep(air.blowing, 0, tuning.sail.hangsBelow);

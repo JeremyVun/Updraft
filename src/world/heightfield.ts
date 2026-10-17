@@ -3,6 +3,7 @@ import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
 import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_PAD, STAIRS_TERRACE } from './stairs-layout';
+import { BIRCHES_ISLE, BIRCHES_NOISE_GLSL, BIRCHES_LOCAL, BIRCHES_SHAPE_GLSL, birchesNoise, birchesShape } from './birches-layout';
 
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
@@ -159,7 +160,7 @@ export const ISLES = {
     rz: MEADOW_SCULPTED.rz * MEADOW_SCALE,
   },
   boats: LITTLE_BOATS,
-  birches: { x: 0, z: -1128, rx: 60, rz: 80 },
+  birches: BIRCHES_ISLE,
   /** The knoll the stairs stand on, under the cloud off the birches' north-east beach. */
   stairs: STAIRS_ISLE,
   drowned: { x: -10, z: -1440, rx: 210, rz: 175 },
@@ -180,7 +181,8 @@ type Isle = (typeof ISLES)[keyof typeof ISLES];
 
 /**
  * The two things that give the long walk over the birches a shape: the rise the swing tree stands on, and the
- * hollow beyond it where the year's leaves have been collecting all autumn. Shared so ground and shader agree.
+ * hollow beyond it where the year's leaves have been collecting all autumn. Band-local, like everything authored on
+ * the island, and read through `birchesShape`. Shared so ground and shader agree.
  */
 export const BIRCH_RISE = { x: 2.6, z: -1118, rx: 38, rz: 30, h: 3.6 };
 export const BIRCH_HOLLOW = { x: -6, z: -1150, rx: 19, rz: 14, h: 2.9 };
@@ -284,21 +286,36 @@ function meadowHeight(wx: number, wz: number): number {
 }
 
 /** The autumn birches: a small low island between the meadow and the village, domed and shelving to bare beaches. */
+const birchesGround = (x: number, z: number): number => gfbm(x * 0.028, z * 0.028, 3, 62);
+const shape = { x: 0, z: 0 };
+
 function birchesHeight(x: number, z: number): number {
-  const c = ISLES.birches;
   // A wind-scoured notch: rock face on the inside, a steep fall beyond the outer footing.
   const across=((x+164.56)*2+(z+1925.88))/Math.sqrt(5);
   const along=((x+164.56)-2*(z+1925.88))/Math.sqrt(5);
   const notch=4.5*smoothstep(1.65,3.8,across)*(1-smoothstep(2.2,5.5,Math.abs(along)));
-  if (isleFar(x, z, c, 0.13, 36)) return -1.6 - notch - 8;
-  const d = isleCoast(x, z, c, 0.13, 61);
+  const s = birchesShape(x, z, shape);
+  return birchesFrom(s.x, s.z, notch, x, z);
+}
+
+/** The birches as they were first built, in their own band-local terms: before any cut was opened or the coast drawn in. */
+export function birchesFirstHeight(x: number, z: number): number {
+  return birchesFrom(x, z, 0, x, z, true);
+}
+
+/** The ground from the island's broad shape at (sx, sz) and its noise at the world point (x, z). */
+function birchesFrom(sx: number, sz: number, notch: number, x: number, z: number, first = false): number {
+  const c = BIRCHES_LOCAL;
+  if (isleFar(sx, sz, c, 0.13, 36)) return -1.6 - notch - 8;
+  const d = isleCoast(sx, sz, c, 0.13, 61);
   /** A long shallow ramp out of the water on both ends: a beach a boat runs up and a slope a camera can see down. */
   const land = smoothstep(18, -38, d);
-  const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
+  const r = Math.hypot((sx - c.x) / c.rx, (sz - c.z) / c.rz);
+  const noise = first ? birchesGround(x, z) : birchesNoise(x, z, birchesGround);
   let h = land * 3.4 - 1.6;
-  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (gfbm(x * 0.028, z * 0.028, 3, 62) * 0.5 + 0.5) * 3.2);
-  h += land * land * lump(x, z, BIRCH_RISE) * BIRCH_RISE.h;
-  h -= land * lump(x, z, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
+  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (noise * 0.5 + 0.5) * 3.2);
+  h += land * land * lump(sx, sz, BIRCH_RISE) * BIRCH_RISE.h;
+  h -= land * lump(sx, sz, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
   h -= notch;
   return h - smoothstep(0, 36, d) * 8;
 }
@@ -596,6 +613,8 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
   return (length(e) - 1.0 - n * wobble) * min(r.x, r.y) * 0.8;
 }
 ${LUMP_GLSL}
+${BIRCHES_SHAPE_GLSL}
+${BIRCHES_NOISE_GLSL}
 float hf_lines(vec2 p) {
   vec2 fold = (p - vec2(${glsl(tuning.world.linesFold.x)}, ${glsl(tuning.world.linesFold.z)})) / vec2(${glsl(tuning.world.linesFold.radiusX)}, ${glsl(tuning.world.linesFold.radiusZ)});
   float crest = max(0.0, 1.0 - dot(fold, fold));
@@ -648,15 +667,16 @@ float hf_meadow(vec2 world) {
   return h - smoothstep(0.0, 70.0, -inland) * 8.0;
 }
 float hf_birches(vec2 p) {
-  vec2 c = vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0);
-  vec2 r = vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0);
-  float d = hf_isleCoast(p, c, r, 0.13, 61.0);
+  vec2 s = birchesShape(p);
+  vec2 c = vec2(${glsl(BIRCHES_LOCAL.x)}, ${glsl(BIRCHES_LOCAL.z)});
+  vec2 r = vec2(${glsl(BIRCHES_LOCAL.rx)}, ${glsl(BIRCHES_LOCAL.rz)});
+  float d = hf_isleCoast(s, c, r, 0.13, 61.0);
   float land = (1.0 - smoothstep(-38.0, 18.0, d));
-  float rr = length((p - c) / r);
+  float rr = length((s - c) / r);
   float h = land * 3.4 - 1.6;
-  h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (gfbm(p * 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
-  h += land * land * hf_lump(p, vec2(${glsl(BIRCH_RISE.x)}, ${glsl(BIRCH_RISE.z)}), vec2(${glsl(BIRCH_RISE.rx)}, ${glsl(BIRCH_RISE.rz)})) * ${glsl(BIRCH_RISE.h)};
-  h -= land * hf_lump(p, vec2(${glsl(BIRCH_HOLLOW.x)}, ${glsl(BIRCH_HOLLOW.z)}), vec2(${glsl(BIRCH_HOLLOW.rx)}, ${glsl(BIRCH_HOLLOW.rz)})) * ${glsl(BIRCH_HOLLOW.h)};
+  h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.birchesCrest)} + (birchesFbm(p, 0.028, 3, 62.0) * 0.5 + 0.5) * 3.2);
+  h += land * land * hf_lump(s, vec2(${glsl(BIRCH_RISE.x)}, ${glsl(BIRCH_RISE.z)}), vec2(${glsl(BIRCH_RISE.rx)}, ${glsl(BIRCH_RISE.rz)})) * ${glsl(BIRCH_RISE.h)};
+  h -= land * hf_lump(s, vec2(${glsl(BIRCH_HOLLOW.x)}, ${glsl(BIRCH_HOLLOW.z)}), vec2(${glsl(BIRCH_HOLLOW.rx)}, ${glsl(BIRCH_HOLLOW.rz)})) * ${glsl(BIRCH_HOLLOW.h)};
   vec2 notch=p-vec2(-164.56,-1925.88);
   float across=dot(notch,vec2(2.0,1.0))/sqrt(5.0), along=dot(notch,vec2(1.0,-2.0))/sqrt(5.0);
   h-=4.5*smoothstep(1.65,3.8,across)*(1.0-smoothstep(2.2,5.5,abs(along)));

@@ -25,8 +25,15 @@ const {heightAt}=await import('../src/world/island.ts');
 const {mulberry32}=await import('../src/world/noise.ts');
 const {IslandChapter,BOAT_BERTH}=await import('../src/story/island.ts');
 const {BirchesChapter}=await import('../src/story/birches.ts');
-const {BIRCHES_BERTH,BIRCHES_WALK,Swing}=await import('../src/world/birches.ts');
+const {BIRCHES_BERTH,BIRCHES_LANDING,BIRCHES_WALK,Swing}=await import('../src/world/birches.ts');
+const {birchesAt}=await import('../src/world/birches-layout.ts');
 const {BirchScarf,SCARF_SNAGS}=await import('../src/world/birch-scarf.ts');
+const {Squirrel}=await import('../src/creatures/squirrel.ts');
+const {ROUNDS}=await import('../src/story/birches-rounds.ts');
+/** The birches as far as the walk, the scarf and the squirrel's game read them, with a floor of untouched heaps. */
+const birchesStub=()=>({scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(birchesAt(0,-1100).x,10,birchesAt(0,-1100).z),0,new THREE.Vector4()),shake(){},kick(){},
+  burst(){},depthAt:async points=>points.map(()=>.8),buryDepth:(x,z,depth)=>Math.min(.38,depth+.12),
+  trunkAt(x,z,height,out){out.set(x,heightAt(x,z)+height,z);return .2;},swingLimbAt(t,out){out.set(birchesAt(0,-1100).x+t*3,10,birchesAt(0,-1100).z);return .12;}});
 Math.random=mulberry32(42);
 
 function fixture() {
@@ -35,7 +42,7 @@ function fixture() {
   const child=new Traveller(wind),plane=new Glider(wind,[]),boat=new Boat(wind),cygnet=new Cygnet();
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped');
   const carry=new Carry(child,cygnet);
-  const cast={child,plane,boat,cygnet,carry,wind};
+  const cast={child,plane,boat,cygnet,carry,wind,squirrel:new Squirrel()};
   const haulCamera=new THREE.PerspectiveCamera(50,16/9,.1,100);
   haulCamera.position.copy(shoreHaul.pinwheel).add(new THREE.Vector3(0,3,10));
   haulCamera.lookAt(shoreHaul.pinwheel);haulCamera.updateMatrixWorld();
@@ -140,7 +147,7 @@ for (const room of ['birches']) for (const fps of [30,60,120]) {
       life:{regions:{island:new THREE.Vector4()},mean:()=>1},nearby:()=>false});
     chapter=new IslandChapter(cast);chapter.restoreCheckpoint();berth=BOAT_BERTH;
   } else {
-    cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(0,10,-1100),0,new THREE.Vector4()),shake(){},kick(){}};
+    cast.birches=birchesStub();
     chapter=new BirchesChapter(cast);chapter.restoreCheckpoint('scarf4-4',[BIRCHES_WALK.length-1,1,0.7,4]);berth=BIRCHES_BERTH;
     boat.beach(berth.x,berth.z,0.15);
   }
@@ -188,24 +195,26 @@ for (const fps of [30, 60, 120]) {
 assert(Math.max(...departures.map(d => d.duration)) - Math.min(...departures.map(d => d.duration)) < .5);
 console.log('PASS: plane stays secured with wind available; fixed boarding timing under opposing gusts, 30/60/120 Hz.', departures);
 
-// Every scarf stop wins over later route cursors; throws and home must agree on the same pending encounter.
+// Every pending stop, the squirrel's rounds between the scarf's tangles, wins over later route cursors; throws and home must agree on it.
 for(let completed=0;completed<SCARF_SNAGS.length;completed++) for(let leg=0;leg<BIRCHES_WALK.length;leg++) {
   const f=fixture(),{cast}=f,{child,plane}=cast;
-  cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(0,10,-1100),0,new THREE.Vector4()),shake(){},kick(){}};
+  cast.birches=birchesStub();
   const chapter=new BirchesChapter(cast);
   chapter.restoreCheckpoint(`scarf4-${completed}`,[leg,1,0.7,completed]);
-  child.stop();child.place(0,-1050,Math.PI);
+  child.stop();child.place(BIRCHES_LANDING.x-3,BIRCHES_LANDING.y+2,Math.PI);
   // Read destination selection without triggering a throw or encounter.
   chapter.beat='toBoat';chapter.update(1/60,0);
-  const snag=SCARF_SNAGS[completed],route=BIRCHES_WALK[leg];
-  const expected=route.y<snag.stopZ?new THREE.Vector2(snag.stopX,snag.stopZ):route;
+  const rounds=chapter.squirrel.rounds,route=BIRCHES_WALK[leg];
+  const stop=[{round:0},{tangle:0},{round:1},{tangle:1},{round:2},{tangle:2},{tangle:3}].find(s=>'round' in s?rounds<=s.round:completed<=s.tangle);
+  const at='round' in stop?{x:ROUNDS[stop.round].stand.x,z:ROUNDS[stop.round].stand.z}:{x:SCARF_SNAGS[stop.tangle].stopX,z:SCARF_SNAGS[stop.tangle].stopZ};
+  const expected=route.y<at.z?new THREE.Vector2(at.x,at.z):route;
   const wanted=new THREE.Vector2(expected.x-child.position.x,expected.y-child.position.z).normalize();
   const got=new THREE.Vector2(plane.home.x-child.position.x,plane.home.z-child.position.z).normalize();
-  assert(got.dot(wanted)>0.999999,`scarf ${completed}, leg ${leg}: wrong homing`);
+  assert(got.dot(wanted)>0.999999,`scarf ${completed}, rounds ${rounds}, leg ${leg}: wrong homing`);
   let aim;child.throwToward=(x,z)=>{aim=new THREE.Vector2(x-child.position.x,z-child.position.z).normalize();};
   chapter.throwAhead();assert(aim.dot(wanted)>=Math.cos(0.300001),'throw and scarf destination disagree');
   chapter.beat='walk';chapter.play='watch';child.stop();child.place(BIRCHES_BERTH.x,BIRCHES_BERTH.z+10,Math.PI);
   chapter.update(1/60,1000);
   assert(!chapter.arrival.active,'incomplete scarf allowed departure');
 }
-console.log('PASS: all four scarf destinations across every route cursor; incomplete encounters cannot board.');
+console.log('PASS: every pending round and tangle across every route cursor; incomplete encounters cannot board.');

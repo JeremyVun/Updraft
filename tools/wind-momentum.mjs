@@ -12,7 +12,7 @@ async function checkMomentum() {
   const { atmo } = await import(atmoUrl);
   const { WindWaves } = await import('/src/world/water/wind-waves.ts');
   const { BirchCanopyMotion } = await import('/src/fx/birch-canopy.ts');
-  const { LitterField, LITTER_SIDE, LITTER_BOX } = await import('/src/fx/leaves.ts');
+  const { LitterField, LITTER_RES, LITTER_BOX } = await import('/src/fx/leaves.ts');
   const { runBootPasses } = await import('/src/gl/gpu.ts');
   const { WINDOW, followWindow, windowCentre } = await import('/src/world/window.ts');
   const renderer = window.__game.renderer;
@@ -118,9 +118,9 @@ async function checkMomentum() {
   assert(read(canopy.vel.read)[0] < 0, 'Shed leaf never responds to the new wind');
 
   atmo.uniforms.uDomain.value.set(LITTER_BOX.x, LITTER_BOX.z, 1 / LITTER_BOX.sx, 1 / LITTER_BOX.sz);
-  const seed = new Float32Array(LITTER_SIDE * LITTER_SIDE * 4);
-  for (let y = 0; y < LITTER_SIDE; y++) for (let x = 0; x < LITTER_SIDE; x++) {
-    seed[(y * LITTER_SIDE + x) * 4] = Math.exp(-((x - 128) ** 2 + (y - 128) ** 2) / 500);
+  const seed = new Float32Array(LITTER_RES.x * LITTER_RES.z * 4);
+  for (let y = 0; y < LITTER_RES.z; y++) for (let x = 0; x < LITTER_RES.x; x++) {
+    seed[(y * LITTER_RES.x + x) * 4] = Math.exp(-((x - 128) ** 2 + (y - 128) ** 2) / 500);
   }
   const litter = new LitterField(renderer, seed, new THREE.Vector4(1e6, 1e6, 0, 0));
   runBootPasses();
@@ -133,7 +133,7 @@ async function checkMomentum() {
   wind.needsUpdate = true;
   litter.update(dt);
   const afterLitter = read(litter.field.read);
-  const ci = (128 * LITTER_SIDE + 128) * 4;
+  const ci = (128 * LITTER_RES.x + 128) * 4;
   assert(beforeLitter[ci + 1] > 0 && afterLitter[ci + 1] > 0, 'Litter transport reversed instantly');
   for (let i = 0; i < 59; i++) litter.update(dt);
   const settledLitter = read(litter.field.read);

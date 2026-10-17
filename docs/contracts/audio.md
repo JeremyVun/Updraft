@@ -5,7 +5,7 @@ Home, the Sky Mirror, Birches, the stairs in the clouds, the drowned village, Sl
 environment, the shared pad, gesture chimes, authored cues and calls, and runs one pass per rendered frame after the
 camera update. Each room with its own composition has a score module that follows story phases, not timers:
 `opening-score.ts` and `meadow-score.ts`. `recorded-score.ts` plays Home, the Sky Mirror,
-Birches, Lines and Little Boats continuously across story phases, and the stairs' `clouds.ogg`, the village's
+Birches, the stairs song under the cloud, Lines and Little Boats continuously across story phases, and the stairs' `clouds.ogg`, the village's
 `village_approach.ogg` and `belfry.ogg`, and Still's departure once each (`recordedMusicOnce`); `phrase-clips.ts` plays excerpts of one recording as
 overlapping clips for `still-phrases.ts` and the open sea's `sea-music.ts`; `sleeping-music.ts` plays Sleeping's lullaby
 and the parts of its climb's recording.
@@ -49,7 +49,7 @@ and clears it on exit.
 ## Room levels
 
 Every piece sits near one reference, about −29 LUFS in its main section. Home measures −14.6 LUFS and uses −14.4 dB
-gain; Birches (`birches.ogg`, "A Question, Then a Gentle Answer", 224 s) measures −16.0 LUFS and uses −13 dB; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the stairs' `clouds.ogg` measures
+gain; Birches (`red_door.ogg`, "The Red Door Opens", 238.9 s) measures −18.3 LUFS and uses −10.7 dB; the stairs song (`birches.ogg`, "A Question, Then a Gentle Answer", 224 s) measures −16.0 LUFS and uses −13 dB; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the stairs' `clouds.ogg` measures
 −14.5 LUFS over the 0–3:28 it plays and uses −14.5 dB; the drowned village's `village_approach.ogg` measures −15.2 LUFS
 over the whole file but −19.3 LUFS over the 0–36.93 s it plays, and uses −9.7 dB; its goodbye (`belfry.ogg` from 7.97 s, then `belfry_ending.ogg`) measures
 −18.0 LUFS over the 47.06 s it plays and uses −11 dB; the open sea's recording measures −15.4 LUFS
@@ -60,7 +60,9 @@ its climb (`cygnet_brave.ogg`) measures −14.4 LUFS over its three parts whole 
 plays and uses −15 dB, level with the climb. Still measures −23.3 LUFS across its
 phrases and rests and starts at −6 dB (`stillPhraseDb`). These trims preserve the source dynamics and encoded bytes.
 Their dry route avoids adding reverb to an already mixed recording. `roomTrimDb`'s Home, Sky Mirror, Birches, drowned
-village and Sleeping entries and their old score levels are historical, unused by recorded playback. With the experiment disabled, the opening grows about
+village and Sleeping entries and their old score levels are historical, unused by recorded playback; the stairs song
+needs no trim of its own, since its gain already puts it at the reference. Loudness is ffmpeg's `ebur128` integrated
+measure over the whole file unless a stretch is given. With the experiment disabled, the opening grows about
 5 dB with life (`openingPadRise`), keeping its quiet start. The grey
 meadow and the wood stay quiet by design; the wood's drone keeps its original level (`woodDroneDb`
 0; Wood, below). Add new rooms at the reference.
@@ -307,21 +309,58 @@ should make that bell sound anymore. It no loner fits with the meadow music"; "t
 they answer with sight and the ordinary sound of the wind. `MeadowSong` smoothly shares the existing
 `pianoMix` gate while the child and wind exchange seeds, then releases it; the warm bed ignores that duck.
 
-**Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
-`assets/music/birches.ogg` ("A Question, Then a Gentle Answer") replaces the synthesised score from the approach
-crossing through boarding and departure. The existing `walk`, `swing`, `scarf` and `return` phases still describe
-story progress and checkpoint state, but never seek, restart or rearrange the recording. Jeremy (2026-10-14/15):
+**Birches.** The room plays "The Red Door Opens", and `birches.ogg` ("A Question, Then a Gentle Answer") is the
+stairs song under the cloud (the stairs, below). Jeremy (2026-10-15):
+
+> yea the red door opens, and yep makes sense to make birches the song under the stairs i guess (we can try this)
+
+How it plays out and the silence in the cloud, Jeremy (2026-10-14/15):
 
 > my thinking for birches is the logic can be pretty simple. if on birches island, loop, else don't loop and let it finish up. And then on the stairs chapter, just have a hard stop for silence if it's still somehow playing before they enter the clouds and start the penrose stairs sequence.
 
 > My feeling is that there should be silence as they enter the cloud and do the penrose puzzle up until the nest. it builds up a climax i think? And it kinda fits the idea of them being in the clouds (a place they aren't normally supposed to be, so theres no music which makes it feel slightly more awkward)
 
-It loops only while the story is on the Birches island or its approach (`toBirches`, `birches`: `SoundState.birchesLoop`).
-Once they have sailed (`toStairs`, `stairs`) it stops looping (`RecordedScore.playOut`): the pass under way plays to the
-end of the file and stops; begun there (a `toStairs` or `stairs` start) it plays once. In the stairs, if it is still
-playing when they go up into the white (`StairsAir.phase` leaves `under` as the bird goes first, before the loop), it
-stops over `birchesCloudFade` (1 s; a cut would click) and never starts again in that room. Silence then holds
-through the white and the loop until `clouds.ogg` on top of the cloud (below).
+`assets/music/red_door.ogg` (a copy of "The Red Door Opens") plays from the approach crossing through boarding. The
+`walk`, `swing`, `scarf` and `return` phases describe story progress and checkpoint state, but never seek, restart or
+rearrange the recording. It loops only while the story is on the Birches island or its approach (`toBirches`,
+`birches`: `SoundState.birchesLoop`) and begins only there. Jeremy (2026-10-15):
+
+> the birches island music should start 2-3 seconds later than it currently does, and it should fade in a bit more.
+
+> when the music loops on the birches island, it needs to have a better fade in.
+
+Jeremy (2026-10-16):
+
+> The start of the birches music should coincide with the camera panning to reveal it, so it needs to start a bit earlier now.
+
+> There's too much of a pause in between the looping of the birches music, reduce it by atleast 3 seconds.
+
+On the meadow sail it enters 3 s into the lens's swing round to reveal the island: the birches' `IslandReveal`
+carries `music: 3`, the seconds after the reveal starts (`revealing` above 0) that the crossing is ready for it, not
+as the shore nears. The meadow's music is asked to leave early enough that its longest phrase wait, fade and quiet
+(`arrivalPhraseWait` + `arrivalFadeOut` + `arrivalQuiet`, 10.5 s at the boat's speed) all fall before the reveal. It
+fades in on a 1.63 s time constant (`recordedMusicFadeIn`: about 0.46 of full at 1 s, 0.71 at 2 s, 0.95 at 4.9 s),
+rising with the swing. With no input from `?chapter=toBirches` (crossing clock): the meadow fades 5.4–8.4 s, sea and wind
+until the reveal begins at 17.9 s, Red Door from 20.9 s, the lens visibly turning from about 19.5 s and settled
+at 27.8 s, landing at 38.8 s.
+
+Going round, the song is never butted end to start: each pass plays to its natural end, rests
+`recordedMusicLoop.birches.rest` (0.3 s) with only the room's world sounds, and begins again from its top with the same
+entrance. The recording's last chord dies away over its final seconds, so the pause heard is longer than the rest:
+measured on the render (`music-transition-audit.mjs`, `birches-seam`, 50 ms windows within 30 dB of the piece's average
+as played), the last audible sound falls 2.7 s before the end of the file and the next pass is audible 0.17 s after it
+begins, a 3.25 s pause. The decoded recording is held through the rest and released once the loop is
+over (play-out, stop or leaving). Once they have sailed (`toStairs`) it stops looping (`RecordedScore.playOut`) and
+the pass under way plays out; sailing during a rest, nothing more plays. A `toStairs` start is quiet until the stairs
+song. The
+crossing says how soon the stairs song can come in (`arrivalIn`: the distance to the handoff's entrance over the
+boat's speed now). Once that is `stairsSongRest` + `birchesSailFade` (15 s) or less, a pass that would still sound
+`stairsSongRest` (10 s) before it fades over `birchesSailFade` (5 s) to end then; a pass ending sooner simply ends.
+The gap is sea, wind and the boat. The boat gathers way after the estimate is made, and gusts can drive it on, so
+the stairs song also waits until `stairsSongRest` after the birches were last heard. With no input, timed from the
+push-off: aboard 2.8 s, the fade 22.2–27.2 s, the handoff asked for at 29.1 and ready at 36.9, the stairs song from
+37.2 s (held 0.3 s for the rest), the landing 45.8 s. A pass ending by itself before the rest leaves the song on
+the handoff (36.9 s).
 
 **Drowned Village.** Jeremy (2026-10-14/15), verbatim:
 
@@ -424,9 +463,9 @@ Claude holds creative ownership of these timings (2026-10-15). Three unchanged r
 (`sleeping-music.ts`, `SleepingMusic`), each once, at their own dynamics: music mute (their clocks run on), hidden-page
 suspension, exit fades and permanent silence apply; `hush` does not, and the generic pad is silent throughout. They
 follow `SleepingChapter.sleepingMusic`, the furthest gate reached: `bedtime`, `asleep`, `feather` (the pillow feather
-freed), `mist` (the fog closes over the bird), `catch` (it takes the feather in its bill), `summit` (it reaches the top:
-`unbinding`, which comes before `hilltop`) and `glide` (the ribbon released as the curtains begin to part, a moment
-before the bird leaves the top). `sleepingScore` remains the story phase the handoffs and
+freed), `mist` (the fog closes over the bird), `catch` (it takes the feather in its bill), `summit` (it reaches the top
+and unwinds its bandage: `unbinding`), `ribbon` (`ribbonLead`, 1 s, before the bandage comes free, about 2.3 s before
+the bird turns to face the ribbon, and on through `hilltop`, the leap and the tug) and `glide` (the ribbon released as the curtains begin to part, a moment before the bird leaves the top). `sleepingScore` remains the story phase the handoffs and
 gestures read.
 
 - **The lullaby.** `sleeping.ogg` ("A Tune for the Sleeping Meadow", 143.6 s, A minor) enters through the wood's
@@ -449,11 +488,26 @@ gestures read.
   back in the recording (`BRAVE_PARTS`), each from 30 ms before the attack after one of its clean rests: the climb
   theme 0–96.27 s as the feather is freed (its quiet opening carries the bird watching, hopping down and looking back);
   the sparse commitment 96.27–112.11 at `catch`; the summit 112.11–153.18 at `summit`. The two-phrase coda after it is
-  unused. When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
+  unused. Jeremy (2026-10-16), verbatim: "the summit music needs to start like a second later and have a bit more of a
+  fade in too." Begun on its own, the summit part starts `summitDelay` (1 s) after the bird reaches the top and rises
+  over `summitFadeIn` (1.5 s); following on from the commitment it carries the recording on unbroken. When the fog closes the climb theme ends at its next seam (0.3 s ahead, over up to
   1.2 s) if one comes within `fogSeamWithin` (6 s), or else fades over `fogFade` (3 s), so the fog never carries the
   full theme into the bird's call (the rebuilt climb's prompt fog closes about 68.5 s in, 12 s short of a seam); otherwise it ends at 96.27 s and never runs into the sparse section. `BRAVE_SEAMS`: .84, 4.08, 6.13, 8.18,
   16.1, 24.02, 27.63, 49.96, 57.86, 65.69, 80.5, 92.67, 96.27, 104.18, 112.11, 126.67, 153.18, 157.15, 161.24 (there is
   none between 65.69 and 80.5, nor 80.5 and 92.67, where the theme is full).
+- **Silence at the ribbon.** Jeremy (2026-10-16), verbatim:
+
+  > ok i think there just needs to be a bit of silence as a musical palate cleanse at the ribbon sequence, so it focuses on the cygnet all alone at the top before it jumps. understand what i mean?
+
+  And, verbatim: "it needs to fade to silence over like 3 seconds when the bandage comes free, so shift the fade out
+  start back by like 1 second".
+
+  The unwinding keeps its music; `ribbonLead` (1 s) before the bandage comes free (`ribbon`) the climb part sounding
+  ends at its next seam at least `mirrorSeamSoonest` (0.3 s) ahead if one comes within `ribbonSeamWithin` (1.5 s),
+  fading over up to `mirrorSeamRelease` (1.2 s) into it, or else fades over `ribbonFade` (3 s), and no part of the climb's recording
+  begins after it: a part waiting, or a summit part not yet begun, never plays. The music lets go as the bandage falls
+  away, so the bird faces the ribbon in silence before it leaps; wind and foley alone carry the turn, the circles, the
+  leap and the tug until the curtains.
 - **The morning.** Jeremy (2026-10-16), verbatim, of a piece for the curtains opening and the cygnet gliding down:
 
   > ok i figured it out, use the colour returns to the meadow song, and start it on the second phrase at around 11 seconds. When you do that, the next phrase lines up perfectly with the child waking up out of bed.
@@ -461,25 +515,28 @@ gestures read.
   `sleeping_morning.ogg` ("Colour Returns to the Meadow", 123.7 s, A minor) starts the moment the ribbon is released
   (`glide`), from `MORNING_FROM`, 11 s: the last second of the rest before its second phrase (the 12.02 s seam), which
   is what lands its third phrase (the 23.62 s seam) on the bird's landing and the child waking. It plays once to its end,
-  through the glide, the waking and the lap, until the departure hands off to the sea. It never waits: the climb part
-  still sounding gives way as it starts, ending at its next seam if one comes within `mirrorSeamRelease` (1.2 s), or
-  else fading over `curtainsFade` (1.5 s), and a part waiting to follow that one is passed over. A bird reaching the
-  curtains after the summit part has ended hears the rest, then the morning. `MORNING_SEAMS`, measured as the others:
+  through the glide, the waking and the lap, until the departure hands off to the sea, fading over
+  `sleepingDepartureFade` (4 s) as the boat leaves (Jeremy, 2026-10-16: "The colour returns to the meadow song needs a
+  slightly longer fade out as well"). It enters out of the silence at the ribbon and never waits: should a climb part
+  still sound (the curtains reached with no `ribbon` gate), it gives way as the morning starts, ending at its next
+  seam if one comes within `mirrorSeamRelease` (1.2 s), or else fading over `curtainsFade` (1.5 s), and a part waiting
+  to follow it is passed over. `MORNING_SEAMS`, measured as the others:
   1.75, 5.47, 12.02, 16.46, 23.62, 27.8, 31.81, 35.67, 38.26, 41.39, 50.93, 61.1, 69.02, 72.91, 75.81, 79.37, 89.25,
   99.58, 109.68, 118.83.
 - **Queueing** (Jeremy's ruling: phrases never overlap and are never cut or faded early). A part reached while another
   sounds starts as that one ends, placed a second ahead; where it follows on in the recording the earlier part's end
   fade is dropped, so the recording runs on unbroken. A later gate reached before a waiting part begins plays instead
-  of it. Parts never replay. A slow player hears the piece's rests and then the wind until the next gate. The curtains
-  are the one exception: the morning starts at its gate and the climb gives way to it (above). The morning hands off
-  to the sea as below, whatever is or is not still sounding.
+  of it. Parts never replay. A slow player hears the piece's rests and then the wind until the next gate. The bandage
+  freed and the curtains are the exceptions: the climb lets go with the bandage, and the morning starts at its gate,
+  the climb giving way to it (above). The morning hands off to the sea as below, whatever is or is not still sounding.
 - **Restores.** The `feather` save resumes the climb (beat `climb`) with the climb theme from its top; the `morning`
   save is silent until the sea and decodes none of the three. Any start or music switched on past a gate stays silent
-  until the next, except bedtime (the lullaby) and the freed feather (the climb theme); past the curtains, until the
-  sea. The QA start `?chapter=ribbon`, a step below the top with the feather caught, plays the summit part as the bird
-  reaches the top and the morning at the curtains.
+  until the next, except bedtime (the lullaby) and the freed feather (the climb theme); once the bandage is
+  freed, until the curtains; past the curtains, until the sea. The QA start `?chapter=ribbon`, a step below the top
+  with the feather caught, plays the summit part a second after the bird reaches the top, the silence from the
+  bandage freed and the morning at the curtains.
 - **Cues.** Sleeping no longer raises `feather` or `lifted` (D major against A and C minor): the climb theme's entrance is
-  the feather's sound and the summit part carries the flight. Landing adds no completion phrase.
+  the feather's sound, the summit part the bird's arrival at the top and the morning its flight. Landing adds no completion phrase.
 - **Loading.** The wood and the crossing from it prefetch the lullaby, decoded at the wood's handoff; bedtime prefetches
   the climb, decoded from `asleep`; the freed feather prefetches the morning, decoded from `catch`, so it is in hand well
   before the curtains; the sea prefetches from the summit. Each buffer is released when its last part ends, or on
@@ -491,12 +548,13 @@ the arrival is asked for at 12.5, the lullaby plays 19.2–82.9, she lands at 29
 and is asleep at 84.7; the frost at 86.8 (no wait: 3.9 s after the lullaby), the tries at 85.9, 89.1 and 92.3, the
 call at 95.5, the feather offered at 106.5 and freed at 109.4, the background silent between. From the `feather` save
 through the rebuilt climb: the fog closes at +68.5 with no seam within 6 s, so the climb theme fades out by +71.5; the
-commitment at the catch, +81.5; the summit part at +97.4 as the commitment ends (top +95.2); the ribbon released at
-+115.0, where the morning enters from 11 s and the summit part fades out by +116.5 (131.27 s in). The morning's 23.62 s
-seam sounds at +127.6, with the bird landing (`waking`, +127.7); boarding at +169.2 fades the morning by +172.2,
-and the sea's recording begins 6.3 s into the passage. From `?chapter=ribbon`, measured from the release: the 16.46 s
-seam at +5.4, the 23.62 s seam at +12.6, the landing (`waking`) at +12.7, her eyes open at +14.9, the 27.8 s seam at
-+16.8 and she sits up from +16.3. From `?chapter=sleeping` she sleeps 49.2 s in: the lullaby ends at its 52.76 s seam
+commitment at the catch, +81.5; the summit part at +97.4 as the commitment ends (top +95.2), unbroken. From
+`?chapter=ribbon` (`sleeping-music-browser-check.mjs ribbon`, prompt circles 2 s after the turn), measured from the
+release: the top at −20.0, the summit part from −19.0, rising in; the `ribbon` gate at −8.9, a second before the bandage
+comes free, where it fades out by −5.9 (125.09 s in); the turn at −6.6; the leap at −3.6, 2.3 s into the silence, the
+tug at −1.6, and the morning at the release, 5.9 s of silence before it. Then the 16.46 s seam at +5.5, the 23.62 s seam at +12.6, the landing (`waking`)
+at +12.7, her eyes open at +14.9 and she sits up from +16.3; boarding at +54.2 fades the morning out by +58.2, and the
+sea's recording begins 6.3 s into the passage, 2.3 s after the morning stops, the gates open. From `?chapter=sleeping` she sleeps 49.2 s in: the lullaby ends at its 52.76 s seam
 and the frost waits 3.2 s. `sleeping-music-check.mjs` prints the same timeline offline for main's former climb, the
 rebuilt climb and a slow player.
 
@@ -698,11 +756,11 @@ before Begin. Begin unlocks audio and decodes while the chosen room prepares its
 both, showing "Preparing music" for waits over 150 ms. Sound-off and music-off skip preparation; switching either
 off cancels an in-progress start. A 20-second deadline bounds download/decode failures so ambience can still begin.
 During play, a single compressed prefetch slot warms Still's second recording on the island, Lines on the first crossing, Boats in Lines, Birches in Meadow,
-the stairs' `clouds.ogg` from Birches on (once the birches recording is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` with its ending in the village, Sleeping's lullaby in the wood and on the crossing from it, Sleeping's climb at bedtime, its morning from the freed feather and the open sea from the summit on (`nextMusicForChapter` takes Sleeping's gate), the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
+the stairs song from the birches on (decoded when the crossing asks for it), the stairs' `clouds.ogg` under the cloud (once the stairs song is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` with its ending in the village, Sleeping's lullaby in the wood and on the crossing from it, Sleeping's climb at bedtime, its morning from the freed feather and the open sea from the summit on (`nextMusicForChapter` takes Sleeping's gate), the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its fade in the white; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB and its ending about 3 MiB, from the belfry to its end; Sleeping's lullaby about 53 MiB, from the wood's handoff to its end; its climb about 64 MiB, from her falling asleep until the curtains (or the summit part's end); its morning about 45 MiB, from the catch to its end, so the climb and the morning hold about 109 MiB together over the summit, under the lullaby and climb's 117 MiB while she falls asleep. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
 retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
 (`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
@@ -731,8 +789,8 @@ the Meadow melody itself.
 - Re-entering a piece that is already playing makes no second pause. Section changes inside one piece keep their own
   continuity.
 - Special cases: Sleeping morning hands off explicitly to `sea` on departure, without a phrase wait: it fades over
-  3 s, rests `seaArrivalQuiet` (1 s) and the gates reopen over `seaArrivalFadeIn` (1 s), clear before the recording
-  begins at `seaMusicLead`; sea → Mirror waits until the whale has gone; the stairs → Drowned is asked for in the stairs' fog and waits for `clouds.ogg` (below); the village's recording enters at full level, without a fade-in (`villageArrivalFadeIn`), and so does Sleeping's lullaby (`sleepingArrivalFadeIn`); Drowned requests Wood
+  `sleepingDepartureFade` (4 s), rests `seaArrivalQuiet` (1 s) and the gates reopen over `seaArrivalFadeIn` (1 s), clear
+  before the recording begins at `seaMusicLead` (6.3 s), 2.3 s after the morning stops; sea → Mirror waits until the whale has gone; the stairs → Drowned is asked for in the stairs' fog and waits for `clouds.ogg` (below); the village's recording enters at full level, without a fade-in (`villageArrivalFadeIn`), and so does Sleeping's lullaby (`sleepingArrivalFadeIn`); Drowned requests Wood
   only after the lost-plane scene: out of the storm, silent by then, the wood's drone comes in over `forestMusicBlend` (4 s) with
   the gates open, tuned on D/A before it is audible; Mirror → Home is scheduled from the boat's leaving, the Mirror ending at a phrase seam
   (Homeward and Home above).
@@ -788,6 +846,11 @@ pan and bounded scheduling; finished nodes disconnect.
   readbacks) and the cygnet's heap kicks, sharing one `leafScuffEvery` budget; particles and wind never trigger them.
   `leafScuffLevel` is 3 dB above the original level, independent of wind and grass rustle.
   Swing creaks need real travel and a reversal, `swingCreakEvery` apart. Both attenuate over `birchesFoleyNear/Far`.
+  The squirrel's game (`BirchesFoley.leaves`): a rustle for each tell from its heap (`leafRustleLevel`), a burst when
+  it is turned out or the wind throws a wrong heap up, and the leap's burst with a thump under it (`leafBurstLevel`);
+  each stands for the scuff the leaves going up would make. The squirrel's own voice is synthesised
+  (`creatures/squirrel/voice.ts`): the scolding chuck and teeth-chatter, a squeak as it bursts out, claws on bark,
+  patter, landings and gnawing, played positionally from `squirrel.heard` in `main.ts`.
 - Sail: one quiet canvas fold at full droop (`sailSettleAt`), re-armed only after a refill below `sailSettleRearm`;
   flutter sounds only on fresh rises, `sailEvery` apart. Toy-boat flutter is silent.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
@@ -884,11 +947,12 @@ After playtesting (2026-10-14):
 
 > The cloud stairs music plays too soon by like ~5 seconds or so. It needs to start when the child has already stopped moving and the sun is revealed. have a look at that sequence and figure out a good timing. basically when the child reaches the clearing. Also that background ambience noise / wind sound above the clouds never transitions down. It's supposed to give way to the music at the top. Still there, but much quieter. The windy noise of going through teh clouds and emerging on top into a peaceful, serene scene is what we're going for.
 
-- Under the cloud the birches recording plays out the pass it was on when they sailed (Birches, above). Each flight that docks raises
+- Under the cloud the stairs song (`birches.ogg`) loops, begun from its top on the crossing's handoff (Birches, above;
+  a stairs start under the cloud begins it on load). Each flight that docks raises
   `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
   completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
-- In the white, if the birches recording is still playing, it stops over `birchesCloudFade` (1 s) and never starts
-  again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
+- In the white the stairs song fades over `stairsSongCloudFade` (3 s, a trial value awaiting Jeremy's listen) and
+  never starts again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
   `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.
 - Out on top, on the first `above` frame, the wind's last gust sweeps past and away and the white's wind dies within
   about 2 s; the high air above the cloud rises as the view opens. She walks to the edge and stops, and the haze lifts
@@ -915,7 +979,7 @@ After playtesting (2026-10-14):
   handoff as it was. Once out on top only the fog brings the sea back.
   Outside the room every level multiplier is exactly 1.
 
-Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.clouds`, `birchesCloudFade`. `node tools/clouds-music-check.mjs` checks the
+Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.stairs`, `recordedMusicDb.clouds`, `stairsSongCloudFade`. `node tools/clouds-music-check.mjs` checks the
 recording's start, entrance, end, hold and gates offline; `node tools/stairs-audio-proposal.mjs [outDir]` renders the
 room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloom and sail) remains for studies.
 
@@ -925,9 +989,12 @@ room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloo
 the list and the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs`
 covers start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's
 preparation and the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score
-sections. `node tools/village-music-check.mjs` covers the Birches play-out and stop in the white, the village's
+sections. `node tools/village-music-check.mjs` covers the Birches play-out and its end before the stairs song, the stairs song's fade in the white, the village's
 recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
-tools/village-music-browser-check.mjs [drowned cloud belfry storm]` measures them in the real game. `node
+tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]` measures them in the real game (`sail`: the
+birches' push-off to the stairs and up into the white). `node tools/music-transition-audit.mjs` also renders that sail
+whole (`sail-faded`, `sail-ended`) and the birches going round (`birches-seam`: a pass's last 10 s, the rest and the
+next's first 10 s, with the gap and entrance measured). `node
 tools/sleeping-music-check.mjs` checks Sleeping's cut points and seams on the decoded samples, the frost's wait, the
 climb's gates, queueing, skips, the morning at the curtains and restores offline and prints each player's timeline;
 `node tools/sleeping-music-browser-check.mjs [climb sleeping ribbon feather morning]` measures them in the real game.
@@ -936,6 +1003,8 @@ climb's gates, queueing, skips, the morning at the curtains and restores offline
 
 - The stairs: the sail's air over the cloud awaits Jeremy's listen in the game, and the moment `clouds.ogg` starts
   (on `clear`) and the settled high air await his playtest (`cloudsMusicDelay`, `highSettled`).
+- Birches and the stairs song: Red Door's level, its rest and entrance going round, the sail's fade and quiet (`birchesSailFade`, `stairsSongRest`) and
+  the stairs song's 3 s fade into the white (`stairsSongCloudFade`) await his listen.
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its slowed end falls in the storm) awaits his playtest.

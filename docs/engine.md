@@ -193,7 +193,10 @@ like there wasn't an authored system in place". What intention means:
   boat to keep them.
 - **An arrival can have its own view.** A crossing may name an `ArrivalView` (`crossingCamera.arrivals`): angle off
   astern, distance, height, look-ahead and optionally a committed side, eased in over sailed distance from the end of
-  the route and ending where the room's first view stands, so landing is not followed by a swing round.
+  the route and ending where the room's first view stands, so landing is not followed by a swing round. Its
+  bearing can be a world one (`world`), as rooms frame their first views, and an `IslandReveal` can come first: a
+  world-anchored view across the water toward the island as it clears its mist, held until the arrival takes over,
+  with its windows set in framed progress, which runs a few metres behind the boat.
 - **Reveals ratchet.** Each piano answer steps the view up and out and it stays; the finale's step ends on the walk's
   view of her, so nothing comes down when she stands (`piano.steps`, `finaleEase`).
 - Deliberate single moves are allowed: the doorway's threshold path, the little-boats close-up while the child handles
@@ -285,8 +288,9 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
 reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low it is not
 drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
-level. Home retains the ordinary reflection through landing and the walk inland: the meadow's coast cutoff does
-not apply there, because the sea remains in view. Verify from the crossing; starting at the jetty misses the handoff.
+level. Ordinary reflections stay enabled across room changes: distance from the meadow's southern coast cannot
+establish that water is out of view at another shore. Entering the mirror's room changes target resolution and
+cadence, not whether ordinary water reflects. Verify from the crossing; starting at a jetty misses the handoff.
 The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
 the collar, none), selected only by `applyWorldQuality`. A change fades them over a second (`uSeaEffects`, toward
@@ -325,7 +329,9 @@ least 80% of eight or more finish early the cap is proven and Auto judges every 
 under 25 ms show it has lifted. A timer that fires late counts as not early. A single hitch, time behind Begin or in
 a hidden tab never changes quality; Begin and visibility changes reset its timing. Pacing reports the longest display
 callback interval since the last presentation, floored at 16.7 ms, so deliberately skipped callbacks on 120/144 Hz
-displays don't look like overload.
+displays don't look like overload. Another process drawing on the same GPU (a capture, another tab running the game)
+makes frames late for real, so Auto steps down then. Judge its level, or any frame timing, on an otherwise idle
+machine; `perf.mjs` waits until it has the GPU to itself.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
 for every level at boot (about 44 MiB for the tables' four attachments, and 33 MiB for what moves each frame), so quality changes

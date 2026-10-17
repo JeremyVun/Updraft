@@ -32,17 +32,12 @@ For Jeremy's eye, ear or hands:
 - The whale shot on the first crossing: a glance from behind the boat, small in frame.
 - The child's pigtails, the hood's side line and the open bag flap, seen in a level from the play camera in motion
   ([child.md](child.md)).
+- The birches: a playthrough of the squirrel's hide-and-seek; Red Door's level on the island, its fade and the quiet
+  sea before the stairs song, and the stairs song's 3 s fade into the white (`birchesSailFade`, `stairsSongRest`,
+  `stairsSongCloudFade`; [contracts/audio.md](contracts/audio.md)). The island grew and gained a squirrel, heaps
+  and loose leaves; its cost is for his profiling session.
 - A playthrough on the iPad for performance: smoothness on Auto, heat and battery. It also settles whether the
   child's bone texture moves before the frame's passes ([engine.md](engine.md), Open).
-
-Planned:
-- **Birches uplift.** The island is over in about 90 seconds and its sail on to the stairs is short, so `birches.ogg`
-  barely clears before the stairs. More to do on the island, and the island moved so the crossing to the stairs is
-  longer, giving the music room between the two. Jeremy (2026-10-15): "if we make birches island longer / more
-  interactions and activities (right now its over in 90 seconds) we can add another song for the stairs, and probably
-  move the birches island so that the travel from birches to stairs island is a bit longer? Otherwise there's not
-  enough musical palate cleansing between the two islands." A song for the stairs under the cloud comes with it;
-  the white and the Penrose loop stay silent up to the top.
 
 Known issues:
 - The sky mirror: a faint speckled patch on the water beyond the departure jetty, looking toward the sun on the way
@@ -52,6 +47,8 @@ Known issues:
 - The child: unchecked that a resumed save with the cygnet in the bag starts with the flap open.
 - The stairs' wisps: a respawned rag keeps the radius it was created with (`aRadius` is fixed at creation in
   `world/stairs-puffs.ts`).
+- `scarf-check`: the birches' bow (tangle 4) takes 5–9 scripted strokes, so a full run's five-stroke limit fails now
+  and then; a rerun passes.
 - `storm-check` can fail under heavy machine load ("Plane did not disappear into the storm"), on old and new builds.
 
 Checks ([testing.md](testing.md)). The 2026-10-11 merge run and focused fixes leave passing results for all 63

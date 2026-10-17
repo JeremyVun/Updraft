@@ -22,10 +22,10 @@ export class StormWeather {
   constructor(private readonly thunder: (strength: number, pan: number, close: boolean) => void) {}
 
   /** Called after the palette, so the flash lights the rain, sail, travellers and reflected sky together. */
-  update(dt: number, storm: number, heading: number, lightningScale = 1, woodShade = 0, strike?: StormStrike | null): void {
+  update(dt: number, storm: number, heading: number, lightningScale = 1, woodShade = 0, strike?: StormStrike | null, cover = storm): void {
     this.flashScale += (lightningScale - this.flashScale) * (1 - Math.exp(-dt * 2.5));
     const u = atmo.uniforms;
-    u.uStormCover.value = storm;
+    u.uStormCover.value = cover;
     if (storm > 0.01) this.elapsed += dt;
     else {
       this.elapsed = 0;
@@ -66,11 +66,11 @@ export class StormWeather {
     const flash = t < 1 ? Math.sin(Math.min(1, this.age / tuning.storm.lightningAttack) * Math.PI * 0.5) * Math.pow(1 - t, 2) * this.strength * (this.close ? 1 : this.flashScale) : 0;
     u.uLightning.value.w = flash;
     // A storm hides the moon as well as the sun. Keep the close figures readable in scattered light.
-    u.uSunColor.value.multiplyScalar(1 - storm * (1 - tuning.storm.moonThroughCloud));
-    u.uSkyHorizonSun.value.lerp(u.uSkyHorizon.value, storm);
-    u.uSkyZenith.value.multiplyScalar(1 - storm * 0.25);
+    u.uSunColor.value.multiplyScalar(1 - cover * (1 - tuning.storm.moonThroughCloud));
+    u.uSkyHorizonSun.value.lerp(u.uSkyHorizon.value, cover);
+    u.uSkyZenith.value.multiplyScalar(1 - cover * 0.25);
     // Cloud-scattered light keeps the two travellers readable between the lightning strikes.
-    this.light.setRGB(0.025, 0.032, 0.046).multiplyScalar(storm);
+    this.light.setRGB(0.025, 0.032, 0.046).multiplyScalar(cover);
     u.uSkyAmbient.value.add(this.light);
     // Under the canopy, keep a little scattered fill and cold sky between the trunks.
     // The moon has already passed through storm cloud: preserve its directional edges rather than

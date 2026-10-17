@@ -6,6 +6,7 @@ import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
 import { STORM_WAY, CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, DARK_AT_STRAND, NAVE_BERTH, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
 import { LIGHTHOUSE_LANTERN_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
+import { birchesZ } from '../world/birches-layout';
 import { atmo } from '../world/atmosphere';
 import { drownedEntry } from '../world/journey-rooms';
 import { tuning } from '../tuning';
@@ -29,7 +30,7 @@ const TO_STRAND = 3;
 /** How far through the village the light has gone by the time the drift strands, wherever it began. */
 const STRAND_THROUGH = TO_STRAND / (PASSAGE.length - 2);
 /** Saves from before the stairs begin the room at the birches' beach, north of all of it. */
-const FROM_BIRCHES_Z = -1240;
+const FROM_BIRCHES_Z = birchesZ(-1240);
 /** Once she is aboard at the nave they go out by `STORM_WAY` and approach the forest beach from open water. */
 const ON_FROM_NAVE = PASSAGE.length - 1;
 /**

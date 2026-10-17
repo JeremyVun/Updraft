@@ -8,7 +8,7 @@ import { RotaryCreak } from './rotary-creak';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
+  | 'dolphin-surface' | 'leaf-scuff' | 'leaf-rustle' | 'leaf-burst' | 'leaf-leap' | 'leaf-dive' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
   | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
   | 'hull-strain' | 'rotary-creak';
@@ -87,6 +87,37 @@ export class Foley {
         type: 'bandpass', from: 2900 * colour, q: 0.7, attack: 0.008 });
       this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
+    } else if (kind === 'leaf-rustle') {
+      // Something small shifting under a heap: a few dry folds close together, softer than a footstep.
+      const colour = 0.9 + Math.random() * 0.2;
+      for (let i = 0, t = at; i < 5; i++, t += 0.05 + Math.random() * 0.08) {
+        this.puff({ at: t, len: 0.06 + Math.random() * 0.05, level: level * (0.02 + Math.random() * 0.014), pan,
+          type: 'bandpass', from: (1500 + Math.random() * 1300) * colour, q: 0.8, attack: 0.008 });
+      }
+    } else if (kind === 'leaf-burst' || kind === 'leaf-leap') {
+      // A heap thrown up: one rush of leaves through the air, and the crisp ones scattering out of it; landed in, a soft thump under it.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.puff({ at, len: 0.55, level: level * 0.05, pan, type: 'bandpass', from: 700 * colour, to: 1900 * colour, q: 0.6, attack: 0.03, wet: 0.05 });
+      for (let i = 0, t = at + 0.03; i < 9; i++, t += 0.03 + Math.random() * 0.06) {
+        this.puff({ at: t, len: 0.04 + Math.random() * 0.05, level: level * (0.012 + Math.random() * 0.016),
+          pan: pan + (Math.random() - 0.5) * 0.25, type: 'bandpass', from: (1800 + Math.random() * 1800) * colour, q: 0.8, attack: 0.004 });
+      }
+      if (kind === 'leaf-leap') this.puff({ at, len: 0.18, level: level * 0.05, pan, type: 'lowpass', from: 220, to: 110, attack: 0.006 });
+    } else if (kind === 'leaf-dive') {
+      // Something landing in a heap: a soft whumph of body into leaves, a dense crunch as it goes under, and the thrown
+      // ones pattering down after. It falls where a burst rises, so going in and coming out never sound alike.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.puff({ at, len: 0.26, level: level * 0.09, pan, type: 'lowpass', from: 300 * colour, to: 85, attack: 0.008 });
+      this.blip(at, 140 * colour, 70 * colour, 0.16, level * 0.03, pan, 'sine', 0.03);
+      this.puff({ at, len: 0.4, level: level * 0.05, pan, type: 'bandpass', from: 1500 * colour, to: 520 * colour, q: 0.7, attack: 0.012, wet: 0.05 });
+      for (let i = 0, t = at + 0.005; i < 14; i++, t += 0.008 + Math.random() * 0.022) {
+        this.puff({ at: t, len: 0.03 + Math.random() * 0.04, level: level * (0.016 + Math.random() * 0.02),
+          pan: pan + (Math.random() - 0.5) * 0.2, type: 'bandpass', from: (1300 + Math.random() * 2400) * colour, q: 0.9, attack: 0.003 });
+      }
+      for (let i = 0; i < 7; i++) {
+        this.puff({ at: at + 0.45 + Math.random() * 0.8, len: 0.035 + Math.random() * 0.04, level: level * (0.005 + Math.random() * 0.008),
+          pan: pan + (Math.random() - 0.5) * 0.45, type: 'bandpass', from: (2000 + Math.random() * 1800) * colour, q: 0.8, attack: 0.004 });
+      }
     } else if (kind === 'rotary-creak') {
       this.rotary.play(this.out!, at, level, pan);
     } else if (kind === 'swing-creak') {

@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 globalThis.location={search:'?lite=0'};
 const {BirchScarf,SCARF_SNAGS,SCARF_PERCHES}=await import('../src/world/birch-scarf.ts');
 const {heightAt,setHeightGrid}=await import('../src/world/island.ts');
-const res=400,size=200,minX=-100,minZ=-1230,data=new Float32Array(res*res);
+const {ISLES}=await import('../src/world/heightfield.ts');
+const res=560,size=280,minX=ISLES.birches.x-size/2,minZ=ISLES.birches.z-size/2,data=new Float32Array(res*res);
 for(let z=0;z<res;z++)for(let x=0;x<res;x++)data[z*res+x]=heightAt(minX+(x+.5)/res*size,minZ+(z+.5)/res*size);
 setHeightGrid({data,res,size,minX,minZ,stride:1});
 const scarf=new BirchScarf();
@@ -109,7 +110,8 @@ for(const index of [2,3]){
 }
 
 const {BirchesChapter}=await import('../src/story/birches.ts');
-const saved={cast:{birches:{scarf},boat:{scarfSail:0},child:{stop(){}},cygnet:{carried:false}}};
+const saved=Object.assign(Object.create(BirchesChapter.prototype),{cast:{birches:{scarf},boat:{scarfSail:0},child:{stop(){}},cygnet:{carried:false}},
+  squirrel:{release(){},restore(){}},cueNow:{}});
 BirchesChapter.prototype.restoreCheckpoint.call(saved,'scarf-3',[4,0,.65,3]);
 assert.equal(scarf.completed,4);assert.equal(saved.cast.boat.scarfSail,1);
 BirchesChapter.prototype.restoreCheckpoint.call(saved,'scarf4-3',[4,0,.65,3]);

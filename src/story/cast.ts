@@ -23,6 +23,7 @@ import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
 import type { Cat } from '../creatures/cat';
+import type { Squirrel } from '../creatures/squirrel';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
 import type { Feather } from '../fx/feather';
@@ -68,6 +69,8 @@ export interface Cast {
   flock: SwanFlock;
   /** The stranded cat of the drowned village. */
   cat: Cat;
+  /** The red squirrel of the autumn birches, who hides in the leaf heaps. */
+  squirrel: Squirrel;
   /** Everything the two of them do with their hands on each other: gathering up, holding, setting down, the satchel. */
   carry: Carry;
   /** The one white feather the family leaves behind on the meadow's pond. */
@@ -86,6 +89,8 @@ export interface Cast {
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
   /** A physical sound at a place in the world, heard as near as it is: for things a chapter builds and moves itself. */
   knock?(kind: MaterialSound, at: THREE.Vector3, strength: number): void;
+  /** The birches' leaves heard where they go up: something hidden stirring them, the squirrel diving in, a heap bursting, a child landing in one. */
+  leafSound?(kind: 'rustle' | 'dive' | 'burst' | 'leap', at: THREE.Vector3, strength: number): void;
 }
 
 /** What a chapter tells the rest of the game each frame. */
@@ -134,13 +139,18 @@ export interface Chapter {
   readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
   /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
   readonly cameraCut?: number;
+  /** Carry the actual view through a hidden move instead of snapping to its framing target. */
+  readonly cameraRelocation?: THREE.Matrix4;
   /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
   readonly pointerFloor?: number | null;
+  /** How far from the lens the pointer's wind may land, while the player is aiming at something standing up out of the ground. */
+  readonly pointerReach?: number | null;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
   readonly arrivalMusic?: ArrivalMusic;
   readonly arrivalReady?: boolean;
+  readonly arrivalIn?: number;
   readonly homewardTime?: number;
   /** The opening holds its home chord under the skein and rests from the fall until the child carries the bird away. */
   readonly openingScore?: OpeningScorePhase;
@@ -178,6 +188,7 @@ export interface Chapter {
   readonly meadowMusic?: MeadowMusicPart;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */
   readonly birchesScore?: BirchesScorePhase;
+  readonly stairsSong?: boolean;
   /** The air round the travellers in the stairs in the clouds: in the white, out on top, the fog on the way down. */
   readonly stairsAir?: StairsAir;
   /** Lines follows each curtain, the family clothes and the walk beyond the doorway. */
@@ -225,6 +236,8 @@ export interface Chapter {
   readonly invitationHeading?: number | null;
   /** How many of the night's fireflies are out, 0..1; all of them when unset. */
   readonly fireflies?: number;
+  /** Something besides her and the cygnet that the depth blur keeps sharp, and how much (0..1). */
+  readonly alsoSharp?: { at: THREE.Vector3; weight: number } | null;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
   /** Where the one ember light the shaders get comes from, when a beat needs it somewhere other than the brightest coal. */

@@ -276,7 +276,8 @@ uniform float uScarf;
 uniform float uFill;
 uniform float uDroop;
 uniform vec4 uSubject;
-/** Where the cloth hangs between the camera and the child it thins, so the child is never lost behind the sail. */
+uniform float uGiveWay;
+/** Where the cloth hangs between the camera and the child it thins to uGiveWay, so the child is never lost behind the sail. */
 float givesWay(vec3 world) {
   if (uSubject.w < 0.5 || uMirrorPass > 0.5) return 1.0;
   vec3 toSubject = uSubject.xyz - cameraPosition;
@@ -289,7 +290,7 @@ float givesWay(vec3 world) {
   /** Where this line of sight passes her, against her whole height from boots to hood. */
   vec3 past = toHere * (reach / along) - toSubject;
   float off = length(past - vec3(0.0, clamp(past.y, -0.75, 0.3), 0.0));
-  return max(behind, mix(0.3, 1.0, smoothstep(0.45, 1.25, off)));
+  return max(behind, mix(uGiveWay, 1.0, smoothstep(0.45, 1.25, off)));
 }
 in vec2 vUv;
 in vec2 vCut;

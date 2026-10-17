@@ -2,17 +2,18 @@ import type { SoundState } from './audio';
 import { tuning } from '../tuning';
 import { mirrorEnding } from './mirror-seams';
 
-export type ArrivalMusic = 'lines' | 'boats' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sleeping' | 'sea' | 'mirror' | 'home';
+export type ArrivalMusic = 'lines' | 'boats' | 'meadow' | 'birches' | 'stairs' | 'drowned' | 'wood' | 'sleeping' | 'sea' | 'mirror' | 'home';
 type Stage = 'wait' | 'none' | 'fade' | 'gap' | 'incoming' | 'blend';
-type Background = Pick<SoundState, 'music' | 'hush' | 'seaScore' | 'sleepingScore' | 'meadowScore' | 'birchesScore' | 'linesScore' | 'linesMelodyQuiet' | 'mirrorScore' | 'drownedScore' | 'summitScore' | 'openingScore'>;
+type Background = Pick<SoundState, 'music' | 'hush' | 'seaScore' | 'sleepingScore' | 'meadowScore' | 'birchesScore' | 'stairsSong' | 'linesScore' | 'linesMelodyQuiet' | 'mirrorScore' | 'drownedScore' | 'summitScore' | 'openingScore'>;
 const empty = { seaScore: undefined, sleepingScore: undefined, meadowScore: undefined,
-  birchesScore: undefined, linesScore: undefined, linesMelodyQuiet: false, mirrorScore: undefined, drownedScore: undefined, summitScore: undefined, openingScore: undefined };
+  birchesScore: undefined, stairsSong: undefined, linesScore: undefined, linesMelodyQuiet: false, mirrorScore: undefined, drownedScore: undefined, summitScore: undefined, openingScore: undefined };
 export const ARRIVAL_MUSIC: Record<ArrivalMusic, Background> = {
   lines: { ...empty, music: 'lines', hush: 0, linesScore: 'first' },
   boats: { ...empty, music: 'boats', hush: .28 },
   // The meadow must still be grey and unawakened before the piano.
   meadow: { ...empty, music: 'meadow', hush: 0 },
   birches: { ...empty, music: 'birches', hush: 0, birchesScore: 'walk' },
+  stairs: { ...empty, music: 'birches', hush: 0, stairsSong: true },
   drowned: { ...empty, music: 'drowned', hush: .3, drownedScore: 'drift' },
   wood: { ...empty, music: 'wood', hush: .6 },
   sleeping: { ...empty, music: 'wood', hush: .5, sleepingScore: 'shelter' },
@@ -23,10 +24,10 @@ export const ARRIVAL_MUSIC: Record<ArrivalMusic, Background> = {
 const background = (s: SoundState): Background => ({ music: s.music, hush: s.hush,
   mirrorScore: s.mirrorScore, drownedScore: s.drownedScore, openingScore: s.openingScore,
   seaScore: s.seaScore, sleepingScore: s.sleepingScore, meadowScore: s.meadowScore,
-  birchesScore: s.birchesScore, linesScore: s.linesScore, linesMelodyQuiet: s.linesMelodyQuiet, summitScore: s.summitScore });
+  birchesScore: s.birchesScore, stairsSong: s.stairsSong, linesScore: s.linesScore, linesMelodyQuiet: s.linesMelodyQuiet, summitScore: s.summitScore });
 
 const identity = (s: Background): string => s.openingScore ? 'opening' : s.sleepingScore ? 'sleeping'
-  : s.meadowScore ? 'meadow' : s.birchesScore ? 'birches' : s.linesScore ? 'lines'
+  : s.meadowScore ? 'meadow' : s.stairsSong ? 'stairs' : s.birchesScore ? 'birches' : s.linesScore ? 'lines'
   : s.mirrorScore ? 'mirror' : s.drownedScore ? 'drowned' : s.summitScore ? 'summit'
   : s.seaScore ? 'sea' : s.music === 'boats' ? 'boats' : `${s.music}-pad`;
 
@@ -86,7 +87,7 @@ export class ArrivalTransition {
     if (this.target) {
       const target = ARRIVAL_MUSIC[this.target];
       const landed = s.music === target.music &&
-        (!target.linesScore || !!s.linesScore) && (!target.birchesScore || !!s.birchesScore) &&
+        (!target.linesScore || !!s.linesScore) && (!target.birchesScore || !!s.birchesScore) && (!target.stairsSong || !!s.stairsSong) &&
         (!target.mirrorScore || !!s.mirrorScore) && (!target.drownedScore || !!s.drownedScore) &&
         (!target.sleepingScore || !!s.sleepingScore) && (!target.summitScore || !!s.summitScore) &&
         (!target.seaScore || !!s.seaScore && !s.sleepingScore);
@@ -118,7 +119,8 @@ export class ArrivalTransition {
           if (this.stage === 'incoming' && !s.arrivalMusic && landed) { this.target = undefined; this.stage = 'none'; }
           return step;
         }
-        const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0 : tuning.audio.arrivalFadeOut;
+        const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0
+          : this.outgoing?.sleepingScore ? tuning.audio.sleepingDepartureFade : tuning.audio.arrivalFadeOut;
         const quiet = arrivalQuiet(this.target);
         const fadeIn = this.target === 'sea' ? tuning.audio.seaArrivalFadeIn
           : this.target === 'drowned' ? tuning.audio.villageArrivalFadeIn

@@ -2,6 +2,7 @@ import { BOATS_BERTH } from '../world/little-boats-layout';
 import { MIRROR_BERTH } from '../world/sky-mirror-layout';
 import type { Progress } from './progress';
 import { STILL_SHIFT, SHORE_SEPARATION } from '../world/geography';
+import { BIRCHES_LOCAL, birchesAt } from '../world/birches-layout';
 import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, PAST_THE_WHALE, ONWARD_SEA, WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING, MIRROR_SHORTENING, LINES_SHIFT, GEOGRAPHY_VERSION } from '../world/geography';
 
 /** Preserve chapter progress when the islands move. Old sailing saves resume in safe open water. */
@@ -57,6 +58,15 @@ export function migrateGeography(p: Progress): Progress {
     for (const region of p.life) if (Math.hypot((region[0] - 240) / 23, (region[1] + 365) / 30) < 1.6) {
       region[0] += SHORE_SEPARATION.x;
       region[1] += SHORE_SEPARATION.z;
+    }
+  }
+  if ((p.geography ?? 0) < 12 && ['birches', 'toStairs', 'drowned'].includes(p.chapter)) {
+    for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
+      // Only what was on or just off the island moves with it; older village saves began on its far beach.
+      if (Math.hypot((v[0] - BIRCHES_LOCAL.x) / BIRCHES_LOCAL.rx, (v[z] - BIRCHES_LOCAL.z) / BIRCHES_LOCAL.rz) > 1.3) continue;
+      const at = birchesAt(v[0], v[z]);
+      v[0] = at.x;
+      v[z] = at.z;
     }
   }
   p.geography = GEOGRAPHY_VERSION;

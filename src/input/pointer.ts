@@ -52,6 +52,8 @@ export class PointerInput {
   anchor: THREE.Vector3 | null = null;
   /** A surface the pointer lands on high above the ground, such as the top of a cloud, or null for the ground. */
   floor: number | null = null;
+  /** How far from the lens the wind may land, or null for wherever the ray meets the ground. */
+  reach: number | null = null;
   /** Chapter-local sensitivity for slow, deliberate circles. */
   twirlGain = 1;
   present = false;
@@ -71,9 +73,14 @@ export class PointerInput {
   private strokeSource = {};
   private readonly vel = new THREE.Vector2();
   private readonly instVel = new THREE.Vector2();
+  /** The stroke's speed where its wind lands, short of `reach`; the same as `vel` with no reach. */
+  private readonly landVel = new THREE.Vector2();
+  private readonly instLand = new THREE.Vector2();
   private readonly ray = new THREE.Raycaster();
   private heading: number | null = null;
   private readonly anchorNdc = new THREE.Vector3();
+  private readonly near = new THREE.Vector3();
+  private readonly nearTo = new THREE.Vector3();
   private spin = 0;
   private sinceHeading = 0;
   private activePointer: number | null = null;
@@ -191,6 +198,14 @@ export class PointerInput {
     out.y = 0;
   }
 
+  /** `p` brought back along its ray to `reach` from the lens; the stroke's speed is still measured where it fell. */
+  private reached(camera: THREE.Camera, p: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    out.copy(p);
+    if (this.reach === null) return out;
+    const far = out.distanceTo(camera.position);
+    return far > this.reach ? out.sub(camera.position).multiplyScalar(this.reach / far).add(camera.position) : out;
+  }
+
   /**
    * Winds the updraft up while the cursor goes round and round. It reads how fast the stroke's heading is turning on
    * screen, so the size of the circles does not matter, a straight stroke counts for nothing, and scribbling back
@@ -220,7 +235,7 @@ export class PointerInput {
     if (want > this.charge) this.charge = Math.min(want, this.charge + dt * T.chargeRate * want);
     else this.charge = Math.max(want, this.charge - dt * T.dischargeRate);
     const settle = this.charge < 0.05 ? 1 : 1 - Math.exp(-dt * 2);
-    this.updraftAt.lerp(this.anchored(camera) ?? this.world, settle);
+    this.updraftAt.lerp(this.anchored(camera) ?? this.reached(camera, this.world, this.near), settle);
   }
 
   private anchored(camera: THREE.Camera): THREE.Vector3 | null {
@@ -264,6 +279,7 @@ export class PointerInput {
     if (!this.hasPrev) {
       this.strokeSource = {};
       this.vel.set(0, 0);
+      this.landVel.set(0, 0);
       this.gust = 0;
       this.hasPrev = true;
       // A touch stroke begins where the finger landed, so its first frame of movement is wind too.
@@ -276,32 +292,40 @@ export class PointerInput {
     }
 
     this.instVel.set(0, 0);
+    this.instLand.set(0, 0);
+    const a = this.reached(camera, this.prev, this.near), b = this.reached(camera, this.world, this.nearTo);
     if (!this.ndc.equals(this.prevNdc)) {
       /** Both ends of a stroke use this frame's camera: moving the camera cannot supply any of the wind. */
       this.pick(camera, this.prevNdc, this.prev);
       this.pick(camera, this.ndc, this.world);
       this.instVel.set((this.world.x - this.prev.x) / dt, (this.world.z - this.prev.z) / dt);
+      this.reached(camera, this.prev, a);
+      this.reached(camera, this.world, b);
+      this.instLand.set((b.x - a.x) / dt, (b.z - a.z) / dt);
     }
     /** With no new gesture, its last gust settles where it was made; no ground picking is needed. */
-    this.vel.lerp(this.instVel, 1 - Math.exp(-dt * 30));
-    const raw = this.vel.length() * (this.down || this.frameReleased ? T.pressedGain : T.hoverGain);
-    const speed = T.maxGust * Math.tanh(raw / T.maxGust);
+    const ease = 1 - Math.exp(-dt * 30), gain = this.down || this.frameReleased ? T.pressedGain : T.hoverGain;
+    this.vel.lerp(this.instVel, ease);
+    this.landVel.lerp(this.instLand, ease);
+    const speed = T.maxGust * Math.tanh(this.vel.length() * gain / T.maxGust);
     this.gust = speed;
     if (speed > T.minGust) {
-      const nx = this.vel.x / this.vel.length();
-      const nz = this.vel.y / this.vel.length();
-      this.gustDir.set(nx, nz);
-      const g = this.gustSplat;
-      g.source = this.strokeSource;
-      g.ax = this.prev.x;
-      g.az = this.prev.z;
-      g.bx = this.world.x;
-      g.bz = this.world.z;
-      g.vx = nx * speed;
-      g.vz = nz * speed;
-      g.radius = 3.4 + speed * 0.14;
-      g.energy = Math.min(1, speed / 20) * 0.5;
-      wind.addSplat(g);
+      this.gustDir.set(this.vel.x / this.vel.length(), this.vel.y / this.vel.length());
+      /** Short of `reach`, the stroke still counts as fast as it was drawn; the wind it writes is as fast as where it lands. */
+      const landed = T.maxGust * Math.tanh(this.landVel.length() * gain / T.maxGust);
+      if (landed > T.minGust) {
+        const g = this.gustSplat;
+        g.source = this.strokeSource;
+        g.ax = a.x;
+        g.az = a.z;
+        g.bx = b.x;
+        g.bz = b.z;
+        g.vx = this.landVel.x / this.landVel.length() * landed;
+        g.vz = this.landVel.y / this.landVel.length() * landed;
+        g.radius = 3.4 + landed * 0.14;
+        g.energy = Math.min(1, landed / 20) * 0.5;
+        wind.addSplat(g);
+      }
     }
 
     this.twirl(dt, camera);

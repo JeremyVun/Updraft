@@ -148,7 +148,11 @@ In `traveller.ts` unless noted.
 - **Quick actions** place the mittens by hand targets in the body's frame with the elbow given (`grips`,
   `motion.reach(…, elbow)`): throw (`THROW`), pick-up (`PICKUP`: a squat, the mitten to where the paper lies; the
   paper comes up in hand at `PICKUP_GRAB`; `pickUp(onDone, at)`), cheer, wave with the free hand, reach, and a
-  forearm raised against a strong wind.
+  forearm raised against a strong wind. At a destination, `PlaneArrival` asks the glider to return outside her
+  shoulder: she turns, reaches with the left mitten, catches it and lowers her arm before boarding. Contact reads
+  the posed hand after her update, and the paper keeps that grip as the reach relaxes (`tuning.planeCatch`).
+  Jeremy (2026-10-17): "It happens everytime the child is about to leave the island and get on the exit boat,
+  the paper plane flies back to her"; "Could you make it so that she catches it in a nice, short, natural looking animation?"
 - **Low reaches** bend her further over toward something low in front, only as far as needed (`stoop`).
 - **High reaches** take the collarbone up with the arm, as a posed raised arm does (`SHRUG` in `motion.ts`). Her
   shoulder sits about 0.5 m below her face and her arm is short, so a mitten tops out about 0.2 m above her face,

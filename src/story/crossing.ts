@@ -11,7 +11,7 @@ import type { SeaScorePhase } from '../audio/sea-score';
 import type { LinesScorePhase } from '../audio/lines-score';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 import type { BirchesScorePhase } from '../audio/birches-score';
-import type { ArrivalMusic } from '../audio/arrival-music';
+import { arrivalQuiet, type ArrivalMusic } from '../audio/arrival-music';
 import type { Shot } from '../camera';
 import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
@@ -44,6 +44,31 @@ export interface ArrivalView {
   lead: number;
   /** The quarter the room's own first view stands on, kept whichever side the sail is on. */
   side?: number;
+  /** `bearing` is in world radians from south, as a room frames its own first view, rather than off astern. */
+  world?: boolean;
+  reveal?: IslandReveal;
+}
+
+/**
+ * The island ahead seen whole across the water as it comes out of its mist, before the arrival's own view: eased in
+ * between `from` and `full` units of sailing from the end of the route and held until the arrival's view takes over.
+ * The lens stands at a world `bearing` and gives `weight` of its gaze to `sight` on the island, where the child looks
+ * too. Portrait has its own of both, so the island can rise behind the boat without the gaze pushing it off a narrow
+ * frame.
+ */
+export interface IslandReveal {
+  from: number;
+  full: number;
+  bearing: number;
+  weight: number;
+  portrait: { bearing: number; weight: number };
+  distance: number;
+  height: number;
+  sight: THREE.Vector3;
+  /** A longer lens while the island is revealed, so it fills the frame instead of reading small end to end. */
+  zoom?: number;
+  /** The destination's music enters this many seconds after the lens begins its swing, rather than as the shore nears. */
+  music?: number;
 }
 
 /** How near a waypoint counts as rounded. */
@@ -54,6 +79,8 @@ const ON_THE_LINE = 12;
 const FRAMED_RESPONSE = 1.2;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
 const SWING = tuning.crossingCamera.farewellRelease;
+const turnToward = (from: number, to: number, share: number): number =>
+  from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * share;
 
 export interface CrossingOpts {
   /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
@@ -147,6 +174,7 @@ export class CrossingChapter implements Chapter {
   private readonly arrivalMusicEarlier: number;
   private readonly departureMusic?: ArrivalMusic;
   private arrivalHeard = false;
+  private revealedAt: number | null = null;
   readonly season: number;
   private readonly route: THREE.Vector2[];
   private readonly departureChannel?: CrossingOpts['departureChannel'];
@@ -180,6 +208,7 @@ export class CrossingChapter implements Chapter {
   private readonly whaleOffset = new THREE.Vector3();
   private readonly farewellAttention = { point: new THREE.Vector3(), strength: 0,
     weight: tuning.crossingCamera.farewellWeight };
+  private readonly revealAttention = { point: new THREE.Vector3(), strength: 0, weight: 0 };
   private readonly whaleRight = new THREE.Vector3();
   private readonly whaleSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     tertiary: new THREE.Vector3(), margin: 0.8, extra: 60 };
@@ -443,14 +472,32 @@ export class CrossingChapter implements Chapter {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
-    const speed=Math.max(4.5,this.cast.boat.speed);
+    const reveal = this.musicReveal;
+    if (reveal) return this.cast.boat.grounded || (this.revealedAt !== null && this.time >= this.revealedAt + reveal.music!);
+    return this.cast.boat.grounded || this.remainingSail()<=this.entrance(Math.max(4.5,this.cast.boat.speed));
+  }
+
+  get arrivalIn(): number | undefined {
+    if (this.homeward || !this.destinationMusic) return undefined;
+    const speed = Math.max(4.5, this.cast.boat.speed);
+    return this.cast.boat.grounded ? 0 : Math.max(0, this.remainingSail() - this.entrance(speed)) / speed;
+  }
+
+  /** How far out the destination's music may come in. */
+  private entrance(speed: number): number {
+    if (this.musicReveal) return this.musicReveal.from;
     const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
-    const lead=tuning.audio.arrivalShoreAllowance+(tuning.audio.arrivalEntranceLead+earlier)*speed;
-    return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
+    return Math.min(tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalEntranceLead + earlier) * speed,
+      this.routeLength * tuning.audio.arrivalEntranceRouteShare);
   }
 
   /** Seconds since the boat left the Mirror. */
   get homewardTime(): number | undefined { return this.homeward ? this.time : undefined; }
+
+  private get musicReveal(): IslandReveal | undefined {
+    const reveal = this.arrivalView?.reveal;
+    return reveal?.music !== undefined ? reveal : undefined;
+  }
 
   /** Remaining sailing distance, not straight-line proximity across an intervening island. */
   private remainingSail(): number {
@@ -467,7 +514,11 @@ export class CrossingChapter implements Chapter {
     const speed=Math.max(4.5,this.cast.boat.speed);
     const earlier = (this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0) + this.arrivalMusicEarlier;
     const lead = tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalMusicLead + earlier) * speed;
-    if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
+    // Entering with the reveal, the outgoing music's longest phrase wait, fade and quiet all fall before it.
+    const a = tuning.audio, reveal = this.musicReveal;
+    const due = reveal ? reveal.from + (a.arrivalPhraseWait + a.arrivalFadeOut + arrivalQuiet(this.destinationMusic)) * speed
+      : Math.min(lead, this.routeLength * a.arrivalMusicRouteShare);
+    if (remaining <= due) {
       this.arrivalHeard = true;
     }
   }
@@ -555,6 +606,7 @@ export class CrossingChapter implements Chapter {
     this.blowTitleGust();
     this.steer();
     this.followProgress(dt);
+    if (this.revealedAt === null && this.musicReveal && this.revealing(this.framed) > 0) this.revealedAt = this.time;
     this.prepareArrivalMusic();
     const { child, boat, plane, sealife } = this.cast;
     const back = this.lookBack;
@@ -573,7 +625,7 @@ export class CrossingChapter implements Chapter {
     } else {
       const k = tuning.crossingCamera, progress = this.framed;
       const near = THREE.MathUtils.smootherstep(progress, 0, k.departureUntil)
-        * (1 - this.arrival(progress)) * (1 - turn);
+        * (1 - this.arrival(progress)) * (1 - this.revealing(progress)) * (1 - turn);
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     }
@@ -596,7 +648,8 @@ export class CrossingChapter implements Chapter {
     } else {
       const look = Math.sin(this.time * 0.13) * 30;
       this.ahead.set(boat.position.x + look, 12, boat.position.z - 200);
-      child.lookAt = this.ahead;
+      const reveal = this.arrivalView?.reveal;
+      child.lookAt = reveal && this.revealing(this.framed) > 0.3 ? reveal.sight : this.ahead;
       if (this.time > this.nextGlance && this.cast.cygnet.carried) {
         this.glanceUntil = this.time + 3.5 + Math.random() * 2.5;
         this.nextGlance = this.glanceUntil + 9 + Math.random() * 8;
@@ -792,6 +845,13 @@ export class CrossingChapter implements Chapter {
     return 1 - THREE.MathUtils.smootherstep((1 - progress) * this.routeLength, view.full, view.from);
   }
 
+  /** How far the island ahead has been revealed, 0 to 1, from the framed route progress. */
+  private revealing(progress: number): number {
+    const reveal = this.arrivalView?.reveal;
+    if (!reveal) return 0;
+    return 1 - THREE.MathUtils.smootherstep((1 - progress) * this.routeLength, reveal.full, reveal.from);
+  }
+
   /** A critically damped follower of `progress()`, so a sudden jump in it becomes a gentle catch-up. */
   private followProgress(dt: number): void {
     const actual = this.progress();
@@ -858,14 +918,24 @@ export class CrossingChapter implements Chapter {
     const view = this.arrivalView ?? { bearing: k.arrivalBearing, distance: k.arrivalDistance,
       height: k.arrivalHeight, lead: k.arrivalLead };
     const arrival = this.arrival(progress);
+    const world = this.arrivalView?.world ?? false;
+    const isle = this.arrivalView?.reveal;
+    const revealed = this.revealing(progress);
+    const reveal = revealed * (1 - arrival);
     const distance = k.nearDistance + (k.departureDistance - k.nearDistance) * departure
-      + (view.distance - k.nearDistance) * arrival;
+      + (view.distance - k.nearDistance) * arrival + (isle ? (isle.distance - k.nearDistance) * reveal : 0);
     const height = k.nearHeight + (k.departureHeight - k.nearHeight) * departure
-      + (view.height - k.nearHeight) * arrival;
+      + (view.height - k.nearHeight) * arrival + (isle ? (isle.height - k.nearHeight) * reveal : 0);
     const lead = k.nearLead + (k.departureLead - k.nearLead) * departure + (view.lead - k.nearLead) * arrival;
     const angle = k.nearBearing + (k.departureBearing - k.nearBearing) * departure
-      + (view.bearing - k.nearBearing) * arrival;
-    const sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
+      + (world ? 0 : (view.bearing - k.nearBearing) * arrival);
+    let sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
+    const lens = isle && (window.innerWidth < window.innerHeight ? isle.portrait : isle);
+    if (lens) sailBearing = turnToward(sailBearing, lens.bearing, revealed);
+    if (world) {
+      sailBearing = turnToward(sailBearing, view.bearing, arrival);
+      this.shot.authored = revealed > 0 || arrival > 0;
+    }
     const seat = this.cast.child.position;
     // Slow and even enough that swinging round to the stern never cancels the boat's own travel: they sail past
     // the lens, which falls in behind them without ever standing still.
@@ -907,7 +977,15 @@ export class CrossingChapter implements Chapter {
       this.shot.target.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead);
       this.shot.distance = distance;
       this.shot.height = height;
+      // Held to the beach: the room lets it go while its lens is still closing in, so it never reads as a zoom out.
+      this.shot.zoom = isle?.zoom ? THREE.MathUtils.lerp(1, isle.zoom, revealed) : undefined;
       this.pace = 0.4;
+      if (isle && lens && reveal > 0) {
+        this.revealAttention.point.copy(isle.sight);
+        this.revealAttention.strength = reveal;
+        this.revealAttention.weight = lens.weight;
+        this.shot.attention = this.revealAttention;
+      }
       if (this.wantsDolphins) {
         // Hold the boat and the near water together, leaving breathing room around whole animals.
         this.shot.target.set(boat.position.x - fz * this.quarter * 1.5 + fx,

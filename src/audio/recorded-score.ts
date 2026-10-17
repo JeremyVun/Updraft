@@ -1,7 +1,7 @@
 import { decodeMusic } from './music-loading';
 import { tuning } from '../tuning';
 
-export type RecordedMusic = 'home' | 'mirror' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'lines' | 'boats' | 'stillDeparture';
+export type RecordedMusic = 'home' | 'mirror' | 'birches' | 'stairs' | 'clouds' | 'villageApproach' | 'belfry' | 'lines' | 'boats' | 'stillDeparture';
 
 export class RecordedScore {
   readonly ready: Promise<void>;
@@ -38,6 +38,8 @@ export class RecordedScore {
   private region: readonly [number, number] | null = null;
   /** Where the pass sounding before a cue was, until the cue begins. */
   private before: { start: number; epoch: number; region: readonly [number, number] | null } | null = null;
+  /** Between passes of a recording that rests before it goes round: the next begins from its top then. */
+  private restUntil = -Infinity;
 
   constructor(private readonly ctx: BaseAudioContext, private readonly output: AudioNode, readonly track: RecordedMusic) {
     this.bus = ctx.createGain();
@@ -68,14 +70,16 @@ export class RecordedScore {
     this.phase = phase;
     if (!this.active) { this.offset = offset; this.late = late; this.keepTime = keepTime; this.asked = this.ctx.currentTime; }
     this.active = true;
+    // Re-aiming at an unchanged level would cut short a slower entrance.
+    const changed = level !== this.level;
     this.level = level;
-    if (this.source && !this.finishing && this.ctx.currentTime >= this.settled) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
+    if (changed && this.source && !this.finishing && this.ctx.currentTime >= this.settled) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
     this.play();
   }
 
   private play(): void {
-    if (this.stopped || !this.active || !this.buffer || this.source) return;
-    const once = this.once, ending = once?.ending && this.ending ? { ...once.ending, buffer: this.ending } : null;
+    if (this.stopped || !this.active || !this.buffer || this.source || this.ctx.currentTime < this.restUntil) return;
+    const once = this.once, rest = this.rest, ending = once?.ending && this.ending ? { ...once.ending, buffer: this.ending } : null;
     this.epoch = Math.max(this.ctx.currentTime, this.startAt);
     if (this.keepTime) this.offset += this.epoch - this.asked;
     const length = ending ? ending.from + ending.buffer.duration : this.buffer.duration;
@@ -94,9 +98,9 @@ export class RecordedScore {
       envelope.connect(this.bus);
     }
     if (enter < 1 || this.keepTime && offset - this.entry < tuning.audio.recordedMusicOnTime) this.bus.gain.setValueAtTime(this.level, this.epoch);
-    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFade);
+    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFadeIn[this.track] ?? tuning.audio.recordedMusicFade);
     const into = envelope ?? this.bus;
-    if (!ending) this.schedule(this.buffer, into, this.epoch, offset, this.endsAt, !once && !this.playingOut);
+    if (!ending) this.schedule(this.buffer, into, this.epoch, offset, this.endsAt, !once && !this.playingOut && rest === undefined);
     else {
       // The ending starts on the same audio clock, sample-aligned with the recording, and fades in as it fades out.
       const handover = this.epoch + Math.max(0, ending.at - offset), crossed = handover + ending.crossfade;
@@ -113,7 +117,7 @@ export class RecordedScore {
       this.schedule(ending.buffer, into, handover, Math.max(offset, ending.at) - ending.from, this.endsAt, false, incoming);
     }
     if (this.track === 'home') this.kept = this.buffer;
-    this.buffer = null;
+    if (rest === undefined) this.buffer = null;
     this.ending = null;
   }
 
@@ -133,6 +137,13 @@ export class RecordedScore {
       this.sources = this.sources.filter(source => source !== entry);
       if (this.sources.some(source => source.bus === bus)) return;
       if (into !== bus) into.disconnect();
+      if (bus === this.bus && this.rest !== undefined && this.buffer && !this.stopped && !this.finishing) {
+        this.restUntil = this.epoch + this.length - this.start + this.rest;
+        this.offset = 0; this.keepTime = false;
+        bus.gain.setValueAtTime(0, this.ctx.currentTime);
+        return;
+      }
+      if (bus === this.bus) this.buffer = null;
       bus.disconnect();
     };
     node.start(at, offset);
@@ -145,6 +156,10 @@ export class RecordedScore {
     return this.sources[0]?.node ?? null;
   }
 
+  private get rest() {
+    return this.playingOut ? undefined : tuning.audio.recordedMusicLoop[this.track]?.rest;
+  }
+
   private get once() {
     return tuning.audio.recordedMusicOnce[this.track];
   }
@@ -153,6 +168,8 @@ export class RecordedScore {
   playOut(): void {
     this.playingOut = true;
     for (const { node } of this.sources) node.loop = false;
+    if (this.source) this.buffer = null;
+    else if (Number.isFinite(this.restUntil) && this.buffer) { this.buffer = null; this.bus.disconnect(); }
   }
 
   get duration(): number { return this.length; }

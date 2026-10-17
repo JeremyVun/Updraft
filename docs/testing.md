@@ -75,12 +75,18 @@ edit.
 - `node tools/play.mjs <out-prefix> '<json steps>'`: drive real gestures and capture frames for visual QA
   (`VIDEO=1`, `TOUCH=1`, `W`/`H`, `QUERY`).
 - `node tools/cygnet-gates.mjs`: every shared moment and way of moving for the cygnet and child on the QA stage,
-  against numeric limits.
+  against numeric limits. `cat-check` (the cat's actions at game distances, in the village's
+  light) and `squirrel-check` (the squirrel's poses, close stills, the birches at round distance, motion strips with
+  skinned contact, and clips) need a dev server.
 
 ## Focused checks
 
 **Engine, rendering and input**
 
+- `rendering-continuity-check`: outgoing water and sheltered firefly transitions at 10–120 Hz, and visual storm
+  cover independent of lightning triggers. `BASE=<QA preview> CASE=toSleeping AFTER=720 OUT=/tmp/<dir>
+  node tools/rendering-continuity-audit.mjs` captures handoff frames and twelve seconds afterward; use
+  `MODE=departure CASE=sleeping|wood|meadow` for boarding. Inspect the images as well as the per-frame state.
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
 - `sky-mirror-star-check`: renders the fallen star shader at constant brightness while the low camera crosses
@@ -88,7 +94,8 @@ edit.
   uses SwiftShader without the GPU lock. The intentional slow pulse is covered by `sky-mirror-logic-check`.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
-  and clear surfaces outside it. Needs a dev server for the shader import.
+  and clear surfaces outside it. Also checks colour and coverage after translating and rotating the bank;
+  an uncarried reference exposes the descent discontinuity. Needs a dev server for the shader import.
 - `stairs-fog-motion-check`: compares moving checkpoint views, including an ultrawide viewport, against the
   original per-ray fog in the same world state. Checks cloud edges per pixel; a whole-image average alone missed
   the rejected cloud-cache artifacts. Needs Vite; `OUT` sets the evidence prefix.
@@ -150,7 +157,7 @@ edit.
 **Camera**
 
 - `camera-direction-check`: orbital clearance, eased turns, focus, dolly and height at 10–120 Hz, carry, attention,
-  stable composition choices, interaction holds, exact paths and portrait resize.
+  stable composition choices, interaction holds, exact paths, portrait resize and hidden camera relocation.
 - `crossing-camera-check`, `drowned-camera-check`, `storm-camera-trace`, `chapter-view-check`, `ending-view-check`
   (fails any staged view whose turn rate changes by 2.5°/s or more within a quarter second), `piano-frame-check`,
   `pond-view-check` (the meadow family seen stirring, running and lifting, then let out of the frame without the
@@ -161,11 +168,15 @@ edit.
 
 **Chapters and mechanics** (Node, real chapter code, no renderer)
 
-- `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
+- `plane-routing-check`, `plane-catch-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
   `little-boats-logic-check`, `kite-logic-check`, `scarf-geometry-check`, `sail-flutter-check`, `sea-logic-check`,
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
   `wing-care-check`, `flock-flight-check`, `dolphin-leap-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- `plane-catch-check` covers return flights at 30/60/120 Hz, eight bearings and three heights under sustained gusts,
+  exact mitten attachment and one completion. It also checks paper edges against the posed child mesh through eight
+  approaches; `QUICK=1` selects one case. `QUICK=1 NEGATIVE=1` loads the old arrival from `db31c945` and reproduces its
+  head intersection. Rendered approach, catch and boarding still need review.
 - `meadow-duet-check` covers the wind call before piano input, retained partial replies, four player answers,
   the delayed bough finale/colour cue and restoration at 30/60/120 Hz. The real-input `piano-check` also swipes
   during a call to confirm that it cannot count as a reply; its framing checks include the bough's crown.
@@ -205,7 +216,7 @@ edit.
   the actual rendered beach against its unclipped geometry through the chapter handoff. `FULL=1` includes the
   entire incoming crossing; `NEGATIVE=1` reinstates the obsolete circular cutoff and must fail.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
-  `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
+  `scarf-check`, `squirrel-rounds-check` (dev server; cases split across calls), `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,
   `kite-check`, `geography-browser-check`, `boats-offshore-browser-check`.
 - `petals-browser-check` replays the flock, fall and bandaging, checking that camera-driven rehoming preserves the
@@ -246,8 +257,9 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `clouds-music-check` renders the stairs' `clouds.ogg`: decoded in the white, started `cloudsMusicDelay` after the view
   clears on top at half level rising to full, never restarted, faded by 3:28, the village's music held until then (fog or village
   first), a recording already over, a late join after music mute and silence.
-  `village-music-check` renders Birches looping on its island, playing its pass out after sailing and stopping over a
-  second in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
+  `village-music-check` renders Birches looping on its island, playing its pass out after sailing and ending at least
+  `stairsSongRest` before the stairs song (faded or by itself), and the stairs song looping under the cloud and fading
+  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
   level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
   rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at its start seam and
   its handover to `belfry_ending.ogg` (just before an attack, sample-aligned, no dip, faded to silence at its end),
@@ -255,13 +267,15 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
   `sleeping-music-check` decodes `sleeping.ogg`, `cygnet_brave.ogg` and `sleeping_morning.ogg` and checks the
   lullaby's end, every seam, the climb's part boundaries and the morning's entry on the samples; the frost's bounded
-  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the climb theme cut at its
-  seam by the fog, queued, passed over and joined unbroken; the morning from its second phrase as the curtains open,
-  the part still sounding giving way at a seam or a short fade; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
+  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the summit begun on its own
+  a second late and rising in, the climb theme cut at its seam by the fog, queued, passed over and joined unbroken;
+  the part sounding as the bandage comes free let go at a seam or a short fade, and silence from there to the
+  curtains; the morning from its second phrase as the curtains open; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
   each player's timeline (main's measured climb, the rebuilt climb, a slow player, `?chapter=sleeping`).
   `sleeping-music-browser-check [climb sleeping ribbon feather morning]` measures the same in the real game with a real
   AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue; `ribbon` drives the
-  summit's circles from `?chapter=ribbon` and logs the morning's seams against the waking).
+  summit's circles from `?chapter=ribbon`, logs the summit part against the top, the bandage freed, the turn and the leap, the morning's
+  seams against the waking, and its departure fade against the sea's entry).
   `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
   the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
@@ -291,7 +305,8 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`, `village-music-browser-check`
   (`drowned` and `cloud` with no input: the village's recording against the tub becoming pushable and its invitation;
   `belfry` rings the bell four times and times the goodbye against boarding and the storm, checking the ending starts
-  on the audio clock where the recording hands over; `storm` starts it on load),
+  on the audio clock where the recording hands over; `storm` starts it on load; `sail` times the birches' end, the
+  quiet and the stairs song from the push-off to the white),
   `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
   only the starting/next recording fetched, and an audible decoded source in each chapter).
   `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature

@@ -89,14 +89,18 @@ export function setJourneyRooms(rooms: Room[]): void {
 /** Coast-distance partition: boundaries fall in open sea, never across a visible island. */
 export const JOURNEY_ROOMS_GLSL = /* glsl */ `
 uniform vec2 uJourneyRooms;
-bool journeyHides(vec2 p) {
-  if (uJourneyRooms.x == -1.0) return false;
+float journeyRoom(vec2 p) {
   float nearest = 1e20;
   float room = -1.0;
   ${Object.values(ROOMS).map((c, i) => `{
     float d = (length((p - vec2(${glsl(c.x)}, ${glsl(c.z)})) / vec2(${glsl(c.rx)}, ${glsl(c.rz)})) - 1.0) * ${glsl(Math.min(c.rx, c.rz))};
     if (d < nearest) { nearest = d; room = ${glsl(i)}; }
   }`).join('\n')}
+  return room;
+}
+bool journeyHides(vec2 p) {
+  if (uJourneyRooms.x == -1.0) return false;
+  float room = journeyRoom(p);
   return room != uJourneyRooms.x && room != uJourneyRooms.y;
 }
 `;

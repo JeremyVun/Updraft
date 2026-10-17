@@ -73,6 +73,8 @@ import { Carry } from './companion/carry';
 import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { Cat } from './creatures/cat';
+import { Squirrel } from './creatures/squirrel';
+import { SquirrelVoice } from './creatures/squirrel/voice';
 import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
@@ -97,6 +99,7 @@ import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
 import { Footprints } from './world/footprints';
 import { dreamEchoes } from './world/echoes';
+import { echoLeaves } from './world/echo-leaves';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
@@ -398,6 +401,9 @@ cygnet.mount = child;
 const cat = new Cat();
 cat.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
 const catVoice = new CatVoice();
+const squirrel = new Squirrel();
+const squirrelVoice = new SquirrelVoice();
+squirrel.objects.forEach((o) => scene.add(o));
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
@@ -413,6 +419,11 @@ const splashAt = new THREE.Vector3();
 birches.onLeafScuff = (x, z, strength) => {
   birchesFoley.scuff(materialAt.set(x, heightAt(x, z), z), strength,
     sound.running && story.name === 'birches');
+};
+/** Going in and peeking out stir its own heap; only bursting out of it spends the heap. */
+squirrel.onLeaves = (stir) => {
+  if (stir.kind === 'burst') birches.burst(stir.at.x, stir.at.z, stir.strength);
+  else if (stir.kind !== 'step') birches.shiver(stir.at.x, stir.at.z, stir.strength);
 };
 sealife.onDolphinSplash = (x, y, z, strength) => {
   if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength);
@@ -440,8 +451,9 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
-  knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); } });
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, squirrel, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
+  knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); },
+  leafSound: (kind, at, strength) => birchesFoley.leaves(kind, at, strength, sound.running && story.name === 'birches') });
 // The bell's bronze must be drawn during boot, before the chapter creates its story controller.
 village.prepareBell({ child, wind, lines, input });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
@@ -490,6 +502,9 @@ const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
+const stairsLeaves = echoLeaves(echoes.stairs!);
+scene.add(stairsLeaves);
+roomObjects.stairs?.push(stairsLeaves);
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }
@@ -681,6 +696,8 @@ const breezeAngle = THREE.MathUtils.degToRad(-18);
 const shown = { breeze: NaN, rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
 const ISLE_MISTS = {
   boats: { isle: ISLES.boats, range: tuning.world.boatsMist },
+  birches: { isle: ISLES.birches, range: tuning.world.birchesMist },
+  stairs: { isle: ISLES.stairs, range: tuning.world.stairsMist },
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
   mirror: { isle: { ...SKY_MIRROR, rx: SKY_MIRROR.rx * tuning.world.mirrorMist.core, rz: SKY_MIRROR.rz * tuning.world.mirrorMist.core },
@@ -763,6 +780,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.muted = story.current.windMuted ?? story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
   input.floor = story.current.pointerFloor ?? null;
+  input.reach = story.current.pointerReach ?? null;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
@@ -774,10 +792,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
   if (story.name === 'drowned') village.tub.brush(rig.camera, input, dt);
   if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
-  if (story.name === 'birches') {
-    birches.scarf.brush(rig.camera, input, wind, dt);
-    birches.swing.brush(rig.camera, input, wind);
-  }
+  if (story.name === 'birches') birches.scarf.brush(rig.camera, input, wind, dt);
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   if (story.name === 'meadow' && input.present && !input.muted) swanFeather.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   embers.updraft(input, story.current.updraftTarget ?? null);
@@ -862,6 +877,27 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   cygnet.heard.length = 0;
   cat.update(dt);
+  /** It lives in the birches and sees them off from the beach as they sail; the QA stage has its own. */
+  if (story.name !== 'birches' && story.name !== 'toStairs' && story.name !== 'stage') squirrel.visible = false;
+  squirrel.update(dt, time);
+  squirrelVoice.setOutput(sound.output);
+  if (squirrel.heard.length) {
+    const pan = screenPan(rig.camera, squirrel.position);
+    const away = squirrel.position.distanceTo(rig.camera.position);
+    /** Its scolding carries across the wood; its feet and claws are only heard close to. */
+    const call = 1 - 0.8 * THREE.MathUtils.smoothstep(away, 8, 45);
+    const near = 1 - THREE.MathUtils.smoothstep(away, 3, 18);
+    for (const h of squirrel.heard) {
+      if (h.kind === 'chuck') squirrelVoice.chuck(pan, call * h.amount);
+      else if (h.kind === 'chitter') squirrelVoice.chitter(pan, call * h.amount);
+      else if (h.kind === 'squeak') squirrelVoice.squeak(pan, call * h.amount);
+      else if (h.kind === 'claw') squirrelVoice.claw(pan, near * h.amount);
+      else if (h.kind === 'land') squirrelVoice.land(pan, near * h.amount);
+      else if (h.kind === 'gnaw') squirrelVoice.gnaw(pan, near * h.amount);
+      else squirrelVoice.patter(pan, near * h.amount);
+    }
+    squirrel.heard.length = 0;
+  }
   catVoice.setOutput(sound.output);
   if (cat.heard.length) {
     const catPan = screenPan(rig.camera, cat.position);
@@ -930,7 +966,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0,
     story.name === 'wood' ? tuning.wood.shadeFollow : tuning.wood.shadeLift, dt);
   stormWeather.update(dt, storm, boat.afloat ? boat.yaw : child.yaw,
-    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike);
+    story.name === 'wood' ? THREE.MathUtils.lerp(1, tuning.wood.lightningScale, overLand) : 1, shown.woodShade, story.current.stormStrike, squall);
   /**
    * How far the dream lets you see. Beyond it the world dissolves, so the next island is never a spoiler.
    * A clear night has nothing out there to give away and everything to show, so the veil draws back and the
@@ -952,6 +988,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   // The island ahead is seen only as near as its detail is drawn, and not at all from across the water.
   // The mirror's own mist lifts only once the whale has gone and the pod with it.
   const mistAhead = story.name === 'toBoats' || story.name === 'lines' ? ISLE_MISTS.boats
+    : story.name === 'toBirches' ? ISLE_MISTS.birches
+    : story.name === 'toStairs' ? ISLE_MISTS.stairs
     : story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
     : story.name === 'toSleeping' ? ISLE_MISTS.sleeping
     : story.name === 'toMirror' && story.current.mirrorArrival === 0 ? ISLE_MISTS.mirror : null;
@@ -1042,6 +1080,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
   soundState.arrivalReady = story.current.arrivalReady;
+  soundState.arrivalIn = story.current.arrivalIn;
   soundState.homewardTime = story.current.homewardTime;
   soundState.summitScore = story.current.summitScore;
   soundState.homeEndingTime = story.current.homeEndingTime;
@@ -1061,6 +1100,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.meadowMusic = story.current.meadowMusic;
   soundState.birchesScore = story.current.birchesScore;
   soundState.birchesLoop = story.name === 'toBirches' || story.name === 'birches';
+  soundState.stairsSong = story.current.stairsSong;
   soundState.stairsAir = story.current.stairsAir;
   soundState.linesScore = story.current.linesScore;
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;
@@ -1094,7 +1134,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     lastCameraCut = cut;
   } else if (cut !== lastCameraCut) {
     lastCameraCut = cut;
-    rig.cut(story.shot);
+    if (story.current.cameraRelocation) rig.relocate(story.shot, story.current.cameraRelocation, time);
+    else rig.cut(story.shot);
   }
   rig.update(dt, time, story.shot, story.pace, !!(story.current.scripted || story.current.invitesSail
     || story.current.invitesFlight || story.current.windInvitation || story.current.updraftTarget || story.current.pianoActive));
@@ -1250,9 +1291,18 @@ function drawView(): void {
   const bird = cygnet.visible ? focusDistance(cygnet.position, 0.2) : her;
   // Measured to the front of the cat rather than its middle: it is small enough to be seen from close to.
   const puss = cat.visible ? focusDistance(cat.position, 0.15) - 0.3 : her;
-  const near = puss > 0.5 ? Math.min(her, bird, puss) : Math.min(her, bird);
+  let near = puss > 0.5 ? Math.min(her, bird, puss) : Math.min(her, bird);
   // The swans overhead and the house she comes home to are subjects in their own right, however far.
   let far = Math.max(her, bird, puss);
+  // And whatever the story says matters now, as far as it says: the focus settles on it rather than jumping.
+  const also = story.current.alsoSharp;
+  if (also && also.weight > 0.005) {
+    const d = focusDistance(also.at, 0);
+    if (d > 0.5) {
+      near = Math.min(near, near + (d - near) * also.weight);
+      far = Math.max(far, far + (d - far) * also.weight);
+    }
+  }
   if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
   if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
   if (story.name === 'drowned' && village.dark.rise > 0) {
@@ -1324,6 +1374,7 @@ function frameInner(now: number): void {
   // The shore behind the impossible door can recede during its departure, but never reappear later.
   const rooms = journeyReveal.update(visibleRooms(story.name, boat.position.z), dt);
   setJourneyRooms(rooms);
+  water.updateRooms(rooms, dt);
   drawJourneyRooms(rooms, roomObjects, drawRooms);
   planeIndicator.update(dt, rig.camera, glider, startScreen.started && !story.current.scripted);
   endFrame(renderer);
@@ -1404,7 +1455,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, meadowMusic, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, meadowMusic, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, squirrel, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);

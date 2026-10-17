@@ -9,11 +9,15 @@
 // reports the fourth ring, when `belfry.ogg` starts and reaches full level, boarding, the storm, the handover to
 // `belfry_ending.ogg` (checked on the audio clock), its ritardando and fade, and the piece's end; `storm`
 // (`?chapter=storm`, about a minute) checks a storm save starts it on load.
-// Usage: node tools/village-music-browser-check.mjs [drowned cloud belfry storm]. Vite on 5230, or BASE.
+// `sail` (`?chapter=birches`, about 2 minutes) jumps to the last stretch of the birches with every tangle done, then
+// leaves the game alone through the push-off, the crossing and the stairs landing, skips the stairs' puzzle and climbs
+// into the white; it reports, from the push-off, when the birches recording fades and ends, the quiet, the stairs song's
+// start against the landing, and its fade in the white.
+// Usage: node tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]. Vite on 5230, or BASE.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
 
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['drowned', 'cloud', 'belfry', 'storm'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['drowned', 'cloud', 'belfry', 'storm', 'sail'];
 const width = 1280, height = 800;
 
 const { browser, close } = await openBrowser({ allowAutoplay: false });
@@ -34,6 +38,7 @@ try {
       const ending = Math.abs(length - 9.03) < .05;
       if (length > 30 || ending) {
         const track = ending ? 'belfryEnding' : Math.abs(length - 192.87) < .05 ? 'villageApproach' : Math.abs(length - 143.92) < .05 ? 'belfry'
+          : Math.abs(length - 238.89) < .05 ? 'birches' : Math.abs(length - 224.08) < .05 ? 'stairs'
           : length > 240 ? 'clouds' : `music ${length.toFixed(1)} s`;
         const entry = { track, offset: +offset.toFixed(3), when: +when.toFixed(2), exact: { when, offset }, ...at() };
         w.sources.push(entry);
@@ -46,6 +51,13 @@ try {
       w.clock += dt;
       update(dt, s);
       const story = __game.story.current, name = __game.story.name;
+      if (name === 'birches' && story.beat === 'push') mark('push');
+      if (name === 'toStairs') mark('aboard');
+      if (sound.birchesScore?.finishing) mark('birchesFade');
+      if (name === 'toStairs' && s.arrivalMusic === 'stairs') mark('request');
+      if (name === 'toStairs' && sound.arrivalTransition.stage === 'incoming') mark('entrance');
+      if (name === 'stairs') mark('stairs');
+      if (s.stairsAir && s.stairsAir.phase !== 'under') mark('white');
       if (s.stairsAir?.clear) mark('clear');
       if (s.stairsAir?.phase === 'fog') mark('fog');
       if (name === 'drowned') {
@@ -193,7 +205,45 @@ try {
     const t = await goodbye('storm', () => 0);
     assert(t.starts < .2, 'a storm save starts it on load');
   };
-  const run = { drowned, cloud, belfry, storm };
+  const sail = async () => {
+    await begin('chapter=birches');
+    await page.waitForFunction(() => __game.sound.birchesScore?.source, null, { timeout: 60000 });
+    // On the last stretch of the walk with every tangle done: she gathers the bird, boards and pushes off.
+    await page.evaluate(async () => {
+      const g = __game, ch = g.story.current, { BIRCHES_WALK } = await import('/src/world/birches.ts');
+      const last = BIRCHES_WALK.length - 1, p = BIRCHES_WALK[last - 1];
+      ch.restoreCheckpoint('scarf4-4', [last, 1, ch.dusk, 4]);
+      g.child.place(p.x, p.y, Math.PI);
+    });
+    const after = (name, seconds) => page.waitForFunction(({ name, seconds }) => {
+      const e = villageWatch.events.find(x => x.name === name);
+      return e && villageWatch.clock - e.clock > seconds;
+    }, { name, seconds }, { timeout: 300000, polling: 250 });
+    // Under the cloud with every flight home, so she climbs on into the white without the puzzle.
+    await after('stairs', 8);
+    await page.evaluate(() => __game.story.current.restoreCheckpoint('flight-3', [3]));
+    await after('white', 6);
+    const r = await page.evaluate(() => ({ sources: villageWatch.sources, events: villageWatch.events,
+      rest: __game.tuning.audio.stairsSongRest, fade: __game.tuning.audio.birchesSailFade, cloudFade: __game.tuning.audio.stairsSongCloudFade }));
+    const event = name => r.events.find(e => e.name === name), push = event('push');
+    const birches = r.sources.filter(s => s.track === 'birches'), song = r.sources.filter(s => s.track === 'stairs');
+    assert.equal(birches.length, 1, 'sail: the birches recording plays one pass, never begun again');
+    assert.equal(song.length, 1, 'sail: the stairs song starts once');
+    const [b, t] = [birches[0], song[0]], white = event('white');
+    const at = x => +(x - push.clock).toFixed(1);
+    const report = { origin: 'push-off, game clock (s)', aboard: at(event('aboard').clock),
+      birchesFadeFrom: event('birchesFade') ? at(Math.max(event('birchesFade').clock, b.ended.clock - r.fade)) : null, birchesEnds: at(b.ended.clock),
+      request: at(event('request').clock), stairsSongStarts: at(t.clock), landing: at(event('stairs').clock),
+      quietGap: +(t.clock - b.ended.clock).toFixed(1), quietGapAudioClock: +(t.ctx - b.ended.ctx).toFixed(2),
+      songBeforeLanding: +(event('stairs').clock - t.clock).toFixed(1), white: at(white.clock),
+      songEnds: at(t.ended.clock), songFadeAudioClock: +(t.ended.ctx - white.ctx).toFixed(2), songOffset: t.offset };
+    console.log(JSON.stringify({ sail: report }, null, 2));
+    assert(t.offset < .01 && t.clock < event('stairs').clock, 'sail: the stairs song begins from its top on the crossing\'s handoff');
+    assert(t.ctx - b.ended.ctx >= r.rest - .1, `sail: the birches end at least ${r.rest} s before the stairs song`);
+    assert(t.ended.ctx - white.ctx <= r.cloudFade + .1 && t.ended.ctx > white.ctx, `sail: up in the white the song fades over ${r.cloudFade} s`);
+    assert(r.sources.every(s => s === b || s === t), `sail: no other music: ${JSON.stringify(r.sources)}`);
+  };
+  const run = { drowned, cloud, belfry, storm, sail };
   for (const name of cases) await run[name]();
   if (logged.length) console.log(JSON.stringify({ logged }, null, 2));
   assert.deepEqual(errors, []);

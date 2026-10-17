@@ -17,6 +17,29 @@ export const tuning = {
     /** Down a hill, sitting back against it (radians). */
     descentLean: 0.06,
   },
+  /**
+   * The birches' red squirrel: how much bigger than life it is drawn so it reads beside the cygnet at play distance,
+   * how quickly it snaps from one held shape to the next and its head from one glance to the next (per second), and
+   * its speeds along the ground, up a trunk and along the wool (m/s), how quickly it gets up to speed (per second)
+   * and how hard it pulls up at the end of its way (m/s²).
+   */
+  squirrel: {
+    scale: 3.6, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6,
+    /**
+     * It falls as everything in the world does (m/s²), however big it is drawn. A leap from one surface to another
+     * goes at `speed` (m/s) and is in the air between `least` and `most` seconds; it takes off `reach` (metres
+     * before scale) from a trunk or the wool's end, bounding the rest of the way. It pounces into a heap from no
+     * further than `pounce` (before scale), and an idle hop round on the spot is `hop` seconds in the air.
+     */
+    gravity: 9.8, leap: { speed: 3, least: 0.16, most: 0.34, reach: 0.13 }, pounce: 0.25, hop: 0.16,
+    /**
+     * Its call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
+     * than `least` of the view's height so they read over a heap from a round's lens, edged dark against the gold.
+     * `hold` is the least time they show for a chuck (a chitter twice that); buried, they rise from `buried` over its
+     * paws, about the height of its raised tail over the leaves.
+     */
+    calls: { height: 0.3, size: 0.6, least: 0.075, halo: 'rgba(62, 30, 12, 0.6)', hold: 0.5, buried: 0.75 },
+  },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,
@@ -97,13 +120,25 @@ export const tuning = {
      * curtains take whatever climb part still sounds at a seam within `mirrorSeamRelease`, or over `curtainsFade`.
      */
     fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
+    /**
+     * The summit part, starting on its own, begins `summitDelay` after the bird reaches the top and rises over
+     * `summitFadeIn`. `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
+     * `ribbonSeamWithin`, or fades over `ribbonFade`, and the music rests until the curtains.
+     */
+    summitDelay: 1, summitFadeIn: 1.5, ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
+    /** Seconds Sleeping's morning takes to fade as the boat leaves for the sea. */
+    sleepingDepartureFade: 4,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3,
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -10.7, stairs: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3,
       sleeping: -12.7, cygnetBrave: -14, sleepingMorning: -15 },
     recordedMusicFade: .65,
+    /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
+    recordedMusicFadeIn: { birches: 1.63 } as Partial<Record<string, number>>,
+    /** Looped recordings that end, rest this many seconds and come in again from the top as on arrival, instead of going straight round. */
+    recordedMusicLoop: { birches: { rest: 0.3 } } as Partial<Record<string, { rest: number }>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
@@ -125,8 +160,13 @@ export const tuning = {
         ending: { from: 46, at: 50.24, crossfade: .03 } },
     } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean;
       ending?: { from: number; at: number; crossfade: number } }>>,
-    /** Going up into the white, a birches pass still playing stops over this long. */
-    birchesCloudFade: 1,
+    /**
+     * Sailing to the stairs, a birches pass that would still sound `stairsSongRest` before the stairs song can begin
+     * fades over `birchesSailFade` to end then.
+     */
+    birchesSailFade: 5, stairsSongRest: 10,
+    /** Going up into the white, the stairs song fades over this long. */
+    stairsSongCloudFade: 3,
     /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
     woodDroneDb: 0,
     /** Seconds after the view clears round her at the top (`StairsAir.clear`) that `clouds.ogg` begins; below 0 starts it that far in. */
@@ -224,6 +264,8 @@ export const tuning = {
     paperLevel: 0.35,
     /** Sparse close physical detail: child and bird share one leaf budget, with no wind/particle triggers. */
     leafScuffLevel: 0.4 * 10 ** (3 / 20), leafScuffEvery: 1.4, leafCoverMin: 0.55,
+    /** The squirrel's heap stirring under it, it diving in, and a heap going up (a leap is that, a third louder and with a thump). */
+    leafRustleLevel: 0.9, leafDiveLevel: 0.95, leafBurstLevel: 0.85,
     swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
     birchesFoleyNear: 20, birchesFoleyFar: 65,
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
@@ -352,6 +394,12 @@ export const tuning = {
     travelHeight: 3, sinkSpeed: 5,
     pickupAhead: 1.4,
     returnMargin: 12, returnSpeed: 5,
+  },
+  planeCatch: {
+    approachDistance: 4, approachHeight: 1.7, speed: 8, turnRate: 4,
+    minApproachSeconds: 1.2, groundClearance: 0.8, levelAt: 0.7, wristTurn: -0.9,
+    hand: [0.8, 0.55, 0.4],
+    reachAt: 0.55, catchSeconds: 0.75, recoverSeconds: 0.65,
   },
   /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
@@ -534,6 +582,8 @@ export const tuning = {
     bankHeight: 28, bankDensity: 0.14, bankFloor: 0.3, bankLow: 1.1, bankFront: 28, bankBack: 16, bankSoft: 4.5,
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
+    /** Close the white over the visible sail before its hidden change of side. */
+    bankSwapDensity: 3.5,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
@@ -941,8 +991,8 @@ export const tuning = {
     arrivalFogOuter: 1.32,
     /**
      * The island ahead lies in mist beyond `clear` to `hidden` units from the eye: the wood past its farthest trees,
-     * the sleeping island everywhere but the shore the boat lands on. The bank thins away over the water by `edge`
-     * coast radii. It lifts at `isleMistLift` once they are ashore.
+     * the sleeping island everywhere but the shore the boat lands on, the birches until the run-in up their beach.
+     * The bank thins away over the water by `edge` coast radii. It lifts at `isleMistLift` once they are ashore.
      */
     woodMist: { clear: 110, hidden: 165, edge: 1.32 },
     linesHorizon: { farewellClear: 205, farewellHidden: 260, clear: 65, hidden: 140, settle: 16 },
@@ -951,6 +1001,8 @@ export const tuning = {
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     boatsMist: { clear: 75, hidden: 150, edge: 1.32 },
+    birchesMist: { clear: 90, hidden: 150, edge: 2 },
+    stairsMist: { clear: 70, hidden: 130, edge: 2 },
     seaStateEase: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: .88,
@@ -1288,6 +1340,7 @@ export const tuning = {
     fireflyCount: 240,
     fireflyRange: 25,
     fireflyPresence: 0.85,
+    fireflyTransition: 2,
     /**
      * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
      * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
@@ -1383,7 +1436,6 @@ export const tuning = {
       inviteSpan: 4,
       inviteBowSpan: 5,
       inviteCircleRadius: 1.65,
-      swingOfferSeconds: 12,
       releaseSeconds: 2.6,
       /** Seconds the whole freed scarf takes to be drawn in to the mast: about 135 m of wool, so the free end runs at up to 13 m/s. */
       gatherSeconds: 16,
@@ -1419,11 +1471,8 @@ export const tuning = {
       clothSlipReach: 2,
       clothSlipDrop: 1.1,
       arriveWithin: 9.5,
-      /** Seconds the seated child waits, under the invitation, for the player's first push; then quiet seconds between pushes before they drag their feet (`swingBrake`, per second) and step off. */
-      firstPushWait: 7,
-      quietToLeaveSwing: 4,
-      swingBrake: 0.9,
-      swingMountSeconds: 0.8,
+      /** At a tangle the stroke's wind lands at most this far past the shot's distance, round the wool being worked. */
+      strokeReach: 4,
     },
     /** The companion explores within sight of the child and responds to local gusts. */
     playRadius: 9,
@@ -1436,7 +1485,6 @@ export const tuning = {
     playRummageNear: 6,
     playScuffRadius: 0.85,
     playScuffStrength: 0.65,
-    swingInvitation: 0.22,
     /** Shed clusters keep their own velocity for this many seconds, then fade. */
     shedFlight: 3.2,
     shedDrag: 1.5,
@@ -1466,16 +1514,188 @@ export const tuning = {
     /** How fast a gust sweeps the floor bare where it blows, and the share of the wind speed the swept litter travels at. */
     litterSweep: 1.35,
     litterCarry: 0.6,
+    /**
+     * A raked heap's leaves are loose: they feel the strongest air within `looseReach` m as well as the air over them,
+     * and go `looseLift` times as readily.
+     */
+    looseReach: 1.6,
+    looseLift: 1.6,
+    /** How hard an updraft throws the litter under it outward, per unit of lift it falls by over 2 m. */
+    litterLiftThrow: 9,
+    /**
+     * Heaps stand against every gust and yield only to an updraft wound over them: within `heapGuardReach` m of a
+     * heap's rim the leaves go only once the lift there passes `heapLiftFrom`, in full flood at `heapLiftFull` and
+     * `heapLiftTakes` as readily as a full gust takes the open floor. Lift builds with time spent circling, about
+     * 0.6 after a loop and 1.3 after two at a child's pace.
+     */
+    heapGuardReach: 0.6,
+    heapLiftFrom: 1.0,
+    heapLiftFull: 1.7,
+    heapLiftTakes: 2.4,
     /** How fast leaves heaped steeper than they will stand run off sideways, and the slope they will stand at. */
     litterSlump: 3.0,
     litterRepose: 0.95,
-    /** How high a heap of leaves stands, per unit of depth. */
+    /** How high a heap of leaves stands, per unit of depth over `heapFrom`, the depth of an ordinary floor. */
     pileHeight: 0.34,
-    /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
-    swingPush: 0.8,
-    swingGust: 3.8,
-    /** How long a swing takes to die away when nobody is pushing it (seconds to lose most of it). */
-    swingDamping: 0.13,
+    /** Share of the loose leaves kept per metre of the walk, against the room as first laid out. */
+    looseLeaves: 0.75,
+    heapFrom: 1.6,
+    /**
+     * A heap somebody made: its top rounded over this many metres, its foot at most this share of its radius out, and
+     * the floor round it raked thin for this far past its radius, keeping this share of its leaves at the foot.
+     */
+    heapCrown: 0.6,
+    heapFoot: 1.05,
+    heapRaked: 2.4,
+    heapRakedKeep: 0.3,
+    /** How thick the layer of leaves over a heap's surface is drawn, in metres. */
+    heapSkin: 0.35,
+    /** And how far under its surface the solid body of it stands, which is what keeps anything buried in it hidden. */
+    heapCore: 0.12,
+    /**
+     * How much further than the shot's distance a stroke's wind may land. Under the canopy a stroke at the trees or
+     * at the wool in them would otherwise put its wind on the floor far beyond, on heaps the player cannot see.
+     */
+    strokeReach: 16,
+    /** Something going into or out of the leaves: how far round it they go up, at a strength of 0 and per unit of it. */
+    burstReach: 0.6,
+    burstReachPer: 1.6,
+    /** A heap held against the wind until the squirrel is in it: how far past its rim it is held, and in how many seconds it is held or let go. */
+    holdReach: 0.6,
+    holdEase: 0.5,
+    /** Stepping off the bow under the sail in the first shot, she is seen through all but this much of it. */
+    landingGivesWay: 0.06,
+    /** The sail's longer lens is let go between these seconds ashore, while the first shot is still closing in on her. */
+    arrivalLens: { holdFor: 1.5, goneBy: 6 },
+    /**
+     * The boat goes round to the far berth once she is `away` metres from it and no part of it, hull to `mast` metres
+     * up, has been within `margin` of the frame for `unseen` seconds: a lens tilting up the ride must not catch it go.
+     */
+    boatLeaves: { away: 25, mast: 6, margin: 1.35, unseen: 3 },
+    /** Something burrowing under the leaves heaves them into a hump this far across (m, from its middle) and this high. */
+    burrowReach: 1.3,
+    burrowRise: 0.75,
+    /** A squirrel diving into a heap: how far round it the loose leaves go up, and how hard they are thrown (over 1 throws them higher and wider). */
+    splashReach: 3.4,
+    splashThrow: 2.6,
+    /** The buried squirrel's paws this far under the leaves' surface (at 3.6 times life its back about 0.2 m under), and at most this far into the soil. */
+    buryBelow: 0.45,
+    burySoil: 0.12,
+    /**
+     * The swing over the fallen birch (`story/birches.ts`), pumped as the drowned village's (`crossings.swing`); `ride`
+     * is what differs here. She stops `stopShort` metres off the bole and looks along it for `lookFor` seconds before
+     * she turns to the swing, and her feet clear its top by `clear` when she lets go over it.
+     */
+    swing: {
+      ride: { most: 1.05 },
+      stopShort: 1.5, lookFor: 2.4, clear: 0.4,
+      /**
+       * Its lens: three-quarters on from the south-east and low, into the sun, `distance` back and `height` up from a
+       * point `ahead` of the rope's hang toward the bole and `lift` above the ground; portrait nearer along the arc on a
+       * longer lens. As she flies it rises `rise` and looks `follow` further on, so she lands in the middle of it.
+       */
+      lens: { from: [0.6, 0.8], distance: 20, height: 4.8, ahead: 3.4, lift: 2.4, zoom: 1 },
+      lensTall: { from: [0.22, 0.97], distance: 24, height: 4.5, ahead: 3.4, lift: 4.6, zoom: 1.2 },
+      rise: 6, follow: 5, landedIn: 1.8,
+      /**
+       * The cygnet's beat after she lands before it goes after her, its flutter up onto the bole and its hop down the far
+       * side (seconds, metres of arc), and its pause on top.
+       */
+      flutterWait: 0.6, flutterFor: 0.75, flutterArc: 0.55, onTopFor: 1.1, hopDownFor: 0.6, hopDownArc: 0.3,
+      /** How loud the leaves she lands in are, as a share of a heap thrown up. */
+      landLeaves: 0.7,
+    },
+    /** The squirrel's hide-and-seek (`story/birches-squirrel.ts`). */
+    squirrel: {
+      /** Seconds between the hidden heap's tells, and how hard each shivers it; under a waving tail, less. */
+      tellFrom: 2.5, tellTo: 4, tellStrength: 0.18, tailTellStrength: 0.1,
+      /** Share of the time the tail tip is out of the leaves, by round, and how long a peek at a gust that shaved it looks. */
+      tailOut: [0.5, 0.33, 0.2], peekFor: 1.3,
+      /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
+      buryDepth: 0.35, leapDepth: 0.35,
+      /**
+       * Finding: the air over its heap (`driftReach` round a drift, `trunkReach` round a trunk) as the trees feel it
+       * when they shed. Each rise of the updraft there (`liftWork`) is counted, and `findWork` by round flushes it from
+       * behind a trunk; each rise of any air, `nearlyWork` in one gust, makes it peek. Counts are forgotten at
+       * `findForget` a second.
+       */
+      driftReach: 1.6, trunkReach: 2.6, findWork: [0.35, 0.35, 0.35], nearlyWork: 0.05, findForget: 0.03,
+      /**
+       * In the leaves it is found once they are thinner than `uncovered` m over where its paws are set (its back is
+       * about 0.22 m above them at 3.6 times life, and red shows through the last few centimetres), read every
+       * `feelEvery` s over it and `feelAcross` m round it; it starts for `startledFor` s, sitting up in what is left
+       * of them, before it bursts out.
+       */
+      uncovered: 0.3, feelEvery: 0.25, feelAcross: 0.35, startledFor: 0.4,
+      /**
+       * Seconds without updraft on the right heap before the cygnet goes to stand at it, and before the drawn updraft
+       * turns over it: its loops `inviteRadius` of the heap's radius, `inviteLift` m over the hide, plain after `inviteRamp` s.
+       */
+      hintAfter: 7, inviteAfter: 12, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
+      /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
+      liftWork: 0.3,
+      /**
+       * Updraft charge at which circles wound over another heap stop their gusts counting on the hide's. Once circles
+       * over a heap have wound the charge past `circleHoldFrom` (well past what a child's random swipes wind up), and for
+       * `circleLinger` s after, the round's other heaps hold against the column.
+       */
+      circledBy: 0.02, circleHoldFrom: 0.35, circleLinger: 3,
+      /**
+       * The meeting: how near she comes before the lens glances at it on its log, how long she stands at the heap
+       * looking at it (the round's frame easing in) before it sees her, how long it freezes before it sits up and
+       * chatters at her, and how long it holds her look after that before it dives in.
+       */
+      meetGlance: 30, meetPause: 1.4, meetFreeze: 0.5, meetHold: 1.8,
+      /** Found: sitting up scolding her, then off, glancing back once a few metres on. */
+      sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
+      /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */
+      kneel: 0.6, chaseReach: 2.5,
+      /** How much faster than its usual it runs on ahead to hide. */
+      dash: 2.4,
+      /**
+       * Hide-and-seek at a freed tangle while it runs on to hide: she watches it go for `countAfter` seconds, covers
+       * her eyes and counts for `countFor`, nodding `countNod` numbers a second, then looks round for `lookRound`, or
+       * until it has gone to ground but no longer than `lookRoundMost`, her gaze sweeping `lookSweep` radians a second.
+       */
+      countAfter: 0.6, countFor: 6, countNod: 1.3, lookRound: 1.2, lookRoundMost: 3, lookSweep: 2.2,
+      /** Seconds between the cygnet's tries at a heap of its own choosing. */
+      seekFrom: 1.2, seekTo: 3,
+      /**
+       * Share of the camera's gaze given to the squirrel when it is worth a look (`glanceIn` a second to come and go),
+       * and how quickly the depth blur's focus settles on it.
+       */
+      glance: 0.28, glanceIn: 1.2, sharpIn: 1.5,
+      /** How quickly a round's longer portrait lens eases in and out: a spring's rate per second, settled in about 3 s. */
+      lensEase: 1.6,
+      /** How far short of its hide a dash ends, so it goes in with one pounce (the creature bounds closer from further than about 0.9 m). */
+      pounceFrom: 0.8,
+      /**
+       * How hard its dives throw the leaves up (`AutumnBirches.splash`): the first, at the meeting, hardest; and how hard
+       * an updraft over a heap it is not in throws up that heap's top in the shuffle's round, where those heaps stand.
+       */
+      splash: 1, meetSplash: 1.3, emptySplash: 1.1,
+      /**
+       * The shuffle, at a round with no counting. It runs on ahead `shuffleRunOn` times its pace and sits up waiting.
+       * Once she has stood watching `shuffleLook` s and the lens has slowed below `framedBelow` m/s (or `shuffleLookMost`
+       * s have gone), it sits up and chatters, and `shuffleDare` s later dives into a heap whose rim is within
+       * `shuffleNear` m. In each heap it rests `shuffleRest` s by move, shorter each time. It bounds across at
+       * `shufflePace` by move and dives in throwing the leaves up `shuffleSplash` (the first, then the rest, low enough
+       * that they are down before it comes out). It bursts out heard at `shuffleBurst`, the loose leaves only popping
+       * round it (`shufflePop`) so it is not lost in them. Under the leaves it goes `shuffleUnder` m/s by move, stirring
+       * the loose ones over it every `burrowStirEvery` s as hard as `burrowStir`, heard every `burrowRustleEvery` s. It
+       * settles for `shuffleSettle` s before the wind may find it.
+       */
+      shuffleRunOn: 1.3, shuffleLook: 2, shuffleLookMost: 7, framedBelow: 0.35, shuffleDare: 1.6, shuffleNear: 3.5,
+      shuffleRest: [1.8, 1.1, 0.8, 0.6, 0.45], shufflePace: [0.9, 1.15, 1.45],
+      shuffleSplash: [0.6, 0.3], shuffleBurst: 0.7, shufflePop: 0.3,
+      shuffleUnder: [2.5, 3.2], burrowStirEvery: 0.07, burrowStir: 0.45, burrowRustleEvery: 0.16, shuffleSettle: 0.8,
+      /** Wind on a heap it is not in: the one it is in answers `answerAfter` s later with a tell, at most every `answerEvery` s. */
+      answerAfter: 0.3, answerEvery: 1.5,
+      /** The leap: her run-up speed and spring, how high and wide the leaves go up round her, and how long she sits in them. */
+      leapRun: 3.2, leapUp: 2.6, leapSplash: 1.4, leapSitFor: 1.8,
+      /** Through a bare hollow she runs, kicking up what is left this often and this hard. */
+      kickEvery: 0.28, kickStrength: 0.4,
+    },
   },
   washing: {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */
@@ -1726,13 +1946,26 @@ export const tuning = {
     /**
      * Arrivals watched from somewhere else than behind and above (`ArrivalView`), easing in between `from` and `full`
      * units of sailing from the end of the route and ending where the room's own first view stands: low beside the
-     * hull as the meadow's bank rises over it, high and wide over the little boats' pools, low on the quarter under
-     * the cloud onto the stairs' knoll.
+     * hull as the meadow's bank rises over it, high and wide over the little boats' pools.
      */
     arrivals: {
       meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
       boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
-      stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+      /**
+       * The stairs come out of their mist dead ahead and are watched from low off the port quarter, the lens lifted
+       * to the stair climbing from the knoll into the cloud (in portrait from astern, the stair rising behind the
+       * boat), then low beside the hull onto the knoll, where the room's first view takes it from the south-west.
+       */
+      stairs: { from: 80, full: 10, world: true, bearing: -0.6, distance: 14.5, height: 1.5, lead: 1.5,
+        reveal: { from: 120, full: 70, bearing: -1.3, weight: 0.22, portrait: { bearing: -1.55, weight: 0.08 }, distance: 16, height: 3 } },
+      /**
+       * The birches come out of their mist ahead and to starboard and are watched from the port side, low over the
+       * water: the whole island beside the boat with the low sun over it, or in portrait standing behind it. As the
+       * bow runs in, the lens rises into the room's first view from the south. Red Door comes in 2 s into the swing.
+       */
+      birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
+        reveal: { from: 100, full: 47, bearing: 0.1, weight: 0.3, portrait: { bearing: 0.35, weight: 0.3 }, distance: 20, height: 4, zoom: 1.3,
+          music: 3 } },
     },
   },
 
@@ -2266,6 +2499,8 @@ export const tuning = {
     nearShow: 5,
   },
   water: {
+    /** Outgoing land can still own visible shallows; let their shading recede without a cut. */
+    departureFade: 6,
     /** Seconds for wind ripples to build and to settle after a gust. */
     windAttack: 0.6,
     windRelease: 2.8,
@@ -2306,6 +2541,8 @@ export const tuning = {
    * the wind field's unit, so `drive` is boat speed per unit of breeze.
    */
   sail: {
+    /** What is left of the cloth where it hangs between the camera and the child. */
+    givesWay: 0.3,
     /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
     hullClearance: 0.06,
     /** Most a beached hull leans with the sand beneath it, in radians. */

@@ -27,16 +27,18 @@ try {
       return sum / Math.max(1, (to - from) * buffer.sampleRate);
     };
 
-    check(musicForStart('stairs') === 'birches' && musicForStart('clouds') === 'birches', 'a stairs start fetches the birches first');
+    check(musicForStart('stairs') === 'stairs' && musicForStart('clouds') === 'stairs' && musicForStart({ chapter: 'stairs', point: 'flight-3' }) === 'stairs',
+      'a stairs start under the cloud fetches the stairs song first');
     check(musicForStart('cloud') === 'clouds' && musicForStart({ chapter: 'stairs', point: 'cloud' }) === 'clouds',
       'a start past the loop fetches clouds.ogg instead');
-    check(['birches', 'toStairs', 'stairs'].every(c => nextMusicForChapter(c) === 'clouds') && nextMusicForChapter('meadow') === 'birches',
-      'clouds.ogg is the next download from Birches on, once the birches recording is in hand');
+    check(['birches', 'toStairs'].every(c => nextMusicForChapter(c) === 'stairs') && nextMusicForChapter('stairs') === 'clouds'
+      && nextMusicForChapter('stairs', 'under') === 'clouds' && nextMusicForChapter('meadow') === 'birches',
+      'the stairs song is the next download from the birches on, and clouds.ogg under the cloud, once the stairs song is in hand');
 
     const air = phase => ({ phase, cloud: phase === 'cloud' ? 1 : 0, climb: phase === 'under' ? 0 : 1,
       open: phase === 'under' || phase === 'cloud' ? 0 : 1, fog: phase === 'fog' ? 1 : 0, speed: phase === 'sail' || phase === 'fog' ? 4 : 0,
       clear: phase !== 'under' && phase !== 'cloud' });
-    const stairs = phase => ({ ...baseState, music: 'birches', birchesScore: 'return', hush: .35, stairsAir: air(phase),
+    const stairs = phase => ({ ...baseState, music: 'birches', stairsSong: true, hush: .35, stairsAir: air(phase),
       arrivalMusic: phase === 'fog' || phase === 'down' ? 'drowned' : undefined });
     const village = () => ({ ...baseState, music: 'drowned', drownedScore: 'drift', hush: .3, arrivalMusic: 'drowned' });
     // Drive a soundscape through `seconds`, `state(t)` each eighth of a second; `watch(t, sound)` after each update.
@@ -47,7 +49,7 @@ try {
       sound.wetDuck.disconnect(); sound.wetDuck.connect(wet, 0, 1); wet.connect(ctx.destination);
       const step = async t => {
         sound.update(STEP, state(t));
-        await sound.preparedScore?.ready; await sound.cloudsScore?.ready; await sound.birchesScore?.ready; await sound.villageScore?.ready;
+        await sound.preparedScore?.ready; await sound.cloudsScore?.ready; await sound.stairsScore?.ready; await sound.villageScore?.ready;
         watch(t, sound);
       };
       await step(0);
@@ -63,18 +65,18 @@ try {
     // Restored past the loop, up through the white, out on top at 3 s, sailing at 8, fog at 12; music muted 12.5 to 16.5.
     // The view clears on the first frame out on top here; the recording begins `cloudsMusicDelay` after that.
     const TOP = 3, START = TOP + tuning.audio.cloudsMusicDelay;
-    let prepared = null, birchesInWhite = false, source = null, same = true, pad = 0;
+    let prepared = null, songInWhite = false, source = null, same = true, pad = 0;
     const top = await render(20, t => {
       return stairs(t < TOP ? 'cloud' : t < 8 ? 'above' : t < 12 ? 'sail' : 'fog');
     }, (t, sound) => {
-      if (t < TOP) { prepared ??= sound.preparedScore?.track; birchesInWhite ||= !!sound.birchesScore; }
+      if (t < TOP) { prepared ??= sound.preparedScore?.track; songInWhite ||= !!sound.stairsScore; }
       if (t === 12.5) sound.setMusicMuted(true);
       if (t === 16.5) sound.setMusicMuted(false);
       if (sound.cloudsScore?.source) { source ??= sound.cloudsScore.source; same &&= sound.cloudsScore.source === source; }
       if (t >= TOP) pad = Math.max(pad, sound.padGain.gain.value);
     });
     check(prepared === 'clouds', 'clouds.ogg is decoded in the white, before they reach the top');
-    check(!birchesInWhite, 'the birches recording never starts up in the white (it stops there)');
+    check(!songInWhite, 'the stairs song never starts up in the white (it fades there)');
     check(top.starts.length === 1 && Math.abs(top.starts[0].when - START) < STEP / 2 && top.starts[0].offset < .01,
       `clouds.ogg starts from its top ${tuning.audio.cloudsMusicDelay} s after the view clears on top (${JSON.stringify(top.starts.map(s => [s.when, s.offset]))})`);
     check(!top.starts[0].node.loop, 'it plays once, not looped');

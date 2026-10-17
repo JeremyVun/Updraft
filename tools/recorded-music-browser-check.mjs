@@ -44,10 +44,11 @@ try {
     }, null, { timeout: 15000 });
     assert(result.running && result.loop);
     assert.equal(result.track, track);
-    assert.equal(requests.filter(url => url.includes(`${track}.ogg`)).length, 1, `${track}: startup download is reused`);
-    assert(requests.every(url => url.includes(`${track}.ogg`) || track === 'lines' && url.includes('boats.ogg') || track === 'birches' && url.includes('clouds.ogg')),
+    const file = track === 'birches' ? 'red_door.ogg' : `${track}.ogg`;
+    assert.equal(requests.filter(url => url.includes(file)).length, 1, `${track}: startup download is reused`);
+    assert(requests.every(url => url.includes(file) || track === 'lines' && url.includes('boats.ogg') || track === 'birches' && url.includes('birches.ogg')),
       `${track}: only the starting recording and next destination may download`);
-    assert(requests[0].includes(`${track}.ogg`));
+    assert(requests[0].includes(file));
     assert.deepEqual(errors, []);
     report.push({ ...result, requests, audible: true });
     await page.close();
