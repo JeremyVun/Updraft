@@ -4,13 +4,27 @@ import { Instances } from '../creatures/shapes';
 import { CREATURE_GLSL } from '../creatures/shading';
 import { Cloth } from '../world/cloth-sim';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
+import { heightAt } from '../world/island';
+import { grassHeightAt } from '../world/grass';
 import { tuning } from '../tuning';
 import type { WindField } from '../wind/field';
 import { Voices, type AudioOut } from '../creatures/voices';
 import { screenPan } from '../creatures/motion';
 
 const H = 1 / 120;
-const FLOOR = () => -20;
+const FLOOR = -20;
+/**
+ * Over the sea nothing stops them; on land they come to rest half sunk in the grass, held up unevenly by its tufts so
+ * they drape in folds. The island of lines' grass is tall enough to swallow a sheet lying on the ground beneath it.
+ */
+const landFloor = (x: number, z: number): number => {
+  const ground = heightAt(x, z);
+  const tufts = 0.5 + 0.2 * Math.sin(x * 4.1 + z * 1.3) * Math.sin(z * 3.7 - x * 0.9);
+  return ground > 0 ? ground + 0.05 + grassHeightAt(x, z) * tufts : FLOOR;
+};
+/** How slowly a fallen sheet must move (metres a second), for how long (seconds), before it is left lying. */
+const STILL = 0.08;
+const REST = 1.5;
 const VERT = `out vec3 vWorld; out vec3 vNormal; out vec2 vCloth;
 void main() { vWorld=position; vNormal=normal; vCloth=uv;
 gl_Position=projectionMatrix*viewMatrix*vec4(position,1.0); }`;
@@ -31,6 +45,11 @@ class Linen {
   readonly mesh: THREE.Mesh;
   readonly anchor = new THREE.Vector3();
   private remainder = 0;
+  /** It has come down on land: out of the air it was riding, it falls and drapes over the ground. */
+  landed = false;
+  private nearLand = false;
+  private quiet = 0;
+  private resting = false;
   private readonly air = { x: 0, y: 0, z: 0, spin: 0, cx: 0, cz: 0 };
   private readonly sample = { x: 0, z: 0, energy: 0, lift: 0 };
   private clock = 0;
@@ -40,6 +59,7 @@ class Linen {
   private readonly turn = new THREE.Vector3();
   private readonly flutter = (i: number) => 1 + .18 * Math.sin(this.clock * (4 + this.phase * .3) + i * .7 + this.phase);
   private get phase(): number { return this.flight?.phase ?? 0; }
+  private readonly floor = (x: number, z: number): number => this.nearLand ? landFloor(x, z) : FLOOR;
 
   constructor(width: number, drop: number, readonly carried: boolean, readonly flight?: LinenFlight) {
     this.cloth = new Cloth(9, 11, width, drop);
@@ -57,9 +77,18 @@ class Linen {
     this.mesh.visible = false;
   }
 
+  private touching(): boolean {
+    const p = this.cloth.pos;
+    for (let i = 0; i < this.cloth.count; i++) {
+      if (p[i * 3 + 1] <= landFloor(p[i * 3], p[i * 3 + 2]) + 1e-3) return true;
+    }
+    return false;
+  }
+
   begin(at: THREE.Vector3, right: THREE.Vector3, forward: THREE.Vector3): void {
     const c = this.cloth;
     this.anchor.copy(at); this.remainder = 0;
+    this.landed = this.nearLand = this.resting = false; this.quiet = 0;
     this.axis.copy(right).multiplyScalar(Math.cos(this.phase)).addScaledVector(forward, Math.sin(this.phase));
     this.axis.y = .25 * Math.sin(this.phase * 1.7); this.axis.normalize();
     for (let i = 0; i < c.count; i++) {
@@ -74,10 +103,11 @@ class Linen {
 
   update(dt: number, time: number, wind: WindField, flow: THREE.Vector3): void {
     const c = this.cloth, k = tuning.opening.shoreEchoes;
-    this.clock = time;
+    if (this.resting) return;
+    this.clock = this.landed ? this.clock + dt : time;
     const w = wind.sample(c.pos[0], c.pos[2], this.sample);
     const flight = this.flight;
-    const speed = flight ? flight.speed * (1 + .3 * Math.sin(time * flight.rate + this.phase)) : 1;
+    const speed = this.landed ? 0 : flight ? flight.speed * (1 + .3 * Math.sin(time * flight.rate + this.phase)) : 1;
     const angle = flight ? flight.veer * Math.sin(time * flight.rate * .6 + this.phase) : 0;
     this.air.x = (flow.x * Math.cos(angle) + flow.z * Math.sin(angle)) * speed + THREE.MathUtils.clamp(w.x, -12, 12) * .15;
     this.air.z = (flow.z * Math.cos(angle) - flow.x * Math.sin(angle)) * speed + THREE.MathUtils.clamp(w.z, -12, 12) * .15;
@@ -85,12 +115,14 @@ class Linen {
     while (this.remainder >= H) {
       if (this.carried) c.hold(0, this.anchor.x, this.anchor.y, this.anchor.z);
       this.air.y = .5;
-      if (flight) {
+      if (this.landed) this.air.y = 0;
+      else if (flight) {
         this.centre.set(0, 0, 0);
         for (let i = 0; i < c.count; i++) {
           this.centre.x += c.pos[i * 3]; this.centre.y += c.pos[i * 3 + 1]; this.centre.z += c.pos[i * 3 + 2];
         }
         this.centre.multiplyScalar(1 / c.count);
+        this.nearLand = heightAt(this.centre.x, this.centre.z) > -3;
         const height = flight.height + Math.sin(time * flight.rate + this.phase) * flight.bob;
         this.air.y = k.laundryLift + (height - this.centre.y) * k.laundrySteady;
         const torque = k.laundryTurn * flight.roll * (.8 + .7 * Math.sin(time * flight.rate * 1.5 + this.phase));
@@ -100,8 +132,13 @@ class Linen {
           c.kick(i, this.turn.x, this.turn.y, this.turn.z, H);
         }
       }
-      c.step(H, this.air, .09, .35, 7, this.flutter, FLOOR, [], this.carried ? .45 : 2);
+      c.step(H, this.air, .09, .35, 7, this.flutter, this.floor, [], this.carried ? .45 : 2);
       this.remainder -= H;
+      if (this.nearLand && !this.landed) this.landed = this.touching();
+      if (this.landed) {
+        this.quiet = c.motion(H) < STILL ? this.quiet + H : 0;
+        if (this.quiet > REST) { this.resting = true; this.remainder = 0; break; }
+      }
     }
     c.blend(this.remainder / H);
     this.mesh.geometry.attributes.position.needsUpdate = true;
@@ -148,12 +185,17 @@ export class CrossingLinen {
     point.addScaledVector(this.screenRight, -distance);
   }
 
-  update(dt: number, crossing: number | undefined, boat: THREE.Vector3, heading: number, audio: AudioOut | null): void {
+  /** `keepLanded` leaves any sheet that came down on the island lying there once the crossing is over. */
+  update(dt: number, crossing: number | undefined, boat: THREE.Vector3, heading: number, audio: AudioOut | null,
+    keepLanded = false): void {
     this.voices.setOutput(audio);
     const k = tuning.opening.shoreEchoes, t = (crossing ?? -Infinity) - k.afterFarewell;
     if (t < 0 || t > k.duration) {
       this.instances.commit(0);
-      this.linen.forEach(l => { l.mesh.visible = false; });
+      this.linen.forEach(l => {
+        if (keepLanded && l.landed && l.mesh.visible) l.update(dt, 0, this.wind, this.flow);
+        else l.mesh.visible = false;
+      });
       this.started = false; this.previous = -Infinity;
       return;
     }
