@@ -473,7 +473,7 @@ export const tuning = {
     cameraSetOff: 8, cameraSettleFrom: 10, cameraSettleFor: 4,
     cameraSeedBearing: 2.36, cameraSeedBack: 20, cameraSeedUp: 7.5, cameraSeedAim: .5, cameraPortraitSeedBearing: 2.74, cameraPortraitSeedBack: 19,
     cameraPortraitSeedUp: 7.5, cameraSeedRise: 2.5, cameraSeedHold: 6,
-    cameraBack: 10, cameraUp: 2, cameraPortraitBack: 13, cameraPortraitUp: 3, cameraPace: 0.5, cameraArrivePace: 0.35,
+    cameraBack: 12, cameraUp: 3, cameraPortraitBack: 15, cameraPortraitUp: 4, cameraPace: 0.5, cameraArrivePace: 0.35,
     cameraTurnFrom: -722, cameraTurnTo: -776, cameraListenBearing: .55,
     cameraOpenBack: 3, cameraOpenUp: 4, cameraOpenLook: 1.4, cameraPortraitOpenBack: 3, cameraPortraitOpenUp: 5,
     cameraOpenFrom: 24, cameraOpenTo: 10,
