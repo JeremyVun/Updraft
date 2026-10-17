@@ -513,6 +513,8 @@ Rules:
   explicit gradients (`textureGrad`) are not bit-identical to implicit ones; an edit nearby can move a result by an
   ulp (≤1/255); toggling `resolveDepthBuffer` on the multisampled scene target silently drops antialiasing. Drawing
   the sea after the land is slower, not faster: the land discards, so the tiler cannot cull the water beneath it.
+  The Birches trunks then crowns draw before the ground and sea (`renderOrder` -2, -1): despite their discards,
+  looking into the grove this measured 20–25% less scene time.
 - GLSL descending ramps use `1.0 - smoothstep(low, high, x)` with distinct, ascending edges; reversed or equal edges
   are undefined on some GPUs even if the local driver draws the expected curve. `tools/shader-check.mjs` rejects
   literal violations; expression bounds need range reasoning. CPU reversible helpers are separate.

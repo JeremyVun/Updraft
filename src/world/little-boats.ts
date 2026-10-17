@@ -388,7 +388,7 @@ export class LittleBoats {
     }
     if (!this.active || !this.launched || input.muted || !input.present || input.gust < tuning.littleBoats.brushSpeed) return;
     if (input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
-    this.drain.brush(camera, input, this.toys[0].s, dt);
+    this.drain.brush(camera, input);
     for (const toy of this.toys) {
       this.brushAt.copy(toy.group.position);
       this.brushAt.y += 0.8;

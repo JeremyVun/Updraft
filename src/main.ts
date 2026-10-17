@@ -609,7 +609,7 @@ controls.onSoundChange = on => {
 };
 input.onButton((kind) => {
   if (contextRecovery.lost) return;
-  if (kind === 'down' && soundChosen && soundButton.dataset.on === 'true' && !sound.running) sound.start();
+  if (kind === 'down' && soundChosen && soundButton.dataset.on === 'true' && !sound.running) setSound(true);
   if (kind === 'down' && !soundChosen && !params.shot) {
     soundChosen = true;
     setSound(true);

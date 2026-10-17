@@ -36,6 +36,29 @@ try {
     report.checks.push('failed AudioContext does not block Begin; sound switches off');
   }
 
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(base + '?shot&start=1&progress=0');
+    await page.waitForSelector('#veil.ready', { timeout: 60000 });
+    await page.locator('#begin').click();
+    await page.waitForSelector('#veil', { state: 'detached', timeout: 15000 });
+    const before = await page.evaluate(() => {
+      const sound = window.__game.sound;
+      Object.defineProperty(sound, 'running', { get: () => false });
+      sound.start = () => { throw new Error('injected audio retry failure'); };
+      return window.__stats.frame;
+    });
+    await page.locator('#view').click({ position: { x: 400, y: 400 } });
+    await page.waitForFunction(frame => window.__stats.frame > frame + 5, before);
+    assert.equal(await page.locator('#sound').getAttribute('data-on'), 'false');
+    assert.deepEqual(errors, [], 'a failed pointer-triggered audio retry must be contained');
+    await context.close();
+    report.checks.push('failed audio retry from a pointer gesture switches sound off and keeps playing');
+  }
+
   // 2. An exception thrown inside the frame loop shows the graphics-recovery dialog and stops scheduling.
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -116,7 +139,10 @@ try {
     await page.goto(base + '?shot&progress=1&chapter=washing');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.chapter === 'lines', null, { timeout: 60000 });
     let blocked = 0;
-    await page.route(url => /[a-z]+-(land|port)(-[^/]+)?\.webp$/.test(url.pathname), route => { blocked++; return route.abort(); });
+    await page.route(url => /[a-z]+-(land|port)(-[^/]+)?\.webp$/.test(url.pathname), route => {
+      if (route.request().resourceType() !== 'image') return route.continue();
+      blocked++; return route.abort();
+    });
     await page.goto(base + '?shot&start=1&progress=1');
     await page.waitForSelector('#veil.ready', { timeout: 60000 });
     assert(blocked > 0, 'the fixture actually blocked the painting');

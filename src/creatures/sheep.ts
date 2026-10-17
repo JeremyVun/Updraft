@@ -553,7 +553,7 @@ export class Sheep {
         }
         this.sense(m, dt, s);
         this.behave(m, dt, s);
-        this.pose(m, dt, time, s);
+        this.pose(m, dt, time);
         this.voice(m, dt, s);
         this.write(m, drawn++);
       }
@@ -1069,7 +1069,7 @@ export class Sheep {
     m.bob = Math.abs(Math.sin(m.phase)) * 0.045 * m.trot * m.size;
   }
 
-  private pose(m: Member, dt: number, time: number, s: Stimuli): void {
+  private pose(m: Member, dt: number, time: number): void {
     const rand = m.rand;
     const act = m.activity;
     const f = m.flock;
