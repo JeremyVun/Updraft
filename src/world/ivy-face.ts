@@ -17,6 +17,8 @@ export interface IvySpot {
   roof?: (across: number) => number;
   spread?: number;
   opening?: number;
+  /** Half the width of a ledge under the sill, standing out from the face, which no leaf grows up through. */
+  ledge?: { half: number; out: number };
 }
 
 /** A place on the ivy she climbs by: where a mitten closes round the stem, and where a boot's ankle sits with its toe in the fork. */
@@ -257,10 +259,11 @@ export class IvyFace {
       g.scale(size, size, size);
       const z = (d < 0.09 ? 0.02 : OFF + 0.01) + rand() * 0.1;
       g.translate(x, y, z);
-      g.applyMatrix4(this.frame);
-      const pivot = this.toWorld(new THREE.Vector3(x, y, z));
-      add(g, LEAVES[Math.floor(rand() * LEAVES.length)].clone().multiplyScalar(0.85 + rand() * 0.3), LEAF_KIND, pivot, rand());
+      const colour = LEAVES[Math.floor(rand() * LEAVES.length)].clone().multiplyScalar(0.85 + rand() * 0.3), seed = rand();
       placed++;
+      if (spot.ledge && this.throughLedge(g, spot.ledge)) continue;
+      g.applyMatrix4(this.frame);
+      add(g, colour, LEAF_KIND, this.toWorld(new THREE.Vector3(x, y, z)), seed);
     }
 
     const woody = parts.filter((p) => p.attributes.aKind.getX(0) === WOOD);
@@ -277,6 +280,13 @@ export class IvyFace {
 
   get objects(): THREE.Object3D[] {
     return [this.mesh];
+  }
+
+  /** Whether a leaf, in the face's frame, would stand up out of the ledge's top. */
+  private throughLedge(leaf: THREE.BufferGeometry, ledge: { half: number; out: number }): boolean {
+    leaf.computeBoundingBox();
+    const box = leaf.boundingBox!;
+    return box.max.y > this.height && box.min.z < ledge.out && box.max.x > this.drift - ledge.half && box.min.x < this.drift + ledge.half;
   }
 
   /** A point in the face's own frame (across to her right, up from the foot, out from the stone) into the world. */

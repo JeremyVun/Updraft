@@ -972,6 +972,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     ? 1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, tuning.skyMirror.duskTo) : 0;
   applyPalette(story.worldLife, dusk, shower, squall, homeLight);
   applySleepingPalette(sleeping.presence);
+  water.catchStars(['wood', 'toSleeping', 'sleeping'].includes(story.name)
+    ? atmo.uniforms.uNight.value * (1 - atmo.uniforms.uStormCover.value) : null);
   // Leaving, the shade lifts over the crossing: lifted at the pace it follows the child, the whole night brightens at once.
   shown.woodShade = ease(shown.woodShade, story.name === 'wood' ? overLand * atmo.uniforms.uNight.value : 0,
     story.name === 'wood' ? tuning.wood.shadeFollow : tuning.wood.shadeLift, dt);

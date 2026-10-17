@@ -2640,6 +2640,13 @@ export const tuning = {
   water: {
     /** Outgoing land can still own visible shallows; let their shading recede without a cut. */
     departureFade: 6,
+    /**
+     * How many metres of sea past its border a room going yields to a room shown, and over how many metres either
+     * side of the line between them the sea passes from one's showing to the other's: an island's shelf can run on
+     * past its room's border, and its shallows must deepen there rather than stop at a line.
+     */
+    roomYield: 50,
+    roomBlend: 35,
     /** Seconds for wind ripples to build and to settle after a gust. */
     windAttack: 0.6,
     windRelease: 2.8,
@@ -2654,9 +2661,9 @@ export const tuning = {
     darken: 0.07,
     /** Height of the small chop a gust lays over the swell, in world units. */
     chop: 0.12,
-    /** How many of the night sky's stars the sea catches, and how brightly they flash when it does. */
-    stars: 0.11,
-    starLight: 5,
+    /** How many of the night sky's stars the sea catches, and how brightly each shines at the height of its slow swell. */
+    stars: 0.045,
+    starLight: 3,
   },
   lantern: {
     /** How brightly the boat's lantern lights what is round it at full dark, and how the light falls away with distance. */
