@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
+import type { SeaRescue } from '../audio/sea-music';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 import type { SleepingGate } from '../audio/sleeping-music';
@@ -177,9 +178,9 @@ export interface Chapter {
   /** The bell's fourth ring has sounded, or a save is past it: the belfry's goodbye plays from here. */
   readonly bellsRung?: boolean;
   readonly seaScore?: SeaScorePhase;
-  /** The open sea's recording: its time on the passage clock, the rescue phrase reached and the whale's calls. */
+  /** The open sea's recording: its time on the passage clock, where the rescue is and the whale's calls. */
   readonly seaMusicTime?: number;
-  readonly seaPhrase?: number;
+  readonly seaRescue?: SeaRescue;
   readonly whaleCalling?: number;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;

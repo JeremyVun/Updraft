@@ -2197,9 +2197,21 @@ export const tuning = {
      * `raftTurn` radians.
      */
     raftPort: 8, raftAhead: 9, raftTurn: 0.5,
-    /** Seconds into its first full breath when the blue-green net drifts clear, and how long it takes. */
-    slumpFrom: 1.8, slumpFor: 5,
-    breathNetGap: 0.14, breathNetAside: 24, breathNetAlong: 5, breathNetArc: 2.5, breathNetCell: 0.65, breathNetDrape: 6.5,
+    /**
+     * Its first full breath throws the blue-green net off the blowhole and the breeze carries it away as cloth. The
+     * breath rises `blast` m/s at its heart, `plume` metres out, easing over `exhale` seconds; the breeze comes in from
+     * `breezeFrom` seconds at `breeze` m/s, gusting by `gusts` of that, toward the tail and away from the boat in the
+     * shares `toward` [tailward, away], rising `lift` m/s over its back (falling off over `liftFor` metres); eddies of `flutter` m/s turn it over, rising and
+     * falling only `eddyRise` as much, never enough to hold it up; the air rises `tumble` m/s on one side of it
+     * 5 m out and falls on the other, swinging at `tumbleRate` rad/s, so it turns over one way and back. Air through its face
+     * carries it at `catch` and along it at `skim` (1/s); it is drawn down at `fall` m/s², comes down on the water at
+     * `water` metres, is stilled there at `wetDrag` (1/s), soaks so the air lets go of it at `soak` (1/s), and
+     * once it has lain there `settle[0]` seconds, all of it within `settle[1]` metres of the water (or `settle[2]`
+     * seconds whatever), rides the swell and sinks away over `sinkFor` seconds.
+     */
+    netFlight: { blast: 16, plume: 8, exhale: 0.8, breeze: 6.5, breezeFrom: 0.4, gusts: 0.35, toward: [0.45, 1] as const, lift: 2.5, liftFor: 22,
+      flutter: 3, eddyRise: 0.25, tumble: 2, tumbleRate: 0.8, catch: 2.6, skim: 0.35, fall: 3, water: 0.08, wetDrag: 6, soak: 3, settle: [3, 0.7, 12] as const, sinkFor: 14 },
+    breathNetGap: 0.14, breathNetCell: 0.65, breathNetDrape: 6.5,
     /** Half length and width of the opening beneath the upper net (m). */
     breathFlapAlong: 3.5, breathFlapAcross: 3.2,
     /**

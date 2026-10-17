@@ -833,8 +833,10 @@ rest beside its head, the far length lost in haze. It is the whale from the firs
 
 Five steps share the rescue between wind, child and bird:
 
-1. Circles lift a separate blue-green net with a tighter weave, draped visibly over the orange net. The wind carries
-   it off to the far side, leaving the blowhole open. The orange net stays put throughout this challenge.
+1. Circles lift a separate blue-green net with a tighter weave, draped visibly over the orange net. Its first full
+   breath throws the net up as cloth; it streams in the column, folds over and the breeze carries it away over the far
+   side of its back, tumbling down onto the sea far off, where it sinks (`fx/sealife/net-flight.ts`,
+   `tuning.netWhale.netFlight`). The orange net stays put throughout this challenge.
 2. A sweep across the fold clears its eye; it opens and finds her.
 3. Strokes bring a cork to her reaching mitten so she can take the line.
 4. Gusts lift the net as she heaves it off the head, then lets the line go.
@@ -855,9 +857,10 @@ Dolphins follow their own stations, never swim in the air and never turn faster 
 crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while
 the camera finishes moving, and return two seconds after the last relevant stroke if more help is needed.
 
-Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest, then one whole phrase
-as each act begins (the net lifting, the fold lifting, her first pull, the cygnet's pull; none for taking the line) and
-its close from the release to the Mirror (`docs/contracts/audio.md`, "The long sea crossing").
+Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest in the quiet; its
+bass section as one continuous bed from the net first lifting, going round at its phrase ends for as long as the rescue
+takes; its close's theme from the end of the phrase the cygnet's pull began in, ending on its resolution as the whale
+dives (`docs/contracts/audio.md`, "The long sea crossing").
 
 Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
 `tuning.audio.whaleVoice`, `tuning.audio.seaMusicLead`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with

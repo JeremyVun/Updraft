@@ -13,8 +13,8 @@ try {
     const source = target => ({...baseState,music:target==='birches'?'birches':target==='sleeping'?'wood':target==='drowned'?'birches':target==='home'?'home':'sea',
       // Enable the forest's playable voice to verify that background gates cannot mute gesture feedback.
       seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,forestWind:true,
-      // Leaving the sea, its recording is in its close; arriving at sea, it begins once the morning has gone.
-      ...(target==='mirror'?{seaMusicTime:200,seaPhrase:5}:{})});
+      // Leaving the sea, its recording is in its release; arriving at sea, it begins once the morning has gone.
+      ...(target==='mirror'?{seaMusicTime:200,seaRescue:'freeing'}:{})});
     for(const target of Object.keys(ARRIVAL_MUSIC)) {
       const {ctx,sound}=offlineSound(36), notes=[], phases=[];
       // Hear just the background and its send into the reverb, while still scheduling real gestures and environment.
@@ -25,7 +25,7 @@ try {
       const score=()=>sound.seaMusic??sound.summitScore??sound.mirrorScore??sound.villageScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingMusic;
       const update=tick=>{
         const now=tick/8, landed=now>=28;
-        sound.update(.125,{...source(target),...(landed?ARRIVAL_MUSIC[target]:{}),...(target==='sea'?{seaMusicTime:now-12.5,seaPhrase:-1}:{}),
+        sound.update(.125,{...source(target),...(landed?ARRIVAL_MUSIC[target]:{}),...(target==='sea'?{seaMusicTime:now-12.5,seaRescue:'coming'}:{}),
           arrivalMusic:now>=8&&!landed?target:undefined,
           gust:now>=10&&now<10.5?10:0,charge:now>=12&&now<13?.65:0});
         const stage=sound.arrivalTransition.stage;if(phases.at(-1)?.stage!==stage)phases.push({at:now,stage});

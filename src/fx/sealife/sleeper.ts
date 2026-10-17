@@ -36,7 +36,7 @@ const REST_CURL = 0.2;
 const SIGH_AT = 0.42;
 const SIGH_FOR = 2.2;
 /** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
-const BREATH_IN = 1.4;
+export const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
 /**
  * Free, in seconds: a long breath drawn while it drifts clear of the boat and the pod comes, the spout, its mist coming

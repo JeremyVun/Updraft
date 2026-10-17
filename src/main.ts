@@ -1097,7 +1097,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.bellsRung = story.current.bellsRung;
   soundState.seaScore = story.current.seaScore;
   soundState.seaMusicTime = story.current.seaMusicTime;
-  soundState.seaPhrase = story.current.seaPhrase;
+  soundState.seaRescue = story.current.seaRescue;
   soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.sleepingMusic = story.current.sleepingMusic;
