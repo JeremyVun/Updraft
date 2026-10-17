@@ -32,6 +32,8 @@ const RABBIT_SIZE = 0.4;
 /** Seconds the morning may lie on the rabbit unseen before it wakes anyway. */
 const WAKE_UNSEEN = 30;
 const asleep = () => 0;
+/** Where the morning's green brings rabbits up, either side of the child's way down from the bed to the boat. */
+const MORNING_RABBITS = [[-192, -1914.2], [-199.8, -1914.3], [-203, -1927]] as const;
 
 const BANK_U = new THREE.Vector2(SLEEP_STEP.ux, SLEEP_STEP.uz);
 const BANK_V = new THREE.Vector2(-SLEEP_STEP.uz, SLEEP_STEP.ux);
@@ -330,6 +332,10 @@ export class SleepingDressing {
   private readonly gust = { value: 0 };
   private readonly rabbits: Rabbits;
   private readonly stimuli: Stimuli;
+  private readonly morningRabbits: Rabbits;
+  private readonly morningStimuli: Stimuli;
+  /** The child walking by in the morning, whom the rabbits out in the new green sit up for or lope away from. */
+  walker: THREE.Vector3 | null = null;
   /** How long the morning has lain on the form: the rabbit waits a while to wake where it can be watched. */
   private unwatched = 0;
   private readonly form = new THREE.Vector3();
@@ -376,10 +382,14 @@ export class SleepingDressing {
     this.rabbits = new Rabbits(habitat, 1, RABBIT_SIZE);
     this.rabbits.addSleeper(FORM.x, FORM.y, FORM_FACING, 90413);
     this.objects.push(this.rabbits.mesh);
+    this.morningRabbits = new Rabbits(habitat, MORNING_RABBITS.length, RABBIT_SIZE);
+    MORNING_RABBITS.forEach(([x, z], i) => this.morningRabbits.add(x, z, 52041 + i * 977));
+    this.objects.push(this.morningRabbits.mesh);
     this.stimuli = {
       wind, sample: { x: 0, z: 0, energy: 0, lift: 0 }, camera: new THREE.PerspectiveCamera(), input, gustAt: null,
       updraft: { x: 0, z: 0, strength: 0 }, glider: null, walker: null, life: asleep, breeze: 1, night: 1, voices: new Voices(),
     };
+    this.morningStimuli = { ...this.stimuli, sample: { x: 0, z: 0, energy: 0, lift: 0 }, life: morningAt };
     this.form.set(FORM.x, heightAt(FORM.x, FORM.y) + 0.2, FORM.y);
   }
 
@@ -395,6 +405,11 @@ export class SleepingDressing {
       if ((watched && this.unwatched > 0) || this.unwatched > WAKE_UNSEEN) s.life = morningAt;
     }
     this.rabbits.update(dt, time, s);
+    const m = this.morningStimuli;
+    m.camera = camera;
+    m.gustAt = s.gustAt;
+    m.walker = this.walker;
+    this.morningRabbits.update(dt, time, m);
   }
 
   /** Tall things keep clear of the bird's way, the bed's terrace and the light's way down from the window. */

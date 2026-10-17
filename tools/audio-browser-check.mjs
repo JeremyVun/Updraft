@@ -100,7 +100,7 @@ try {
   await page.waitForFunction(() => audioStates.length >= 4);
   assert.equal(await page.evaluate(() => audioStates.at(-1).music), 'sea');
   assert.equal(await page.evaluate(() => __game.sound.seaMusic), null, 'Sleeping morning does not borrow the sea\'s recording');
-  assert(await page.evaluate(() => !__game.sound.sleepingMusic?.lullaby && !__game.sound.sleepingMusic?.brave), 'Restoring morning stays silent until the sea');
+  assert(await page.evaluate(() => !__game.sound.sleepingMusic?.lullaby && !__game.sound.sleepingMusic?.brave && !__game.sound.sleepingMusic?.morning), 'Restoring morning stays silent until the sea');
   // A real pointer sweep through a playable wood fixture must be reflected by the audio state.
   await page.evaluate(() => {
     __game.story.begin('wood');

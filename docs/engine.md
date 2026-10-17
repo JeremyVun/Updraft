@@ -287,8 +287,9 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
 reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low it is not
 drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
-level. Home retains the ordinary reflection through landing and the walk inland: the meadow's coast cutoff does
-not apply there, because the sea remains in view. Verify from the crossing; starting at the jetty misses the handoff.
+level. Ordinary reflections stay enabled across room changes: distance from the meadow's southern coast cannot
+establish that water is out of view at another shore. Entering the mirror's room changes target resolution and
+cadence, not whether ordinary water reflects. Verify from the crossing; starting at a jetty misses the handoff.
 The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
 the collar, none), selected only by `applyWorldQuality`. A change fades them over a second (`uSeaEffects`, toward

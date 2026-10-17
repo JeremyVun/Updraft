@@ -138,6 +138,8 @@ export interface Chapter {
   readonly kiteTow?: { at: THREE.Vector3; heading: number } | null;
   /** Bumped when the story wants the camera to jump to its shot at once, as it may where nothing can be seen. */
   readonly cameraCut?: number;
+  /** Carry the actual view through a hidden move instead of snapping to its framing target. */
+  readonly cameraRelocation?: THREE.Matrix4;
   /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
   readonly pointerFloor?: number | null;
   /** How far from the lens the pointer's wind may land, while the player is aiming at something standing up out of the ground. */

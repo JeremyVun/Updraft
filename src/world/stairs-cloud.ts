@@ -625,6 +625,8 @@ export class FogBank {
   amount = 0;
   /** The light of its white, how brightly the sun glows through it, and how clear the pocket round the boat is. */
   readonly light = new THREE.Color(1, 1, 1);
+  // Carry the light's heading and texture's height through the hidden descent.
+  readonly frame = new THREE.Vector3(1, 0, 0);
   glow = 0;
   clear = 0;
   private asked = false;
@@ -639,6 +641,7 @@ export class FogBank {
   face(x: number, z: number, yaw: number): void {
     this.at.set(x, z);
     this.into.set(Math.sin(yaw), Math.cos(yaw));
+    this.frame.set(1, 0, 0);
   }
 
   /** How far past its front line a point is. */
@@ -654,6 +657,7 @@ export class FogBank {
     u.uFogBank.value.set(this.at.x, this.at.y, this.into.x, this.into.y);
     u.uFogBankShape.value.set(this.floor, this.top, this.deep, this.shown);
     u.uFogBankLight.value.set(this.light.r, this.light.g, this.light.b, this.glow);
+    u.uFogBankFrame.value.copy(this.frame);
     // How far into the white the eye is: it goes along the way the boat goes, where the front is straight across it.
     const into = this.depthOf(eye.x, eye.z);
     const inside = THREE.MathUtils.clamp(into / tuning.stairs.bankFront, 0, 1) * THREE.MathUtils.clamp((this.deep - into) / tuning.stairs.bankBack, 0, 1);

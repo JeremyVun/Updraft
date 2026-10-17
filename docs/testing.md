@@ -83,6 +83,10 @@ edit.
 
 **Engine, rendering and input**
 
+- `rendering-continuity-check`: outgoing water and sheltered firefly transitions at 10–120 Hz, and visual storm
+  cover independent of lightning triggers. `BASE=<QA preview> CASE=toSleeping AFTER=720 OUT=/tmp/<dir>
+  node tools/rendering-continuity-audit.mjs` captures handoff frames and twelve seconds afterward; use
+  `MODE=departure CASE=sleeping|wood|meadow` for boarding. Inspect the images as well as the per-frame state.
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
 - `sky-mirror-star-check`: renders the fallen star shader at constant brightness while the low camera crosses
@@ -90,7 +94,8 @@ edit.
   uses SwiftShader without the GPU lock. The intentional slow pulse is covered by `sky-mirror-logic-check`.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
-  and clear surfaces outside it. Needs a dev server for the shader import.
+  and clear surfaces outside it. Also checks colour and coverage after translating and rotating the bank;
+  an uncarried reference exposes the descent discontinuity. Needs a dev server for the shader import.
 - `stairs-fog-motion-check`: compares moving checkpoint views, including an ultrawide viewport, against the
   original per-ray fog in the same world state. Checks cloud edges per pixel; a whole-image average alone missed
   the rejected cloud-cache artifacts. Needs Vite; `OUT` sets the evidence prefix.
@@ -152,7 +157,7 @@ edit.
 **Camera**
 
 - `camera-direction-check`: orbital clearance, eased turns, focus, dolly and height at 10–120 Hz, carry, attention,
-  stable composition choices, interaction holds, exact paths and portrait resize.
+  stable composition choices, interaction holds, exact paths, portrait resize and hidden camera relocation.
 - `crossing-camera-check`, `drowned-camera-check`, `storm-camera-trace`, `chapter-view-check`, `ending-view-check`
   (fails any staged view whose turn rate changes by 2.5°/s or more within a quarter second), `piano-frame-check`,
   `pond-view-check` (the meadow family seen stirring, running and lifting, then let out of the frame without the
@@ -163,11 +168,15 @@ edit.
 
 **Chapters and mechanics** (Node, real chapter code, no renderer)
 
-- `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
+- `plane-routing-check`, `plane-catch-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
   `little-boats-logic-check`, `kite-logic-check`, `scarf-geometry-check`, `sail-flutter-check`, `sea-logic-check`,
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
   `wing-care-check`, `flock-flight-check`, `dolphin-leap-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- `plane-catch-check` covers return flights at 30/60/120 Hz, eight bearings and three heights under sustained gusts,
+  exact mitten attachment and one completion. It also checks paper edges against the posed child mesh through eight
+  approaches; `QUICK=1` selects one case. `QUICK=1 NEGATIVE=1` loads the old arrival from `db31c945` and reproduces its
+  head intersection. Rendered approach, catch and boarding still need review.
 - `meadow-duet-check` covers the wind call before piano input, retained partial replies, four player answers,
   the delayed bough finale/colour cue and restoration at 30/60/120 Hz. The real-input `piano-check` also swipes
   during a call to confirm that it cannot count as a reply; its framing checks include the bough's crown.
@@ -256,13 +265,17 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   its handover to `belfry_ending.ogg` (just before an attack, sample-aligned, no dip, faded to silence at its end),
   started on the fourth ring with its slow entrance, played through the storm's start into the ending's ritardando and
   fade, never restarted, started on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
-  `sleeping-music-check` decodes `sleeping.ogg` and `cygnet_brave.ogg` and checks the lullaby's end, every seam and the
-  climb's part boundaries on the samples; the frost's bounded wait and the lullaby's early end at a seam; the parts at
-  their gates, never overlapping, the climb theme alone cut at its seam by the fog, queued, passed over and joined
-  unbroken; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
+  `sleeping-music-check` decodes `sleeping.ogg`, `cygnet_brave.ogg` and `sleeping_morning.ogg` and checks the
+  lullaby's end, every seam, the climb's part boundaries and the morning's entry on the samples; the frost's bounded
+  wait and the lullaby's early end at a seam; the parts at their gates, never overlapping, the summit begun on its own
+  a second late and rising in, the climb theme cut at its seam by the fog, queued, passed over and joined unbroken;
+  the part sounding as the bandage comes free let go at a seam or a short fade, and silence from there to the
+  curtains; the morning from its second phrase as the curtains open; restores; the wood's handoff at full level, the pad, the climb's chime tones, mute and silence. It prints
   each player's timeline (main's measured climb, the rebuilt climb, a slow player, `?chapter=sleeping`).
-  `sleeping-music-browser-check [climb sleeping feather morning]` measures the same in the real game with a real
-  AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue).
+  `sleeping-music-browser-check [climb sleeping ribbon feather morning]` measures the same in the real game with a real
+  AudioContext (`climb` first, about 5 minutes: it saves the checkpoints the restores continue; `ribbon` drives the
+  summit's circles from `?chapter=ribbon`, logs the summit part against the top, the bandage freed, the turn and the leap, the morning's
+  seams against the waking, and its departure fade against the sea's entry).
   `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
   the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.

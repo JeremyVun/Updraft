@@ -401,7 +401,7 @@ export class Soundscape {
       this.seaMusic ??= new SeaMusic(this.ctx, this.backgroundDry);
       return this.seaMusic.ready;
     }
-    if (track === 'sleeping' || track === 'cygnetBrave') {
+    if (track === 'sleeping' || track === 'cygnetBrave' || track === 'sleepingMorning') {
       this.sleepingMusic ??= new SleepingMusic(this.ctx, this.backgroundDry);
       return this.sleepingMusic.prepare(track);
     }
@@ -1201,7 +1201,7 @@ export class Soundscape {
       this.seaMusic.update(s.seaMusicTime, s.seaPhrase ?? -1,
         10 ** ((tuning.audio.recordedMusicDb.sea + tuning.audio.whaleCallRoomDb * (s.whaleCalling ?? 0)) / 20) * (1 - piano));
     }
-    // Sleeping's recordings carry their own dynamics: no hush. Arriving it is bedtime; leaving, past the coda.
+    // Sleeping's recordings carry their own dynamics: no hush. Arriving it is bedtime; leaving, past the curtains.
     if (bg.sleepingScore && !s.silence && !backgroundPaused && (this.sleepingMusic || !this.musicMuted)) {
       this.sleepingMusic ??= new SleepingMusic(ctx, this.backgroundDry);
       this.sleepingMusic.update(s.sleepingMusic ?? (bg.sleepingScore === 'shelter' ? 'bedtime' : 'glide'), 1 - piano);

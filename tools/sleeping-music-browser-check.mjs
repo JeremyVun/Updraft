@@ -2,17 +2,22 @@
 // `climb`  `?chapter=toSleeping` with no input until the feather is offered, then prompt real gestures (the pillow, the
 //          climb's sweeps, the summit's circles) and on to the sea: the lullaby's start and end against the arrival,
 //          bed, sleep, the frost, the tries and the call; silence from its end until the feather; each of the climb's
-//          parts against the beats; the coda and the sea. Saves the feather and morning checkpoints for the restores.
+//          parts against the beats; the morning from the curtains, and the sea. Saves the feather and morning
+//          checkpoints for the restores.
 // `sleeping`  `?chapter=sleeping`: the lullaby from load and the frost's wait.
+// `ribbon`  `?chapter=ribbon`, the summit's circles: the summit part a second after the top, rising in, let go as the
+//          bandage comes free, silence through the turn to the ribbon, the leap and the tug, then the curtains, the morning's entry and its
+//          next seams against the glide, the waking and the child sitting up, and its fade as the boat leaves for the sea.
 // `feather`, `morning`  those saves continued: the climb theme from its top as the climb resumes; silence until the sea.
-// Usage: node tools/sleeping-music-browser-check.mjs [climb sleeping feather morning]; `climb` first (about 5 minutes,
-// the rest 1–2 each). Vite on 5230, or BASE. SLOW=2.5 holds every stop that much longer. Offline rules and the
-// players' tables: `sleeping-music-check.mjs`.
+// Usage: node tools/sleeping-music-browser-check.mjs [climb sleeping ribbon feather morning]; `climb` before the
+// restores (about 5 minutes, the rest 1–2 each). Vite on 5230, or BASE. SLOW=2.5 holds every stop that much longer.
+// Offline rules and the players' tables: `sleeping-music-check.mjs`.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
 
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['climb', 'sleeping', 'feather', 'morning'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['climb', 'sleeping', 'ribbon', 'feather', 'morning'];
+
 const saves = '/tmp/updraft-sleeping-music-saves.json';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const slow = Number(process.env.SLOW ?? 1);
@@ -38,7 +43,8 @@ try {
     const length = node => node.buffer?.duration ?? 0;
     const native = AudioBufferSourceNode.prototype.start, nativeStop = AudioBufferSourceNode.prototype.stop;
     AudioBufferSourceNode.prototype.start = function (...args) {
-      const d = length(this), track = Math.abs(d - 174.2) < .1 ? 'brave' : Math.abs(d - 143.6) < .1 ? 'lullaby' : Math.abs(d - 236.6) < .2 ? 'sea' : null;
+      const d = length(this), track = Math.abs(d - 174.2) < .1 ? 'brave' : Math.abs(d - 143.6) < .1 ? 'lullaby'
+        : Math.abs(d - 123.7) < .1 ? 'morning' : Math.abs(d - 236.6) < .2 ? 'sea' : null;
       if (track) {
         const [when = 0, offset = 0, duration = Infinity] = args, ctx = sound.ctx.currentTime;
         this.clip = { track, offset, when, end: when + duration, game: w.game + Math.max(0, when - ctx), beat: g.story.current.beat };
@@ -61,10 +67,14 @@ try {
       analyser.getFloatTimeDomainData(samples);
       let sum = 0; for (const s of samples) sum += s * s;
       w.loud.push([ctx, 10 * Math.log10(sum / samples.length + 1e-20)]);
-      for (const [key, value] of [['chapter', g.story.name], ['arrival', state.arrivalMusic], ['beat', c.beat], ['score', c.sleepingScore], ['gate', c.sleepingMusic], ['tried', c.tried], ['called', c.called], ['offered', !!(c.beat === 'asleep' && c.windInvitation)]]) {
+      for (const [key, value] of [['chapter', g.story.name], ['arrival', state.arrivalMusic], ['beat', c.beat], ['score', c.sleepingScore], ['gate', c.sleepingMusic], ['tried', c.tried], ['called', c.called], ['offered', !!(c.beat === 'asleep' && c.windInvitation)],
+        ['released', !!g.sleeping?.ribbon.released],
+        // As `waking` has it: her eyes open 2.2 s in, and she sits up from 3.6 s.
+        ['eyes', c.beat === 'waking' && c.t > 2.2], ['sitsUp', c.beat === 'waking' && c.t > 3.6]]) {
         if (seen[key] !== value) { seen[key] = value; w.events.push({ key, value, ...at, t: c.t }); }
       }
       if (c.beat === 'asleep') { w.marks.frostWait = c.frostWait; w.marks.lullabyLeft = c.lullaby; }
+      if (w.marks.seaGate === undefined && w.clips.some(clip => clip.track === 'sea' && clip.when <= ctx)) w.marks.seaGate = sound.backgroundGate.gain.value;
     };
   });
   const begin = async (page, query) => {
@@ -92,11 +102,16 @@ try {
       const y = p.y + (circle ? Math.sin(a) * rad : Math.sin(i / count * Math.PI) * 8);
       await page.mouse.move(Math.max(4, Math.min(width - 4, x)), Math.max(4, Math.min(height - 4, y)));
       await page.waitForTimeout(circle ? 25 : 22);
-      if (circle && i % 5 === 0 && await page.evaluate(() => __game.story.current.beat !== 'hilltop')) break;
+      if (circle && i % 5 === 0 && await page.evaluate(() => !__game.story.current.invitesFlight)) break;
     }
   };
   const report = async (page, errors, requests) => {
-    const w = await page.evaluate(() => ({ ...sleepWatch, loud: undefined, loudness: sleepWatch.loud }));
+    const w = await page.evaluate(async () => {
+      const { MORNING_FROM, MORNING_SEAMS } = await import('/src/audio/sleeping-music.ts'), A = __game.tuning.audio;
+      return { ...sleepWatch, loud: undefined, loudness: sleepWatch.loud, MORNING_FROM, MORNING_SEAMS,
+        giveWay: Math.max(A.curtainsFade, A.mirrorSeamRelease), letGo: Math.max(A.ribbonFade, A.ribbonSeamWithin),
+        summitDelay: A.summitDelay, departureFade: A.sleepingDepartureFade, seaLead: A.seaMusicLead };
+    });
     const quiet = (from, to) => Math.max(-200, ...w.loudness.filter(([t]) => t >= from && t <= to).map(([, v]) => v));
     return { w, quiet, errors, requests };
   };
@@ -122,7 +137,14 @@ try {
       await keep();
       const current = await page.evaluate(() => __game.story.current.beat);
       if (current === 'catchFeather' || current === 'edge') { await page.waitForTimeout(300); continue; }
+      // The step up the bank takes circles at the bird, as the summit does.
+      if (current === 'step') {
+        if (await page.evaluate(() => __game.story.current.invitesFlight)) await sweep(page, 'bird');
+        else await page.waitForTimeout(300);
+        continue;
+      }
       if (current === 'snow' || current === 'mist') {
+        if (!await page.evaluate(() => !!__game.story.current.windInvitation)) { await page.waitForTimeout(300); continue; }
         await page.waitForTimeout(400 + 2400 * (slow - 1));
         await sweep(page, 'encounter');
       } else {
@@ -160,9 +182,9 @@ try {
       const e = when(w, 'beat', name);
       if (e) console.log('  ' + row(name, e) + `   (+${(e.ctx - feather.ctx).toFixed(1)} s from the feather)`);
     }
-    for (const gate of ['feather', 'mist', 'catch', 'summit', 'glide']) { const e = when(w, 'gate', gate); if (e) console.log('  ' + row(`gate ${gate}`, e)); }
-    for (const line of clipRows(w, 'brave')) console.log('  ' + line);
-    for (const line of clipRows(w, 'sea')) console.log('  ' + line);
+    for (const gate of ['feather', 'mist', 'catch', 'summit', 'ribbon', 'glide']) { const e = when(w, 'gate', gate); if (e) console.log('  ' + row(`gate ${gate}`, e)); }
+    console.log('  ' + row('ribbon released', when(w, 'released', true)));
+    for (const track of ['brave', 'morning', 'sea']) for (const line of clipRows(w, track)) console.log('  ' + line);
     console.log('  ' + row('toMirror', when(w, 'chapter', 'toMirror')));
     const tuneEnd = lullaby[0].end, silent = quiet(tuneEnd + .1, feather.ctx - .1);
     console.log(`  background loudest from the lullaby's end to the feather: ${silent.toFixed(1)} dBFS; requests: ${requests.join(', ')}`);
@@ -172,9 +194,84 @@ try {
     assert(silent < -90, 'silence from the lullaby\'s end until the feather');
     assert(parts[0]?.offset === 0 && Math.abs(parts[0].when - feather.ctx) < .2, 'the climb theme enters with the freed feather');
     assert(parts.every((c, i) => !i || c.when >= parts[i - 1].end - 1e-3), 'parts never overlap');
-    assert(sea && (parts.at(-1)?.end ?? 0) <= sea.when, 'the sea begins after Sleeping\'s last part');
+    ribbonHolds(w, parts, quiet);
+    curtainsHold(w, parts);
+    const morning = w.clips.find(c => c.track === 'morning');
+    assert(sea && morning.end <= sea.when + 1e-3, 'the sea begins after the morning');
+    departureHolds(w);
     assert(captured.feather && captured.morning, 'both checkpoints were saved');
     assert.deepEqual(errors, [], 'no console errors');
+  };
+  // The curtains: the morning once, from its second phrase, as the ribbon is released; the climb gone within
+  // `giveWay`; no coda.
+  const curtainsHold = (w, parts) => {
+    const released = when(w, 'released', true), morning = w.clips.filter(c => c.track === 'morning');
+    assert(morning.length === 1 && Math.abs(morning[0].offset - w.MORNING_FROM) < 1e-3, 'the morning plays once, from its second phrase');
+    assert(Math.abs(morning[0].when - released.ctx) < .2, `the morning enters as the curtains open (${(morning[0].when - released.ctx).toFixed(3)} s)`);
+    assert(parts.every(c => c.end <= morning[0].when + w.giveWay + .05), 'the climb gives way to the morning');
+    assert(!parts.some(c => c.offset > 152), 'the coda never plays');
+    assert(when(w, 'gate', 'glide').ctx <= released.ctx + .05, 'the glide gate is the release');
+  };
+  // The bandage freed: no climb part begins from it, the one sounding is let go within `letGo`, and silence holds
+  // through the turn to the ribbon, the leap and the tug until the curtains.
+  const ribbonHolds = (w, parts, quiet) => {
+    const turn = when(w, 'beat', 'hilltop'), released = when(w, 'released', true), gate = when(w, 'gate', 'ribbon');
+    assert(gate && gate.ctx > when(w, 'beat', 'unbinding').ctx && gate.ctx < turn.ctx, 'the ribbon gate comes with the bandage, before the turn');
+    assert(!parts.some(c => c.when >= gate.ctx - .05), 'no climb part begins once the bandage is freed');
+    const end = Math.max(gate.ctx, ...parts.map(c => c.end));
+    assert(end <= gate.ctx + w.letGo + .05, `the climb lets go within ${w.letGo} s of the bandage freed (${(end - gate.ctx).toFixed(2)} s)`);
+    const loudest = quiet(end + .1, released.ctx - .1);
+    assert(loudest < -90, `silence from the climb's end until the curtains (${loudest.toFixed(1)} dBFS)`);
+    return end;
+  };
+  // Leaving for the sea: the morning fades over `sleepingDepartureFade` as the passage begins, and the sea's recording begins
+  // `seaMusicLead` into the passage.
+  const departureHolds = w => {
+    const aboard = when(w, 'beat', 'aboard'), passage = when(w, 'chapter', 'toMirror');
+    const morning = w.clips.find(c => c.track === 'morning'), sea = w.clips.find(c => c.track === 'sea');
+    const heard = w.loudness.filter(([t, v]) => t >= aboard.ctx && t < sea.when && v > -90).map(([t]) => t);
+    const lastHeard = Math.max(aboard.ctx, ...heard);
+    console.log(`  departure: aboard audio ${aboard.ctx.toFixed(2)}, passage ${passage.ctx.toFixed(2)}, morning stops ${morning.end.toFixed(2)} (+${(morning.end - passage.ctx).toFixed(2)} s from the passage), last heard over −90 dBFS +${(lastHeard - aboard.ctx).toFixed(2)} s, sea begins ${sea.when.toFixed(2)} (+${(sea.when - passage.ctx).toFixed(2)} s into the passage on the audio clock, +${(sea.game - passage.game).toFixed(2)} s on the game's, ${(sea.when - morning.end).toFixed(2)} s after the morning), gate ${w.marks.seaGate?.toFixed(3)} as it begins`);
+    assert(Math.abs(morning.end - passage.ctx - w.departureFade) < .2, `the morning fades over ${w.departureFade} s as the boat leaves`);
+    assert(Math.abs(sea.game - passage.game - w.seaLead) < .2, `the sea begins ${w.seaLead} s into the passage`);
+    assert(sea.when >= morning.end + .5 && w.marks.seaGate > .99, 'a rest, and the gates open, before the sea begins');
+  };
+  const ribbon = async () => {
+    const { page, errors, requests } = await open();
+    await begin(page, 'progress=0&chapter=ribbon');
+    await beat(page, 'hilltop');
+    await page.waitForTimeout(2000 * slow);
+    for (let i = 0; i < 6 && await page.evaluate(() => __game.story.current.beat === 'hilltop'); i++) await sweep(page, 'bird');
+    await beat(page, 'glide');
+    await beat(page, 'lap');
+    await page.waitForFunction(() => sleepWatch.clips.some(c => c.track === 'sea'), null, { timeout: 180000 });
+    await page.waitForTimeout(1500);
+    const { w, quiet, errors: errs } = await report(page, errors, requests);
+    const parts = w.clips.filter(c => c.track === 'brave' && c.end > c.when), morning = w.clips.find(c => c.track === 'morning');
+    const released = when(w, 'released', true);
+    console.log('\n?chapter=ribbon (from Begin)');
+    for (const [label, e] of [['gate summit', when(w, 'gate', 'summit')], ['unbinding', when(w, 'beat', 'unbinding')], ['gate ribbon (bandage nearly free)', when(w, 'gate', 'ribbon')], ['hilltop (turn)', when(w, 'beat', 'hilltop')],
+      ['reachRibbon (leap)', when(w, 'beat', 'reachRibbon')], ['pullRibbon', when(w, 'beat', 'pullRibbon')], ['ribbon released', released], ['gate glide', when(w, 'gate', 'glide')],
+      ['glide', when(w, 'beat', 'glide')], ['waking', when(w, 'beat', 'waking')], ['eyes open', when(w, 'eyes', true)], ['sits up', when(w, 'sitsUp', true)], ['lap', when(w, 'beat', 'lap')]]) {
+      if (e) console.log('  ' + row(label, e) + `   (${(e.ctx - released.ctx >= 0 ? '+' : '')}${(e.ctx - released.ctx).toFixed(2)} s from the release)`);
+    }
+    for (const track of ['brave', 'morning']) for (const line of clipRows(w, track)) console.log('  ' + line);
+    for (const seam of w.MORNING_SEAMS.filter(seam => seam > w.MORNING_FROM).slice(0, 3)) {
+      const at = morning.when + seam - morning.offset;
+      console.log(`  morning seam ${seam.toFixed(2)} s sounds at audio ${at.toFixed(2)}   (+${(at - released.ctx).toFixed(2)} s from the release)`);
+    }
+    const unbound = when(w, 'gate', 'ribbon'), leap = when(w, 'beat', 'reachRibbon'), summit = when(w, 'gate', 'summit');
+    const end = ribbonHolds(w, parts, quiet), part = parts[0];
+    const seamed = Math.abs(part.offset + part.end - part.when - 126.67) < .02;
+    console.log(`  summit part begins +${(part.when - summit.ctx).toFixed(2)} s after the top, ends ${seamed ? 'at its 126.67 s seam' : 'in a fade'} +${(part.end - unbound.ctx).toFixed(2)} s after the ribbon gate (${(part.offset + part.end - part.when).toFixed(2)} s in the recording);`
+      + ` silence ${(leap.ctx - end).toFixed(2)} s before the leap, ${(released.ctx - end).toFixed(2)} s before the curtains`);
+    departureHolds(w);
+    console.log(`  requests: ${requests.join(', ')}`);
+    assert(parts.length === 1 && Math.abs(part.offset - 112.11) < 1e-3 && Math.abs(part.when - summit.ctx - w.summitDelay) < .2,
+      `the summit part ${w.summitDelay} s after the bird reaches the top`);
+    curtainsHold(w, parts);
+    assert(requests.includes('sleeping_morning.ogg'), 'the morning is loaded');
+    assert.deepEqual(errs, [], 'no console errors');
   };
   const sleeping = async () => {
     const { page, errors, requests } = await open();
@@ -207,7 +304,7 @@ try {
     const { w, quiet } = await report(page, errors, requests);
     console.log(`\n${point} save, continued (from Begin)`);
     for (const e of w.events.filter(e => e.key === 'beat' || e.key === 'chapter' || e.key === 'gate').slice(0, 8)) console.log('  ' + row(`${e.key} ${e.value}`, e));
-    for (const track of ['lullaby', 'brave', 'sea']) for (const line of clipRows(w, track)) console.log('  ' + line);
+    for (const track of ['lullaby', 'brave', 'morning', 'sea']) for (const line of clipRows(w, track)) console.log('  ' + line);
     console.log(`  requests: ${requests.join(', ')}`);
     assert(!w.clips.some(c => c.track === 'lullaby'), 'no lullaby');
     if (point === 'feather') {
@@ -216,14 +313,15 @@ try {
       assert(requests.includes('cygnet_brave.ogg') && !requests.includes('sleeping.ogg'), 'only the climb\'s recording is loaded to begin');
     } else {
       const sea = w.clips.find(c => c.track === 'sea');
-      assert(!w.clips.some(c => c.track === 'brave') && quiet(0, sea.when - .1) < -90, 'silence until the sea');
-      assert(!requests.includes('cygnet_brave.ogg') && !requests.includes('sleeping.ogg'), 'neither Sleeping recording is loaded');
+      assert(!w.clips.some(c => c.track === 'brave' || c.track === 'morning') && quiet(0, sea.when - .1) < -90, 'silence until the sea');
+      assert(!['cygnet_brave.ogg', 'sleeping.ogg', 'sleeping_morning.ogg'].some(file => requests.includes(file)), 'no Sleeping recording is loaded');
     }
     assert.deepEqual(errors, [], 'no console errors');
   };
   for (const name of cases) {
     if (name === 'climb') await climb();
     else if (name === 'sleeping') await sleeping();
+    else if (name === 'ribbon') await ribbon();
     else await restore(name);
   }
 } finally { await close(); }

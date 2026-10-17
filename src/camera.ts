@@ -230,6 +230,15 @@ export class CameraRig {
     this.fitSubjects(shot, Infinity);
   }
 
+  relocate(shot: Shot, transform: THREE.Matrix4, time: number): void {
+    if (this.fixed) return;
+    const eye = this.camera.position.clone().applyMatrix4(transform);
+    const look = this.look.clone().applyMatrix4(transform);
+    this.cut(shot);
+    this.eye.copy(eye).sub(breathe(time, eye.distanceTo(look), this.breath));
+    this.look.copy(look);
+  }
+
   update(dt: number, time: number, shot: Shot, pace = 0.6, holdComposition = false): void {
     if (this.fixed) return;
     const zoom = shot.zoom ?? 1;

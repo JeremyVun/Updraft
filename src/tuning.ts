@@ -115,14 +115,25 @@ export const tuning = {
      * once. Other recordings fade into a seam over up to `mirrorSeamRelease`.
      */
     mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorFade: 3,
-    /** Sleeping's fog takes the climb theme at its next seam within `fogSeamWithin`, or fades it over `fogFade`. */
-    fogSeamWithin: 6, fogFade: 3,
+    /**
+     * Sleeping's fog takes the climb theme at its next seam within `fogSeamWithin`, or fades it over `fogFade`. The
+     * curtains take whatever climb part still sounds at a seam within `mirrorSeamRelease`, or over `curtainsFade`.
+     */
+    fogSeamWithin: 6, fogFade: 3, curtainsFade: 1.5,
+    /**
+     * The summit part, starting on its own, begins `summitDelay` after the bird reaches the top and rises over
+     * `summitFadeIn`. `ribbonLead` before the bandage comes free the climb part sounding ends at its next seam within
+     * `ribbonSeamWithin`, or fades over `ribbonFade`, and the music rests until the curtains.
+     */
+    summitDelay: 1, summitFadeIn: 1.5, ribbonLead: 1, ribbonSeamWithin: 1.5, ribbonFade: 3,
+    /** Seconds Sleeping's morning takes to fade as the boat leaves for the sea. */
+    sleepingDepartureFade: 4,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
     recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -10.7, stairs: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3,
-      sleeping: -12.7, cygnetBrave: -14 },
+      sleeping: -12.7, cygnetBrave: -14, sleepingMorning: -15 },
     recordedMusicFade: .65,
     /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
     recordedMusicFadeIn: { birches: 1.63 } as Partial<Record<string, number>>,
@@ -382,6 +393,12 @@ export const tuning = {
     pickupAhead: 1.4,
     returnMargin: 12, returnSpeed: 5,
   },
+  planeCatch: {
+    approachDistance: 4, approachHeight: 1.7, speed: 8, turnRate: 4,
+    minApproachSeconds: 1.2, groundClearance: 0.8, levelAt: 0.7, wristTurn: -0.9,
+    hand: [0.8, 0.55, 0.4],
+    reachAt: 0.55, catchSeconds: 0.75, recoverSeconds: 0.65,
+  },
   /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
   meadowEchoes: {
@@ -507,6 +524,8 @@ export const tuning = {
     bankHeight: 28, bankDensity: 0.14, bankFloor: 0.3, bankLow: 1.1, bankFront: 28, bankBack: 16, bankSoft: 4.5,
     /** How far past its front line the boat is when it is let down onto the sea, which nobody can see. */
     bankSwap: 34,
+    /** Close the white over the visible sail before its hidden change of side. */
+    bankSwapDensity: 3.5,
     /** How long the white takes to thin off the village's water, the boat sailing out of the back of it. */
     fogLift: 15,
     /** How fast the tops of the cloud drift along under the boat, metres a second (the smallest lobes; the heaps go slower). */
@@ -1252,6 +1271,7 @@ export const tuning = {
     fireflyCount: 240,
     fireflyRange: 25,
     fireflyPresence: 0.85,
+    fireflyTransition: 2,
     /**
      * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
      * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
@@ -2410,6 +2430,8 @@ export const tuning = {
     nearShow: 5,
   },
   water: {
+    /** Outgoing land can still own visible shallows; let their shading recede without a cut. */
+    departureFade: 6,
     /** Seconds for wind ripples to build and to settle after a gust. */
     windAttack: 0.6,
     windRelease: 2.8,

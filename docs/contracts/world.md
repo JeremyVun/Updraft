@@ -140,8 +140,10 @@ bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pac
 The player never sees the next island before it is time.
 
 - **Only two rooms at a time.** `visibleRooms` (`world/journey-rooms.ts`) gives each chapter the rooms it may draw:
-  a crossing its departure and destination, a room itself. Terrain and grass discard the rest, water drops their
-  shallows and surf, and their props leave both the scene and the reflection. A room coming into view is covered
+  a crossing its departure and destination, a room itself. Terrain and grass discard the rest, and their props
+  leave both the scene and the reflection. Water retains the outgoing shore's contribution and eases it to deep
+  sea over `tuning.water.departureFade` (6 s), because its offshore partition can still be visible at landing.
+  Incoming water is enabled under the same full cover as its land. A room coming into view is covered
   in fog first and cleared after (`JourneyReveal`, `tuning.world.arrivalFogCover`/`arrivalFogClear`). The door
   shore is visible only from the washing and its outgoing crossing; the home jetty only from `toHarbour`.
 - **Haze.** Each chapter sets a `haze`; the veil (`uVeil`, `world/atmosphere.ts`) dissolves the world past it
@@ -168,8 +170,9 @@ The player never sees the next island before it is time.
   `tuning.skyMirror.arriveFor` (7 s).
 - **Nothing snaps into colour.** Everything north of `LIVING_BEYOND` (`atmosphere.ts`) is already alive before the
   child reaches it; only the still island starts grey, and the meadow is held back by its waiting region.
-  `main.ts` eases time of day, haze, season and rain toward what each chapter asks, so a chapter change is never a
-  cut in the sky.
+  `main.ts` eases time of day, haze, season, rain and visual storm cover toward what each chapter asks, so a chapter
+  change is never a cut in the sky. Lightning triggers still read the chapter's storm state. Sheltered firefly
+  size, colour, population and movement blend into their open-country values over `tuning.wood.fireflyTransition`.
 
 ## The sea surface
 
