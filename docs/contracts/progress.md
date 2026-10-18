@@ -157,11 +157,11 @@ Muted, hidden and not-started audio still consume cues, and muting or hiding dro
 The frame loop skips simulation and rendering while hidden and resets its time baseline on visibility changes, so
 story time waits with audio and a long absence is neither a scripted jump nor a slow frame to the quality governor.
 
-Sound and background music on/off choices persist independently in `updraft.sound.v1` and `updraft.music.v1`
-(`src/sound-preference.ts`); both default on. Graphics uses `updraft.quality.v2` (`src/gl/quality-preference.ts`).
-All fall back gracefully when storage is unavailable. Only a deliberate toggle writes them; `?shot` stays muted
-and ignores the remembered music setting for deterministic audio checks. Music mute keeps the audio clock running;
-only mute-all suspends it.
+The sound on/off choice and the volume persist in `updraft.sound.v1` and `updraft.volume.v1`
+(`src/sound-preference.ts`); sound defaults on at full volume. Graphics uses `updraft.quality.v2`
+(`src/gl/quality-preference.ts`). All fall back gracefully when storage is unavailable. Only a deliberate toggle or
+slider release writes them; `?shot` stays muted at full volume and ignores the remembered settings for deterministic
+audio checks. Mute suspends the audio clock; the volume only scales the master gain.
 
 ## Lost graphics context
 

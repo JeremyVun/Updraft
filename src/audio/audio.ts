@@ -318,6 +318,7 @@ export class Soundscape {
   private lastGlider = 0;
   private activity = 0;
   private muted = false;
+  private volume = 1;
   private musicMuted = false;
   private hidden = document.hidden;
   private padFilter!: BiquadFilterNode;
@@ -508,7 +509,7 @@ export class Soundscape {
     comp.connect(ctx.destination);
     this.master = ctx.createGain();
     this.master.gain.value = 0;
-    this.master.gain.setTargetAtTime(0.9, ctx.currentTime, 0.8);
+    this.master.gain.setTargetAtTime(this.masterGain(), ctx.currentTime, 0.8);
     this.master.connect(comp);
 
     this.reverbConvolver = ctx.createConvolver();
@@ -625,8 +626,18 @@ export class Soundscape {
     this.muted = muted;
     if (muted) this.heldCues.length = 0;
     if (!this.ctx) return;
-    this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.25);
+    this.master.gain.setTargetAtTime(muted ? 0 : this.masterGain(), this.ctx.currentTime, 0.25);
     this.syncPlayback();
+  }
+
+  setVolume(volume: number): void {
+    this.volume = volume;
+    if (this.ctx && !this.muted) this.master.gain.setTargetAtTime(this.masterGain(), this.ctx.currentTime, 0.05);
+  }
+
+  /** Squared so the slider's travel sounds even to the ear. */
+  private masterGain(): number {
+    return 0.9 * this.volume * this.volume;
   }
 
   setMusicMuted(muted: boolean): void {

@@ -952,11 +952,14 @@ pan and bounded scheduling; finished nodes disconnect.
 
 ## Start-up and lifecycle
 
-The Music button mutes background scores and the shared pad through separate dry and reverb-send gains.
-Existing reverb tails ring out. Wind, wildlife, physical sounds, gesture chimes, story cues and the meadow's duet
-remain audible. The score keeps following the story while music is muted; arrivals and endings cannot override
-the preference. The Sound button and M shortcut still mute everything. `tools/music-mute-check.mjs` renders both
-music routes and the effects routes through this control.
+One Sound control covers everything the player hears. The button and the M shortcut mute it all; the volume slider
+above the button (beside it on a phone) scales the master gain by the square of its value, so its travel sounds even.
+Moving the slider while muted unmutes.
+
+The engine can also mute music alone (`setMusicMuted`, used by checks only): background scores and the shared pad
+fall silent through separate dry and reverb-send gains while existing reverb tails ring out, and wind, wildlife,
+physical sounds, gesture chimes, story cues and the meadow's duet remain audible. The score keeps following the story
+meanwhile. `tools/music-mute-check.mjs` renders both music routes and the effects routes through it.
 
 The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The loop noise and reverb
 impulse are then synthesised in slices over about a second (`sliced.ts`), each long convolver gets a frame to itself,

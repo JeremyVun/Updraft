@@ -1,7 +1,7 @@
 import { params } from './params';
 import type { QualityLevelName, QualityMode } from './gl/quality';
 import { readQualityMode, saveQualityMode } from './gl/quality-preference';
-import { readSoundPreference, saveSoundPreference, readMusicPreference, saveMusicPreference } from './sound-preference';
+import { readSoundPreference, saveSoundPreference, readVolumePreference, saveVolumePreference } from './sound-preference';
 
 /** Lightweight controls work before the game bundle loads; engine callbacks attach later. */
 class Controls {
@@ -9,23 +9,30 @@ class Controls {
   qualityMode: QualityMode = this.qualityEnabled ? readQualityMode() : 'auto';
   /** Shot mode keeps its muted default regardless of any remembered preference. */
   soundOn = params.shot ? false : readSoundPreference();
-  musicOn = params.shot ? true : readMusicPreference();
+  volume = params.shot ? 1 : readVolumePreference();
   onSoundChange: ((on: boolean) => void) | null = null;
-  onMusicChange: ((on: boolean) => void) | null = null;
+  onVolumeChange: ((volume: number) => void) | null = null;
   onQualityChange: ((mode: QualityMode) => void) | null = null;
   private readonly sound = document.getElementById('sound') as HTMLButtonElement;
-  private readonly music = document.getElementById('music') as HTMLButtonElement;
+  private readonly volumeSlider = document.getElementById('volume') as HTMLInputElement;
   private readonly quality = document.getElementById('quality') as HTMLButtonElement;
   private renderedQuality: Exclude<QualityMode, 'auto'> | null = null;
 
   constructor() {
     this.setSound(this.soundOn);
-    this.setMusic(this.musicOn);
-    this.music.addEventListener('click', () => {
-      this.setMusic(!this.musicOn);
-      saveMusicPreference(this.musicOn);
-      this.onMusicChange?.(this.musicOn);
+    this.volumeSlider.value = String(this.volume);
+    this.syncVolume();
+    this.volumeSlider.addEventListener('input', () => {
+      this.volume = Number(this.volumeSlider.value);
+      this.syncVolume();
+      this.onVolumeChange?.(this.volume);
+      if (!this.soundOn && this.volume > 0) {
+        this.setSound(true);
+        saveSoundPreference(true);
+        this.onSoundChange?.(true);
+      }
     });
+    this.volumeSlider.addEventListener('change', () => saveVolumePreference(this.volume));
     this.sound.addEventListener('click', () => {
       this.setSound(!this.soundOn);
       saveSoundPreference(this.soundOn);
@@ -129,11 +136,9 @@ class Controls {
     this.sound.title = on ? 'Mute all sound (M)' : 'Unmute sound (M)';
   }
 
-  setMusic(on: boolean): void {
-    this.musicOn = on;
-    this.music.dataset.on = String(on);
-    this.music.setAttribute('aria-pressed', String(on));
-    this.music.title = on ? 'Mute music' : 'Unmute music';
+  private syncVolume(): void {
+    this.sound.dataset.level = this.volume === 0 ? 'none' : this.volume < .5 ? 'low' : 'high';
+    this.volumeSlider.setAttribute('aria-valuetext', `${Math.round(this.volume * 100)}%`);
   }
 }
 

@@ -140,9 +140,8 @@ declare global {
 
 performance.mark('main');
 const startingChoice = () => (params.progress ? readProgress() : null) ?? params.chapter;
-const prefetchStartingMusic = () => prefetchMusic(controls.soundOn && controls.musicOn ? musicForStart(startingChoice()) : null);
+const prefetchStartingMusic = () => prefetchMusic(controls.soundOn ? musicForStart(startingChoice()) : null);
 prefetchStartingMusic();
-controls.onMusicChange = prefetchStartingMusic;
 controls.onSoundChange = prefetchStartingMusic;
 startScreen.progress('build', 0);
 /** Construction steps, each ending where the veil may paint; `start-check` fails if a real boot counts a different number. */
@@ -566,13 +565,14 @@ controls.onQualityChange = mode => {
 const sound = new Soundscape();
 const stillGestures = new StillGestures();
 const stillLifeAt = (x: number, z: number) => life.at(x, z);
-sound.setMusicMuted(!controls.musicOn);
+sound.setVolume(controls.volume);
+controls.onVolumeChange = volume => sound.setVolume(volume);
 let playing = false;
 let nextMusic: ReturnType<typeof nextMusicForChapter> = null;
 function syncMusicLoading(): void {
   if (!startScreen.started) { prefetchStartingMusic(); return; }
-  meadowMusic.prefetch(playing && controls.soundOn ? meadowFilesAhead(story.name, story.current.meadowMusic, controls.musicOn) : []);
-  if (!controls.soundOn || !controls.musicOn) {
+  meadowMusic.prefetch(playing && controls.soundOn ? meadowFilesAhead(story.name, story.current.meadowMusic, true) : []);
+  if (!controls.soundOn) {
     prefetchMusic(null);
     nextMusic = null;
     if (!playing) sound.cancelStartingMusic();
@@ -582,7 +582,6 @@ function syncMusicLoading(): void {
   const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase, story.current.sleepingMusic);
   if (track !== nextMusic) { prefetchMusic(track); nextMusic = track; }
 }
-controls.onMusicChange = on => { sound.setMusicMuted(!on); syncMusicLoading(); };
 const audioEnvironment = new AudioEnvironment(heightAt);
 contextRecovery.onPause = () => { input.muted = true; sound.setMuted(true); };
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
@@ -1582,7 +1581,7 @@ async function boot(): Promise<void> {
         setSound(controls.soundOn);
       }
       const choice = pick ?? startingChoice();
-      prefetchMusic(controls.soundOn && controls.musicOn ? musicForStart(choice) : null);
+      prefetchMusic(controls.soundOn ? musicForStart(choice) : null);
       story.start(choice);
       /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
       story.update(0, 0);
@@ -1600,7 +1599,7 @@ async function play(resumed: boolean): Promise<void> {
   const track = tuning.audio.stillPhraseExperiment && story.current.stillDepartureSoon ? 'stillDeparture'
     : musicForStart({ chapter: story.name, point: story.current.checkpoint ?? undefined });
   const meadowStart = story.name === 'meadow' && controls.soundOn ? sound.prepareMeadow(meadowFilesAt(story.current.meadowMusic)) : null;
-  const music = Promise.all([controls.soundOn && controls.musicOn && track ? sound.prepareMusic(track) : undefined, meadowStart]);
+  const music = Promise.all([controls.soundOn && track ? sound.prepareMusic(track) : undefined, meadowStart]);
   const musicStatus = window.setTimeout(() => startScreen.musicLoading(true), 150);
   const musicReady = music.finally(() => { clearTimeout(musicStatus); startScreen.musicLoading(false); });
   try {
